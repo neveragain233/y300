@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 @immutable
@@ -46,6 +48,20 @@ class ReaderChromeInsets {
     safeAreaBottom,
     pageIndicatorReservedHeight,
   );
+}
+
+/// System gesture insets that stay relevant after the reader hides the bars.
+///
+/// Android reports the gesture region separately from system-bar padding, so
+/// floating reader controls must consider both instead of only [padding].
+abstract final class ReaderSystemUiInsets {
+  static double bottom(BuildContext context, {double minimum = 0}) {
+    final media = MediaQuery.of(context);
+    return math.max(
+      math.max(media.padding.bottom, media.systemGestureInsets.bottom),
+      minimum,
+    );
+  }
 }
 
 class ReaderToolbarAction {

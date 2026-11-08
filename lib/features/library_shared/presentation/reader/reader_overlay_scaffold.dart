@@ -75,6 +75,7 @@ class ReaderOverlayScaffold extends StatefulWidget {
     required this.topBar,
     required this.bottomBar,
     required this.child,
+    this.persistentFooter,
     this.controller,
     this.onLeftTap,
     this.onCenterTap,
@@ -90,6 +91,11 @@ class ReaderOverlayScaffold extends StatefulWidget {
   final ReaderTopBarConfig topBar;
   final ReaderBottomBarConfig bottomBar;
   final Widget child;
+
+  /// Display-only status shown below the tap-zone viewport for the whole
+  /// reading session. It is intentionally outside [child] so scroll and tap
+  /// geometry never include it.
+  final Widget? persistentFooter;
   final ReaderOverlayController? controller;
   final VoidCallback? onLeftTap;
   final VoidCallback? onCenterTap;
@@ -164,15 +170,31 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
     return Stack(
       key: const Key('shared-reader-overlay-scaffold'),
       children: [
-        ReaderTapZones(
-          enabled: widget.tapZonesEnabled,
-          blockedListenable: widget.tapZonesBlockedListenable,
-          gestureCoordinator: widget.gestureCoordinator,
-          bottomSafeFraction: widget.bottomSafeFraction,
-          onCenterTap: _handleCenterTap,
-          onLeftTap: widget.onLeftTap,
-          onRightTap: widget.onRightTap,
-          child: widget.child,
+        Column(
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ReaderTapZones(
+                    enabled: widget.tapZonesEnabled,
+                    blockedListenable: widget.tapZonesBlockedListenable,
+                    gestureCoordinator: widget.gestureCoordinator,
+                    bottomSafeFraction: widget.bottomSafeFraction,
+                    onCenterTap: _handleCenterTap,
+                    onLeftTap: widget.onLeftTap,
+                    onRightTap: widget.onRightTap,
+                    child: widget.child,
+                  ),
+                ],
+              ),
+            ),
+            if (widget.persistentFooter != null)
+              KeyedSubtree(
+                key: const Key('shared-reader-persistent-footer-slot'),
+                child: widget.persistentFooter!,
+              ),
+          ],
         ),
         Positioned(
           key: const Key('shared-reader-top-overlay'),

@@ -20,7 +20,6 @@ import 'package:y300/features/novel/presentation/models/novel_reader_pagination_
 import 'package:y300/features/novel/presentation/models/novel_reader_pagination_progress.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_prepared_chapter.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_pagination_position.dart';
-import 'package:y300/features/novel/presentation/models/novel_reader_paged_indicator_layout.dart';
 import 'package:y300/features/novel/presentation/services/novel_html_chapter_render_preparer.dart';
 import 'package:y300/features/novel/presentation/services/novel_html_image_reader_bridge.dart';
 import 'package:y300/features/novel/presentation/services/novel_html_reader_preferences_adapter.dart';
@@ -364,21 +363,10 @@ class _NovelReaderHtmlPagedSurfaceState
               pagePadding * 2 -
               topChromeInset -
               bottomChromeInset;
-          final pageIndicatorReservedHeight = math
-              .min(
-                widget.chromeInsets.pageIndicatorReservedHeight,
-                math.max(
-                  0,
-                  availableHeight -
-                      NovelReaderPagedIndicatorLayout.rendererSafetyInset -
-                      1,
-                ),
-              )
-              .toDouble();
-          final paginationHeight =
-              availableHeight -
-              pageIndicatorReservedHeight -
-              NovelReaderPagedIndicatorLayout.rendererSafetyInset;
+          // The persistent footer owns page progress. The page box therefore
+          // uses the full reading window instead of reserving an in-page
+          // indicator band.
+          final paginationHeight = availableHeight;
           final contentMaxWidth = widget.typography.contentMaxWidth < 160
               ? 160
               : widget.typography.contentMaxWidth;
@@ -695,8 +683,6 @@ class _NovelReaderHtmlPagedSurfaceState
                             (constraints.maxWidth - pageWidth) / 2,
                             pagePadding + bottomChromeInset,
                           ),
-                          showProgressIndicator:
-                              widget.preferences.showProgressIndicator,
                           previousChapterTitle: widget.previousChapterTitle,
                           nextChapterTitle: widget.nextChapterTitle,
                           chapterTurnPolicy: widget.chapterTurnPolicy,
@@ -704,10 +690,7 @@ class _NovelReaderHtmlPagedSurfaceState
                               widget.chapterEntryRequest != null,
                           onTurnToAdjacentChapter:
                               widget.onTurnToAdjacentChapter,
-                          contentBottomInset:
-                              pageIndicatorReservedHeight +
-                              NovelReaderPagedIndicatorLayout
-                                  .rendererSafetyInset,
+                          contentBottomInset: 0,
                           theme: widget.theme,
                           htmlPreferences: htmlPreferences,
                           typography: widget.typography,
@@ -1686,7 +1669,6 @@ class _NovelReaderPagedPageView extends StatefulWidget {
     required this.pageEffect,
     required this.pageSpeed,
     this.paperInsets = EdgeInsets.zero,
-    required this.showProgressIndicator,
     this.previousChapterTitle,
     this.nextChapterTitle,
     this.chapterTurnPolicy = const NovelReaderChapterTurnPolicy(),
@@ -1729,7 +1711,6 @@ class _NovelReaderPagedPageView extends StatefulWidget {
   final NovelReaderPageEffect pageEffect;
   final NovelReaderPageSpeed pageSpeed;
   final EdgeInsets paperInsets;
-  final bool showProgressIndicator;
   final String? previousChapterTitle;
   final String? nextChapterTitle;
   final NovelReaderChapterTurnPolicy chapterTurnPolicy;
@@ -2087,8 +2068,6 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
                                 _onBodyVisibilityChanged(index, visibility),
                           ),
                         ),
-                        if (fullSheetEnabled && widget.showProgressIndicator)
-                          _pageIndicator(index),
                       ],
                     ),
                   );
@@ -2100,8 +2079,6 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
             hint: _chapterTurnHint,
             bottomInset: widget.contentBottomInset,
           ),
-          if (widget.showProgressIndicator && !fullSheetEnabled)
-            _pageIndicator(_currentPage),
         ],
       ),
     );
@@ -2113,30 +2090,6 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
     if (size == null) return;
     final height = size.height + widget.paperInsets.vertical;
     if (height > 0) _paperClock.touchY = (dy + widget.paperInsets.top) / height;
-  }
-
-  Widget _pageIndicator(int index) {
-    final l10n = AppLocalizations.of(context);
-    return Positioned(
-      key: const Key('novel-reader-page-indicator'),
-      right: NovelReaderPagedIndicatorLayout.rightInset,
-      bottom: NovelReaderPagedIndicatorLayout.bottomInset,
-      child: Text(
-        l10n.novelPageIndicator(
-          index + 1,
-          widget.isPageCountFinal
-              ? '${widget.plan.pageCount}'
-              : l10n.novelPageCountPending,
-        ),
-        key: const Key('novel-reader-page-indicator-text'),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontSize: NovelReaderPagedIndicatorLayout.fontSize,
-          height: NovelReaderPagedIndicatorLayout.lineHeight,
-          letterSpacing: 0,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
   }
 
   bool _turnPageByTap(int delta) {

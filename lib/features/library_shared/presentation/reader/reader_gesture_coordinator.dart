@@ -33,6 +33,13 @@ class ReaderGestureCoordinator {
   final double tapSlop;
   final double doubleTapSlop;
 
+  /// Whether a second tap in the same area is routed to double-tap listeners.
+  ///
+  /// Text-only vertical readers disable this so consecutive taps stay distinct
+  /// page intents; deferred single-tap actions still let content interactions
+  /// cancel before the tap commits.
+  bool doubleTapEnabled = true;
+
   final Set<ReaderDoubleTapListener> _doubleTapListeners =
       <ReaderDoubleTapListener>{};
   final Set<ReaderPointerListener> _pointerListeners =
@@ -151,7 +158,13 @@ class ReaderGestureCoordinator {
       return;
     }
 
-    _clearPendingSingleTap();
+    if (!doubleTapEnabled) {
+      // Commit the deferred tap before this one so rapid taps in the same area
+      // remain separate page intents instead of collapsing into a double tap.
+      _commitPendingSingleTap();
+    } else {
+      _clearPendingSingleTap();
+    }
     _pendingTapGlobalPosition = event.position;
     _pendingSingleTapAction = singleTapAction;
     _pendingSingleTapTimer = Timer(doubleTapTimeout, _commitPendingSingleTap);
@@ -192,6 +205,9 @@ class ReaderGestureCoordinator {
   }
 
   bool _isDoubleTapCandidate(Offset globalPosition) {
+    if (!doubleTapEnabled) {
+      return false;
+    }
     final pendingPosition = _pendingTapGlobalPosition;
     return (_pendingSingleTapTimer?.isActive ?? false) &&
         pendingPosition != null &&

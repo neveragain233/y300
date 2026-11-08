@@ -20,29 +20,35 @@ class ReaderBottomOverlayPanel extends StatelessWidget {
       color: palette.chromeBackground,
       child: SafeArea(
         top: false,
+        bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (progress != null) ReaderProgressControl(config: progress),
-              if (config.actions.isNotEmpty) ...[
-                if (progress != null) const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    for (final action in config.actions)
-                      ReaderToolButton(
-                        key: Key('shared-reader-bottom-action-${action.id}'),
-                        icon: action.icon,
-                        label: action.label,
-                        enabled: action.enabled,
-                        onPressed: action.onPressed,
-                      ),
-                  ],
-                ),
+          padding: EdgeInsets.only(
+            bottom: ReaderSystemUiInsets.bottom(context, minimum: 12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (progress != null) ReaderProgressControl(config: progress),
+                if (config.actions.isNotEmpty) ...[
+                  if (progress != null) const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      for (final action in config.actions)
+                        ReaderToolButton(
+                          key: Key('shared-reader-bottom-action-${action.id}'),
+                          icon: action.icon,
+                          label: action.label,
+                          enabled: action.enabled,
+                          onPressed: action.onPressed,
+                        ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
