@@ -129,6 +129,18 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.replyStickerLastGroupId,
   );
 
+  static const contentFilterBlockedThreadsV1 = PreferenceKey<String>(
+    PreferenceKeyNames.contentFilterBlockedThreadsV1,
+  );
+
+  static const contentFilterWebBlacklistSnapshotV1 = PreferenceKey<String>(
+    PreferenceKeyNames.contentFilterWebBlacklistSnapshotV1,
+  );
+
+  static const recentSearchSnapshotV1 = PreferenceKey<String>(
+    PreferenceKeyNames.recentSearchSnapshotV1,
+  );
+
   static const legacyThreadTextFontScale = PreferenceKey<double>(
     PreferenceKeyNames.legacyThreadTextFontScale,
   );

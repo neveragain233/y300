@@ -60,6 +60,14 @@ abstract final class PreferenceKeyNames {
 
   static const replyStickerLastGroupId = 'reply_sticker_last_group_id';
 
+  static const contentFilterBlockedThreadsV1 =
+      'content_filter.blocked_threads.v1';
+
+  static const contentFilterWebBlacklistSnapshotV1 =
+      'content_filter.web_blacklist.snapshot.v1';
+
+  static const recentSearchSnapshotV1 = 'search.recent.snapshot.v1';
+
   static const legacyThreadTextFontScale = 'thread_text_font_scale';
   static const legacyThreadTextLineHeightScale =
       'thread_text_line_height_scale';
