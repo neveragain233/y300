@@ -30,6 +30,39 @@ import 'package:y300/features/library_shared/domain/models/library_sort_models.d
 import 'package:y300/features/library_shared/domain/models/library_state_models.dart';
 
 void main() {
+  test('reads source tags from the comic source thread first post', () async {
+    final threadRepository = _FakeThreadRepository(
+      _threadDetailWithTags(const [
+        ThreadPostTagLink(
+          label: '漫画',
+          url: 'https://bbs.yamibo.com/misc.php?mod=tag&id=86',
+          tagId: '86',
+        ),
+        ThreadPostTagLink(
+          label: '漫画',
+          url: 'https://bbs.yamibo.com/misc.php?mod=tag&id=86',
+          tagId: '86',
+        ),
+        ThreadPostTagLink(
+          label: '讨论',
+          url: 'https://bbs.yamibo.com/misc.php?mod=tag&id=87',
+          tagId: '87',
+        ),
+      ]),
+    );
+    final adapter = ComicDetailAdapter(
+      _FakeComicRepository(),
+      threadRepository: threadRepository,
+      stateRepository: _FakeLibraryStateRepository(),
+    );
+
+    final tags = await adapter.loadSourceTags(workId: 'comic:1');
+
+    expect(tags.map((tag) => tag.tagId), <String>['86', '87']);
+    expect(tags.first.label, '漫画');
+    expect(threadRepository.requestedTids, <String>['100']);
+  });
+
   test(
     'catalog configuration keeps source and custom values separate',
     () async {
@@ -1632,5 +1665,60 @@ final class _UnusedComicThreadDiscoveryRepository
   >
   load(ComicThreadDiscoveryRequest request) {
     throw UnimplementedError();
+  }
+}
+
+
+ThreadDetailData _threadDetailWithTags(List<ThreadPostTagLink> tags) {
+  return ThreadDetailData(
+    tid: '100',
+    fid: '30',
+    subject: 'Source thread',
+    author: 'Author',
+    replies: 0,
+    views: 1,
+    currentPage: 1,
+    perPage: 10,
+    posts: [
+      ThreadPost(
+        pid: 'p1',
+        author: 'Author',
+        authorId: '1',
+        message: '<p>body</p>',
+        number: 1,
+        isFirst: true,
+        dateline: 'today',
+        tagLinks: tags,
+      ),
+    ],
+  );
+}
+
+final class _FakeThreadRepository implements ThreadRepository {
+  _FakeThreadRepository(this.detail);
+
+  final ThreadDetailData detail;
+  final List<String> requestedTids = <String>[];
+
+  @override
+  ThreadDetailSourceCapabilities get capabilities =>
+      ThreadDetailSourceCapabilities.full;
+
+  @override
+  Future<DataReadResult<ThreadDetailData, ThreadDetailReadCapabilities>>
+  getThreadDetail({
+    required String tid,
+    int page = 1,
+    ThreadDetailQuery query = const ThreadDetailQuery(),
+  }) async {
+    requestedTids.add(tid);
+    return DataReadSuccess<ThreadDetailData, ThreadDetailReadCapabilities>(
+      data: detail,
+      capabilities: ThreadDetailReadCapabilities(
+        values: DataCapabilitySet.supported(ThreadDetailCapability.values),
+        paginationPrecision: PaginationPrecision.unknown,
+      ),
+      metadata: const DataReadMetadata.network(),
+    );
   }
 }

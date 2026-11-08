@@ -480,9 +480,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       final sourcePosition = _verticalPosition(tester);
       final originalOffset = sourcePosition.pixels;
-      final geometry = _bodyLayout(tester);
-      expect(geometry.topChrome, greaterThanOrEqualTo(safeArea.top));
-      expect(geometry.bottomChrome, greaterThanOrEqualTo(safeArea.bottom));
+      // The safe area now bounds the scroll viewport instead of the content
+      // padding, so it must be verified on the viewport itself.
+      final paragraphList = find.byKey(
+        const Key('novel-reader-paragraph-list'),
+      );
+      expect(
+        tester.getTopLeft(paragraphList).dy,
+        greaterThanOrEqualTo(safeArea.top),
+      );
+      expect(
+        tester.getBottomLeft(paragraphList).dy,
+        lessThanOrEqualTo(
+          tester.getSize(find.byType(Scaffold)).height - safeArea.bottom,
+        ),
+      );
       final saved = repository.progress[_chapter]!;
       expect(saved.progressPercent, greaterThan(0));
       expect(saved.progressPercent, lessThan(1));
@@ -657,9 +669,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pump();
         expect(
-          ModalRoute.of(
-            tester.element(find.byType(NovelReaderPage)),
-          )!.isCurrent,
+          ModalRoute.of(tester.element(find.byType(NovelReaderPage)))!
+              .isCurrent,
           isTrue,
         );
         expect(
@@ -859,9 +870,8 @@ Widget _app(
   child: LocalizedTestApp(
     navigatorKey: navigation,
     builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(padding: safeArea, viewPadding: safeArea),
+      data: MediaQuery.of(context)
+          .copyWith(padding: safeArea, viewPadding: safeArea),
       child: child!,
     ),
     home: const NovelReaderPage(novelId: _work, initialEpisodeId: _chapter),

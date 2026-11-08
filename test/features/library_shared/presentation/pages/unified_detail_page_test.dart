@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
@@ -17,7 +20,7 @@ void main() {
   ) async {
     final adapter = _FakeDetailAdapter(module: LibraryModuleKey.comic);
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -38,6 +41,56 @@ void main() {
     expect(adapter.refreshWorkCallCount, 2);
   });
 
+  for (final module in [LibraryModuleKey.comic, LibraryModuleKey.novel]) {
+    testWidgets(
+      'detail chapter search stays local and opens once for $module',
+      (tester) async {
+        final adapter = _FakeDetailAdapter(
+          module: module,
+          includeSecondChapter: true,
+        );
+        final opened = <String>[];
+        await tester.pumpWidget(
+          _scopedApp(
+            home: UnifiedDetailPage(
+              adapter: adapter,
+              workId: 'work-1',
+              onOpenReader: (context, target) async {
+                opened.add(target.episodeId);
+              },
+              onOpenThread: (context, target) async {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final reads = adapter.loadChaptersCallCount;
+        final input = find.byKey(
+          const Key('unified-detail-chapter-search-field'),
+        );
+        expect(tester.widget<TextField>(input).autofocus, isFalse);
+        await tester.enterText(input, '2');
+        await tester.pumpAndSettle();
+        expect(adapter.loadChaptersCallCount, reads);
+        expect(
+          find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),
+          findsNothing,
+        );
+        final result = find.byKey(
+          const ValueKey<String>('unified-detail-chapter-e2'),
+        );
+        expect(result, findsOneWidget);
+        expect(
+          tester.getTopLeft(result).dy,
+          greaterThanOrEqualTo(tester.getBottomLeft(find.byType(AppBar)).dy),
+        );
+        await tester.tap(result);
+        await tester.pumpAndSettle();
+        expect(opened, ['e2']);
+        expect(adapter.refreshWorkCallCount, 0);
+      },
+    );
+  }
+
   testWidgets('UnifiedDetailPage renders header/chapter and FAB', (
     tester,
   ) async {
@@ -47,7 +100,7 @@ void main() {
       isDownloaded: true,
     );
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -193,7 +246,7 @@ void main() {
       final adapter = _FakeDetailAdapter();
       var presentationCount = 0;
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -241,7 +294,7 @@ void main() {
     (tester) async {
       final adapter = _EditableDetailAdapter();
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -324,7 +377,7 @@ void main() {
       fields: const <LibraryMetadataField>{LibraryMetadataField.title},
     );
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -370,7 +423,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: _FakeDetailAdapter(),
           workId: 'work-1',
@@ -397,7 +450,7 @@ void main() {
   ) async {
     final adapter = _CatalogEditableDetailAdapter();
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -450,7 +503,7 @@ void main() {
     (tester) async {
       final adapter = _CoverEditableDetailAdapter();
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -479,7 +532,7 @@ void main() {
     (tester) async {
       final adapter = _CoverEditableDetailAdapter();
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -502,7 +555,7 @@ void main() {
   ) async {
     final adapter = _CoverEditableDetailAdapter(hasCustomCover: true);
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -533,7 +586,7 @@ void main() {
   ) async {
     final adapter = _CoverEditableDetailAdapter(hasSourceCover: true);
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -571,7 +624,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
           scaffoldBackgroundColor: pageBackground,
@@ -642,7 +695,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
             scaffoldBackgroundColor: pageBackground,
@@ -679,7 +732,7 @@ void main() {
       final adapter = _FakeDetailAdapter();
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
             scaffoldBackgroundColor: pageBackground,
@@ -736,7 +789,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
             scaffoldBackgroundColor: pageBackground,
@@ -769,7 +822,7 @@ void main() {
     final adapter = _EditableDetailAdapter();
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         theme: AppTheme.dark(),
         home: UnifiedDetailPage(
           adapter: adapter,
@@ -825,7 +878,7 @@ void main() {
           );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -862,7 +915,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -921,7 +974,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -975,7 +1028,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -1040,7 +1093,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -1134,7 +1187,7 @@ void main() {
     final adapter = _FakeDetailAdapter(secondIsBookmarked: true);
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1178,7 +1231,7 @@ void main() {
     final adapter = _FakeDetailAdapter(includeSecondChapter: true);
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1229,7 +1282,7 @@ void main() {
       final adapter = _FakeDetailAdapter(includeSecondChapter: true);
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -1312,7 +1365,7 @@ void main() {
     final adapter = _FakeDetailAdapter();
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1395,7 +1448,7 @@ void main() {
     final adapter = _FakeDetailAdapter(module: LibraryModuleKey.comic);
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1436,7 +1489,7 @@ void main() {
       isRead: true,
     );
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1467,7 +1520,7 @@ void main() {
   ) async {
     final adapter = _FakeDetailAdapter(module: LibraryModuleKey.comic);
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1512,7 +1565,7 @@ void main() {
   ) async {
     final adapter = _FakeDetailAdapter(module: LibraryModuleKey.comic);
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: Directionality(
           textDirection: TextDirection.rtl,
           child: UnifiedDetailPage(
@@ -1546,7 +1599,7 @@ void main() {
   ) async {
     final adapter = _FakeDetailAdapter(module: LibraryModuleKey.comic);
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1580,7 +1633,7 @@ void main() {
       failMarkRead: true,
     );
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1615,7 +1668,7 @@ void main() {
       isRead: true,
     );
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1669,7 +1722,7 @@ void main() {
     final adapter = _FakeDetailAdapter();
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1734,7 +1787,7 @@ void main() {
         refreshBus.dispose();
       });
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -1783,7 +1836,7 @@ void main() {
       final adapter = _FakeDetailAdapter();
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -1811,7 +1864,7 @@ void main() {
         queuePosition: 1,
       );
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1841,7 +1894,7 @@ void main() {
   ) async {
     final adapter = _FakeDetailAdapter();
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1870,7 +1923,7 @@ void main() {
       final adapter = _FakeDetailAdapter();
       var presentationCount = 0;
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -1916,7 +1969,7 @@ void main() {
     final adapter = _FakeDetailAdapter()..failLoadHeaderOnce = true;
     var presentationCount = 0;
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: adapter,
           workId: 'work-1',
@@ -1962,7 +2015,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: UnifiedDetailPage(
           adapter: _FakeDetailAdapter(),
           workId: 'work-1',
@@ -1987,7 +2040,7 @@ void main() {
     var presentationCount = 0;
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -2028,12 +2081,51 @@ void main() {
     expect(presentationCount, 2);
   });
 
+  testWidgets('source tag can be confirmed as catalog and refreshes chapters', (
+    tester,
+  ) async {
+    final adapter = _SourceTagCatalogAdapter();
+    await tester.pumpWidget(
+      _scopedApp(
+        home: UnifiedDetailPage(
+          adapter: adapter,
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('unified-detail-source-tags')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('unified-detail-source-tag-86')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('unified-detail-source-tag-catalog-86')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('unified-detail-source-tag-catalog-confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(adapter.lastCatalogUrl, contains('misc.php'));
+    expect(adapter.lastCatalogUrl, contains('id=86'));
+    expect(adapter.refreshWorkCallCount, greaterThanOrEqualTo(1));
+  });
+
   testWidgets(
     'UnifiedDetailPage keeps existing content when chapter reload fails',
     (tester) async {
       final adapter = _FakeDetailAdapter();
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -2073,9 +2165,11 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.ensureVisible(
-        find.byKey(const Key('unified-detail-error-retry')),
+      await Scrollable.ensureVisible(
+        tester.element(find.byKey(const Key('unified-detail-error-retry'))),
+        alignment: 0.5,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('unified-detail-error-retry')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('unified-detail-error-panel')), findsNothing);
@@ -2087,7 +2181,7 @@ void main() {
     (tester) async {
       final adapter = _FakeDetailAdapter()..failMarkDownload = true;
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -2125,7 +2219,7 @@ void main() {
     (tester) async {
       final adapter = _ManageableDetailAdapter();
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -2158,6 +2252,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // 单章操作只隐藏目标章节，其他可见章节保持不变。
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('unified-detail-chapter-e2')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),
         findsNothing,
@@ -2200,7 +2299,7 @@ void main() {
       final adapter = _FakeDetailAdapter(isDownloaded: true)
         ..failDeleteDownload = true;
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: UnifiedDetailPage(
             adapter: adapter,
             workId: 'work-1',
@@ -2582,6 +2681,39 @@ class _EditableDetailAdapter extends _FakeDetailAdapter
   }
 }
 
+class _SourceTagCatalogAdapter extends _FakeDetailAdapter
+    implements DetailSourceTagsAdapter, DetailCatalogEditor {
+  _SourceTagCatalogAdapter() : super(module: LibraryModuleKey.comic);
+
+  String? lastCatalogUrl;
+
+  @override
+  Future<List<DetailSourceTag>> loadSourceTags({required String workId}) async {
+    return const <DetailSourceTag>[DetailSourceTag(label: '漫画', tagId: '86')];
+  }
+
+  @override
+  Future<DetailCatalogConfiguration> loadCatalogConfiguration({
+    required String workId,
+  }) async {
+    return const DetailCatalogConfiguration(
+      sourceCatalogUrl: null,
+      customCatalogUrl: null,
+    );
+  }
+
+  @override
+  Future<DetailCatalogUpdateOutcome> updateCatalogOverride({
+    required String workId,
+    String? catalogUrl,
+  }) async {
+    lastCatalogUrl = catalogUrl;
+    return const DetailCatalogUpdateOutcome(
+      code: DetailCatalogUpdateOutcomeCode.saved,
+    );
+  }
+}
+
 class _CatalogEditableDetailAdapter extends _FakeDetailAdapter
     implements DetailCatalogEditor {
   String? lastCatalogUrl;
@@ -2778,4 +2910,20 @@ LinearGradient _headerGradient(WidgetTester tester) {
   );
   final decoration = gradientBox.decoration as BoxDecoration;
   return decoration.gradient! as LinearGradient;
+}
+
+Widget _scopedApp({
+  Key? key,
+  Widget? home,
+  TransitionBuilder? builder,
+  ThemeData? theme,
+}) {
+  return ProviderScope(
+    child: LocalizedTestApp(
+      key: key,
+      home: home,
+      builder: builder,
+      theme: theme,
+    ),
+  );
 }

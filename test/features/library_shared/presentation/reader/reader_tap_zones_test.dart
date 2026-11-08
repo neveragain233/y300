@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_gesture_coordinator.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_paged_turn_motion.dart';
@@ -127,6 +129,31 @@ void main() {
     await tester.pump(const Duration(milliseconds: 330));
 
     expect(centerTaps, 0);
+  });
+
+  testWidgets('disabled double tap keeps rapid taps as distinct single taps', (
+    tester,
+  ) async {
+    var rightTaps = 0;
+    var doubleTaps = 0;
+    final coordinator = ReaderGestureCoordinator()..doubleTapEnabled = false;
+    addTearDown(coordinator.dispose);
+    coordinator.addDoubleTapListener((_) => doubleTaps += 1);
+    await tester.pumpWidget(
+      _buildTapZones(
+        gestureCoordinator: coordinator,
+        onCenterTap: () {},
+        onRightTap: () => rightTaps += 1,
+      ),
+    );
+
+    await tester.tapAt(const Offset(500, 300));
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.tapAt(const Offset(500, 300));
+    await tester.pump(const Duration(milliseconds: 330));
+
+    expect(rightTaps, 2);
+    expect(doubleTaps, 0);
   });
 
   testWidgets('ReaderTapZones double tap cancels pending single tap', (

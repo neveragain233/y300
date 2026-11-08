@@ -1,10 +1,15 @@
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_chapter_management_sheet.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
   testWidgets(
     'manages visibility, searches chapters, and removes manual ones',
     (tester) async {
@@ -28,7 +33,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        LocalizedTestApp(
+        _scopedApp(
           home: Scaffold(
             body: UnifiedDetailChapterManagementSheet(
               workId: 'comic',
@@ -131,7 +136,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: Scaffold(
           body: UnifiedDetailChapterManagementSheet(
             workId: 'comic',
@@ -190,7 +195,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: Scaffold(
           body: UnifiedDetailChapterManagementSheet(
             workId: 'comic',
@@ -251,7 +256,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: Scaffold(
           body: UnifiedDetailChapterManagementSheet(
             workId: 'comic',
@@ -303,7 +308,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      LocalizedTestApp(
+      _scopedApp(
         home: Scaffold(
           body: UnifiedDetailChapterManagementSheet(
             workId: 'comic',
@@ -479,4 +484,8 @@ class _FakeManagementAdapter implements DetailChapterManagementAdapter {
       isHidden: isHidden,
     );
   }
+}
+
+Widget _scopedApp({required Widget home}) {
+  return ProviderScope(child: LocalizedTestApp(home: home));
 }

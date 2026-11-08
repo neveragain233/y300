@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +46,7 @@ import 'package:y300/features/novel/presentation/services/novel_reader_document_
 import 'package:y300/features/novel/presentation/services/novel_reader_progress_committer.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_document_view.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_paged_surface.dart';
+import 'package:y300/features/content_rendering_shared/presentation/html_rendering/forum_html_widget_post_renderer.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/identity_text_converter.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_converter.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_supplemental_hydration_service.dart';
@@ -343,8 +346,7 @@ void main() {
         preferences: NovelReaderPreferences.defaults().copyWith(
           flowMode: NovelReaderFlowMode.pagedLtr,
         ),
-        firstRawHtml:
-            '<p><span style="font-style:italic">会话缓存正文。</span><ruby>保护<rt>reading</rt></ruby></p>',
+        firstRawHtml: '<p><span style="font-style:italic">会话缓存正文。</span><ruby>保护<rt>reading</rt></ruby></p>',
       );
       await tester.pumpWidget(_buildReaderApp(repository: repository));
       await _pumpPagedCacheReady(tester);
@@ -738,6 +740,186 @@ void main() {
       find.byKey(const Key('shared-reader-top-subtitle')),
     );
     expect(subtitle.data, '第1章');
+  });
+
+  testWidgets('vertical side taps turn pages and keep rapid taps distinct', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildReaderApp(
+        repository: _FakeNovelRepository(
+          firstParagraphs: List<String>.generate(40, (index) => '第一章段落 $index'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final position = _verticalPosition(tester);
+    final start = position.pixels;
+    expect(start, closeTo(0, 0.01));
+
+    await tester.tapAt(const Offset(650, 300));
+    await tester.pump(const Duration(milliseconds: 330));
+    await tester.pumpAndSettle();
+
+    final afterFirst = position.pixels;
+    expect(afterFirst, greaterThan(start));
+
+    await tester.tapAt(const Offset(650, 300));
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.tapAt(const Offset(650, 300));
+    await tester.pump(const Duration(milliseconds: 330));
+    await tester.pumpAndSettle();
+
+    final afterRapid = position.pixels;
+    expect(afterRapid, greaterThan(afterFirst));
+
+    await tester.tapAt(const Offset(130, 300));
+    await tester.pump(const Duration(milliseconds: 330));
+    await tester.pumpAndSettle();
+
+    expect(position.pixels, lessThan(afterRapid));
+  });
+
+  testWidgets('novel reader enters immersive mode and restores on disposal', (
+    tester,
+  ) async {
+    final systemUi = _RecordingReaderSystemUiController();
+    await tester.pumpWidget(
+      _buildReaderApp(
+        repository: _FakeNovelRepository(),
+        systemUiController: systemUi,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(systemUi.enterCount, greaterThan(0));
+    expect(systemUi.immersive, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(systemUi.restoreCount, greaterThan(0));
+    expect(systemUi.immersive, isFalse);
+  });
+
+  testWidgets(
+    'novel reader restores system bars while a page route covers it',
+    (tester) async {
+      final systemUi = _RecordingReaderSystemUiController();
+      await tester.pumpWidget(
+        _buildReaderApp(
+          repository: _FakeNovelRepository(),
+          systemUiController: systemUi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isTrue);
+
+      final navigator = Navigator.of(
+        tester.element(find.byType(NovelReaderPage)),
+      );
+      unawaited(
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('覆盖页面')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isFalse);
+
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isTrue);
+    },
+  );
+
+  testWidgets(
+    'vertical reading window respects the top inset and updates the footer',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildReaderApp(
+          repository: _FakeNovelRepository(
+            firstParagraphs: List<String>.generate(
+              40,
+              (index) => '安全区段落 $index ${List<String>.filled(20, '正文').join()}',
+            ),
+          ),
+          safeArea: const EdgeInsets.only(top: 24, bottom: 18),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final list = find.byKey(const Key('novel-reader-paragraph-list'));
+      expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
+      expect(
+        find.byKey(const Key('shared-reader-persistent-status-bar')),
+        findsOneWidget,
+      );
+      final before = _readingStatusCenter(tester);
+      expect(before, contains('本章'));
+      expect(before, contains('剩'));
+
+      final scroll = tester
+          .state<ScrollableState>(
+            find.descendant(of: list, matching: find.byType(Scrollable)),
+          )
+          .position;
+      final viewport = scroll.viewportDimension;
+      final start = scroll.pixels;
+      await tester.tapAt(const Offset(650, 300));
+      await tester.pump(const Duration(milliseconds: 330));
+      await tester.pumpAndSettle();
+
+      final delta = scroll.pixels - start;
+      expect(delta, greaterThan(viewport * 0.75));
+      expect(delta, lessThan(viewport));
+      expect(_readingStatusCenter(tester), isNot(before));
+      expect(
+        tester
+            .getBottomLeft(
+              find.byKey(const Key('shared-reader-persistent-status-center')),
+            )
+            .dy,
+        lessThanOrEqualTo(tester.getSize(find.byType(Scaffold)).height - 18),
+      );
+    },
+  );
+
+  testWidgets('paged page content fills the reading window above the footer', (
+    tester,
+  ) async {
+    final repository = _FakeNovelRepository(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        flowMode: NovelReaderFlowMode.pagedLtr,
+      ),
+      firstParagraphs: <String>['${List.filled(2000, '正文内容').join()}。'],
+      firstRawHtml: '<p>${List.filled(2000, '正文内容').join()}。</p>',
+    );
+    await tester.pumpWidget(_buildReaderApp(repository: repository));
+    await _pumpPagedCacheReady(tester);
+
+    final pageView = find.byKey(const Key('novel-reader-paged-page-view'));
+    final pageViewBox = tester.renderObject<RenderBox>(pageView);
+    final content = find.descendant(
+      of: pageView,
+      matching: find.byType(ForumHtmlWidgetPostRenderer),
+    );
+    final contentBox = tester.renderObject<RenderBox>(content.first);
+    expect(contentBox.size.height, closeTo(pageViewBox.size.height, 2));
+    expect(
+      find.byKey(const Key('shared-reader-persistent-status-bar')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getBottomLeft(pageView).dy,
+      lessThanOrEqualTo(
+        tester
+            .getTopLeft(
+              find.byKey(const Key('shared-reader-persistent-status-bar')),
+            )
+            .dy,
+      ),
+    );
   });
 
   testWidgets('NovelReaderPage hides menu after content scroll', (
@@ -2074,9 +2256,8 @@ void main() {
       );
       final provider = novelReaderControllerProvider(args);
       final initial = container.read(provider).value!;
-      final failureText = AppLocalizations.of(
-        context,
-      ).novelSaveDisplaySettingsFailed;
+      final failureText = AppLocalizations.of(context)
+          .novelSaveDisplaySettingsFailed;
       await _showReaderMenu(tester);
       await tester.tap(
         find.byKey(const Key('shared-reader-bottom-action-display')),
@@ -2183,9 +2364,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       final context = tester.element(find.byType(NovelReaderPage));
-      final failureText = AppLocalizations.of(
-        context,
-      ).novelSaveDisplaySettingsFailed;
+      final failureText = AppLocalizations.of(context)
+          .novelSaveDisplaySettingsFailed;
       final container = ProviderScope.containerOf(context, listen: false);
       const args = NovelReaderArgs(
         novelId: 'novel:49:100',
@@ -2318,27 +2498,25 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('novel-reader-page-indicator-text')),
+      find.byKey(const Key('shared-reader-persistent-status-bar')),
       findsOneWidget,
     );
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    final statusCenter = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('shared-reader-persistent-status-center')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(statusCenter.style?.fontSize, 11);
     final contentInset = tester.widget<Padding>(
       find.byKey(const ValueKey<String>('novel-reader-paged-content-inset-0')),
     );
     expect(
       (contentInset.padding as EdgeInsets).bottom,
-      greaterThan(18),
-      reason: 'The page indicator reserves only its compact text footprint.',
-    );
-    final indicatorText = tester.widget<Text>(
-      find.byKey(const Key('novel-reader-page-indicator-text')),
-    );
-    expect(indicatorText.style?.fontSize, 11);
-    expect(
-      find.ancestor(
-        of: find.byKey(const Key('novel-reader-page-indicator-text')),
-        matching: find.byType(DecoratedBox),
-      ),
-      findsNothing,
+      0,
+      reason:
+          'Page progress lives in the persistent footer, not inside the page.',
     );
     expect(
       tester
@@ -2348,7 +2526,9 @@ void main() {
           .dy,
       lessThanOrEqualTo(
         tester
-            .getTopLeft(find.byKey(const Key('novel-reader-page-indicator')))
+            .getTopLeft(
+              find.byKey(const Key('shared-reader-persistent-status-bar')),
+            )
             .dy,
       ),
     );
@@ -2671,20 +2851,20 @@ void main() {
     await tester.pumpWidget(_buildReaderApp(repository: repository));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('1 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
     await tester.tapAt(const Offset(720, 300));
     await tester.pump(
       ReaderPagedTurnMotion.tapConfirmationDelay -
           const Duration(milliseconds: 1),
     );
-    expect(find.textContaining('1 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump(ReaderPagedTurnMotion.animationDuration);
     await tester.pumpAndSettle();
-    expect(find.textContaining('2 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 2 /'));
 
     await _tapPagedReaderZone(tester, const Offset(80, 300));
-    expect(find.textContaining('1 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage reverses side tap mapping in paged RTL', (
@@ -2703,10 +2883,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tapPagedReaderZone(tester, const Offset(80, 300));
-    expect(find.textContaining('2 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 2 /'));
 
     await _tapPagedReaderZone(tester, const Offset(720, 300));
-    expect(find.textContaining('1 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage center tap still toggles paged chrome only', (
@@ -2730,7 +2910,7 @@ void main() {
       find.byKey(const Key('shared-reader-top-overlay-hit-test-gate')),
     );
     expect(topGate.ignoring, isFalse);
-    expect(find.textContaining('1 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage side taps continue across chapter boundaries', (
@@ -2826,7 +3006,7 @@ void main() {
       find.byKey(const Key('novel-reader-paged-page-view')),
     );
     expect(pageView.reverse, isTrue);
-    expect(find.textContaining('1 /'), findsOneWidget);
+    expect(_readingStatusCenter(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage constrains wide content column', (tester) async {
@@ -2975,15 +3155,20 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final indicator = find.byKey(const Key('novel-reader-page-indicator-text'));
-    final before = tester.widget<Text>(indicator).data;
+    final before = _readingStatusCenter(tester);
     final action = find.byKey(
       const Key('novel-reader-chapter-interactions-button'),
     );
     expect(action, findsOneWidget);
     expect(
       tester.getRect(action).bottom,
-      lessThan(tester.getRect(indicator).top),
+      lessThan(
+        tester
+            .getRect(
+              find.byKey(const Key('shared-reader-persistent-status-bar')),
+            )
+            .top,
+      ),
     );
     await tester.tap(action);
     await tester.pumpAndSettle();
@@ -2996,7 +3181,7 @@ void main() {
     );
     Navigator.of(tester.element(find.byType(ThreadDetailPage))).pop();
     await tester.pumpAndSettle();
-    expect(tester.widget<Text>(indicator).data, before);
+    expect(_readingStatusCenter(tester), before);
     expect(locator.calls, 1);
   });
 
@@ -3020,9 +3205,7 @@ void main() {
     final page = tester.element(
       find.byKey(const Key('novel-reader-paged-page-session')),
     );
-    final indicator = tester
-        .widget<Text>(find.byKey(const Key('novel-reader-page-indicator-text')))
-        .data;
+    final status = _readingStatusCenter(tester);
 
     await _showReaderMenu(tester);
     await tester.tap(
@@ -3047,14 +3230,7 @@ void main() {
       tester.element(find.byKey(const Key('novel-reader-paged-page-session'))),
       same(page),
     );
-    expect(
-      tester
-          .widget<Text>(
-            find.byKey(const Key('novel-reader-page-indicator-text')),
-          )
-          .data,
-      indicator,
-    );
+    expect(_readingStatusCenter(tester), status);
     await _showReaderMenu(tester);
     expect(
       find.byKey(const Key('shared-reader-bottom-action-chapter-interactions')),
@@ -3531,8 +3707,7 @@ void main() {
             preferences: NovelReaderPreferences.defaults().copyWith(
               flowMode: flowMode,
             ),
-            firstRawHtml:
-                '<p><a href="https://elsewhere.test/read?a=1&amp;a=2#section">External link</a></p>',
+            firstRawHtml: '<p><a href="https://elsewhere.test/read?a=1&amp;a=2#section">External link</a></p>',
             firstParagraphs: const ['External link'],
           ),
           clipboardWriter: clipboard,
@@ -3567,8 +3742,7 @@ void main() {
     await tester.pumpWidget(
       _buildReaderApp(
         repository: _FakeNovelRepository(
-          firstRawHtml:
-              '<p><a href="https://bbs.yamibo.com/misc.php?mod=tag&amp;id=28">Forum tag</a></p>',
+          firstRawHtml: '<p><a href="https://bbs.yamibo.com/misc.php?mod=tag&amp;id=28">Forum tag</a></p>',
           firstParagraphs: const ['Forum tag'],
         ),
         clipboardWriter: clipboard,
@@ -3671,8 +3845,7 @@ void main() {
       await tester.pumpWidget(
         _buildReaderApp(
           repository: _FakeNovelRepository(
-            firstRawHtml:
-                '<p><a href="forum.php?mod=redirect&amp;goto=findpost&amp;ptid=200&amp;pid=5001">Target floor</a></p>',
+            firstRawHtml: '<p><a href="forum.php?mod=redirect&amp;goto=findpost&amp;ptid=200&amp;pid=5001">Target floor</a></p>',
             firstParagraphs: const ['Target floor'],
           ),
           threadPostLocator: locator,
@@ -4000,6 +4173,16 @@ ScrollPosition _verticalPosition(WidgetTester tester) => tester
     )
     .position;
 
+String _readingStatusCenter(WidgetTester tester) {
+  final text = tester.widget<Text>(
+    find.descendant(
+      of: find.byKey(const Key('shared-reader-persistent-status-center')),
+      matching: find.byType(Text),
+    ),
+  );
+  return text.data ?? '';
+}
+
 Future<void> _tapPagedReaderZone(WidgetTester tester, Offset position) async {
   await tester.tapAt(position);
   await tester.pump(ReaderPagedTurnMotion.tapConfirmationDelay);
@@ -4042,11 +4225,31 @@ Widget _buildReaderApp({
   ValueListenable<ThemeData>? themeListenable,
   String initialEpisodeId = 'novel:49:100:5001',
   Widget? home,
+  EdgeInsets safeArea = EdgeInsets.zero,
+  ReaderSystemUiController? systemUiController,
   _FakeNovelChapterDockRepository? dockRepository,
 }) {
   dockRepository ??= _FakeNovelChapterDockRepository();
+  final homePage =
+      home ??
+      NovelReaderPage(
+        novelId: 'novel:49:100',
+        initialEpisodeId: initialEpisodeId,
+      );
+  final page = safeArea == EdgeInsets.zero
+      ? homePage
+      : Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(padding: safeArea, viewPadding: safeArea),
+            child: homePage,
+          ),
+        );
   return ProviderScope(
     overrides: [
+      readerSystemUiControllerProvider.overrideWithValue(
+        systemUiController ?? const _NoopReaderSystemUiController(),
+      ),
       novelChapterInteractionsDockPreferencesRepositoryProvider
           .overrideWithValue(dockRepository),
       novelRepositoryProvider.overrideWithValue(repository),
@@ -4085,30 +4288,43 @@ Widget _buildReaderApp({
         threadPostLocatorProvider.overrideWithValue(threadPostLocator),
     ],
     child: themeListenable == null
-        ? LocalizedTestApp(
-            theme: theme,
-            home:
-                home ??
-                NovelReaderPage(
-                  novelId: 'novel:49:100',
-                  initialEpisodeId: initialEpisodeId,
-                ),
-          )
+        ? LocalizedTestApp(theme: theme, home: page)
         : ValueListenableBuilder<ThemeData>(
             valueListenable: themeListenable,
             builder: (context, activeTheme, child) {
-              return LocalizedTestApp(
-                theme: activeTheme,
-                home:
-                    home ??
-                    NovelReaderPage(
-                      novelId: 'novel:49:100',
-                      initialEpisodeId: initialEpisodeId,
-                    ),
-              );
+              return LocalizedTestApp(theme: activeTheme, home: page);
             },
           ),
   );
+}
+
+final class _NoopReaderSystemUiController implements ReaderSystemUiController {
+  const _NoopReaderSystemUiController();
+
+  @override
+  Future<void> enterImmersive() async {}
+
+  @override
+  Future<void> restore() async {}
+}
+
+final class _RecordingReaderSystemUiController
+    implements ReaderSystemUiController {
+  bool immersive = false;
+  int enterCount = 0;
+  int restoreCount = 0;
+
+  @override
+  Future<void> enterImmersive() async {
+    immersive = true;
+    enterCount += 1;
+  }
+
+  @override
+  Future<void> restore() async {
+    immersive = false;
+    restoreCount += 1;
+  }
 }
 
 final class _FakeNovelChapterDockRepository

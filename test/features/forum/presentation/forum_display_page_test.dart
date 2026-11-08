@@ -1,11 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' as riverpod_misc;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
+import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
+import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
+import 'package:y300/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:y300/app/theme/app_theme.dart';
@@ -763,8 +770,7 @@ void main() {
                 replies: 1,
                 views: 5,
                 dateline: 'today',
-                avatarUrl:
-                    'https://bbs.yamibo.com/uc_server/data/avatar/000/00/00/42_avatar_middle.jpg',
+                avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/00/00/42_avatar_middle.jpg',
               ),
             ],
           ),
@@ -951,8 +957,7 @@ void main() {
                 replies: 0,
                 views: 1,
                 dateline: 'today',
-                threadUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=572604&mobile=2',
+                threadUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=572604&mobile=2',
               ),
             ],
           ),
@@ -1072,8 +1077,7 @@ void main() {
                 views: 1,
                 dateline: 'today',
                 sourceTagName: '長篇連載',
-                sourceTagUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=69&mobile=2',
+                sourceTagUrl: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=69&mobile=2',
               ),
             ],
           ),
@@ -1139,8 +1143,7 @@ void main() {
               page: page,
               total: 24,
               lastPage: 8,
-              headImageUrl:
-                  'https://bbs.yamibo.com/data/attachment/album/202603/02/head.png',
+              headImageUrl: 'https://bbs.yamibo.com/data/attachment/album/202603/02/head.png',
               threads: _manyThreads(
                 suffix: suffix,
                 count: 12,
@@ -1238,8 +1241,7 @@ void main() {
             topEntries: const <ForumDisplayTopEntry>[
               ForumDisplayTopEntry(
                 title: '置顶跳转',
-                url:
-                    'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=535389&mobile=2',
+                url: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=535389&mobile=2',
                 tid: '535389',
                 badgeLabel: '置顶',
               ),
@@ -1368,8 +1370,7 @@ void main() {
           _displayData(
             page: page,
             total: 52718,
-            headImageUrl:
-                'https://bbs.yamibo.com/data/attachment/album/202603/02/head.png',
+            headImageUrl: 'https://bbs.yamibo.com/data/attachment/album/202603/02/head.png',
             threads: [
               ForumThreadSummary(
                 tid: '572604',
@@ -1636,8 +1637,7 @@ void main() {
                 dateline: 'today',
                 excerpt: '摘要',
                 sourceTagName: '長篇連載',
-                sourceTagUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=69&mobile=2',
+                sourceTagUrl: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=69&mobile=2',
               ),
             ],
           ),
@@ -1720,10 +1720,8 @@ void main() {
               ForumDisplaySubForum(
                 fid: '52',
                 title: '百合会最萌世界杯专版！',
-                url:
-                    'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=52&mobile=2',
-                iconUrl:
-                    'https://bbs.yamibo.com/data/attachment/common/9a/common_52_icon.gif',
+                url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=52&mobile=2',
+                iconUrl: 'https://bbs.yamibo.com/data/attachment/common/9a/common_52_icon.gif',
               ),
             ],
             threads: const <ForumThreadSummary>[],
@@ -1867,6 +1865,147 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets('local block rules hide matching thread cards', (tester) async {
+      _seedBlockedThreads(const <String, String>{'000101': '已屏蔽的帖子'});
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 2,
+            threads: [
+              _blockedTestThread(tid: '101', subject: '已屏蔽的帖子'),
+              _blockedTestThread(tid: '102', subject: '正常帖子'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-101')), findsNothing);
+      expect(find.byKey(const Key('forum-thread-102')), findsOneWidget);
+    });
+
+    testWidgets('blocking a card hides it immediately and undo restores it', (
+      tester,
+    ) async {
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 1,
+            threads: [_blockedTestThread(tid: '201', subject: '要屏蔽的帖子')],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-201')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('thread-block-menu-201')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('thread-block-action-201')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-201')), findsNothing);
+      expect(find.text('撤销'), findsOneWidget);
+
+      await tester.tap(find.text('撤销'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-201')), findsOneWidget);
+    });
+
+    testWidgets('web blacklist hides threads by their author id', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+          <String, Object?>{
+            'schemaVersion': 1,
+            'accounts': <String, Object?>{
+              '11': <String, Object?>{
+                'lastSuccessAt': 1000,
+                'members': <Object?>[
+                  <String, Object?>{'userId': '42', 'username': 'Blocked'},
+                ],
+              },
+            },
+          },
+        ),
+      });
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 2,
+            threads: [
+              _blockedTestThread(tid: '301', subject: '黑名单作者', uid: '42'),
+              _blockedTestThread(tid: '302', subject: '正常作者', uid: '43'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          extraOverrides: [
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-301')), findsNothing);
+      expect(find.byKey(const Key('forum-thread-302')), findsOneWidget);
+    });
+
+    testWidgets('a fully filtered page explains the rules and keeps paging', (
+      tester,
+    ) async {
+      _seedBlockedThreads(const <String, String>{'101': '第一条', '102': '第二条'});
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 4,
+            lastPage: 2,
+            threads: [
+              _blockedTestThread(tid: '101', subject: '第一条'),
+              _blockedTestThread(tid: '102', subject: '第二条'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ForumDisplayPage)),
+      );
+      expect(find.text(l10n.contentFilterHiddenOnPage), findsOneWidget);
+      expect(find.text(l10n.contentFilterHiddenOnPageHint), findsOneWidget);
+      expect(
+        find.byKey(const Key('forum-display-load-more-button')),
+        findsOneWidget,
+      );
+    });
   });
 }
 
@@ -1964,15 +2103,13 @@ ForumDisplayData _displayData({
       ),
       ForumDisplayFilterItem(
         label: '最新',
-        url:
-            'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=lastpost&mobile=2',
+        url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=lastpost&mobile=2',
       ),
     ],
     typeFilters: const <ForumDisplayFilterItem>[
       ForumDisplayFilterItem(
         label: '公告',
-        url:
-            'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=65&mobile=2',
+        url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=65&mobile=2',
         typeid: '65',
       ),
     ],
@@ -2355,4 +2492,36 @@ class _FakeThreadRepository implements ThreadRepository {
       metadata: const DataReadMetadata.network(),
     );
   }
+}
+
+ForumThreadSummary _blockedTestThread({
+  required String tid,
+  required String subject,
+  String uid = '',
+}) {
+  return ForumThreadSummary(
+    tid: tid,
+    subject: subject,
+    uid: uid,
+    author: 'alice',
+    replies: 0,
+    views: 1,
+    dateline: 'today',
+  );
+}
+
+void _seedBlockedThreads(Map<String, String> subjects) {
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'content_filter.blocked_threads.v1': jsonEncode(<String, Object>{
+      'schemaVersion': 1,
+      'threads': [
+        for (final entry in subjects.entries)
+          <String, Object?>{
+            'tid': entry.key,
+            'subject': entry.value,
+            'blockedAt': 1000,
+          },
+      ],
+    }),
+  });
 }

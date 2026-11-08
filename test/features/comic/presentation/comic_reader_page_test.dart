@@ -500,6 +500,98 @@ void main() {
     expect(find.text('已添加书签'), findsOneWidget);
   });
 
+  testWidgets('ComicReaderPage no-image state offers source thread entries', (
+    tester,
+  ) async {
+    await prepareLargeViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ..._interactionOverrides(),
+          comicRepositoryProvider.overrideWithValue(
+            _ReaderFakeRepository(images: const <ComicEpisodeImageItem>[]),
+          ),
+          comicReadingStateWriterProvider.overrideWithValue(
+            _NoopReadingStateWriter(),
+          ),
+          comicReaderServiceProvider.overrideWith(
+            (ref) async => _ReaderFakeService(imageUrls: const <String>[]),
+          ),
+          comicDownloadServiceProvider.overrideWithValue(
+            _NoopComicDownloadService(),
+          ),
+          imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
+        ],
+        child: const LocalizedTestApp(
+          home: ComicReaderPage(
+            comicId: 'yamibo:100',
+            episodeId: 'yamibo:100:101',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('comic-reader-no-images-source-tags')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('comic-reader-no-images-source-thread')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('comic-reader-no-images-source-tags')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('查看原帖标签'), findsWidgets);
+  });
+
+  testWidgets('ComicReaderPage failure state keeps source thread entries', (
+    tester,
+  ) async {
+    await prepareLargeViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          ..._interactionOverrides(),
+          comicRepositoryProvider.overrideWithValue(
+            _ReaderFakeRepository(images: const <ComicEpisodeImageItem>[]),
+          ),
+          comicReadingStateWriterProvider.overrideWithValue(
+            _NoopReadingStateWriter(),
+          ),
+          comicReaderServiceProvider.overrideWith(
+            (ref) async => _FailingReaderService(),
+          ),
+          comicDownloadServiceProvider.overrideWithValue(
+            _NoopComicDownloadService(),
+          ),
+          imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
+        ],
+        child: const LocalizedTestApp(
+          home: ComicReaderPage(
+            comicId: 'yamibo:100',
+            episodeId: 'yamibo:100:101',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('comic-reader-error-source-tags')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('comic-reader-error-source-thread')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('ComicReaderPage applies shared vertical page spacing', (
     tester,
   ) async {
@@ -1494,6 +1586,15 @@ class _NoopComicDownloadService implements ComicDownloadService {
 }
 
 class _ReaderFakeService implements ComicReaderService {
+  _ReaderFakeService({
+    this.imageUrls = const <String>[
+      'https://img.test/101-1.jpg',
+      'https://img.test/101-2.jpg',
+    ],
+  });
+
+  final List<String> imageUrls;
+
   @override
   Future<ComicImageCacheResult> cacheImage({
     required String imageUrl,
@@ -1514,10 +1615,7 @@ class _ReaderFakeService implements ComicReaderService {
 
   @override
   Future<ComicEpisodeImagesFetchResult> fetchEpisodeImages(String tid) async {
-    return const ComicEpisodeImagesFetched(<String>[
-      'https://img.test/101-1.jpg',
-      'https://img.test/101-2.jpg',
-    ]);
+    return ComicEpisodeImagesFetched(imageUrls);
   }
 
   @override
@@ -2063,4 +2161,30 @@ class _ReaderBlockingRepository extends _ReaderFakeRepository {
   }) {
     return _episodesCompleter.future;
   }
+}
+
+class _FailingReaderService implements ComicReaderService {
+  @override
+  Future<ComicImageCacheResult> cacheImage({
+    required String imageUrl,
+    String? cacheKey,
+    ImageCacheOwnerType? ownerType,
+    String? ownerId,
+    ImageCacheRole role = ImageCacheRole.comicPage,
+    String? episodeId,
+    int? imageIndex,
+    bool protected = false,
+  }) async {
+    return const ComicImageCacheResult(success: false);
+  }
+
+  @override
+  Future<ComicEpisodeImagesFetchResult> fetchEpisodeImages(String tid) async {
+    return const ComicEpisodeImagesFetchFailed(
+      reason: ComicEpisodeImagesFetchFailureReason.network,
+    );
+  }
+
+  @override
+  Future<void> prefetchImages({required List<String> imageUrls}) async {}
 }

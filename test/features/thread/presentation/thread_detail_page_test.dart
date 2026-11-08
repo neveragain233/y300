@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter/rendering.dart'
     show RenderAspectRatio, RenderParagraph, ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +21,9 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+
 import '../../profile/test_support/profile_repository_fixture.dart';
+
 import 'package:y300/core/data_source/api_result_data_read_adapter.dart';
 import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:y300/core/network/api_result.dart';
@@ -52,7 +57,9 @@ import 'package:y300/features/composer_shared/data/providers/composer_providers.
 import 'package:y300/features/composer_shared/domain/models/composer_attachment_models.dart';
 import 'package:y300/features/composer_shared/domain/models/composer_draft_models.dart';
 import 'package:y300/features/composer_shared/domain/services/composer_image_upload_coordinator.dart';
+
 import '../../../support/favorite_command_test_support.dart';
+
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/data/providers/novel_providers.dart';
 import 'package:y300/features/novel/data/repositories/novel_repository.dart';
@@ -844,9 +851,8 @@ void main() {
               theme: dark ? AppTheme.dark() : AppTheme.light(),
               home: Builder(
                 builder: (context) => MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: const TextScaler.linear(1.6)),
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: const TextScaler.linear(1.6)),
                   child: ThreadDetailPage(tid: '100', subject: subject),
                 ),
               ),
@@ -1322,8 +1328,7 @@ void main() {
                 ratingSummary: const ThreadPostRatingSummary(
                   participantText: '参与人数 1',
                   scoreText: '积分 +2',
-                  viewAllUrl:
-                      'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=1',
+                  viewAllUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=1',
                   ratings: <ThreadPostRating>[
                     ThreadPostRating(
                       userName: '预览用户',
@@ -1382,8 +1387,7 @@ void main() {
                 ratingSummary: const ThreadPostRatingSummary(
                   participantText: '参与人数 1',
                   scoreText: '积分 +2',
-                  viewAllUrl:
-                      'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=1',
+                  viewAllUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=1',
                   ratings: <ThreadPostRating>[
                     ThreadPostRating(
                       userName: '预览用户',
@@ -1561,16 +1565,11 @@ void main() {
               views: 12,
               currentPage: 1,
               lastPage: 2,
-              nextPageUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
-              reverseOrderUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&ordertype=1',
-              onlyAuthorUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&authorid=1',
-              favoriteUrl:
-                  'https://bbs.yamibo.com/home.php?mod=spacecp&ac=favorite&type=thread&id=100',
-              shareUrl:
-                  'https://bbs.yamibo.com/home.php?mod=spacecp&ac=share&type=thread&id=100',
+              nextPageUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
+              reverseOrderUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&ordertype=1',
+              onlyAuthorUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&authorid=1',
+              favoriteUrl: 'https://bbs.yamibo.com/home.php?mod=spacecp&ac=favorite&type=thread&id=100',
+              shareUrl: 'https://bbs.yamibo.com/home.php?mod=spacecp&ac=share&type=thread&id=100',
               homeUrl: 'https://bbs.yamibo.com/index.php',
               desktopUrl:
                   'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100',
@@ -1586,16 +1585,14 @@ void main() {
                   dateline: 'today',
                   rateUrl:
                       'https://bbs.yamibo.com/forum.php?mod=misc&action=rate',
-                  commentUrl:
-                      'https://bbs.yamibo.com/forum.php?mod=misc&action=comment',
+                  commentUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=comment',
                   replyUrl:
                       'https://bbs.yamibo.com/forum.php?mod=post&action=reply',
                   comments: const <ThreadPostCommentEntry>[
                     ThreadPostCommentEntry(
                       author: '花実',
                       authorId: '231169',
-                      avatarUrl:
-                          'https://bbs.yamibo.com/uc_server/data/avatar/000/23/11/69_avatar_small.jpg',
+                      avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/23/11/69_avatar_small.jpg',
                       message: '活该你日和你国同性恋权益烂的要死',
                       dateline: '2026-6-21 12:31',
                     ),
@@ -1603,8 +1600,7 @@ void main() {
                   ratingSummary: const ThreadPostRatingSummary(
                     participantText: '参与人数 1',
                     scoreText: '积分 +2',
-                    viewAllUrl:
-                        'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=1',
+                    viewAllUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=1',
                     ratings: <ThreadPostRating>[
                       ThreadPostRating(
                         userName: '子子子车',
@@ -1640,15 +1636,12 @@ void main() {
             views: 12,
             currentPage: 2,
             lastPage: 2,
-            previousPageUrl:
-                'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+            previousPageUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
             reverseOrderUrl: null,
             onlyAuthorUrl: null,
-            shareUrl:
-                'https://bbs.yamibo.com/home.php?mod=spacecp&ac=share&type=thread&id=100',
+            shareUrl: 'https://bbs.yamibo.com/home.php?mod=spacecp&ac=share&type=thread&id=100',
             homeUrl: 'https://bbs.yamibo.com/index.php',
-            desktopUrl:
-                'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
+            desktopUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
             perPage: 1,
             posts: [
               ThreadPost(
@@ -1948,10 +1941,8 @@ void main() {
               views: 12,
               currentPage: 2,
               lastPage: 2,
-              previousPageUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
-              desktopUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
+              previousPageUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+              desktopUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
               perPage: 1,
               posts: <ThreadPost>[
                 ThreadPost(
@@ -1993,10 +1984,8 @@ void main() {
               views: 12,
               currentPage: 1,
               lastPage: 2,
-              nextPageUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
-              desktopUrl:
-                  'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+              nextPageUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=2',
+              desktopUrl: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
               perPage: 1,
               posts: <ThreadPost>[
                 ThreadPost(
@@ -2743,34 +2732,39 @@ void main() {
       );
     });
 
-    testWidgets('image reader return preserves origin for a closed fold target', (
-      tester,
-    ) async {
-      final repository = _imageReturnRepository(
-        '<img src="https://example.com/visible.jpg">'
-        '<div class="showcollapse_box">'
-        '<div class="showcollapse_title">Hidden pages</div>'
-        '<div class="showcollapse_content"><img src="https://example.com/hidden.jpg"></div>'
-        '</div><p>After the fold</p>',
-      );
-      final reader = await _openImageReturnReader(tester, repository);
-      expect(reader.request.group.entries, hasLength(2));
-      expect(_imageReturnBodyImage(1, skipOffstage: false), findsNothing);
-      final origin = _imageReturnScrollable(tester).position.pixels;
+    testWidgets(
+      'image reader return preserves origin for a closed fold target',
+      (tester) async {
+        final repository = _imageReturnRepository(
+          '<img src="https://example.com/visible.jpg">'
+          '<div class="showcollapse_box">'
+          '<div class="showcollapse_title">Hidden pages</div>'
+          '<div class="showcollapse_content"><img src="https://example.com/hidden.jpg"></div>'
+          '</div><p>After the fold</p>',
+        );
+        final reader = await _openImageReturnReader(tester, repository);
+        expect(reader.request.group.entries, hasLength(2));
+        expect(_imageReturnBodyImage(1, skipOffstage: false), findsNothing);
+        final origin = _imageReturnScrollable(tester).position.pixels;
 
-      await _prepareImageReturn(tester, reader, _imageReturnResult(reader, 1));
-      expect(
-        _imageReturnScrollable(tester).position.pixels,
-        closeTo(origin, 0.1),
-      );
-      await tester.binding.handlePopRoute();
-      await _pumpImageReturnTransition(tester);
-      expect(
-        _imageReturnScrollable(tester).position.pixels,
-        closeTo(origin, 0.1),
-      );
-      expect(_imageReturnBodyImage(1), findsNothing);
-    });
+        await _prepareImageReturn(
+          tester,
+          reader,
+          _imageReturnResult(reader, 1),
+        );
+        expect(
+          _imageReturnScrollable(tester).position.pixels,
+          closeTo(origin, 0.1),
+        );
+        await tester.binding.handlePopRoute();
+        await _pumpImageReturnTransition(tester);
+        expect(
+          _imageReturnScrollable(tester).position.pixels,
+          closeTo(origin, 0.1),
+        );
+        expect(_imageReturnBodyImage(1), findsNothing);
+      },
+    );
 
     testWidgets('image reader return rejects a refreshed source snapshot', (
       tester,
@@ -3037,8 +3031,7 @@ void main() {
                 pid: 'p1',
                 author: 'alice',
                 authorId: '1',
-                avatarUrl:
-                    'https://bbs.yamibo.com/uc_server/data/avatar/000/00/00/01_avatar_small.jpg',
+                avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/00/00/01_avatar_small.jpg',
                 message: '<p>正文</p>',
                 number: 1,
                 isFirst: true,
@@ -3158,8 +3151,7 @@ void main() {
             home: Scaffold(
               body: ThreadDetailContent(
                 state: state,
-                imageReferer:
-                    'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+                imageReferer: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
                 onLoadPreviousPage: () {},
                 onLoadNextPage: () {},
                 onLoadPageNumber: (_) {},
@@ -3235,8 +3227,7 @@ void main() {
             home: Scaffold(
               body: ThreadDetailContent(
                 state: state,
-                imageReferer:
-                    'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+                imageReferer: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
                 onLoadPreviousPage: () {},
                 onLoadNextPage: () {},
                 onLoadPageNumber: (_) {},
@@ -3302,8 +3293,7 @@ void main() {
               home: Scaffold(
                 body: ThreadDetailContent(
                   state: state,
-                  imageReferer:
-                      'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+                  imageReferer: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
                   onLoadPreviousPage: () {},
                   onLoadNextPage: () {},
                   onLoadPageNumber: (_) {},
@@ -3578,12 +3568,8 @@ void main() {
               views: 12,
               currentPage: page,
               lastPage: 1,
-              reverseOrderUrl: isReverse
-                  ? null
-                  : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&ordertype=1',
-              onlyAuthorUrl: isAuthorOnly
-                  ? null
-                  : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&authorid=1',
+              reverseOrderUrl: isReverse ? null : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&ordertype=1',
+              onlyAuthorUrl: isAuthorOnly ? null : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&authorid=1',
               desktopUrl:
                   'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=$page',
               perPage: 3,
@@ -3860,8 +3846,7 @@ void main() {
                 pid: 'p1',
                 author: 'alice',
                 authorId: '1',
-                message:
-                    '<a href="https://bbs.yamibo.com/misc.php?mod=tag&id=20674">目录</a>',
+                message: '<a href="https://bbs.yamibo.com/misc.php?mod=tag&id=20674">目录</a>',
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
@@ -3907,9 +3892,7 @@ void main() {
                 pid: 'p$tid',
                 author: 'alice',
                 authorId: '1',
-                message: tid == '572514'
-                    ? '<p>新帖子正文</p>'
-                    : '<a href="https://bbs.yamibo.com/thread-572514-1-1.html">00</a>',
+                message: tid == '572514' ? '<p>新帖子正文</p>' : '<a href="https://bbs.yamibo.com/thread-572514-1-1.html">00</a>',
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
@@ -3968,8 +3951,7 @@ void main() {
                       pid: 'source',
                       author: 'alice',
                       authorId: '1',
-                      message:
-                          '<a href="https://bbs.yamibo.com/forum.php?mod=viewthread&tid=572057&page=3&extra=#pid41560047">跳到楼层</a>',
+                      message: '<a href="https://bbs.yamibo.com/forum.php?mod=viewthread&tid=572057&page=3&extra=#pid41560047">跳到楼层</a>',
                       number: 1,
                       isFirst: true,
                       dateline: 'today',
@@ -4167,9 +4149,8 @@ void main() {
           home: ValueListenableBuilder<double>(
             valueListenable: textScale,
             builder: (context, scale, _) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(scale)),
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
               child: const ThreadDetailPage(
                 tid: '100',
                 targetPid: 'target',
@@ -4319,8 +4300,7 @@ void main() {
                 targetPid: post.pid,
                 landing: ThreadPostLanding.bodyEnd,
                 onTargetVisible: (_) => visibleCount++,
-                imageReferer:
-                    'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
+                imageReferer: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
                 onLoadPreviousPage: () {},
                 onLoadNextPage: () {},
                 onLoadPageNumber: (_) {},
@@ -4404,8 +4384,7 @@ void main() {
                 ratingSummary: const ThreadPostRatingSummary(
                   participantText: '参与人数 1',
                   scoreText: '积分 +2',
-                  viewAllUrl:
-                      'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=rated',
+                  viewAllUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=100&pid=rated',
                   ratings: [
                     ThreadPostRating(
                       userName: '预览用户',
@@ -4472,8 +4451,7 @@ void main() {
                   pid: 'source',
                   author: 'alice',
                   authorId: '1',
-                  message:
-                      '<a href="https://bbs.yamibo.com/forum.php?mod=redirect&goto=findpost&ptid=572057&pid=41554030&fromuid=420637">findpost</a>',
+                  message: '<a href="https://bbs.yamibo.com/forum.php?mod=redirect&goto=findpost&ptid=572057&pid=41554030&fromuid=420637">findpost</a>',
                   number: 1,
                   isFirst: true,
                   dateline: 'today',
@@ -4487,8 +4465,7 @@ void main() {
           tid: '572057',
           pid: '41554030',
           page: 2,
-          url:
-              'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=572057&page=2#pid41554030',
+          url: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=572057&page=2#pid41554030',
         ),
       );
 
@@ -5093,8 +5070,7 @@ void main() {
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
-                editUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=33&tid=100&pid=999',
+                editUrl: 'https://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=33&tid=100&pid=999',
               ),
               ThreadPost(
                 pid: '102',
@@ -5113,8 +5089,7 @@ void main() {
                 number: 3,
                 isFirst: false,
                 dateline: 'today',
-                editUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=33&tid=999&pid=103',
+                editUrl: 'https://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=33&tid=999&pid=103',
               ),
               ThreadPost(
                 pid: '104',
@@ -5124,8 +5099,7 @@ void main() {
                 number: 4,
                 isFirst: false,
                 dateline: 'today',
-                editUrl:
-                    'https://example.com/forum.php?mod=post&action=edit&fid=33&tid=100&pid=104',
+                editUrl: 'https://example.com/forum.php?mod=post&action=edit&fid=33&tid=100&pid=104',
               ),
               ThreadPost(
                 pid: '105',
@@ -5135,8 +5109,7 @@ void main() {
                 number: 5,
                 isFirst: false,
                 dateline: 'today',
-                editUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=post&action=reply&fid=33&tid=100&pid=105',
+                editUrl: 'https://bbs.yamibo.com/forum.php?mod=post&action=reply&fid=33&tid=100&pid=105',
               ),
               ThreadPost(
                 pid: '106',
@@ -5146,8 +5119,7 @@ void main() {
                 number: 6,
                 isFirst: false,
                 dateline: 'today',
-                editUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=abc&tid=100&pid=106',
+                editUrl: 'https://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=abc&tid=100&pid=106',
               ),
               ThreadPost(
                 pid: '107',
@@ -5157,8 +5129,7 @@ void main() {
                 number: 7,
                 isFirst: false,
                 dateline: 'today',
-                editUrl:
-                    'http://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=33&tid=100&pid=107',
+                editUrl: 'http://bbs.yamibo.com/forum.php?mod=post&action=edit&fid=33&tid=100&pid=107',
               ),
             ],
           ),
@@ -5317,8 +5288,7 @@ void main() {
                 pid: 'p1',
                 author: 'alice',
                 authorId: '1',
-                message:
-                    '<img src="static/image/common/none.gif" file="data/attachment/forum/page-1.jpg" />',
+                message: '<img src="static/image/common/none.gif" file="data/attachment/forum/page-1.jpg" />',
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
@@ -5378,8 +5348,7 @@ void main() {
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
-                rateUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=misc&action=rate&tid=100&pid=p1',
+                rateUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=rate&tid=100&pid=p1',
               ),
             ],
           ),
@@ -5448,8 +5417,7 @@ void main() {
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
-                commentUrl:
-                    'https://bbs.yamibo.com/forum.php?mod=misc&action=comment&tid=100&pid=p1',
+                commentUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=comment&tid=100&pid=p1',
               ),
             ],
           ),
@@ -5613,8 +5581,7 @@ void main() {
                 pid: 'p1',
                 author: 'alice',
                 authorId: '1',
-                message:
-                    '<p>漫画正文</p><img src="https://img.test/1.jpg"/><img src="https://img.test/%E3.jpg"/><a href="thread-100-1-1.html">1</a><a href="thread-101-1-1.html">2</a>',
+                message: '<p>漫画正文</p><img src="https://img.test/1.jpg"/><img src="https://img.test/%E3.jpg"/><a href="thread-100-1-1.html">1</a><a href="thread-101-1-1.html">2</a>',
                 number: 1,
                 isFirst: true,
                 dateline: 'today',
@@ -5711,8 +5678,7 @@ void main() {
                   pid: 'p2',
                   author: 'alice',
                   authorId: '1',
-                  message:
-                      '<img src="https://img.test/page-1.jpg"/><img src="https://img.test/page-2.jpg"/>',
+                  message: '<img src="https://img.test/page-1.jpg"/><img src="https://img.test/page-2.jpg"/>',
                   number: 2,
                   isFirst: false,
                   dateline: 'today',
@@ -6161,10 +6127,8 @@ void main() {
                   ThreadPostCommentEntry(
                     author: 'commenter',
                     authorId: '777',
-                    authorUrl:
-                        'https://bbs.yamibo.com/home.php?mod=space&uid=777&mobile=2',
-                    avatarUrl:
-                        'https://bbs.yamibo.com/uc_server/data/avatar/000/00/07/77_avatar_small.jpg',
+                    authorUrl: 'https://bbs.yamibo.com/home.php?mod=space&uid=777&mobile=2',
+                    avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/00/07/77_avatar_small.jpg',
                     message: '点评内容',
                     dateline: 'today',
                   ),
@@ -6229,8 +6193,7 @@ void main() {
                   ThreadPostCommentEntry(
                     author: 'commenter',
                     authorId: '778',
-                    avatarUrl:
-                        'https://bbs.yamibo.com/uc_server/data/avatar/000/00/07/78_avatar_small.jpg',
+                    avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/00/07/78_avatar_small.jpg',
                     message: '点评内容',
                     dateline: 'today',
                   ),
@@ -6412,8 +6375,7 @@ void main() {
                   ThreadPostCommentEntry(
                     author: 'commenter',
                     authorId: '779',
-                    avatarUrl:
-                        'https://bbs.yamibo.com/uc_server/data/avatar/noavatar.svg',
+                    avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/noavatar.svg',
                     message: '点评内容',
                     dateline: 'today',
                   ),
@@ -6470,8 +6432,7 @@ void main() {
                   ThreadPostCommentEntry(
                     author: 'commenter',
                     authorId: '780',
-                    avatarUrl:
-                        'https://bbs.yamibo.com/uc_server/data/avatar/000/00/07/80_avatar_small.jpg',
+                    avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/00/07/80_avatar_small.jpg',
                     message: '点评内容',
                     dateline: 'today',
                   ),
@@ -6550,7 +6511,9 @@ void main() {
       expect(favoriteActionService.called, isTrue);
       expect(favoriteActionService.lastTid, '100');
       expect(find.byIcon(Icons.star), findsOneWidget);
-      final l10n = AppLocalizations.of(tester.element(find.byType(ThreadDetailPage)));
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThreadDetailPage)),
+      );
       expect(find.text(l10n.threadFavoriteParseQueued), findsOneWidget);
     });
 
@@ -6625,6 +6588,277 @@ void main() {
       expect(invalidationService.invalidatedThreadIds, <String>['100']);
       expect(find.text('回复成功'), findsOneWidget);
     });
+
+    testWidgets(
+      'blacklisted topic author prompts once and other blacklisted floors collapse',
+      (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'accounts': <String, Object?>{
+                '11': <String, Object?>{
+                  'lastSuccessAt': 1000,
+                  'members': <Object?>[
+                    <String, Object?>{'userId': '42', 'username': 'Blocked'},
+                    <String, Object?>{'userId': '44', 'username': 'Muted'},
+                  ],
+                },
+              },
+            },
+          ),
+        });
+        final sessionStore = YamiboSessionStore()
+          ..saveExtracted(
+            YamiboSessionSnapshot(
+              isLoggedIn: true,
+              uid: '11',
+              username: 'Reader',
+              formhash: '',
+              updatedAt: DateTime(2026, 1, 1),
+              source: 'test',
+            ),
+          );
+        final repository = _FakeThreadRepository(
+          (String tid, int page) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _postWithAuthor(
+                  pid: 'blacklist-p1',
+                  author: 'Blocked',
+                  authorId: '42',
+                  number: 1,
+                  isFirst: true,
+                ),
+                _postWithAuthor(
+                  pid: 'blacklist-p2',
+                  author: 'Muted',
+                  authorId: '44',
+                  number: 2,
+                ),
+                _postWithAuthor(
+                  pid: 'blacklist-p3',
+                  author: 'Normal',
+                  authorId: '43',
+                  number: 3,
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            additionalOverrides: [
+              yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('blacklist-author-gate')), findsOneWidget);
+        expect(
+          find.byKey(const Key('thread-post-card-blacklist-p1')),
+          findsNothing,
+        );
+
+        await tester.tap(
+          find.byKey(const Key('blacklist-author-view-once-button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('blacklist-author-gate')), findsNothing);
+        expect(
+          find.byKey(const Key('thread-post-card-blacklist-p1')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('thread-blacklisted-post-blacklist-p2')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('thread-post-card-blacklist-p2')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('thread-post-card-blacklist-p3')),
+          findsOneWidget,
+        );
+
+        await tester.tap(
+          find.byKey(const Key('thread-blacklisted-expand-blacklist-p2')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('thread-blacklisted-post-blacklist-p2')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('thread-post-card-blacklist-p2')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('first post topic tags render in the native tag bar', (
+      tester,
+    ) async {
+      final repository = _FakeThreadRepository(
+        (String tid, int page) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            posts: [
+              ThreadPost(
+                pid: 'tag-p1',
+                author: 'fixture-user',
+                authorId: '1',
+                message: '<p>fixture-body</p>',
+                number: 1,
+                isFirst: true,
+                dateline: 'today',
+                tagLinks: const [
+                  ThreadPostTagLink(
+                    label: '漫画',
+                    url: 'https://bbs.yamibo.com/misc.php?mod=tag&id=86',
+                    tagId: '86',
+                  ),
+                  ThreadPostTagLink(
+                    label: '讨论',
+                    url: 'https://bbs.yamibo.com/misc.php?mod=tag&id=87',
+                    tagId: '87',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('thread-topic-tag-bar')), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, '漫画'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, '讨论'), findsOneWidget);
+    });
+
+    testWidgets(
+      'direct blocked entry prompts before touching the thread body',
+      (tester) async {
+        _seedBlockedThread(tid: '100', subject: '被屏蔽的主题');
+        final repository = _FakeThreadRepository(
+          (String tid, int page) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _post(
+                  pid: 'blocked-gate-p1',
+                  author: 'fixture-user',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: '<p>fixture-body</p>',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            home: const ThreadDetailPage(
+              tid: '100',
+              subject: '被屏蔽的主题',
+              gateBlockedEntry: true,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('content-filter-blocked-thread-gate')),
+          findsOneWidget,
+        );
+        expect(repository.queryHistory, isEmpty);
+
+        await tester.tap(
+          find.byKey(const Key('content-filter-view-once-button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('content-filter-blocked-thread-gate')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('thread-post-card-blocked-gate-p1')),
+          findsOneWidget,
+        );
+        expect(repository.queryHistory, isNotEmpty);
+      },
+    );
+
+    testWidgets('unblocking from the prompt opens the thread', (tester) async {
+      _seedBlockedThread(tid: '100', subject: '被屏蔽的主题');
+      final repository = _FakeThreadRepository(
+        (String tid, int page) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            posts: [
+              _post(
+                pid: 'unblocked-gate-p1',
+                author: 'fixture-user',
+                authorId: '1',
+                number: 1,
+                isFirst: true,
+                message: '<p>fixture-body</p>',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          home: const ThreadDetailPage(
+            tid: '100',
+            subject: '被屏蔽的主题',
+            gateBlockedEntry: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-unblock-and-view-button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('content-filter-blocked-thread-gate')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('thread-post-card-unblocked-gate-p1')),
+        findsOneWidget,
+      );
+    });
+  });
+}
+
+void _seedBlockedThread({required String tid, required String subject}) {
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'content_filter.blocked_threads.v1': jsonEncode(<String, Object>{
+      'schemaVersion': 1,
+      'threads': [
+        <String, Object?>{'tid': tid, 'subject': subject, 'blockedAt': 1000},
+      ],
+    }),
   });
 }
 
@@ -7427,10 +7661,7 @@ class _FakeForumTagDirectoryRepository implements ForumTagDirectoryRepository {
 class _FakeThreadFavoriteActionService implements ThreadFavoriteActionService {
   final DataCommandResult<ThreadFavoriteActionResult> result =
       const DataCommandApplied<ThreadFavoriteActionResult>(
-        ThreadFavoriteActionResult(
-          parseQueued: true,
-          alreadyFavorited: false,
-        ),
+        ThreadFavoriteActionResult(parseQueued: true, alreadyFavorited: false),
       );
   bool called = false;
   String? lastTid;
@@ -8170,4 +8401,22 @@ class _FakeNovelRepository implements NovelRepository {
     required String episodeId,
     required bool isBookmarked,
   }) async {}
+}
+
+ThreadPost _postWithAuthor({
+  required String pid,
+  required String author,
+  required String authorId,
+  required int number,
+  bool isFirst = false,
+}) {
+  return ThreadPost(
+    pid: pid,
+    author: author,
+    authorId: authorId,
+    message: '<p>body</p>',
+    number: number,
+    isFirst: isFirst,
+    dateline: 'today',
+  );
 }
