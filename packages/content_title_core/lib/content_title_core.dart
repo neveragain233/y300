@@ -6,6 +6,8 @@
 /// the consuming application. Test fixtures are outside this public API.
 library;
 
+export 'src/chapter_search_marker.dart' show ChapterSearchMarker;
+
 export 'src/comic/comic_title_analysis.dart' show ComicTitleAnalysis;
 export 'src/comic/comic_title_analyzer.dart'
     show ComicTitleAnalyzer, PetitComicTitleAnalyzer;

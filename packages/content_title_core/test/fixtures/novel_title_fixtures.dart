@@ -168,3 +168,18 @@ const novelTitleEdgeFixtures = <NovelTitleFixture>[
     note: '括号未闭合时不会越界吞内容',
   ),
 ];
+
+const novelChapterSearchMarkers =
+    <({String text, double? number, int? segment, bool query})>[
+      (text: '第三十七章 起点', number: 37, segment: null, query: false),
+      (text: '第１３７章', number: 137, segment: null, query: false),
+      (text: '三十七', number: 37, segment: null, query: true),
+      (text: '第两百零三章', number: 203, segment: null, query: false),
+      (text: '三十七点零五', number: 37.05, segment: null, query: true),
+      (text: '番外 特典', number: null, segment: null, query: false),
+      (text: '书名包含37和137', number: null, segment: null, query: false),
+      (text: '86 不存在的战区', number: null, segment: null, query: false),
+      (text: '37、起点', number: 37, segment: null, query: false),
+      (text: '37', number: 37, segment: null, query: false),
+      (text: '第37章后的讨论', number: null, segment: null, query: true),
+    ];

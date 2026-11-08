@@ -563,3 +563,18 @@ final List<ComicTitleAnalyzerCase> stageOneComicTitleAnalyzerCases =
         expectedPossibleChapterNumbers: <double>[9],
       ),
     ];
+
+/// 目录检索语料不改变漫画作品解析与收录规则。
+const comicChapterSearchMarkers =
+    <({String text, double? number, int? segment, bool query})>[
+      (text: '第16话①', number: 16, segment: 1, query: false),
+      (text: '第１６話②', number: 16, segment: 2, query: false),
+      (text: '16②', number: 16, segment: 2, query: true),
+      (text: '第16话②', number: 16, segment: 2, query: true),
+      (text: '第16.5话', number: 16.5, segment: null, query: false),
+      (text: '第十六點五話', number: 16.5, segment: null, query: false),
+      (text: '作品2026 第37话', number: 37, segment: null, query: false),
+      (text: '作品2026 台版书讯', number: null, segment: null, query: false),
+      (text: '第37话 标题137', number: 37, segment: null, query: false),
+      (text: '１６．５', number: 16.5, segment: null, query: true),
+    ];
