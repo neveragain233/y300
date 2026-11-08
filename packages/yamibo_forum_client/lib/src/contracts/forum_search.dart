@@ -76,6 +76,7 @@ final class ForumSearchTopicSummary {
     this.forumId,
     this.forumName,
     this.authorName,
+    this.authorId,
     this.publishedAtText,
   });
 
@@ -93,6 +94,11 @@ final class ForumSearchTopicSummary {
 
   /// Author name.
   final String? authorName;
+
+  /// Stable author id when a verifiable same-site profile link is present.
+  ///
+  /// Missing ids stay null; callers must not infer identity from the name.
+  final String? authorId;
 
   /// Published at text.
   final String? publishedAtText;

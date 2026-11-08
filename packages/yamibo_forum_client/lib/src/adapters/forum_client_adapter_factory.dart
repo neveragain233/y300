@@ -23,9 +23,11 @@ import '../contracts/message_directories.dart';
 import '../contracts/private_message_command.dart';
 import '../contracts/private_message_batch_command.dart';
 import '../contracts/friend_directory.dart';
+import '../contracts/forum_blacklist.dart';
 import '../contracts/friend_feed.dart';
 import 'discuz_private_message_batch_command.dart';
 import 'discuz_friend_directory_repository.dart';
+import 'discuz_forum_blacklist_repository.dart';
 import 'discuz_friend_feed_repository.dart';
 import 'discuz_friend_removal_command.dart';
 import 'discuz_private_message_command.dart';
@@ -212,6 +214,14 @@ final class ForumClientAdapterFactory {
   /// Creates the desktop friend selector without persisting private data.
   ForumFriendDirectoryRepository createFriendDirectory() =>
       DiscuzFriendDirectoryRepository(
+        config: config,
+        network: network,
+        profiles: requestProfiles,
+      );
+
+  /// Creates the read-only desktop web-blacklist source without caching.
+  ForumBlacklistRepository createForumBlacklist() =>
+      DiscuzForumBlacklistRepository(
         config: config,
         network: network,
         profiles: requestProfiles,

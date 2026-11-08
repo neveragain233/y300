@@ -143,10 +143,38 @@ final class DiscuzSearchHtmlParser {
       authorName: _nullable(
         _clean(row.querySelector('.muser .mmc')?.text ?? ''),
       ),
+      authorId: _authorId(row),
       publishedAtText: _nullable(
         _clean(row.querySelector('.muser .mtime')?.text ?? ''),
       ),
     );
+  }
+
+  String? _authorId(html_dom.Element row) {
+    final author = row.querySelector('.muser');
+    if (author == null) {
+      return null;
+    }
+    for (final anchor in author.querySelectorAll('a[href]')) {
+      final uri = _sameSite(anchor.attributes['href']);
+      if (uri == null) {
+        continue;
+      }
+      final pathMatch = RegExp(
+        r'^/space-uid-([1-9]\d{0,19})\.html$',
+      ).firstMatch(uri.path);
+      if (pathMatch != null) {
+        return pathMatch.group(1);
+      }
+      if (uri.path.toLowerCase() == '/home.php' &&
+          uri.queryParameters['mod'] == 'space') {
+        final uid = uri.queryParameters['uid'];
+        if (uid != null && RegExp(r'^[1-9]\d{0,19}$').hasMatch(uid)) {
+          return uid;
+        }
+      }
+    }
+    return null;
   }
 
   _ForumSummary? _optionalForum(html_dom.Element? anchor) {

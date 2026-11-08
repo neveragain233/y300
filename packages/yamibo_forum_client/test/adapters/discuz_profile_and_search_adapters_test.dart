@@ -475,6 +475,57 @@ void main() {
     expect(network.requests.last.uri.queryParameters['page'], '2');
   });
 
+  test('search keeps an optional author id only from a profile link', () async {
+    final network = _ScenarioNetwork(
+      initialBody: _searchPage(
+        tid: '100',
+        nextPage: null,
+        authorHref: 'space-uid-42.html',
+      ),
+    );
+    final repository = ForumClientAdapterFactory(
+      config: config,
+      network: network,
+    ).createForumSearch(const _Formhash());
+
+    final result = await repository.load(
+      const ForumSearchQuery(
+        keyword: 'fixture',
+        scope: ForumSearchScope.allForums,
+      ),
+    );
+
+    final topic = result.dataOrNull!.topics.single;
+    expect(topic.authorName, 'Author');
+    expect(topic.authorId, '42');
+  });
+
+  test(
+    'search leaves author id null without a verifiable profile link',
+    () async {
+      final network = _ScenarioNetwork(
+        initialBody: _searchPage(
+          tid: '100',
+          nextPage: null,
+          authorHref: 'https://other.test/space-uid-42.html',
+        ),
+      );
+      final repository = ForumClientAdapterFactory(
+        config: config,
+        network: network,
+      ).createForumSearch(const _Formhash());
+
+      final result = await repository.load(
+        const ForumSearchQuery(
+          keyword: 'fixture',
+          scope: ForumSearchScope.allForums,
+        ),
+      );
+
+      expect(result.dataOrNull!.topics.single.authorId, isNull);
+    },
+  );
+
   test(
     'current-forum search accepts canonical Discuz result redirects',
     () async {
@@ -760,12 +811,14 @@ String _searchPage({
   required String tid,
   String forumId = '30',
   required int? nextPage,
+  String? authorHref,
 }) =>
     '''
 <ul class="threadlist"><li class="list">
   <a href="forum.php?mod=viewthread&amp;tid=$tid&amp;mobile=2">
     <div class="threadlist_tit"><em>Fixture $tid</em></div>
   </a>
+  ${authorHref == null ? '' : '<div class="muser"><a href="$authorHref"><span class="mmc">Author</span></a><span class="mtime">Today</span></div>'}
   <div class="threadlist_foot"><a href="forum.php?mod=forumdisplay&amp;fid=$forumId&amp;mobile=2">Forum</a></div>
 </li></ul>
 ${nextPage == null ? '' : '<div class="pg"><a class="nxt" href="search.php?mod=forum&amp;searchid=777&amp;page=$nextPage&amp;mobile=2">Next</a></div>'}

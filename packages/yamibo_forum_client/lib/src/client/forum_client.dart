@@ -27,6 +27,7 @@ import '../contracts/forum_message_attention.dart';
 import '../contracts/private_message_command.dart';
 import '../contracts/private_message_batch_command.dart';
 import '../contracts/friend_directory.dart';
+import '../contracts/forum_blacklist.dart';
 import '../contracts/friend_feed.dart';
 import '../contracts/notification_ignore_command.dart';
 import '../contracts/sticker_catalog.dart';
@@ -365,12 +366,21 @@ final class YamiboForumClient {
   ForumFriendDirectoryRepository? get friendDirectory =>
       sourcePlan.friendDirectory;
 
+  /// Configured read-only web-blacklist source, if installed.
+  ForumBlacklistRepository? get friendBlacklist => sourcePlan.friendBlacklist;
+
   /// Configured account-bound native friend-page member lists.
   ForumFriendFeedRepository? get friendFeed => sourcePlan.friendFeed;
 
   /// Configured fresh-form friend-removal command.
   ForumFriendRemovalCommand? get friendRemovalCommand =>
       sourcePlan.friendRemovalCommand;
+
+  /// Loads the current account's complete web blacklist.
+  Future<DataReadResult<ForumBlacklistData, ForumBlacklistReadCapabilities>>
+  loadBlacklist(ForumBlacklistQuery query) =>
+      sourcePlan.friendBlacklist?.load(query) ??
+      unsupported<ForumBlacklistData, ForumBlacklistReadCapabilities>();
 
   /// Reads one authenticated friend-page list without persisting account data.
   Future<DataReadResult<ForumFriendFeedPage, ForumFriendFeedReadCapabilities>>
