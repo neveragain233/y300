@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
+import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
+import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
+import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// 章节管理面板。
@@ -8,7 +14,7 @@ import 'package:y300/l10n/app_localizations.dart';
 /// 解析章节与手动章节合在一个列表里：用户关心的是“这部作品有哪些章节”，
 /// 按来源拆成两段会让阅读顺序断裂。来源差异改用行内标签和可用动作表达——
 /// 解析章节只能隐藏（下次刷新还会回来，给出“移除”是假承诺），手动章节可移除。
-class UnifiedDetailChapterManagementSheet extends StatefulWidget {
+class UnifiedDetailChapterManagementSheet extends ConsumerStatefulWidget {
   const UnifiedDetailChapterManagementSheet({
     super.key,
     required this.workId,
@@ -24,12 +30,12 @@ class UnifiedDetailChapterManagementSheet extends StatefulWidget {
   final VoidCallback? onChanged;
 
   @override
-  State<UnifiedDetailChapterManagementSheet> createState() =>
+  ConsumerState<UnifiedDetailChapterManagementSheet> createState() =>
       _UnifiedDetailChapterManagementSheetState();
 }
 
 class _UnifiedDetailChapterManagementSheetState
-    extends State<UnifiedDetailChapterManagementSheet> {
+    extends ConsumerState<UnifiedDetailChapterManagementSheet> {
   final TextEditingController _inputController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   final Set<String> _busyEpisodeIds = <String>{};
@@ -112,6 +118,14 @@ class _UnifiedDetailChapterManagementSheetState
                   _buildAddField(),
                   const SizedBox(height: 8),
                   _buildSearchField(),
+                  if (_searchQuery.isEmpty)
+                    if (RecentSearchScope.workChapters(widget.workId)
+                        case final scope?)
+                      RecentSearchView(
+                        scope: scope,
+                        onSelected: _applyRecentSearch,
+                        padding: const EdgeInsets.only(top: 6),
+                      ),
                   const SizedBox(height: 12),
                   Expanded(child: _buildBody(theme, scrollController)),
                 ],
@@ -152,6 +166,35 @@ class _UnifiedDetailChapterManagementSheetState
     );
   }
 
+  void _recordRecentSearch(String keyword) {
+    final normalized = keyword.trim();
+    final scope = RecentSearchScope.workChapters(widget.workId);
+    if (normalized.isEmpty || scope == null) {
+      return;
+    }
+    unawaited(
+      ref
+          .read(recentSearchesControllerProvider.notifier)
+          .record(scope, normalized),
+    );
+  }
+
+  void _applyRecentSearch(String keyword) {
+    final scope = RecentSearchScope.workChapters(widget.workId);
+    _searchController.text = keyword;
+    _searchController.selection = TextSelection.collapsed(
+      offset: keyword.length,
+    );
+    setState(() => _searchQuery = keyword);
+    if (scope != null) {
+      unawaited(
+        ref
+            .read(recentSearchesControllerProvider.notifier)
+            .record(scope, keyword),
+      );
+    }
+  }
+
   Widget _buildSearchField() {
     final l10n = AppLocalizations.of(context);
     return TextField(
@@ -159,6 +202,7 @@ class _UnifiedDetailChapterManagementSheetState
       controller: _searchController,
       enabled: !_loading && _loadError == null,
       onChanged: (value) => setState(() => _searchQuery = value.trim()),
+      onSubmitted: _recordRecentSearch,
       decoration: InputDecoration(
         labelText: l10n.libraryChapterFilterLabel,
         hintText: l10n.libraryChapterFilterHint,
@@ -751,10 +795,8 @@ class _SourceBadge extends StatelessWidget {
         isManual
             ? AppLocalizations.of(context).libraryChapterManual
             : AppLocalizations.of(context).libraryChapterParsed,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
       ),
     );
   }

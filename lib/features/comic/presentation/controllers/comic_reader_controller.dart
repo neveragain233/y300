@@ -1,4 +1,5 @@
 import 'package:y300/features/comic/domain/services/comic_download_service.dart';
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -148,6 +149,7 @@ class ComicReaderChapterEntry {
   const ComicReaderChapterEntry({
     required this.episodeId,
     required this.title,
+    this.sourceTitle,
     required this.orderIndex,
     required this.sourceTid,
     required this.isCurrent,
@@ -156,6 +158,7 @@ class ComicReaderChapterEntry {
 
   final String episodeId;
   final String title;
+  final String? sourceTitle;
   final int orderIndex;
   final String sourceTid;
   final bool isCurrent;
@@ -1539,6 +1542,7 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
         ComicReaderChapterEntry(
           episodeId: item.episodeId,
           title: item.episodeTitle ?? '',
+          sourceTitle: item.sourceEpisodeTitle,
           orderIndex: item.orderIndex,
           sourceTid: item.sourceTid,
           isCurrent: item.episodeId == episodeId,
@@ -1716,6 +1720,7 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
               ? ComicReaderChapterEntry(
                   episodeId: chapter.episodeId,
                   title: chapter.title,
+                  sourceTitle: chapter.sourceTitle,
                   orderIndex: chapter.orderIndex,
                   sourceTid: chapter.sourceTid,
                   isCurrent: chapter.isCurrent,

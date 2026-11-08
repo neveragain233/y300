@@ -276,6 +276,7 @@ class LibraryChapterItem {
     required this.episodeId,
     required this.workId,
     required this.title,
+    this.sourceTitle,
     required this.orderIndex,
     this.sourceTid,
     this.sourcePid,
@@ -292,6 +293,8 @@ class LibraryChapterItem {
   final String episodeId;
   final String workId;
   final String title;
+  /// 重命名后仍可按来源章节名检索，显示继续使用 title。
+  final String? sourceTitle;
   final int orderIndex;
   final String? sourceTid;
   final String? sourcePid;

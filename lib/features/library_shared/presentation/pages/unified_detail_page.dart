@@ -1,7 +1,12 @@
 import 'dart:async';
 import 'dart:io' as io;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
+
+import 'package:y300/core/config/app_config.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
@@ -21,6 +26,7 @@ import 'package:y300/features/library_shared/presentation/services/library_detai
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/widgets/cover_focal_point_picker.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_sort_option_tile.dart';
+import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 
@@ -144,6 +150,13 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     final adapter = widget.adapter;
     return adapter is DetailChapterManagementAdapter
         ? adapter as DetailChapterManagementAdapter
+        : null;
+  }
+
+  DetailSourceTagsAdapter? get _sourceTagsAdapter {
+    final adapter = widget.adapter;
+    return adapter is DetailSourceTagsAdapter
+        ? adapter as DetailSourceTagsAdapter
         : null;
   }
 
@@ -299,263 +312,299 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
         ? detailPalette.onHeader
         : detailPalette.collapsedAppBarForeground;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: detailPalette.pageBackground,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(end: _showCollapsedTitle ? 1 : 0),
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOutCubic,
-          builder: (context, progress, _) {
-            final appBarForeground = Color.lerp(
-              expandedAppBarForeground,
-              detailPalette.collapsedAppBarForeground,
-              progress,
-            )!;
-            return AppBar(
-              backgroundColor: detailPalette.collapsedAppBarBackground
-                  .withValues(alpha: progress),
-              forceMaterialTransparency: false,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              shadowColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              foregroundColor: appBarForeground,
-              iconTheme: IconThemeData(color: appBarForeground),
-              titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: appBarForeground,
-                fontWeight: FontWeight.normal,
-              ),
-              // Fade this single text directly, without an opacity layer.
-              title: ExcludeSemantics(
-                excluding: progress == 0,
-                child: Text(
-                  header == null
-                      ? ''
-                      : LibraryShelfTextResolver.workTitle(
-                          l10n,
-                          widget.adapter.moduleKey,
-                          header.title,
-                          header.workId,
-                        ),
-                  key: const Key('unified-detail-collapsed-title'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: appBarForeground.withValues(
-                      alpha: appBarForeground.a * progress,
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                if (_supportsChapterDownloads && _showsBulkDownloadActions)
-                  AppPopupMenuButton<String>(
-                    key: const Key('unified-detail-appbar-download'),
-                    tooltip: l10n.libraryDetailDownload,
-                    icon: const Icon(Icons.file_download),
-                    onSelected: _handleDownloadMenuAction,
-                    itemBuilder: _downloadMenuItems,
-                  ),
-                IconButton(
-                  key: const Key('unified-detail-appbar-filter'),
-                  tooltip: l10n.libraryDetailFilterAndSort,
-                  icon: const Icon(Icons.filter_list),
-                  onPressed: _showChapterFilterSheet,
-                ),
-                AppPopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  itemBuilder: (context) => [
-                    AppPopupMenuItem<String>(
-                      value: 'refresh',
-                      label: l10n.libraryDetailRefresh,
-                    ),
-                    AppPopupMenuItem<String>(
-                      value: 'change-category',
-                      label: l10n.libraryDetailChangeCategory,
-                    ),
-                    if (widget.adapter is DetailMetadataEditor)
-                      AppPopupMenuItem<String>(
-                        key: const Key('unified-detail-edit-metadata'),
-                        value: 'edit-metadata',
-                        label: l10n.libraryDetailEditMetadata,
-                      ),
-                    if (widget.adapter is DetailCatalogEditor)
-                      AppPopupMenuItem<String>(
-                        key: const Key('unified-detail-configure-catalog'),
-                        value: 'configure-catalog',
-                        label: l10n.libraryDetailConfigureCatalog,
-                      ),
-                    // 章节长按之外的第二个入口：隐藏全部章节后列表为空，
-                    // 长按目标随之消失，只靠长按会把“全部显示”永久锁死。
-                    if (_chapterManagementAdapter != null)
-                      AppPopupMenuItem<String>(
-                        key: const Key('unified-detail-manage-chapters'),
-                        value: 'manage-chapters',
-                        label: l10n.libraryDetailManageChapters,
-                      ),
-                    if (_supportsCoverEditing) ...[
-                      AppPopupMenuItem<String>(
-                        key: const Key('unified-detail-set-cover'),
-                        value: 'set-custom-cover',
-                        label: l10n.libraryDetailSetCustomCover,
-                      ),
-                      if (_canRemoveCover)
-                        AppPopupMenuItem<String>(
-                          key: const Key('unified-detail-remove-cover'),
-                          value: 'remove-custom-cover',
-                          label: l10n.libraryDetailRemoveCustomCover,
-                        ),
-                    ],
-                    AppPopupMenuItem<String>(
-                      value: 'edit-intro',
-                      label: l10n.libraryDetailEditIntro,
-                    ),
-                  ],
-                  onSelected: (value) async {
-                    await _handleMoreAction(value);
-                  },
-                ),
-              ],
-            );
-          },
-        ),
+    return LibraryChapterBrowser<LibraryChapterItem>(
+      key: ValueKey('detail-chapters-${widget.workId}'),
+      workId: widget.workId,
+      keyPrefix: 'unified-detail-chapter',
+      currentId: state.chapters
+          .where((chapter) => chapter.progressInfo?.isCurrent == true)
+          .firstOrNull
+          ?.episodeId,
+      locateCurrentOnOpen: false,
+      scrollController: _scrollController,
+      topObstruction:
+          topInset +
+          kToolbarHeight +
+          LibraryChapterBrowser.controlsHeight(context),
+      itemExtent: math.max(
+        80,
+        24 +
+            2 *
+                MediaQuery.textScalerOf(context).scale(
+                  Theme.of(context).textTheme.titleSmall?.fontSize ?? 14,
+                ) *
+                1.5 +
+            MediaQuery.textScalerOf(
+                  context,
+                ).scale(Theme.of(context).textTheme.bodySmall?.fontSize ?? 12) *
+                1.5,
       ),
-      body: state.isLoading && header == null
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              // 从屏幕顶部出现刷新指示器。
-              edgeOffset: 0,
-              displacement: 28,
-              elevation: 0,
+      entries: [
+        for (final chapter in state.chapters)
+          ChapterSearchEntry(
+            id: chapter.episodeId,
+            title: chapter.title,
+            aliases: [if (chapter.sourceTitle != null) chapter.sourceTitle!],
+            metadata: [chapter.sourceTid ?? '', chapter.sourcePid ?? ''],
+            value: chapter,
+          ),
+      ],
+      leadingSlivers: [
+        if (header != null)
+          SliverToBoxAdapter(
+            child: UnifiedDetailHeaderSection(
+              header: header,
+              moduleKey: widget.adapter.moduleKey,
+              topInset:
+                  topInset + LibraryChapterBrowser.controlsHeight(context),
+              palette: detailPalette,
+              imageReferer: widget.imageReferer,
+              onToggleShelf: () => _showMoveCategorySheet(),
               onRefresh: _refreshAndShowFeedback,
-              child: CustomScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: ClampingScrollPhysics(),
-                ),
-                slivers: [
-                  if (header != null)
-                    SliverToBoxAdapter(
-                      child: UnifiedDetailHeaderSection(
-                        header: header,
-                        moduleKey: widget.adapter.moduleKey,
-                        topInset: topInset,
-                        palette: detailPalette,
-                        imageReferer: widget.imageReferer,
-                        onToggleShelf: () => _showMoveCategorySheet(),
-                        onRefresh: _refreshAndShowFeedback,
-                        onRefreshLongPress: _supportsFullRefresh
-                            ? () => _refreshAndShowFeedback(full: true)
-                            : null,
-                        onOpenThread: () async {
-                          final target = await widget.adapter
-                              .getThreadRouteTarget(workId: widget.workId);
-                          if (!context.mounted || target == null) {
-                            return;
-                          }
-                          await widget.onOpenThread(context, target);
-                        },
-                      ),
+              onRefreshLongPress: _supportsFullRefresh
+                  ? () => _refreshAndShowFeedback(full: true)
+                  : null,
+              onOpenThread: () async {
+                final target = await widget.adapter.getThreadRouteTarget(
+                  workId: widget.workId,
+                );
+                if (!context.mounted || target == null) {
+                  return;
+                }
+                await widget.onOpenThread(context, target);
+              },
+            ),
+          ),
+        if (state.errorMessage != null && state.errorMessage!.isNotEmpty)
+          SliverToBoxAdapter(
+            child: UnifiedDetailErrorPanel(
+              message: state.errorMessage!,
+              topPadding: header == null
+                  ? topInset +
+                        kToolbarHeight +
+                        LibraryChapterBrowser.controlsHeight(context)
+                  : 10,
+              onRetry: _retryLoad,
+            ),
+          ),
+        if (header != null)
+          SliverToBoxAdapter(
+            child: UnifiedDetailIntroSection(
+              intro: header.intro?.trim().isNotEmpty == true
+                  ? header.intro!
+                  : l10n.libraryDetailNoIntro,
+              expanded: _introExpanded,
+              onToggle: () => setState(() => _introExpanded = !_introExpanded),
+            ),
+          ),
+        if (header != null)
+          SliverToBoxAdapter(
+            child: UnifiedDetailTagStrip(
+              sourceTagName: header.sourceTagName,
+              sourceTypeId: header.sourceTypeId,
+            ),
+          ),
+        if (widget.chapterStatus != null)
+          SliverToBoxAdapter(child: widget.chapterStatus),
+        SliverToBoxAdapter(
+          child: UnifiedDetailChapterToolbar(
+            chapterCount: state.chapters.length,
+            filterSummary: _chapterFilterSummary(state.filters),
+            hasActiveFilter: _hasActiveChapterFilter(state.filters),
+            modeControl: widget.chapterModeControl,
+          ),
+        ),
+      ],
+      trailingSlivers: const [SliverToBoxAdapter(child: SizedBox(height: 320))],
+      rowBuilder: (context, chapter, confirmSearch) => UnifiedDetailChapterTile(
+        tileKey: ValueKey<String>(
+          'unified-detail-chapter-${chapter.episodeId}',
+        ),
+        chapter: chapter,
+        subtitle: _chapterSubtitle(chapter),
+        isDownloading: _isChapterDownloading(chapter.episodeId),
+        downloadIconSize: _chapterDownloadIconSize,
+        onTap: () {
+          confirmSearch();
+          _openChapter(chapter);
+        },
+        onLongPress: () => _showChapterActions(chapter),
+        onToggleReadState: _supportsChapterReadState
+            ? () => _toggleChapterReadingState(chapter)
+            : null,
+        readStateMutationLocked:
+            _isResettingWorkReading ||
+            _readingStateMutationEpisodeIds.contains(chapter.episodeId),
+        onToggleDownload: _supportsChapterDownloads
+            ? () => _toggleChapterDownload(chapter)
+            : null,
+      ),
+      layoutBuilder: (context, searchControls, chapterList) => Scaffold(
+        extendBodyBehindAppBar: true,
+        backgroundColor: detailPalette.pageBackground,
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(
+            kToolbarHeight + LibraryChapterBrowser.controlsHeight(context),
+          ),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: _showCollapsedTitle ? 1 : 0),
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOutCubic,
+            builder: (context, progress, _) {
+              final appBarForeground = Color.lerp(
+                expandedAppBarForeground,
+                detailPalette.collapsedAppBarForeground,
+                progress,
+              )!;
+              return AppBar(
+                bottom: searchControls,
+                backgroundColor: detailPalette.collapsedAppBarBackground
+                    .withValues(alpha: progress),
+                forceMaterialTransparency: false,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                shadowColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                foregroundColor: appBarForeground,
+                iconTheme: IconThemeData(color: appBarForeground),
+                titleTextStyle: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(
+                      color: appBarForeground,
+                      fontWeight: FontWeight.normal,
                     ),
-                  if (state.errorMessage != null &&
-                      state.errorMessage!.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: UnifiedDetailErrorPanel(
-                        message: state.errorMessage!,
-                        topPadding: header == null
-                            ? topInset + kToolbarHeight
-                            : 10,
-                        onRetry: _retryLoad,
+                // Fade this single text directly, without an opacity layer.
+                title: ExcludeSemantics(
+                  excluding: progress == 0,
+                  child: Text(
+                    header == null
+                        ? ''
+                        : LibraryShelfTextResolver.workTitle(
+                            l10n,
+                            widget.adapter.moduleKey,
+                            header.title,
+                            header.workId,
+                          ),
+                    key: const Key('unified-detail-collapsed-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: appBarForeground.withValues(
+                        alpha: appBarForeground.a * progress,
                       ),
-                    ),
-                  if (header != null)
-                    SliverToBoxAdapter(
-                      child: UnifiedDetailIntroSection(
-                        intro: header.intro?.trim().isNotEmpty == true
-                            ? header.intro!
-                            : l10n.libraryDetailNoIntro,
-                        expanded: _introExpanded,
-                        onToggle: () =>
-                            setState(() => _introExpanded = !_introExpanded),
-                      ),
-                    ),
-                  if (header != null)
-                    SliverToBoxAdapter(
-                      child: UnifiedDetailTagStrip(
-                        sourceTagName: header.sourceTagName,
-                        sourceTypeId: header.sourceTypeId,
-                      ),
-                    ),
-                  if (widget.chapterStatus != null)
-                    SliverToBoxAdapter(child: widget.chapterStatus),
-                  SliverToBoxAdapter(
-                    child: UnifiedDetailChapterToolbar(
-                      chapterCount: state.chapters.length,
-                      filterSummary: _chapterFilterSummary(state.filters),
-                      hasActiveFilter: _hasActiveChapterFilter(state.filters),
-                      modeControl: widget.chapterModeControl,
                     ),
                   ),
-                  SliverList.builder(
-                    itemCount: state.chapters.length,
-                    addAutomaticKeepAlives: false,
-                    addRepaintBoundaries: true,
-                    addSemanticIndexes: false,
-                    itemBuilder: (context, index) {
-                      final chapter = state.chapters[index];
-                      return UnifiedDetailChapterTile(
-                        tileKey: ValueKey<String>(
-                          'unified-detail-chapter-${chapter.episodeId}',
+                ),
+                actions: [
+                  if (_supportsChapterDownloads && _showsBulkDownloadActions)
+                    AppPopupMenuButton<String>(
+                      key: const Key('unified-detail-appbar-download'),
+                      tooltip: l10n.libraryDetailDownload,
+                      icon: const Icon(Icons.file_download),
+                      onSelected: _handleDownloadMenuAction,
+                      itemBuilder: _downloadMenuItems,
+                    ),
+                  IconButton(
+                    key: const Key('unified-detail-appbar-filter'),
+                    tooltip: l10n.libraryDetailFilterAndSort,
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: _showChapterFilterSheet,
+                  ),
+                  AppPopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    itemBuilder: (context) => [
+                      AppPopupMenuItem<String>(
+                        value: 'refresh',
+                        label: l10n.libraryDetailRefresh,
+                      ),
+                      AppPopupMenuItem<String>(
+                        value: 'change-category',
+                        label: l10n.libraryDetailChangeCategory,
+                      ),
+                      if (widget.adapter is DetailMetadataEditor)
+                        AppPopupMenuItem<String>(
+                          key: const Key('unified-detail-edit-metadata'),
+                          value: 'edit-metadata',
+                          label: l10n.libraryDetailEditMetadata,
                         ),
-                        chapter: chapter,
-                        subtitle: _chapterSubtitle(chapter),
-                        isDownloading: _isChapterDownloading(chapter.episodeId),
-                        downloadIconSize: _chapterDownloadIconSize,
-                        onTap: () => _openChapter(chapter),
-                        onLongPress: () => _showChapterActions(chapter),
-                        onToggleReadState: _supportsChapterReadState
-                            ? () => _toggleChapterReadingState(chapter)
-                            : null,
-                        readStateMutationLocked:
-                            _isResettingWorkReading ||
-                            _readingStateMutationEpisodeIds.contains(
-                              chapter.episodeId,
-                            ),
-                        onToggleDownload: _supportsChapterDownloads
-                            ? () => _toggleChapterDownload(chapter)
-                            : null,
-                      );
+                      if (widget.adapter is DetailCatalogEditor)
+                        AppPopupMenuItem<String>(
+                          key: const Key('unified-detail-configure-catalog'),
+                          value: 'configure-catalog',
+                          label: l10n.libraryDetailConfigureCatalog,
+                        ),
+                      if (_sourceTagsAdapter != null)
+                        AppPopupMenuItem<String>(
+                          key: const Key('unified-detail-source-tags'),
+                          value: 'source-tags',
+                          label: l10n.libraryDetailSourceTags,
+                        ),
+                      // 章节长按之外的第二个入口：隐藏全部章节后列表为空，
+                      // 长按目标随之消失，只靠长按会把“全部显示”永久锁死。
+                      if (_chapterManagementAdapter != null)
+                        AppPopupMenuItem<String>(
+                          key: const Key('unified-detail-manage-chapters'),
+                          value: 'manage-chapters',
+                          label: l10n.libraryDetailManageChapters,
+                        ),
+                      if (_supportsCoverEditing) ...[
+                        AppPopupMenuItem<String>(
+                          key: const Key('unified-detail-set-cover'),
+                          value: 'set-custom-cover',
+                          label: l10n.libraryDetailSetCustomCover,
+                        ),
+                        if (_canRemoveCover)
+                          AppPopupMenuItem<String>(
+                            key: const Key('unified-detail-remove-cover'),
+                            value: 'remove-custom-cover',
+                            label: l10n.libraryDetailRemoveCustomCover,
+                          ),
+                      ],
+                      AppPopupMenuItem<String>(
+                        value: 'edit-intro',
+                        label: l10n.libraryDetailEditIntro,
+                      ),
+                    ],
+                    onSelected: (value) async {
+                      await _handleMoreAction(value);
                     },
                   ),
-                  // 预留足够底部滚动空间，保证短列表场景也能触发折叠标题阈值。
-                  const SliverToBoxAdapter(child: SizedBox(height: 320)),
                 ],
+              );
+            },
+          ),
+        ),
+        body: state.isLoading && header == null
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                // 从屏幕顶部出现刷新指示器。
+                edgeOffset: 0,
+                displacement: 28,
+                elevation: 0,
+                onRefresh: _refreshAndShowFeedback,
+                child: chapterList,
               ),
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final target = await widget.adapter.getReaderRouteTarget(
-            workId: widget.workId,
-            preferContinue: true,
-          );
-          if (!context.mounted || target == null) {
-            return;
-          }
-          final handler = widget.onContinue ?? widget.onOpenReader;
-          await handler(context, target);
-          if (!context.mounted) {
-            return;
-          }
-          await _controller.reload();
-          if (mounted) {
-            setState(() {});
-          }
-        },
-        icon: const Icon(Icons.play_arrow),
-        label: Text(l10n.libraryDetailContinue),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            final target = await widget.adapter.getReaderRouteTarget(
+              workId: widget.workId,
+              preferContinue: true,
+            );
+            if (!context.mounted || target == null) {
+              return;
+            }
+            final handler = widget.onContinue ?? widget.onOpenReader;
+            await handler(context, target);
+            if (!context.mounted) {
+              return;
+            }
+            await _controller.reload();
+            if (mounted) {
+              setState(() {});
+            }
+          },
+          icon: const Icon(Icons.play_arrow),
+          label: Text(l10n.libraryDetailContinue),
+        ),
       ),
     );
   }
@@ -1078,6 +1127,10 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       await _showCatalogConfigurationSheet();
       return;
     }
+    if (value == 'source-tags') {
+      await _showSourceTagsSheet();
+      return;
+    }
     if (value == 'manage-chapters') {
       await _showChapterManagementSheet();
       return;
@@ -1093,6 +1146,166 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     if (value == 'edit-intro') {
       await _showEditIntroDialog();
     }
+  }
+
+  Future<void> _showSourceTagsSheet() async {
+    final adapter = _sourceTagsAdapter;
+    if (adapter == null) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final canSetCatalog = widget.adapter is DetailCatalogEditor;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.libraryDetailSourceTags,
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 300,
+                  child: FutureBuilder<List<DetailSourceTag>>(
+                    future: adapter.loadSourceTags(workId: widget.workId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            l10n.libraryDetailSourceTagsLoadFailed,
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+                      final tags = snapshot.data ?? const <DetailSourceTag>[];
+                      if (tags.isEmpty) {
+                        return Center(
+                          child: Text(
+                            l10n.libraryDetailSourceTagsEmpty,
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+                      return ListView.builder(
+                        key: const Key('unified-detail-source-tags-list'),
+                        itemCount: tags.length,
+                        itemBuilder: (context, index) {
+                          final tag = tags[index];
+                          return ListTile(
+                            key: Key('unified-detail-source-tag-${tag.tagId}'),
+                            leading: const Icon(Icons.sell_outlined),
+                            title: Text(tag.label),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (canSetCatalog)
+                                  IconButton(
+                                    key: Key(
+                                      'unified-detail-source-tag-catalog-${tag.tagId}',
+                                    ),
+                                    tooltip: l10n.libraryDetailUseTagAsCatalog,
+                                    icon: const Icon(Icons.playlist_add),
+                                    onPressed: () {
+                                      navigator.pop(sheetContext);
+                                      unawaited(
+                                        _confirmAndSetSourceTagAsCatalog(tag),
+                                      );
+                                    },
+                                  ),
+                                const Icon(Icons.chevron_right),
+                              ],
+                            ),
+                            onTap: () {
+                              navigator.pop(sheetContext);
+                              navigator.push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      YamiboTagThreadPage(tagId: tag.tagId),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmAndSetSourceTagAsCatalog(DetailSourceTag tag) async {
+    final editor = widget.adapter is DetailCatalogEditor
+        ? widget.adapter as DetailCatalogEditor
+        : null;
+    if (editor == null || !mounted) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.libraryDetailUseTagAsCatalogTitle),
+        content: Text(l10n.libraryDetailUseTagAsCatalogMessage(tag.label)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            key: const Key('unified-detail-source-tag-catalog-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.commonConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    final catalogUrl = Uri.parse(AppConfig.siteBaseUrl)
+        .replace(
+          path: '/misc.php',
+          queryParameters: <String, String>{'mod': 'tag', 'id': tag.tagId},
+        )
+        .toString();
+    final DetailCatalogUpdateOutcome outcome;
+    try {
+      outcome = await editor.updateCatalogOverride(
+        workId: widget.workId,
+        catalogUrl: catalogUrl,
+      );
+    } catch (_) {
+      if (mounted) {
+        _showDetailSnackBar(l10n.libraryDetailUseTagAsCatalogFailed);
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (outcome.code != DetailCatalogUpdateOutcomeCode.saved) {
+      _showDetailSnackBar(l10n.libraryDetailUseTagAsCatalogFailed);
+      return;
+    }
+    // The existing refresh pipeline reads the new catalog and merges chapters
+    // by source identity while preserving progress and offline data.
+    await _refreshAndShowFeedback();
   }
 
   Future<void> _refreshAndShowFeedback({bool full = false}) {

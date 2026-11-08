@@ -16,8 +16,10 @@ import 'package:y300/features/comic/domain/services/comic_refresh_outcome_applie
 import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_models.dart';
 import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_service.dart';
 import 'package:y300/features/comic/domain/services/comic_reader_feature_flags.dart';
+import 'package:y300/features/comic/domain/services/comic_source_tag_reader.dart';
 import 'package:y300/features/comic/domain/services/comic_episode_refresh_service.dart';
 import 'package:content_title_core/content_title_core.dart';
+import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
@@ -46,7 +48,8 @@ class ComicDetailAdapter
         DetailMetadataEditor,
         DetailCatalogEditor,
         DetailChapterManagementAdapter,
-        DetailCoverEditor {
+        DetailCoverEditor,
+        DetailSourceTagsAdapter {
   ComicDetailAdapter(
     this._repository, {
     ComicEpisodeRefreshService? refreshService,
@@ -64,6 +67,7 @@ class ComicDetailAdapter
     ComicCatalogUrlPolicy catalogUrlPolicy = const ComicCatalogUrlPolicy(),
     ComicManualEpisodeUrlPolicy manualEpisodeUrlPolicy =
         const ComicManualEpisodeUrlPolicy(),
+    ThreadRepository? threadRepository,
     required LibraryStateRepository stateRepository,
   }) : _refreshService = refreshService,
        _searchQueue = searchQueue,
@@ -79,7 +83,8 @@ class ComicDetailAdapter
        _titleAnalyzer = titleAnalyzer,
        _catalogUrlPolicy = catalogUrlPolicy,
        _manualEpisodeUrlPolicy = manualEpisodeUrlPolicy,
-       _stateRepository = stateRepository;
+       _stateRepository = stateRepository,
+       _threadRepository = threadRepository;
 
   static const ComicEpisodeSequence _episodeSequence = ComicEpisodeSequence();
 
@@ -99,6 +104,23 @@ class ComicDetailAdapter
   final ComicCatalogUrlPolicy _catalogUrlPolicy;
   final ComicManualEpisodeUrlPolicy _manualEpisodeUrlPolicy;
   final LibraryStateRepository _stateRepository;
+  final ThreadRepository? _threadRepository;
+
+  @override
+  Future<List<DetailSourceTag>> loadSourceTags({required String workId}) async {
+    final threadRepository = _threadRepository;
+    if (threadRepository == null) {
+      return const <DetailSourceTag>[];
+    }
+    final tags = await DefaultComicSourceTagReader(
+      repository: _repository,
+      threadRepository: threadRepository,
+    ).readSourceTags(comicId: workId);
+    return <DetailSourceTag>[
+      for (final tag in tags)
+        DetailSourceTag(label: tag.label, tagId: tag.tagId),
+    ];
+  }
 
   @override
   Listenable? get chapterDownloadActivityListenable => _downloadQueue?.snapshot;
@@ -277,6 +299,7 @@ class ComicDetailAdapter
               ? item.episodeTitle!
               : '',
           orderIndex: item.orderIndex,
+          sourceTitle: item.sourceEpisodeTitle,
           sourceTid: item.sourceTid,
           publishTimeText: item.publishTimeText,
           isRead: isRead,

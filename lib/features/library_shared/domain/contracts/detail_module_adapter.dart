@@ -438,6 +438,19 @@ abstract class DetailCoverEditor {
   Future<void> removeCustomCover({required String workId});
 }
 
+/// 来源原帖的主题标签。
+class DetailSourceTag {
+  const DetailSourceTag({required this.label, required this.tagId});
+
+  final String label;
+  final String tagId;
+}
+
+/// 可选能力：按来源主题编号读取原帖主题标签。
+abstract interface class DetailSourceTagsAdapter {
+  Future<List<DetailSourceTag>> loadSourceTags({required String workId});
+}
+
 /// 原帖跳转目标。
 class ThreadRouteTarget {
   const ThreadRouteTarget({

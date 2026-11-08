@@ -1,18 +1,24 @@
 import 'dart:async';
 import 'dart:io' as io;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/comic/domain/models/comic_reader_exit_result.dart';
 import 'package:y300/features/comic/domain/services/comic_episode_sequence.dart';
 import 'package:y300/features/comic/domain/services/comic_episode_images_unavailable.dart';
+import 'package:y300/features/comic/data/providers/comic_source_tag_providers.dart';
 import 'package:y300/features/comic/presentation/comic_presentation_models.dart';
 import 'package:y300/features/comic/presentation/comic_reader_capability.dart';
 import 'package:y300/features/comic/presentation/comic_text_resolver.dart';
 import 'package:y300/features/comic/presentation/controllers/comic_reader_controller.dart';
 import 'package:y300/features/comic/presentation/controllers/comic_comment_session_controller.dart';
 import 'package:y300/features/comic/presentation/providers/comic_comment_providers.dart';
+import 'package:y300/features/comic/presentation/widgets/comic_source_tags_sheet.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/library_shared/presentation/widgets/cover_focal_point_picker.dart';
 import 'package:y300/features/reader_shared/domain/continuous_image/continuous_image.dart';
@@ -74,7 +80,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
         error: (error, stackTrace) => _buildReaderErrorState(error),
         data: (viewState) {
           if (viewState.images.isEmpty) {
-            return Center(child: Text(l10n.comicNoImages));
+            return _buildNoImagesState(viewState);
           }
           final controller = _controller();
           final commentSessionKey = ComicCommentSessionKey(
@@ -180,6 +186,62 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                 child: Text(l10n.commonRetry),
               ),
             ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
+              children: [
+                OutlinedButton(
+                  key: const Key('comic-reader-error-source-tags'),
+                  onPressed: () => unawaited(_showSourceTagsForReader()),
+                  child: Text(l10n.libraryDetailSourceTags),
+                ),
+                OutlinedButton(
+                  key: const Key('comic-reader-error-source-thread'),
+                  onPressed: () => unawaited(_openSourceThreadForReader()),
+                  child: Text(l10n.comicOpenSourceThread),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoImagesState(ComicReaderViewState viewState) {
+    final l10n = AppLocalizations.of(context);
+    final hasSource = viewState.sourceTid.trim().isNotEmpty;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.comicNoImages, textAlign: TextAlign.center),
+            if (hasSource) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: [
+                  OutlinedButton(
+                    key: const Key('comic-reader-no-images-source-tags'),
+                    onPressed: () => unawaited(
+                      _showSourceTagsForReader(episodeId: viewState.episodeId),
+                    ),
+                    child: Text(l10n.libraryDetailSourceTags),
+                  ),
+                  OutlinedButton(
+                    key: const Key('comic-reader-no-images-source-thread'),
+                    onPressed: () => unawaited(_openSourceThread(viewState)),
+                    child: Text(l10n.comicOpenSourceThread),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -211,14 +273,56 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
   }
 
   Future<void> _openSourceThread(ComicReaderViewState viewState) async {
+    await _openThreadByTid(viewState.sourceTid, viewState.episodeTitle);
+  }
+
+  Future<void> _openThreadByTid(String tid, String? subject) async {
+    final normalized = tid.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ThreadDetailPage(
-          tid: viewState.sourceTid,
-          subject: viewState.episodeTitle,
+          tid: normalized,
+          subject: subject ?? '',
+          gateBlockedEntry: true,
         ),
       ),
     );
+  }
+
+  Future<void> _showSourceTagsForReader({String? episodeId}) async {
+    final args = _readerArgs;
+    await showComicSourceTagsSheet(
+      context,
+      loadTags: () => ref
+          .read(comicSourceTagReaderProvider)
+          .readSourceTags(
+            comicId: args.comicId,
+            episodeId: episodeId ?? args.episodeId,
+          ),
+    );
+  }
+
+  Future<void> _openSourceThreadForReader() async {
+    final l10n = AppLocalizations.of(context);
+    final tid = await ref
+        .read(comicSourceTagReaderProvider)
+        .resolveSourceTid(
+          comicId: _readerArgs.comicId,
+          episodeId: _readerArgs.episodeId,
+        );
+    if (!mounted) {
+      return;
+    }
+    if (tid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.comicSourceThreadUnavailable)),
+      );
+      return;
+    }
+    await _openThreadByTid(tid, null);
   }
 
   Future<void> _openAdjacentEpisode({
@@ -359,37 +463,80 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
     final l10n = AppLocalizations.of(context);
     final selected = await showModalBottomSheet<ComicReaderChapterEntry>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ReaderSheetTitle(title: l10n.comicChapterList),
-            for (final chapter in viewState.chapters)
-              ListTile(
-                key: ValueKey<String>(
-                  'comic-reader-chapter-${chapter.episodeId}',
-                ),
-                selected: chapter.isCurrent,
-                leading: Icon(
-                  chapter.isRead
-                      ? Icons.check_circle_outline
-                      : Icons.radio_button_unchecked,
-                ),
-                title: Text(
-                  ComicTextResolver.chapterTitle(
-                    l10n,
-                    chapter.title,
-                    chapter.sourceTid,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: chapter.isCurrent
-                    ? Text(l10n.comicCurrentChapter)
-                    : null,
-                onTap: () => Navigator.of(context).pop(chapter),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: SizedBox(
+            height: math.min(
+              MediaQuery.sizeOf(context).height * 0.8,
+              math.max(
+                0,
+                MediaQuery.sizeOf(context).height -
+                    MediaQuery.viewInsetsOf(context).bottom -
+                    MediaQuery.paddingOf(context).vertical,
               ),
-          ],
+            ),
+            child: Column(
+              children: [
+                ReaderSheetTitle(title: l10n.comicChapterList),
+                Expanded(
+                  child: LibraryChapterBrowser<ComicReaderChapterEntry>(
+                    workId: viewState.comicId,
+                    keyPrefix: 'comic-reader-chapter',
+                    currentId: viewState.episodeId,
+                    itemExtent: math.max(
+                      64,
+                      MediaQuery.textScalerOf(context).scale(16) * 1.5 + 24,
+                    ),
+                    entries: [
+                      for (final chapter in viewState.chapters)
+                        ChapterSearchEntry(
+                          id: chapter.episodeId,
+                          title: chapter.title,
+                          aliases: [
+                            if (chapter.sourceTitle != null)
+                              chapter.sourceTitle!,
+                          ],
+                          metadata: [chapter.sourceTid],
+                          value: chapter,
+                        ),
+                    ],
+                    rowBuilder: (context, chapter, confirmSearch) => ListTile(
+                      key: ValueKey<String>(
+                        'comic-reader-chapter-${chapter.episodeId}',
+                      ),
+                      selected: chapter.isCurrent,
+                      leading: Icon(
+                        chapter.isRead
+                            ? Icons.check_circle_outline
+                            : Icons.radio_button_unchecked,
+                      ),
+                      title: Text(
+                        ComicTextResolver.chapterTitle(
+                          l10n,
+                          chapter.title,
+                          chapter.sourceTid,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: chapter.isCurrent
+                          ? Text(l10n.comicCurrentChapter)
+                          : null,
+                      onTap: () {
+                        confirmSearch();
+                        Navigator.of(context).pop(chapter);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

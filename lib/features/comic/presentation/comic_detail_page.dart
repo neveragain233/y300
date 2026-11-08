@@ -22,6 +22,7 @@ import 'package:y300/features/library_shared/domain/contracts/detail_module_adap
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_detail_page.dart';
+import 'package:y300/features/thread/data/providers/thread_repository_providers.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 
 /// 漫画详情页（Phase 4）：统一详情页薄壳接入。
@@ -50,6 +51,7 @@ class ComicDetailPage extends ConsumerWidget {
       discoveryService: ref.watch(comicEpisodeDiscoveryServiceProvider),
       featureFlags: ref.watch(comicReaderFeatureFlagsProvider),
       titleAnalyzer: ref.watch(comicTitleAnalyzerProvider),
+      threadRepository: ref.watch(threadRepositoryProvider),
       stateRepository: ref.watch(libraryStateRepositoryProvider),
     );
     return UnifiedDetailPage(
