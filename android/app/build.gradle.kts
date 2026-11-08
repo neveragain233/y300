@@ -19,18 +19,17 @@ if (hasReleaseKeystore) {
 }
 
 
+// Y300 publishes one arm64 APK. Keep the canonical Gradle artifact
+// self-describing without `--split-per-abi`, which would rewrite the
+// package versionCode with Flutter's ABI discriminator.
+base {
+    archivesName.set("y300-v${flutter.versionName}-android-arm64-v8a")
+}
+
 android {
     namespace = "com.example.y300"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-
-    // Y300 publishes one arm64 APK. Keep the canonical Gradle artifact
-    // self-describing without `--split-per-abi`, which would rewrite the
-    // package versionCode with Flutter's ABI discriminator.
-    setProperty(
-        "archivesBaseName",
-        "y300-v${flutter.versionName}-android-arm64-v8a",
-    )
 
     compileOptions {
         // flutter_local_notifications (v21+) requires Java 8+ API desugaring.
@@ -43,7 +42,7 @@ android {
         // Public application identity used by the Play Store / sideloaded installs
         // for update matching. Fixed at release — do not change once distributed.
         // (The Kotlin `namespace` above stays internal and need not match this.)
-        applicationId = "com.adws.y300"
+        applicationId = "com.adws.y300.personal"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
