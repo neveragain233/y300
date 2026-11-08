@@ -148,8 +148,11 @@ class _FavoriteShelfPageState extends ConsumerState<FavoriteShelfPage> {
   ) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            ThreadDetailPage(tid: target.tid, subject: target.title),
+        builder: (_) => ThreadDetailPage(
+          tid: target.tid,
+          subject: target.title,
+          gateBlockedEntry: true,
+        ),
       ),
     );
   }

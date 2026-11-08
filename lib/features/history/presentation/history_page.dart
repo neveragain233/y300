@@ -11,6 +11,9 @@ import 'package:y300/features/history/presentation/history_text_resolver.dart';
 import 'package:y300/features/history/presentation/models/history_view_state.dart';
 import 'package:y300/features/history/presentation/widgets/history_day_section.dart';
 import 'package:y300/features/history/presentation/widgets/history_entry_tile.dart';
+import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
+import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
+import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 typedef HistoryEntryOpenCallback =
@@ -124,9 +127,41 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       child: Scaffold(
         key: const Key('history-page'),
         appBar: _buildAppBar(state),
-        body: _buildBody(state),
+        body: Column(
+          children: [
+            if (_searchActive && _searchController.text.trim().isEmpty)
+              RecentSearchView(
+                scope: RecentSearchScope.history,
+                onSelected: _applyRecentSearch,
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+              ),
+            Expanded(child: _buildBody(state)),
+          ],
+        ),
       ),
     );
+  }
+
+  void _recordRecentSearch(String keyword) {
+    final normalized = keyword.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+    unawaited(
+      ref
+          .read(recentSearchesControllerProvider.notifier)
+          .record(RecentSearchScope.history, normalized),
+    );
+  }
+
+  void _applyRecentSearch(String keyword) {
+    _searchController.text = keyword;
+    _searchController.selection = TextSelection.collapsed(
+      offset: keyword.length,
+    );
+    _controller.updateSearchText(keyword);
+    _recordRecentSearch(keyword);
+    setState(() {});
   }
 
   PreferredSizeWidget _buildAppBar(HistoryViewState state) {
@@ -164,6 +199,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             _controller.updateSearchText(value);
             setState(() {});
           },
+          onSubmitted: _recordRecentSearch,
         ),
       );
     }
@@ -228,7 +264,14 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 entry: entry,
                 imageReferer: widget.imageReferer,
                 thumbnailBuilder: widget.thumbnailBuilder,
-                onOpen: () => _openEntry(entry),
+                onOpen: () {
+                  final keyword = state.searchText.trim();
+                  if (keyword.isNotEmpty) {
+                    // Opening a filtered record confirms this search intent.
+                    _recordRecentSearch(keyword);
+                  }
+                  _openEntry(entry);
+                },
                 onDelete: () => _deleteEntry(entry),
               );
             },

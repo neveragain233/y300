@@ -5,8 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/comic/data/providers/comic_refresh_workflow_providers.dart';
 import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_models.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
+import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
+import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
+import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/features/search/data/services/forum_search_coordinator.dart';
 import 'package:y300/features/search/presentation/search_text_resolver.dart';
 import 'package:y300/features/search/presentation/widgets/forum_search_result_card.dart';
@@ -101,6 +108,15 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
           ? CacheLoadPolicy.networkFirst
           : CacheLoadPolicy.cacheFirst,
     );
+    if (!execution.isRateLimited) {
+      // The intent is recorded even when the network read fails; pagination
+      // and background comic searches never pass through this call.
+      unawaited(
+        ref
+            .read(recentSearchesControllerProvider.notifier)
+            .record(RecentSearchScope.forum, keyword),
+      );
+    }
     if (!mounted || revision != _queryRevision) {
       return;
     }
@@ -283,10 +299,14 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
   void _handleQueryChanged(String value) {
     _queryRevision += 1;
     _requestedPages.clear();
-    if (!_loading &&
+    final clearing = value.trim().isEmpty;
+    if (!clearing &&
+        !_loading &&
         !_loadingMore &&
         _notice == null &&
         _loadMoreNotice == null) {
+      // Rebuild so the recent panel hides as soon as the field is non-empty.
+      setState(() {});
       return;
     }
     setState(() {
@@ -298,6 +318,13 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
       _capabilities = null;
       _metadata = null;
     });
+  }
+
+  void _submitRecentKeyword(String keyword) {
+    _controller.text = keyword;
+    _controller.selection = TextSelection.collapsed(offset: keyword.length);
+    _focusNode.requestFocus();
+    unawaited(_search());
   }
 
   void _clearSearch() {
@@ -318,6 +345,26 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
+    final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
+    final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final visibleItems = [
+      for (final item in _items)
+        if (!blockedThreadIds.contains(
+              ThreadBlockIdentity.normalizeTid(item.tid),
+            ) &&
+            !(item.authorId != null &&
+                blacklistedUserIds.contains(item.authorId!.trim())))
+          item,
+    ];
+    final hiddenByRules = _items.isNotEmpty && visibleItems.isEmpty;
+    final showRecent =
+        _controller.text.trim().isEmpty &&
+        !_loading &&
+        _notice == null &&
+        _data == null;
+    final scopeLabel = widget.scope == ForumSearchScope.allForums
+        ? l10n.searchScopeAllForums
+        : l10n.searchScopeCurrentForum;
     return Scaffold(
       backgroundColor: palette.background,
       appBar: InlineSearchAppBar(
@@ -354,84 +401,146 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                   child: Text(
                     SearchTextResolver.notice(l10n, _notice!),
                     key: const Key('forum-search-hint'),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: palette.bodyText,
-                      height: 1.35,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: palette.bodyText, height: 1.35),
                   ),
                 ),
               ),
             ),
-          Expanded(
-            child: ListView.separated(
-              key: const Key('forum-search-result-list'),
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 16),
-              itemCount:
-                  _items.length +
-                  ((_loadingMore || _loadMoreNotice != null) ? 1 : 0),
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                if (index == _items.length) {
-                  if (_loadingMore) {
-                    return const Padding(
-                      key: Key('forum-search-load-more-progress'),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: SizedBox.square(
-                          dimension: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.4),
+          if (hiddenByRules)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+              child: Material(
+                key: const Key('forum-search-blocked-hint'),
+                color: palette.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        l10n.contentFilterHiddenOnPage,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: palette.bodyText, height: 1.35),
+                      ),
+                      if (_nextPage != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.contentFilterHiddenOnPageHint,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: palette.softText, height: 1.35),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (showRecent)
+            Expanded(
+              child: ListView(
+                key: const Key('forum-search-recent-list'),
+                padding: const EdgeInsets.only(top: 4, bottom: 16),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                    child: Text(
+                      l10n.searchScopeSummary(scopeLabel),
+                      key: const Key('forum-search-scope-label'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: palette.softText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  RecentSearchView(
+                    scope: RecentSearchScope.forum,
+                    onSelected: _submitRecentKeyword,
+                  ),
+                ],
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                key: const Key('forum-search-result-list'),
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 16),
+                itemCount:
+                    visibleItems.length +
+                    ((_loadingMore || _loadMoreNotice != null) ? 1 : 0),
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  if (index == visibleItems.length) {
+                    if (_loadingMore) {
+                      return const Padding(
+                        key: Key('forum-search-load-more-progress'),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.4),
+                          ),
+                        ),
+                      );
+                    }
+                    return Material(
+                      key: const Key('forum-search-load-more-error'),
+                      color: palette.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 11, 12, 8),
+                        child: Column(
+                          children: [
+                            Text(
+                              SearchTextResolver.notice(l10n, _loadMoreNotice!),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: palette.bodyText,
+                                    height: 1.35,
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            TextButton(
+                              key: const Key('forum-search-load-more-button'),
+                              onPressed: () => unawaited(_loadMore()),
+                              child: Text(l10n.commonRetry),
+                            ),
+                          ],
                         ),
                       ),
                     );
                   }
-                  return Material(
-                    key: const Key('forum-search-load-more-error'),
-                    color: palette.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 8),
-                      child: Column(
-                        children: [
-                          Text(
-                            SearchTextResolver.notice(l10n, _loadMoreNotice!),
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: palette.bodyText,
-                                  height: 1.35,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          TextButton(
-                            key: const Key('forum-search-load-more-button'),
-                            onPressed: () => unawaited(_loadMore()),
-                            child: Text(l10n.commonRetry),
-                          ),
-                        ],
-                      ),
+                  final item = visibleItems[index];
+                  return ForumSearchResultCard(
+                    key: Key('forum-search-result-${item.tid}'),
+                    item: item,
+                    capabilities: _capabilities,
+                    action: ThreadBlockMenuButton(
+                      tid: item.tid,
+                      subject: item.title,
+                      color: palette.softText,
                     ),
-                  );
-                }
-                final item = _items[index];
-                return ForumSearchResultCard(
-                  key: Key('forum-search-result-${item.tid}'),
-                  item: item,
-                  capabilities: _capabilities,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => ThreadDetailPage(
-                          tid: item.tid,
-                          subject: item.title,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ThreadDetailPage(
+                            tid: item.tid,
+                            subject: item.title,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

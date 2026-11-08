@@ -20,6 +20,9 @@ import 'package:y300/features/library_shared/presentation/selection/shelf_select
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/services/library_task_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_sort_option_tile.dart';
+import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
+import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
+import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/shelf/fixed_slot_pager_header.dart';
@@ -31,7 +34,7 @@ import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 
 /// 统一书架页面（Phase 3）。
-class UnifiedShelfPage extends StatefulWidget {
+class UnifiedShelfPage extends ConsumerStatefulWidget {
   const UnifiedShelfPage({
     super.key,
     required this.adapter,
@@ -52,10 +55,10 @@ class UnifiedShelfPage extends StatefulWidget {
   final ShelfSelectionHostController? selectionHost;
 
   @override
-  State<UnifiedShelfPage> createState() => _UnifiedShelfPageState();
+  ConsumerState<UnifiedShelfPage> createState() => _UnifiedShelfPageState();
 }
 
-class _UnifiedShelfPageState extends State<UnifiedShelfPage> {
+class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   static const String _moduleActionPrefix = 'module-action:';
 
   late final UnifiedShelfController _controller;
@@ -211,6 +214,11 @@ class _UnifiedShelfPageState extends State<UnifiedShelfPage> {
                                 ),
                           ),
                         ),
+                      ),
+                    if (state.isSearchMode && state.keyword.trim().isEmpty)
+                      RecentSearchView(
+                        scope: _recentScopeFor(state.moduleKey),
+                        onSelected: _applyRecentKeyword,
                       ),
                     if (categories.isNotEmpty)
                       IgnorePointer(
@@ -387,6 +395,11 @@ class _UnifiedShelfPageState extends State<UnifiedShelfPage> {
     if (_selectionEnabled && _selectionController.isSelecting) {
       _selectionController.toggle(workId);
       return;
+    }
+    if (_controller.state.keyword.trim().isNotEmpty) {
+      // Opening a filtered result is an explicit search use; plain typing and
+      // debounced intermediate fragments never reach this path.
+      _recordRecentKeyword(_controller.state.keyword);
     }
     await _openWorkAndRefreshShelf(workId);
   }
@@ -590,6 +603,41 @@ class _UnifiedShelfPageState extends State<UnifiedShelfPage> {
         }
         setState(() {});
       },
+      onSubmitted: _recordRecentKeyword,
+    );
+  }
+
+  RecentSearchScope _recentScopeFor(LibraryModuleKey key) {
+    return switch (key) {
+      LibraryModuleKey.comic => RecentSearchScope.comicShelf,
+      LibraryModuleKey.novel => RecentSearchScope.novelShelf,
+      LibraryModuleKey.favorite => RecentSearchScope.favoriteShelf,
+    };
+  }
+
+  void _recordRecentKeyword(String keyword) {
+    final normalized = keyword.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+    unawaited(
+      ref
+          .read(recentSearchesControllerProvider.notifier)
+          .record(_recentScopeFor(_controller.state.moduleKey), normalized),
+    );
+  }
+
+  void _applyRecentKeyword(String keyword) {
+    _searchController.text = keyword;
+    _searchController.selection = TextSelection.collapsed(
+      offset: keyword.length,
+    );
+    unawaited(
+      _controller.updateKeyword(keyword).then((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      }),
     );
   }
 

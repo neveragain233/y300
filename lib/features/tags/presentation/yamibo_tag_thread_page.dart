@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page_controller.dart';
@@ -36,6 +40,19 @@ class YamiboTagThreadPage extends ConsumerWidget {
     final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
     final data = state.data;
     final l10n = AppLocalizations.of(context);
+    final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
+    final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final visibleTopics = [
+      for (final thread in data?.topics ?? const <ForumTagTopicSummary>[])
+        if (!blockedThreadIds.contains(
+              ThreadBlockIdentity.normalizeTid(thread.tid),
+            ) &&
+            !(thread.authorId != null &&
+                blacklistedUserIds.contains(thread.authorId!.trim())))
+          thread,
+    ];
+    final hiddenByRules =
+        data != null && data.topics.isNotEmpty && visibleTopics.isEmpty;
 
     return Scaffold(
       key: const Key('yamibo-tag-thread-page'),
@@ -78,8 +95,17 @@ class YamiboTagThreadPage extends ConsumerWidget {
                     ),
                   if (data.topics.isEmpty)
                     _EmptyTagThreadList(palette: palette)
+                  else if (hiddenByRules)
+                    _BlockedTagThreadList(
+                      palette: palette,
+                      hasMore:
+                          data.pagination.hasNext == true ||
+                          (data.pagination.totalPages != null &&
+                              data.pagination.currentPage <
+                                  data.pagination.totalPages!),
+                    )
                   else
-                    for (final thread in data.topics)
+                    for (final thread in visibleTopics)
                       _TagThreadCard(
                         thread: thread,
                         capabilities: state.capabilities,
@@ -279,6 +305,11 @@ class _TagThreadCardState extends State<_TagThreadCard> {
                             color: palette.softText,
                           ),
                         ],
+                        ThreadBlockMenuButton(
+                          tid: thread.tid,
+                          subject: thread.title,
+                          color: palette.softText,
+                        ),
                       ],
                     ),
                     if (_hasAuthorMetadata(thread)) ...[
@@ -546,10 +577,8 @@ class _TagForumChip extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.end,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: palette.tag,
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(context).textTheme.labelSmall
+              ?.copyWith(color: palette.tag, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -654,9 +683,8 @@ ButtonStyle _tagPageButtonStyle(
     minimumSize: const Size(0, 34),
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    textStyle: Theme.of(
-      context,
-    ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+    textStyle: Theme.of(context).textTheme.labelMedium
+        ?.copyWith(fontWeight: FontWeight.w700),
   );
 }
 
@@ -680,10 +708,8 @@ class _InlineError extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: palette.warning,
-          fontWeight: FontWeight.w700,
-        ),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: palette.warning, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -707,10 +733,52 @@ class _EmptyTagThreadList extends StatelessWidget {
           child: Text(
             AppLocalizations.of(context).tagEmpty,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: palette.muted,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: palette.muted, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BlockedTagThreadList extends StatelessWidget {
+  const _BlockedTagThreadList({required this.palette, required this.hasMore});
+
+  final ForumDisplayThemePalette palette;
+  final bool hasMore;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return DecoratedBox(
+      key: const Key('yamibo-tag-blocked'),
+      decoration: _tagSurfaceDecoration(palette),
+      child: Material(
+        color: palette.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              Text(
+                l10n.contentFilterHiddenOnPage,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: palette.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (hasMore) ...[
+                const SizedBox(height: 6),
+                Text(
+                  l10n.contentFilterHiddenOnPageHint,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: palette.muted),
+                ),
+              ],
+            ],
           ),
         ),
       ),
