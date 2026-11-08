@@ -110,6 +110,83 @@
       "count": { "type": "int" }
     }
   },
+  "contentFilterEntry": "內容屏蔽",
+  "contentFilterTitle": "內容屏蔽",
+  "contentFilterThreadsSection": "已屏蔽帖子",
+  "contentFilterCount": "共 {count} 條",
+  "@contentFilterCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "contentFilterThreadsEmpty": "還沒有屏蔽任何帖子。在版塊、搜尋或標籤頁的帖子選單中可以選擇「屏蔽此帖」。",
+  "contentFilterLoadFailed": "屏蔽列表讀取失敗",
+  "contentFilterUnblock": "解除屏蔽",
+  "contentFilterUnblocked": "已恢復「{subject}」",
+  "@contentFilterUnblocked": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "contentFilterBlocked": "已屏蔽「{subject}」",
+  "@contentFilterBlocked": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "contentFilterAlreadyBlocked": "「{subject}」已在屏蔽列表",
+  "@contentFilterAlreadyBlocked": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "contentFilterSaveFailed": "屏蔽設定儲存失敗",
+  "contentFilterUndo": "復原",
+  "contentFilterBlockAction": "屏蔽此帖",
+  "contentFilterMenuTooltip": "帖子操作",
+  "contentFilterHiddenOnPage": "本頁帖子均已被屏蔽",
+  "contentFilterHiddenOnPageHint": "伺服器還有下一頁，可繼續載入。",
+  "contentFilterDirectTitle": "帖子已屏蔽",
+  "contentFilterDirectMessage": "這個帖子在本機的屏蔽列表中，正文尚未載入。",
+  "contentFilterViewOnce": "本次查看",
+  "contentFilterUnblockAndView": "解除屏蔽並查看",
+  "contentFilterWebBlacklistSection": "網頁版黑名單",
+  "contentFilterWebBlacklistLoginRequired": "登入後可同步網頁版黑名單",
+  "contentFilterWebBlacklistNotSynced": "尚未同步名單",
+  "contentFilterWebBlacklistEmpty": "名單為空",
+  "contentFilterWebBlacklistLastSync": "最近同步：{time}",
+  "contentFilterWebBlacklistRefresh": "重新整理名單",
+  "contentFilterWebBlacklistRefreshing": "正在同步…",
+  "contentFilterWebBlacklistSyncFailed": "名單同步失敗，已保留上次成功的名單",
+  "contentFilterWebBlacklistCount": "{count} 人",
+  "contentFilterWebBlacklistNote": "名單修改仍在網頁版完成",
+  "contentFilterWebBlacklistOpen": "開啟網頁名單",
+  "contentFilterWebBlacklistMemberUid": "UID：{uid}",
+  "@contentFilterWebBlacklistLastSync": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "@contentFilterWebBlacklistCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "@contentFilterWebBlacklistMemberUid": {
+    "placeholders": {
+      "uid": { "type": "String" }
+    }
+  },
+  "recentSearchTitle": "最近搜尋",
+  "recentSearchDelete": "刪除記錄",
+  "searchScopeSummary": "搜尋範圍：{scope}",
+  "@searchScopeSummary": {
+    "placeholders": {
+      "scope": { "type": "String" }
+    }
+  },
+  "searchScopeAllForums": "全站",
+  "searchScopeCurrentForum": "本版",
   "commonCancel": "取消",
   "commonConfirm": "確定",
   "commonClose": "關閉",
@@ -369,6 +446,18 @@
   "libraryDetailChangeCategory": "修改分類",
   "libraryDetailEditMetadata": "編輯作品資訊",
   "libraryDetailConfigureCatalog": "設定目錄",
+  "libraryDetailSourceTags": "檢視原帖標籤",
+  "libraryDetailSourceTagsEmpty": "原帖沒有可用的主題標籤",
+  "libraryDetailSourceTagsLoadFailed": "原帖標籤讀取失敗",
+  "libraryDetailUseTagAsCatalog": "設為目錄",
+  "libraryDetailUseTagAsCatalogTitle": "設為作品目錄",
+  "libraryDetailUseTagAsCatalogMessage": "將「{tag}」設為目錄並重新整理章節？該標籤可能包含討論、番外或其他作品。",
+  "@libraryDetailUseTagAsCatalogMessage": {
+    "placeholders": {
+      "tag": { "type": "String" }
+    }
+  },
+  "libraryDetailUseTagAsCatalogFailed": "設定目錄失敗",
   "libraryDetailManageChapters": "管理章節",
   "libraryDetailSetCustomCover": "自訂封面",
   "libraryDetailRemoveCustomCover": "取消封面",
@@ -745,6 +834,7 @@
   "comicBookmarkAdded": "已新增書籤",
   "comicBookmarkRemoved": "已移除書籤",
   "comicOpenSourceThread": "開啟原帖",
+  "comicSourceThreadUnavailable": "暫時無法定位原帖",
   "comicMoreActions": "更多操作",
   "comicReaderRefreshEpisode": "重新整理章節",
   "comicReaderEpisodeRefreshed": "章節已重新整理",
@@ -914,6 +1004,20 @@
   "novelNextPageSemantics": "下一頁，第 {page} 頁",
   "novelPreviousPageSemantics": "上一頁，第 {page} 頁",
   "novelPageIndicator": "{currentPage} / {totalPages}",
+  "novelReadingStatusChapter": "第 {current} / {total} 章",
+  "@novelReadingStatusChapter": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "novelReadingStatusVertical": "本章 {percent}% · 剩 {count} 頁",
+  "@novelReadingStatusVertical": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "novelReadingStatusVerticalApprox": "本章 {percent}% · 約剩 {count} 頁",
+  "@novelReadingStatusVerticalApprox": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "novelReadingStatusVerticalEnd": "本章 {percent}% · 本章完",
+  "@novelReadingStatusVerticalEnd": {"placeholders": {"percent": {"type": "int"}}},
+  "novelReadingStatusPaged": "第 {current} / {total} 頁 · 剩 {count} 頁",
+  "@novelReadingStatusPaged": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}, "count": {"type": "int"}}},
+  "novelReadingStatusPagedEnd": "第 {current} / {total} 頁 · 本章完",
+  "@novelReadingStatusPagedEnd": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "novelReadingStatusPagedPending": "第 {current} 頁 · 計算中",
+  "@novelReadingStatusPagedPending": {"placeholders": {"current": {"type": "int"}}},
   "novelChapterTurnContinue": "{direction, select, next {繼續滑動進入下一章} previous {繼續滑動進入上一章} other {繼續滑動切換章節}}",
   "novelChapterTurnRelease": "{direction, select, next {鬆手進入下一章 · {title}} previous {鬆手進入上一章 · {title}} other {鬆手切換章節 · {title}}}",
   "novelPageOfTotalSemantics": "第 {page} 頁，共 {total} 頁",
@@ -958,6 +1062,23 @@
   "threadDetailOpenSource": "開啟原帖",
   "threadDetailMore": "更多",
   "threadDetailDisplaySettings": "顯示設定",
+  "threadTopicTagFallback": "標籤",
+  "threadBlacklistCollapsed": "已屏蔽使用者「{name}」的樓層",
+  "threadBlacklistCollapsedFloor": "#{number} 樓層",
+  "threadBlacklistExpandOnce": "本次展開",
+  "blacklistAuthorGateTitle": "主題作者已屏蔽",
+  "blacklistAuthorGateMessage": "該主題的作者在你的網頁版黑名單中。名單修改仍在網頁版完成。",
+  "blacklistAuthorGateViewOnce": "本次查看",
+  "@threadBlacklistCollapsed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "@threadBlacklistCollapsedFloor": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
   "threadDetailBackHome": "返回首頁",
   "threadDetailSelectCopy": "選擇複製",
   "threadDetailCopyAll": "全部複製",
@@ -1846,5 +1967,18 @@
     "placeholders": {"enqueued": {"type": "int"}, "existing": {"type": "int"}, "failed": {"type": "int"}}
   },
   "threadFavoriteParseQueued": "收藏成功，已加入解析佇列",
-  "threadFavoriteParseQueueFailed": "收藏成功，但未能加入解析佇列，可在收藏頁手動解析"
+  "threadFavoriteParseQueueFailed": "收藏成功，但未能加入解析佇列，可在收藏頁手動解析",
+  "libraryChapterSearchHint": "搜尋章節標題或章號",
+  "libraryChapterSearchCount": "{count} 章",
+  "libraryChapterLocateFirst": "定位第一章",
+  "libraryChapterLocateLast": "定位最後一章",
+  "libraryChapterLocateCurrent": "定位目前章節",
+  "@libraryChapterSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+
 }

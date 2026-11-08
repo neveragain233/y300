@@ -631,6 +631,228 @@ abstract class AppLocalizations {
   /// **'另有 {count} 条相同提醒未重复展示'**
   String messageRepeatedNotifications(int count);
 
+  /// No description provided for @contentFilterEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容屏蔽'**
+  String get contentFilterEntry;
+
+  /// No description provided for @contentFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容屏蔽'**
+  String get contentFilterTitle;
+
+  /// No description provided for @contentFilterThreadsSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽帖子'**
+  String get contentFilterThreadsSection;
+
+  /// No description provided for @contentFilterCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 条'**
+  String contentFilterCount(int count);
+
+  /// No description provided for @contentFilterThreadsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有屏蔽任何帖子。在版块、搜索或标签页的帖子菜单中可以选择「屏蔽此帖」。'**
+  String get contentFilterThreadsEmpty;
+
+  /// No description provided for @contentFilterLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽列表读取失败'**
+  String get contentFilterLoadFailed;
+
+  /// No description provided for @contentFilterUnblock.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除屏蔽'**
+  String get contentFilterUnblock;
+
+  /// No description provided for @contentFilterUnblocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复「{subject}」'**
+  String contentFilterUnblocked(String subject);
+
+  /// No description provided for @contentFilterBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽「{subject}」'**
+  String contentFilterBlocked(String subject);
+
+  /// No description provided for @contentFilterAlreadyBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'「{subject}」已在屏蔽列表'**
+  String contentFilterAlreadyBlocked(String subject);
+
+  /// No description provided for @contentFilterSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽设置保存失败'**
+  String get contentFilterSaveFailed;
+
+  /// No description provided for @contentFilterUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get contentFilterUndo;
+
+  /// No description provided for @contentFilterBlockAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽此帖'**
+  String get contentFilterBlockAction;
+
+  /// No description provided for @contentFilterMenuTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子操作'**
+  String get contentFilterMenuTooltip;
+
+  /// No description provided for @contentFilterHiddenOnPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'本页帖子均已被屏蔽'**
+  String get contentFilterHiddenOnPage;
+
+  /// No description provided for @contentFilterHiddenOnPageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器还有下一页，可继续加载。'**
+  String get contentFilterHiddenOnPageHint;
+
+  /// No description provided for @contentFilterDirectTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子已屏蔽'**
+  String get contentFilterDirectTitle;
+
+  /// No description provided for @contentFilterDirectMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个帖子在本机的屏蔽列表中，正文尚未载入。'**
+  String get contentFilterDirectMessage;
+
+  /// No description provided for @contentFilterViewOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次查看'**
+  String get contentFilterViewOnce;
+
+  /// No description provided for @contentFilterUnblockAndView.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除屏蔽并查看'**
+  String get contentFilterUnblockAndView;
+
+  /// No description provided for @contentFilterWebBlacklistSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'网页版黑名单'**
+  String get contentFilterWebBlacklistSection;
+
+  /// No description provided for @contentFilterWebBlacklistLoginRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录后可同步网页版黑名单'**
+  String get contentFilterWebBlacklistLoginRequired;
+
+  /// No description provided for @contentFilterWebBlacklistNotSynced.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未同步名单'**
+  String get contentFilterWebBlacklistNotSynced;
+
+  /// No description provided for @contentFilterWebBlacklistEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'名单为空'**
+  String get contentFilterWebBlacklistEmpty;
+
+  /// No description provided for @contentFilterWebBlacklistLastSync.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近同步：{time}'**
+  String contentFilterWebBlacklistLastSync(String time);
+
+  /// No description provided for @contentFilterWebBlacklistRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新名单'**
+  String get contentFilterWebBlacklistRefresh;
+
+  /// No description provided for @contentFilterWebBlacklistRefreshing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在同步…'**
+  String get contentFilterWebBlacklistRefreshing;
+
+  /// No description provided for @contentFilterWebBlacklistSyncFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'名单同步失败，已保留上次成功的名单'**
+  String get contentFilterWebBlacklistSyncFailed;
+
+  /// No description provided for @contentFilterWebBlacklistCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人'**
+  String contentFilterWebBlacklistCount(int count);
+
+  /// No description provided for @contentFilterWebBlacklistNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'名单修改仍在网页版完成'**
+  String get contentFilterWebBlacklistNote;
+
+  /// No description provided for @contentFilterWebBlacklistOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开网页名单'**
+  String get contentFilterWebBlacklistOpen;
+
+  /// No description provided for @contentFilterWebBlacklistMemberUid.
+  ///
+  /// In zh, this message translates to:
+  /// **'UID：{uid}'**
+  String contentFilterWebBlacklistMemberUid(String uid);
+
+  /// No description provided for @recentSearchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近搜索'**
+  String get recentSearchTitle;
+
+  /// No description provided for @recentSearchDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除记录'**
+  String get recentSearchDelete;
+
+  /// No description provided for @searchScopeSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索范围：{scope}'**
+  String searchScopeSummary(String scope);
+
+  /// No description provided for @searchScopeAllForums.
+  ///
+  /// In zh, this message translates to:
+  /// **'全站'**
+  String get searchScopeAllForums;
+
+  /// No description provided for @searchScopeCurrentForum.
+  ///
+  /// In zh, this message translates to:
+  /// **'本版'**
+  String get searchScopeCurrentForum;
+
   /// No description provided for @commonCancel.
   ///
   /// In zh, this message translates to:
@@ -1890,6 +2112,48 @@ abstract class AppLocalizations {
   /// **'配置目录'**
   String get libraryDetailConfigureCatalog;
 
+  /// No description provided for @libraryDetailSourceTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看原帖标签'**
+  String get libraryDetailSourceTags;
+
+  /// No description provided for @libraryDetailSourceTagsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'原帖没有可用的主题标签'**
+  String get libraryDetailSourceTagsEmpty;
+
+  /// No description provided for @libraryDetailSourceTagsLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'原帖标签读取失败'**
+  String get libraryDetailSourceTagsLoadFailed;
+
+  /// No description provided for @libraryDetailUseTagAsCatalog.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为目录'**
+  String get libraryDetailUseTagAsCatalog;
+
+  /// No description provided for @libraryDetailUseTagAsCatalogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为作品目录'**
+  String get libraryDetailUseTagAsCatalogTitle;
+
+  /// No description provided for @libraryDetailUseTagAsCatalogMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'将「{tag}」设为目录并刷新章节？该标签可能包含讨论、番外或其他作品。'**
+  String libraryDetailUseTagAsCatalogMessage(String tag);
+
+  /// No description provided for @libraryDetailUseTagAsCatalogFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置目录失败'**
+  String get libraryDetailUseTagAsCatalogFailed;
+
   /// No description provided for @libraryDetailManageChapters.
   ///
   /// In zh, this message translates to:
@@ -3050,6 +3314,12 @@ abstract class AppLocalizations {
   /// **'打开原帖'**
   String get comicOpenSourceThread;
 
+  /// No description provided for @comicSourceThreadUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法定位原帖'**
+  String get comicSourceThreadUnavailable;
+
   /// No description provided for @comicMoreActions.
   ///
   /// In zh, this message translates to:
@@ -4053,6 +4323,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{currentPage} / {totalPages}'**
   String novelPageIndicator(int currentPage, String totalPages);
+
+  /// No description provided for @novelReadingStatusChapter.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {current} / {total} 章'**
+  String novelReadingStatusChapter(int current, int total);
+
+  /// No description provided for @novelReadingStatusVertical.
+  ///
+  /// In zh, this message translates to:
+  /// **'本章 {percent}% · 剩 {count} 页'**
+  String novelReadingStatusVertical(int percent, int count);
+
+  /// No description provided for @novelReadingStatusVerticalApprox.
+  ///
+  /// In zh, this message translates to:
+  /// **'本章 {percent}% · 约剩 {count} 页'**
+  String novelReadingStatusVerticalApprox(int percent, int count);
+
+  /// No description provided for @novelReadingStatusVerticalEnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'本章 {percent}% · 本章完'**
+  String novelReadingStatusVerticalEnd(int percent);
+
+  /// No description provided for @novelReadingStatusPaged.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {current} / {total} 页 · 剩 {count} 页'**
+  String novelReadingStatusPaged(int current, int total, int count);
+
+  /// No description provided for @novelReadingStatusPagedEnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {current} / {total} 页 · 本章完'**
+  String novelReadingStatusPagedEnd(int current, int total);
+
+  /// No description provided for @novelReadingStatusPagedPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {current} 页 · 计算中'**
+  String novelReadingStatusPagedPending(int current);
 
   /// No description provided for @novelChapterTurnContinue.
   ///
@@ -5282,6 +5594,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'显示设置'**
   String get threadDetailDisplaySettings;
+
+  /// No description provided for @threadTopicTagFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get threadTopicTagFallback;
+
+  /// No description provided for @threadBlacklistCollapsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽用户「{name}」的楼层'**
+  String threadBlacklistCollapsed(String name);
+
+  /// No description provided for @threadBlacklistCollapsedFloor.
+  ///
+  /// In zh, this message translates to:
+  /// **'#{number} 楼层'**
+  String threadBlacklistCollapsedFloor(int number);
+
+  /// No description provided for @threadBlacklistExpandOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次展开'**
+  String get threadBlacklistExpandOnce;
+
+  /// No description provided for @blacklistAuthorGateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题作者已屏蔽'**
+  String get blacklistAuthorGateTitle;
+
+  /// No description provided for @blacklistAuthorGateMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'该主题的作者在你的网页版黑名单中。名单修改仍在网页版完成。'**
+  String get blacklistAuthorGateMessage;
+
+  /// No description provided for @blacklistAuthorGateViewOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次查看'**
+  String get blacklistAuthorGateViewOnce;
 
   /// No description provided for @threadDetailBackHome.
   ///
@@ -9327,6 +9681,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'收藏成功，但未能加入解析队列，可在收藏页手动解析'**
   String get threadFavoriteParseQueueFailed;
+
+  /// No description provided for @libraryChapterSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索章节标题或章号'**
+  String get libraryChapterSearchHint;
+
+  /// No description provided for @libraryChapterSearchCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 章'**
+  String libraryChapterSearchCount(int count);
+
+  /// No description provided for @libraryChapterLocateFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'定位第一章'**
+  String get libraryChapterLocateFirst;
+
+  /// No description provided for @libraryChapterLocateLast.
+  ///
+  /// In zh, this message translates to:
+  /// **'定位最后一章'**
+  String get libraryChapterLocateLast;
+
+  /// No description provided for @libraryChapterLocateCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'定位当前章'**
+  String get libraryChapterLocateCurrent;
 }
 
 class _AppLocalizationsDelegate

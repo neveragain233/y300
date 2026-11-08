@@ -138,6 +138,83 @@
       "count": { "type": "int" }
     }
   },
+  "contentFilterEntry": "内容屏蔽",
+  "contentFilterTitle": "内容屏蔽",
+  "contentFilterThreadsSection": "已屏蔽帖子",
+  "contentFilterCount": "共 {count} 条",
+  "@contentFilterCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "contentFilterThreadsEmpty": "还没有屏蔽任何帖子。在版块、搜索或标签页的帖子菜单中可以选择「屏蔽此帖」。",
+  "contentFilterLoadFailed": "屏蔽列表读取失败",
+  "contentFilterUnblock": "解除屏蔽",
+  "contentFilterUnblocked": "已恢复「{subject}」",
+  "@contentFilterUnblocked": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "contentFilterBlocked": "已屏蔽「{subject}」",
+  "@contentFilterBlocked": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "contentFilterAlreadyBlocked": "「{subject}」已在屏蔽列表",
+  "@contentFilterAlreadyBlocked": {
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "contentFilterSaveFailed": "屏蔽设置保存失败",
+  "contentFilterUndo": "撤销",
+  "contentFilterBlockAction": "屏蔽此帖",
+  "contentFilterMenuTooltip": "帖子操作",
+  "contentFilterHiddenOnPage": "本页帖子均已被屏蔽",
+  "contentFilterHiddenOnPageHint": "服务器还有下一页，可继续加载。",
+  "contentFilterDirectTitle": "帖子已屏蔽",
+  "contentFilterDirectMessage": "这个帖子在本机的屏蔽列表中，正文尚未载入。",
+  "contentFilterViewOnce": "本次查看",
+  "contentFilterUnblockAndView": "解除屏蔽并查看",
+  "contentFilterWebBlacklistSection": "网页版黑名单",
+  "contentFilterWebBlacklistLoginRequired": "登录后可同步网页版黑名单",
+  "contentFilterWebBlacklistNotSynced": "尚未同步名单",
+  "contentFilterWebBlacklistEmpty": "名单为空",
+  "contentFilterWebBlacklistLastSync": "最近同步：{time}",
+  "contentFilterWebBlacklistRefresh": "刷新名单",
+  "contentFilterWebBlacklistRefreshing": "正在同步…",
+  "contentFilterWebBlacklistSyncFailed": "名单同步失败，已保留上次成功的名单",
+  "contentFilterWebBlacklistCount": "{count} 人",
+  "contentFilterWebBlacklistNote": "名单修改仍在网页版完成",
+  "contentFilterWebBlacklistOpen": "打开网页名单",
+  "contentFilterWebBlacklistMemberUid": "UID：{uid}",
+  "@contentFilterWebBlacklistLastSync": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "@contentFilterWebBlacklistCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "@contentFilterWebBlacklistMemberUid": {
+    "placeholders": {
+      "uid": { "type": "String" }
+    }
+  },
+  "recentSearchTitle": "最近搜索",
+  "recentSearchDelete": "删除记录",
+  "searchScopeSummary": "搜索范围：{scope}",
+  "@searchScopeSummary": {
+    "placeholders": {
+      "scope": { "type": "String" }
+    }
+  },
+  "searchScopeAllForums": "全站",
+  "searchScopeCurrentForum": "本版",
   "commonCancel": "取消",
   "commonConfirm": "确定",
   "commonClose": "关闭",
@@ -530,6 +607,18 @@
   "libraryDetailChangeCategory": "修改分类",
   "libraryDetailEditMetadata": "编辑作品信息",
   "libraryDetailConfigureCatalog": "配置目录",
+  "libraryDetailSourceTags": "查看原帖标签",
+  "libraryDetailSourceTagsEmpty": "原帖没有可用的主题标签",
+  "libraryDetailSourceTagsLoadFailed": "原帖标签读取失败",
+  "libraryDetailUseTagAsCatalog": "设为目录",
+  "libraryDetailUseTagAsCatalogTitle": "设为作品目录",
+  "libraryDetailUseTagAsCatalogMessage": "将「{tag}」设为目录并刷新章节？该标签可能包含讨论、番外或其他作品。",
+  "@libraryDetailUseTagAsCatalogMessage": {
+    "placeholders": {
+      "tag": { "type": "String" }
+    }
+  },
+  "libraryDetailUseTagAsCatalogFailed": "设置目录失败",
   "libraryDetailManageChapters": "管理章节",
   "libraryDetailSetCustomCover": "自定义封面",
   "libraryDetailRemoveCustomCover": "取消封面",
@@ -812,6 +901,7 @@
   "comicBookmarkAdded": "已添加书签",
   "comicBookmarkRemoved": "已移除书签",
   "comicOpenSourceThread": "打开原帖",
+  "comicSourceThreadUnavailable": "暂时无法定位原帖",
   "comicMoreActions": "更多操作",
   "comicReaderRefreshEpisode": "刷新章节",
   "comicReaderEpisodeRefreshed": "章节已刷新",
@@ -1008,6 +1098,20 @@
   "@novelPreviousPageSemantics": {"placeholders": {"page": {"type": "int"}}},
   "novelPageIndicator": "{currentPage} / {totalPages}",
   "@novelPageIndicator": {"placeholders": {"currentPage": {"type": "int"}, "totalPages": {"type": "String"}}},
+  "novelReadingStatusChapter": "第 {current} / {total} 章",
+  "@novelReadingStatusChapter": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "novelReadingStatusVertical": "本章 {percent}% · 剩 {count} 页",
+  "@novelReadingStatusVertical": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "novelReadingStatusVerticalApprox": "本章 {percent}% · 约剩 {count} 页",
+  "@novelReadingStatusVerticalApprox": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "novelReadingStatusVerticalEnd": "本章 {percent}% · 本章完",
+  "@novelReadingStatusVerticalEnd": {"placeholders": {"percent": {"type": "int"}}},
+  "novelReadingStatusPaged": "第 {current} / {total} 页 · 剩 {count} 页",
+  "@novelReadingStatusPaged": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}, "count": {"type": "int"}}},
+  "novelReadingStatusPagedEnd": "第 {current} / {total} 页 · 本章完",
+  "@novelReadingStatusPagedEnd": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "novelReadingStatusPagedPending": "第 {current} 页 · 计算中",
+  "@novelReadingStatusPagedPending": {"placeholders": {"current": {"type": "int"}}},
   "novelChapterTurnContinue": "{direction, select, next {继续滑动进入下一章} previous {继续滑动进入上一章} other {继续滑动切换章节}}",
   "novelChapterTurnRelease": "{direction, select, next {松手进入下一章 · {title}} previous {松手进入上一章 · {title}} other {松手切换章节 · {title}}}",
   "@novelChapterTurnRelease": {"placeholders": {"direction": {"type": "String"}, "title": {"type": "String"}}},
@@ -1335,6 +1439,23 @@
   "threadDetailOpenSource": "打开原帖",
   "threadDetailMore": "更多",
   "threadDetailDisplaySettings": "显示设置",
+  "threadTopicTagFallback": "标签",
+  "threadBlacklistCollapsed": "已屏蔽用户「{name}」的楼层",
+  "threadBlacklistCollapsedFloor": "#{number} 楼层",
+  "threadBlacklistExpandOnce": "本次展开",
+  "blacklistAuthorGateTitle": "主题作者已屏蔽",
+  "blacklistAuthorGateMessage": "该主题的作者在你的网页版黑名单中。名单修改仍在网页版完成。",
+  "blacklistAuthorGateViewOnce": "本次查看",
+  "@threadBlacklistCollapsed": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "@threadBlacklistCollapsedFloor": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
   "threadDetailBackHome": "返回首页",
   "threadDetailSelectCopy": "选择复制",
   "threadDetailCopyAll": "全部复制",
@@ -2226,5 +2347,18 @@
     "placeholders": {"enqueued": {"type": "int"}, "existing": {"type": "int"}, "failed": {"type": "int"}}
   },
   "threadFavoriteParseQueued": "收藏成功，已加入解析队列",
-  "threadFavoriteParseQueueFailed": "收藏成功，但未能加入解析队列，可在收藏页手动解析"
+  "threadFavoriteParseQueueFailed": "收藏成功，但未能加入解析队列，可在收藏页手动解析",
+  "libraryChapterSearchHint": "搜索章节标题或章号",
+  "libraryChapterSearchCount": "{count} 章",
+  "libraryChapterLocateFirst": "定位第一章",
+  "libraryChapterLocateLast": "定位最后一章",
+  "libraryChapterLocateCurrent": "定位当前章",
+  "@libraryChapterSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+
 }

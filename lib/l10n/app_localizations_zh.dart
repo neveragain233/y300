@@ -291,6 +291,134 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get contentFilterEntry => '内容屏蔽';
+
+  @override
+  String get contentFilterTitle => '内容屏蔽';
+
+  @override
+  String get contentFilterThreadsSection => '已屏蔽帖子';
+
+  @override
+  String contentFilterCount(int count) {
+    return '共 $count 条';
+  }
+
+  @override
+  String get contentFilterThreadsEmpty =>
+      '还没有屏蔽任何帖子。在版块、搜索或标签页的帖子菜单中可以选择「屏蔽此帖」。';
+
+  @override
+  String get contentFilterLoadFailed => '屏蔽列表读取失败';
+
+  @override
+  String get contentFilterUnblock => '解除屏蔽';
+
+  @override
+  String contentFilterUnblocked(String subject) {
+    return '已恢复「$subject」';
+  }
+
+  @override
+  String contentFilterBlocked(String subject) {
+    return '已屏蔽「$subject」';
+  }
+
+  @override
+  String contentFilterAlreadyBlocked(String subject) {
+    return '「$subject」已在屏蔽列表';
+  }
+
+  @override
+  String get contentFilterSaveFailed => '屏蔽设置保存失败';
+
+  @override
+  String get contentFilterUndo => '撤销';
+
+  @override
+  String get contentFilterBlockAction => '屏蔽此帖';
+
+  @override
+  String get contentFilterMenuTooltip => '帖子操作';
+
+  @override
+  String get contentFilterHiddenOnPage => '本页帖子均已被屏蔽';
+
+  @override
+  String get contentFilterHiddenOnPageHint => '服务器还有下一页，可继续加载。';
+
+  @override
+  String get contentFilterDirectTitle => '帖子已屏蔽';
+
+  @override
+  String get contentFilterDirectMessage => '这个帖子在本机的屏蔽列表中，正文尚未载入。';
+
+  @override
+  String get contentFilterViewOnce => '本次查看';
+
+  @override
+  String get contentFilterUnblockAndView => '解除屏蔽并查看';
+
+  @override
+  String get contentFilterWebBlacklistSection => '网页版黑名单';
+
+  @override
+  String get contentFilterWebBlacklistLoginRequired => '登录后可同步网页版黑名单';
+
+  @override
+  String get contentFilterWebBlacklistNotSynced => '尚未同步名单';
+
+  @override
+  String get contentFilterWebBlacklistEmpty => '名单为空';
+
+  @override
+  String contentFilterWebBlacklistLastSync(String time) {
+    return '最近同步：$time';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRefresh => '刷新名单';
+
+  @override
+  String get contentFilterWebBlacklistRefreshing => '正在同步…';
+
+  @override
+  String get contentFilterWebBlacklistSyncFailed => '名单同步失败，已保留上次成功的名单';
+
+  @override
+  String contentFilterWebBlacklistCount(int count) {
+    return '$count 人';
+  }
+
+  @override
+  String get contentFilterWebBlacklistNote => '名单修改仍在网页版完成';
+
+  @override
+  String get contentFilterWebBlacklistOpen => '打开网页名单';
+
+  @override
+  String contentFilterWebBlacklistMemberUid(String uid) {
+    return 'UID：$uid';
+  }
+
+  @override
+  String get recentSearchTitle => '最近搜索';
+
+  @override
+  String get recentSearchDelete => '删除记录';
+
+  @override
+  String searchScopeSummary(String scope) {
+    return '搜索范围：$scope';
+  }
+
+  @override
+  String get searchScopeAllForums => '全站';
+
+  @override
+  String get searchScopeCurrentForum => '本版';
+
+  @override
   String get commonCancel => '取消';
 
   @override
@@ -1132,6 +1260,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDetailConfigureCatalog => '配置目录';
 
   @override
+  String get libraryDetailSourceTags => '查看原帖标签';
+
+  @override
+  String get libraryDetailSourceTagsEmpty => '原帖没有可用的主题标签';
+
+  @override
+  String get libraryDetailSourceTagsLoadFailed => '原帖标签读取失败';
+
+  @override
+  String get libraryDetailUseTagAsCatalog => '设为目录';
+
+  @override
+  String get libraryDetailUseTagAsCatalogTitle => '设为作品目录';
+
+  @override
+  String libraryDetailUseTagAsCatalogMessage(String tag) {
+    return '将「$tag」设为目录并刷新章节？该标签可能包含讨论、番外或其他作品。';
+  }
+
+  @override
+  String get libraryDetailUseTagAsCatalogFailed => '设置目录失败';
+
+  @override
   String get libraryDetailManageChapters => '管理章节';
 
   @override
@@ -1848,6 +1999,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get comicOpenSourceThread => '打开原帖';
 
   @override
+  String get comicSourceThreadUnavailable => '暂时无法定位原帖';
+
+  @override
   String get comicMoreActions => '更多操作';
 
   @override
@@ -2439,6 +2593,41 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String novelPageIndicator(int currentPage, String totalPages) {
     return '$currentPage / $totalPages';
+  }
+
+  @override
+  String novelReadingStatusChapter(int current, int total) {
+    return '第 $current / $total 章';
+  }
+
+  @override
+  String novelReadingStatusVertical(int percent, int count) {
+    return '本章 $percent% · 剩 $count 页';
+  }
+
+  @override
+  String novelReadingStatusVerticalApprox(int percent, int count) {
+    return '本章 $percent% · 约剩 $count 页';
+  }
+
+  @override
+  String novelReadingStatusVerticalEnd(int percent) {
+    return '本章 $percent% · 本章完';
+  }
+
+  @override
+  String novelReadingStatusPaged(int current, int total, int count) {
+    return '第 $current / $total 页 · 剩 $count 页';
+  }
+
+  @override
+  String novelReadingStatusPagedEnd(int current, int total) {
+    return '第 $current / $total 页 · 本章完';
+  }
+
+  @override
+  String novelReadingStatusPagedPending(int current) {
+    return '第 $current 页 · 计算中';
   }
 
   @override
@@ -3162,6 +3351,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get threadDetailDisplaySettings => '显示设置';
+
+  @override
+  String get threadTopicTagFallback => '标签';
+
+  @override
+  String threadBlacklistCollapsed(String name) {
+    return '已屏蔽用户「$name」的楼层';
+  }
+
+  @override
+  String threadBlacklistCollapsedFloor(int number) {
+    return '#$number 楼层';
+  }
+
+  @override
+  String get threadBlacklistExpandOnce => '本次展开';
+
+  @override
+  String get blacklistAuthorGateTitle => '主题作者已屏蔽';
+
+  @override
+  String get blacklistAuthorGateMessage => '该主题的作者在你的网页版黑名单中。名单修改仍在网页版完成。';
+
+  @override
+  String get blacklistAuthorGateViewOnce => '本次查看';
 
   @override
   String get threadDetailBackHome => '返回首页';
@@ -5575,6 +5789,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get threadFavoriteParseQueueFailed => '收藏成功，但未能加入解析队列，可在收藏页手动解析';
+
+  @override
+  String get libraryChapterSearchHint => '搜索章节标题或章号';
+
+  @override
+  String libraryChapterSearchCount(int count) {
+    return '$count 章';
+  }
+
+  @override
+  String get libraryChapterLocateFirst => '定位第一章';
+
+  @override
+  String get libraryChapterLocateLast => '定位最后一章';
+
+  @override
+  String get libraryChapterLocateCurrent => '定位当前章';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -5861,6 +6092,134 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String messageRepeatedNotifications(int count) {
     return '另有 $count 則相同提醒未重複顯示';
   }
+
+  @override
+  String get contentFilterEntry => '內容屏蔽';
+
+  @override
+  String get contentFilterTitle => '內容屏蔽';
+
+  @override
+  String get contentFilterThreadsSection => '已屏蔽帖子';
+
+  @override
+  String contentFilterCount(int count) {
+    return '共 $count 條';
+  }
+
+  @override
+  String get contentFilterThreadsEmpty =>
+      '還沒有屏蔽任何帖子。在版塊、搜尋或標籤頁的帖子選單中可以選擇「屏蔽此帖」。';
+
+  @override
+  String get contentFilterLoadFailed => '屏蔽列表讀取失敗';
+
+  @override
+  String get contentFilterUnblock => '解除屏蔽';
+
+  @override
+  String contentFilterUnblocked(String subject) {
+    return '已恢復「$subject」';
+  }
+
+  @override
+  String contentFilterBlocked(String subject) {
+    return '已屏蔽「$subject」';
+  }
+
+  @override
+  String contentFilterAlreadyBlocked(String subject) {
+    return '「$subject」已在屏蔽列表';
+  }
+
+  @override
+  String get contentFilterSaveFailed => '屏蔽設定儲存失敗';
+
+  @override
+  String get contentFilterUndo => '復原';
+
+  @override
+  String get contentFilterBlockAction => '屏蔽此帖';
+
+  @override
+  String get contentFilterMenuTooltip => '帖子操作';
+
+  @override
+  String get contentFilterHiddenOnPage => '本頁帖子均已被屏蔽';
+
+  @override
+  String get contentFilterHiddenOnPageHint => '伺服器還有下一頁，可繼續載入。';
+
+  @override
+  String get contentFilterDirectTitle => '帖子已屏蔽';
+
+  @override
+  String get contentFilterDirectMessage => '這個帖子在本機的屏蔽列表中，正文尚未載入。';
+
+  @override
+  String get contentFilterViewOnce => '本次查看';
+
+  @override
+  String get contentFilterUnblockAndView => '解除屏蔽並查看';
+
+  @override
+  String get contentFilterWebBlacklistSection => '網頁版黑名單';
+
+  @override
+  String get contentFilterWebBlacklistLoginRequired => '登入後可同步網頁版黑名單';
+
+  @override
+  String get contentFilterWebBlacklistNotSynced => '尚未同步名單';
+
+  @override
+  String get contentFilterWebBlacklistEmpty => '名單為空';
+
+  @override
+  String contentFilterWebBlacklistLastSync(String time) {
+    return '最近同步：$time';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRefresh => '重新整理名單';
+
+  @override
+  String get contentFilterWebBlacklistRefreshing => '正在同步…';
+
+  @override
+  String get contentFilterWebBlacklistSyncFailed => '名單同步失敗，已保留上次成功的名單';
+
+  @override
+  String contentFilterWebBlacklistCount(int count) {
+    return '$count 人';
+  }
+
+  @override
+  String get contentFilterWebBlacklistNote => '名單修改仍在網頁版完成';
+
+  @override
+  String get contentFilterWebBlacklistOpen => '開啟網頁名單';
+
+  @override
+  String contentFilterWebBlacklistMemberUid(String uid) {
+    return 'UID：$uid';
+  }
+
+  @override
+  String get recentSearchTitle => '最近搜尋';
+
+  @override
+  String get recentSearchDelete => '刪除記錄';
+
+  @override
+  String searchScopeSummary(String scope) {
+    return '搜尋範圍：$scope';
+  }
+
+  @override
+  String get searchScopeAllForums => '全站';
+
+  @override
+  String get searchScopeCurrentForum => '本版';
 
   @override
   String get commonCancel => '取消';
@@ -6704,6 +7063,29 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryDetailConfigureCatalog => '設定目錄';
 
   @override
+  String get libraryDetailSourceTags => '檢視原帖標籤';
+
+  @override
+  String get libraryDetailSourceTagsEmpty => '原帖沒有可用的主題標籤';
+
+  @override
+  String get libraryDetailSourceTagsLoadFailed => '原帖標籤讀取失敗';
+
+  @override
+  String get libraryDetailUseTagAsCatalog => '設為目錄';
+
+  @override
+  String get libraryDetailUseTagAsCatalogTitle => '設為作品目錄';
+
+  @override
+  String libraryDetailUseTagAsCatalogMessage(String tag) {
+    return '將「$tag」設為目錄並重新整理章節？該標籤可能包含討論、番外或其他作品。';
+  }
+
+  @override
+  String get libraryDetailUseTagAsCatalogFailed => '設定目錄失敗';
+
+  @override
   String get libraryDetailManageChapters => '管理章節';
 
   @override
@@ -7420,6 +7802,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get comicOpenSourceThread => '開啟原帖';
 
   @override
+  String get comicSourceThreadUnavailable => '暫時無法定位原帖';
+
+  @override
   String get comicMoreActions => '更多操作';
 
   @override
@@ -8011,6 +8396,41 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String novelPageIndicator(int currentPage, String totalPages) {
     return '$currentPage / $totalPages';
+  }
+
+  @override
+  String novelReadingStatusChapter(int current, int total) {
+    return '第 $current / $total 章';
+  }
+
+  @override
+  String novelReadingStatusVertical(int percent, int count) {
+    return '本章 $percent% · 剩 $count 頁';
+  }
+
+  @override
+  String novelReadingStatusVerticalApprox(int percent, int count) {
+    return '本章 $percent% · 約剩 $count 頁';
+  }
+
+  @override
+  String novelReadingStatusVerticalEnd(int percent) {
+    return '本章 $percent% · 本章完';
+  }
+
+  @override
+  String novelReadingStatusPaged(int current, int total, int count) {
+    return '第 $current / $total 頁 · 剩 $count 頁';
+  }
+
+  @override
+  String novelReadingStatusPagedEnd(int current, int total) {
+    return '第 $current / $total 頁 · 本章完';
+  }
+
+  @override
+  String novelReadingStatusPagedPending(int current) {
+    return '第 $current 頁 · 計算中';
   }
 
   @override
@@ -8734,6 +9154,31 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get threadDetailDisplaySettings => '顯示設定';
+
+  @override
+  String get threadTopicTagFallback => '標籤';
+
+  @override
+  String threadBlacklistCollapsed(String name) {
+    return '已屏蔽使用者「$name」的樓層';
+  }
+
+  @override
+  String threadBlacklistCollapsedFloor(int number) {
+    return '#$number 樓層';
+  }
+
+  @override
+  String get threadBlacklistExpandOnce => '本次展開';
+
+  @override
+  String get blacklistAuthorGateTitle => '主題作者已屏蔽';
+
+  @override
+  String get blacklistAuthorGateMessage => '該主題的作者在你的網頁版黑名單中。名單修改仍在網頁版完成。';
+
+  @override
+  String get blacklistAuthorGateViewOnce => '本次查看';
 
   @override
   String get threadDetailBackHome => '返回首頁';
@@ -11149,4 +11594,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get threadFavoriteParseQueueFailed => '收藏成功，但未能加入解析佇列，可在收藏頁手動解析';
+
+  @override
+  String get libraryChapterSearchHint => '搜尋章節標題或章號';
+
+  @override
+  String libraryChapterSearchCount(int count) {
+    return '$count 章';
+  }
+
+  @override
+  String get libraryChapterLocateFirst => '定位第一章';
+
+  @override
+  String get libraryChapterLocateLast => '定位最後一章';
+
+  @override
+  String get libraryChapterLocateCurrent => '定位目前章節';
 }
