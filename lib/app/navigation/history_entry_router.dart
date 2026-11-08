@@ -172,7 +172,12 @@ class HistoryEntryRouter {
 }
 
 Widget _buildNativeThreadPage(String tid, String subject, int? initialPage) {
-  return ThreadDetailPage(tid: tid, subject: subject, initialPage: initialPage);
+  return ThreadDetailPage(
+    tid: tid,
+    subject: subject,
+    initialPage: initialPage,
+    gateBlockedEntry: true,
+  );
 }
 
 Widget _buildNativeBlogPage({

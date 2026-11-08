@@ -21,7 +21,6 @@ import 'package:y300/features/thread/data/providers/thread_repository_providers.
 import 'package:y300/features/thread/domain/models/thread_post_target.dart';
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
-import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
 
@@ -129,10 +128,7 @@ final messageLinkOpenerProvider = Provider<MessageLinkOpener>((ref) {
         case YamiboForumLinkKind.blogDetail:
           page = nativeForumLinkPage(destination);
         case YamiboForumLinkKind.thread:
-          page = ThreadDetailPage(
-            tid: destination.tid!,
-            initialPage: destination.page ?? 1,
-          );
+          page = nativeForumLinkPage(destination);
         case YamiboForumLinkKind.threadPost:
           await launchThreadPostRoute(
             context: context,

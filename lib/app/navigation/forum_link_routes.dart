@@ -10,8 +10,10 @@ import 'package:y300/features/search/presentation/forum_search_page.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 
-typedef NativeForumLinkPageFactory =
-    Widget? Function(YamiboForumLinkDestination destination, {bool isActive});
+typedef NativeForumLinkPageFactory = Widget? Function(
+  YamiboForumLinkDestination destination, {
+  bool isActive,
+});
 
 final nativeForumLinkPageFactoryProvider = Provider<NativeForumLinkPageFactory>(
   (ref) => nativeForumLinkPage,
@@ -42,6 +44,7 @@ Widget? nativeForumLinkPage(
     YamiboForumLinkKind.thread => ThreadDetailPage(
       tid: destination.tid!,
       initialPage: destination.page ?? 1,
+      gateBlockedEntry: true,
     ),
     YamiboForumLinkKind.tagThreadPage => YamiboTagThreadPage(
       tagId: destination.tagId!,

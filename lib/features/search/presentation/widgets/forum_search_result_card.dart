@@ -10,11 +10,15 @@ class ForumSearchResultCard extends StatefulWidget {
     required this.item,
     required this.onTap,
     this.capabilities,
+    this.action,
   });
 
   final ForumSearchTopicSummary item;
   final VoidCallback onTap;
   final ForumSearchReadCapabilities? capabilities;
+
+  /// Optional topic-level action rendered beside the title.
+  final Widget? action;
 
   @override
   State<ForumSearchResultCard> createState() => _ForumSearchResultCardState();
@@ -68,16 +72,28 @@ class _ForumSearchResultCardState extends State<ForumSearchResultCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    key: Key('forum-search-result-title-${item.tid}'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: palette.threadTitle,
-                      height: 1.28,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          key: Key('forum-search-result-title-${item.tid}'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: palette.threadTitle,
+                                height: 1.28,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ),
+                      if (widget.action != null) ...[
+                        const SizedBox(width: 6),
+                        widget.action!,
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Row(

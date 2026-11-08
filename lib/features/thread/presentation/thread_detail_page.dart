@@ -1,6 +1,7 @@
 import 'package:y300/features/thread/presentation/services/thread_post_navigation.dart';
 import 'package:y300/features/thread/presentation/services/thread_image_reader_return_coordinator.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_actions.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,13 @@ import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/composer_shared/domain/models/composer_kind.dart';
 import 'package:y300/features/composer_shared/presentation/services/composer_text_resolver.dart';
+import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
+import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/blacklist/presentation/blacklist_author_gate_view.dart';
+import 'package:y300/features/content_filter/presentation/services/thread_block_action.dart';
+import 'package:y300/features/content_filter/presentation/widgets/blocked_thread_gate_view.dart';
 import 'package:y300/features/history/data/providers/history_providers.dart';
 import 'package:y300/features/history/domain/models/history_models.dart';
 import 'package:y300/features/history/domain/services/history_diagnostic_recorder.dart';
@@ -44,6 +52,7 @@ import 'package:y300/features/thread/presentation/widgets/thread_detail_quick_sc
 import 'package:y300/features/thread/presentation/widgets/thread_quick_scroll_dock_location.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
+import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
@@ -61,6 +70,7 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
     this.landing = ThreadPostLanding.top,
     this.initialForumName,
     this.bodyReadingObserver,
+    this.gateBlockedEntry = false,
   }) : assert(
          landing == ThreadPostLanding.top ||
              (targetPid != null && targetPid != ''),
@@ -75,6 +85,13 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
   final ThreadPostLanding landing;
   final String? initialForumName;
   final ThreadBodyReadingObserver? bodyReadingObserver;
+
+  /// Whether this entry must consult local blocked-thread rules before
+  /// requesting the body.
+  ///
+  /// Direct links, favorites and history opt in; list entries already filter
+  /// their rows and keep their existing first-frame behavior.
+  final bool gateBlockedEntry;
 
   @override
   ConsumerState<ThreadDetailPage> createState() => _ThreadDetailPageState();
@@ -104,6 +121,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   int _readingVisibilityRevision = 0;
   int _readingCloseRevision = 0;
   int _readingOwnerRevision = 0;
+  bool _allowedBlockedView = false;
+  bool _allowedBlacklistedAuthorView = false;
 
   @override
   void initState() {
@@ -266,6 +285,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       _bindReadingObserver();
       _syncReadingVisibility();
     }
+    if (oldWidget.tid != widget.tid) {
+      _allowedBlacklistedAuthorView = false;
+    }
     if (oldWidget.tid != widget.tid ||
         oldWidget.targetPid != widget.targetPid ||
         oldWidget.initialPage != widget.initialPage ||
@@ -304,6 +326,26 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (widget.gateBlockedEntry && !_allowedBlockedView) {
+      final blockedRules = ref.watch(blockedThreadsControllerProvider);
+      if (blockedRules.isLoading && !blockedRules.hasValue) {
+        // The prompt must not flash thread content while rules load; the body
+        // request starts only after this gate resolves.
+        return Scaffold(
+          key: const Key('thread-detail-blocked-rules-loading'),
+          appBar: AppBar(),
+          body: ThreadDetailLoading(subject: widget.subject),
+        );
+      }
+      final rule = _blockedRuleFor(blockedRules.value);
+      if (rule != null) {
+        return BlockedThreadGateView(
+          rule: rule,
+          onViewOnce: _viewBlockedThreadOnce,
+          onUnblock: () => unawaited(_unblockBlockedThread(rule)),
+        );
+      }
+    }
     final args = ThreadDetailArgs(
       tid: widget.tid,
       subject: widget.subject,
@@ -316,6 +358,21 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     final state =
         asyncState.value ??
         ThreadDetailPageState.initial(tid: widget.tid, subject: widget.subject);
+    final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final topicAuthor = _topicAuthorPost(state);
+    final blacklistedTopicAuthorId = topicAuthor?.authorId.trim() ?? '';
+    final blacklistedTopicAuthor =
+        blacklistedTopicAuthorId.isNotEmpty &&
+        blacklistedUserIds.contains(blacklistedTopicAuthorId);
+    if (blacklistedTopicAuthor && !_allowedBlacklistedAuthorView) {
+      return BlacklistAuthorGateView(
+        subject: state.subject.trim().isNotEmpty
+            ? state.subject
+            : widget.subject,
+        author: topicAuthor!.author,
+        onViewOnce: () => setState(() => _allowedBlacklistedAuthorView = true),
+      );
+    }
     final conversionMode = ref.watch(appServerContentConversionModeProvider);
     final converter = ref.watch(textConverterProvider(conversionMode));
     final projectionCandidate = ref
@@ -453,6 +510,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             ),
             onCopyUrl: _copyUrl,
             onDisplaySettings: _openDisplaySettings,
+            onBlockThread: () => unawaited(_blockCurrentThread(state)),
           ),
         ],
       ),
@@ -462,6 +520,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           onNotification: _handleQuickScrollNotification,
           child: Column(
             children: [
+              if (_topicTagsFor(state) case final tags when tags.isNotEmpty)
+                ThreadTopicTagBar(tags: tags, onOpenTag: _openThreadTag),
               Expanded(
                 child: (asyncState.isLoading && state.posts.isEmpty)
                     ? ThreadDetailLoading(
@@ -508,6 +568,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                           bodyReadingCoordinator: _bodyReadingCoordinator,
                           state: state,
                           projection: projection,
+                          allowedBlacklistedAuthorId:
+                              _allowedBlacklistedAuthorView
+                              ? blacklistedTopicAuthorId
+                              : null,
                           displayExtraCommentsByPostId: extraComments,
                           scrollController: _scrollController,
                           highlightPostPid: _highlightPostPid,
@@ -703,6 +767,60 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           },
         )
         .toString();
+  }
+
+  BlockedThread? _blockedRuleFor(List<BlockedThread>? rules) {
+    if (rules == null) {
+      return null;
+    }
+    final target = ThreadBlockIdentity.normalizeTid(widget.tid);
+    if (target == null) {
+      return null;
+    }
+    for (final rule in rules) {
+      if (rule.tid == target) {
+        return rule;
+      }
+    }
+    return null;
+  }
+
+  void _viewBlockedThreadOnce() {
+    setState(() => _allowedBlockedView = true);
+  }
+
+  Future<void> _unblockBlockedThread(BlockedThread rule) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final restored = await ref
+        .read(blockedThreadsControllerProvider.notifier)
+        .unblock(rule.tid);
+    if (!mounted) {
+      return;
+    }
+    if (!restored) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l10n.contentFilterSaveFailed)),
+      );
+      return;
+    }
+    setState(() => _allowedBlockedView = true);
+  }
+
+  Future<void> _blockCurrentThread(ThreadDetailPageState state) async {
+    final subject = state.subject.trim().isNotEmpty
+        ? state.subject
+        : widget.subject;
+    final blocked = await ThreadBlockAction.block(
+      context,
+      ref,
+      tid: widget.tid,
+      subject: subject,
+    );
+    if (!mounted || !blocked) {
+      return;
+    }
+    Navigator.of(context).maybePop();
   }
 
   Future<void> _runPageActionAndScrollTop(
@@ -913,6 +1031,39 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     }
   }
 
+  ThreadPost? _topicAuthorPost(ThreadDetailPageState state) {
+    for (final post in state.posts) {
+      if (post.isFirst) {
+        return post;
+      }
+    }
+    return null;
+  }
+
+  List<ThreadPostTagLink> _topicTagsFor(ThreadDetailPageState state) {
+    if (!state.supports(ThreadDetailCapability.tagLinks)) {
+      return const <ThreadPostTagLink>[];
+    }
+    for (final post in state.posts) {
+      if (post.isFirst) {
+        return post.tagLinks;
+      }
+    }
+    return const <ThreadPostTagLink>[];
+  }
+
+  void _openThreadTag(String tagId) {
+    final normalized = tagId.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => YamiboTagThreadPage(tagId: normalized),
+      ),
+    );
+  }
+
   void _openAuthorProfile(ThreadPost post) => _postNavigation.openAuthor(post);
   void _openCommentAuthorProfile(ThreadPostCommentEntry comment) =>
       _postNavigation.openCommentAuthor(comment);
@@ -1007,6 +1158,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
     required this.onNormalOrder,
     required this.onCopyUrl,
     required this.onDisplaySettings,
+    required this.onBlockThread,
   });
 
   final ThreadDetailPageState state;
@@ -1016,6 +1168,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
   final VoidCallback onNormalOrder;
   final void Function(String label, String url) onCopyUrl;
   final VoidCallback onDisplaySettings;
+  final VoidCallback onBlockThread;
 
   @override
   Widget build(BuildContext context) {
@@ -1043,6 +1196,11 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
           value: 'display-settings',
           label: l10n.threadDetailDisplaySettings,
         ),
+        AppPopupMenuItem<String>(
+          key: const Key('thread-detail-block-menu-item'),
+          value: 'block-thread',
+          label: l10n.contentFilterBlockAction,
+        ),
         if (state.homeUrl?.trim().isNotEmpty == true)
           AppPopupMenuItem<String>(
             value: 'home',
@@ -1065,6 +1223,9 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
             return;
           case 'display-settings':
             onDisplaySettings();
+            return;
+          case 'block-thread':
+            onBlockThread();
             return;
           case 'home':
             onCopyUrl(l10n.threadDetailHomeLink, state.homeUrl!);
@@ -1125,9 +1286,8 @@ Widget threadDetailPreviewShell(Widget child) {
       home: Scaffold(
         body: SafeArea(
           child: ColoredBox(
-            color: ThreadDetailNativePalette.resolve(
-              AppTheme.light(),
-            ).background,
+            color: ThreadDetailNativePalette.resolve(AppTheme.light())
+                .background,
             child: child,
           ),
         ),
@@ -1179,14 +1339,10 @@ final ThreadPost _threadDetailPreviewPost = ThreadPost(
   number: 12,
   isFirst: false,
   dateline: '2026-06-23 12:48',
-  avatarUrl:
-      'https://bbs.yamibo.com/uc_server/data/avatar/000/27/89/48_avatar_small.jpg',
-  replyUrl:
-      'https://bbs.yamibo.com/forum.php?mod=post&action=reply&fid=33&tid=572529&repquote=preview-post',
-  rateUrl:
-      'https://bbs.yamibo.com/forum.php?mod=misc&action=rate&tid=572529&pid=preview-post',
-  commentUrl:
-      'https://bbs.yamibo.com/forum.php?mod=misc&action=comment&tid=572529&pid=preview-post',
+  avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/27/89/48_avatar_small.jpg',
+  replyUrl: 'https://bbs.yamibo.com/forum.php?mod=post&action=reply&fid=33&tid=572529&repquote=preview-post',
+  rateUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=rate&tid=572529&pid=preview-post',
+  commentUrl: 'https://bbs.yamibo.com/forum.php?mod=misc&action=comment&tid=572529&pid=preview-post',
   message:
       '<div class="quote"><blockquote><b>hsyhlj</b>: 后面楼主参加活动的应该就是梅小雪那篇武侠了吧。</blockquote></div>'
       '<p>那篇很好啊我很喜欢 <img src="static/image/smiley/comcom/2.gif" class="vm"> '
@@ -1207,16 +1363,14 @@ final ThreadPost _threadDetailPreviewPost = ThreadPost(
     ThreadPostCommentEntry(
       author: '花実',
       authorId: '231169',
-      avatarUrl:
-          'https://bbs.yamibo.com/uc_server/data/avatar/000/23/11/69_avatar_small.jpg',
+      avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/23/11/69_avatar_small.jpg',
       message: '这一段点评会展示在正文下面，头像、名称、内容和时间都保留下来。',
       dateline: '2026-06-23 13:12',
     ),
     ThreadPostCommentEntry(
       author: 'tagami',
       authorId: '14577',
-      avatarUrl:
-          'https://bbs.yamibo.com/uc_server/data/avatar/000/01/45/77_avatar_small.jpg',
+      avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/01/45/77_avatar_small.jpg',
       message: '短点评也应该保持轻量，不抢正文和评分的视觉层级。',
       dateline: '2026-06-23 13:18',
     ),

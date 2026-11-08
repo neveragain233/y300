@@ -8,6 +8,8 @@ import 'package:y300/features/cache/domain/models/forum_image_dimensions.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/presentation/widgets/cached_library_image.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.dart';
 import 'package:y300/features/forum/presentation/forum_display_content_projection.dart';
 import 'package:y300/features/forum/presentation/forum_display_state.dart';
@@ -36,6 +38,8 @@ class ForumDisplayContent extends StatefulWidget {
     required this.onOpenThread,
     required this.onOpenTopEntry,
     required this.onOpenSubForum,
+    this.blockedThreadIds = const <String>{},
+    this.blacklistedUserIds = const <String>{},
   });
 
   final ForumDisplayContentProjection projection;
@@ -50,6 +54,12 @@ class ForumDisplayContent extends StatefulWidget {
   final ValueChanged<ForumThreadSummary> onOpenThread;
   final ValueChanged<ForumDisplayTopEntry> onOpenTopEntry;
   final ValueChanged<ForumDisplaySubForum> onOpenSubForum;
+
+  /// Canonical thread ids hidden by local content rules.
+  final Set<String> blockedThreadIds;
+
+  /// Author ids hidden by the synced web blacklist.
+  final Set<String> blacklistedUserIds;
 
   @override
   State<ForumDisplayContent> createState() => _ForumDisplayContentState();
@@ -76,8 +86,24 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     );
     final displayTypeFilters = _displayFilters(widget.projection.typeFilters);
     final displaySubForums = _displaySubForums(widget.projection.subForums);
-    final displayTopEntries = _displayTopEntries(widget.projection.topEntries);
-    final displayThreads = _displayThreads(widget.projection.threads);
+    final displayTopEntries = [
+      for (final entry in _displayTopEntries(widget.projection.topEntries))
+        if (!widget.blockedThreadIds.contains(
+          ThreadBlockIdentity.normalizeTid(entry.tid),
+        ))
+          entry,
+    ];
+    final allDisplayThreads = _displayThreads(widget.projection.threads);
+    final displayThreads = [
+      for (final thread in allDisplayThreads)
+        if (!widget.blockedThreadIds.contains(
+              ThreadBlockIdentity.normalizeTid(thread.tid),
+            ) &&
+            !widget.blacklistedUserIds.contains(thread.uid.trim()))
+          thread,
+    ];
+    final hiddenByRules =
+        allDisplayThreads.isNotEmpty && displayThreads.isEmpty;
     return ColoredBox(
       color: palette.background,
       child: CustomScrollView(
@@ -137,7 +163,13 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
               ),
             ),
           if (displayThreads.isEmpty)
-            SliverToBoxAdapter(child: _EmptyThreadList(palette: palette))
+            SliverToBoxAdapter(
+              child: _EmptyThreadList(
+                palette: palette,
+                hiddenByRules: hiddenByRules,
+                hasMore: state.hasMore,
+              ),
+            )
           else
             _ThreadListSection(
               signature: _threadListSignature(state),
@@ -548,9 +580,8 @@ class ForumDisplayErrorView extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: palette.title),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: palette.title),
               ),
               const SizedBox(height: 12),
               FilledButton(
@@ -1366,9 +1397,8 @@ class _TopEntryTile extends StatelessWidget {
                 label: entry.badgeLabel.isNotEmpty
                     ? entry.badgeLabel
                     : (entry.isAnnouncement
-                          ? AppLocalizations.of(
-                              context,
-                            ).forumDisplayAnnouncements
+                          ? AppLocalizations.of(context)
+                                .forumDisplayAnnouncements
                           : AppLocalizations.of(context).forumDisplayPinned),
                 accentColor: entry.isAnnouncement
                     ? palette.warning
@@ -1528,10 +1558,8 @@ class _ThreadCard extends StatelessWidget {
                     thread.excerpt.trim(),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: palette.bodyText,
-                      height: 1.35,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: palette.bodyText, height: 1.35),
                   ),
                 ],
                 const SizedBox(height: 10),
@@ -1643,6 +1671,11 @@ class _ThreadFooter extends StatelessWidget {
             ),
           ),
         ],
+        ThreadBlockMenuButton(
+          tid: thread.tid,
+          subject: thread.subject,
+          color: palette.softText,
+        ),
       ],
     );
   }
@@ -1690,10 +1723,8 @@ class _ThreadTagChip extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: palette.tag,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: palette.tag, fontWeight: FontWeight.w600),
           ),
         ),
       ),
@@ -1870,22 +1901,45 @@ class _LoadMoreSection extends StatelessWidget {
 }
 
 class _EmptyThreadList extends StatelessWidget {
-  const _EmptyThreadList({required this.palette});
+  const _EmptyThreadList({
+    required this.palette,
+    this.hiddenByRules = false,
+    this.hasMore = false,
+  });
 
   final ForumDisplayThemePalette palette;
+  final bool hiddenByRules;
+  final bool hasMore;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _ForumDisplayGroup(
       palette: palette,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 36),
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
         child: Center(
-          child: Text(
-            AppLocalizations.of(context).forumDisplayEmpty,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: palette.softText),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                hiddenByRules
+                    ? l10n.contentFilterHiddenOnPage
+                    : l10n.forumDisplayEmpty,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: palette.softText),
+              ),
+              if (hiddenByRules && hasMore) ...[
+                const SizedBox(height: 6),
+                Text(
+                  l10n.contentFilterHiddenOnPageHint,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: palette.softText),
+                ),
+              ],
+            ],
           ),
         ),
       ),

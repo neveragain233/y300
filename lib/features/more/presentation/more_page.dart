@@ -8,6 +8,7 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/presentation/login_webview_page.dart';
 import 'package:y300/features/comic/presentation/comic_download_queue_page.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_unused_image_management_page.dart';
+import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
 import 'package:y300/features/forum/presentation/forum_home_controller.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_driver.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_route_factory.dart';
@@ -170,6 +171,20 @@ class _MorePageState extends ConsumerState<MorePage> {
               onTap: () => _showAppearanceSettingsSheet(context),
             ),
             ListTile(
+              key: const Key('more-content-filter-entry'),
+              leading: const Icon(Icons.visibility_off_outlined),
+              title: Text(l10n.contentFilterEntry),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ContentFilterPage(
+                      managedBlacklistRouteBuilder: _managedBlacklistRoute,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
               key: const Key('more-navigation-management-entry'),
               leading: const Icon(Icons.view_week_outlined),
               title: Text(l10n.moreNavigationManagement),
@@ -214,6 +229,23 @@ class _MorePageState extends ConsumerState<MorePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Route<void> _managedBlacklistRoute() {
+    final owner = ref.read(verifiedSessionOwnerProvider);
+    return ref.read(forumWebViewRouteFactoryProvider)(
+      ForumWebViewLaunchConfig(
+        initialUri: Uri.parse(AppConfig.siteBaseUrl).replace(
+          path: '/home.php',
+          queryParameters: <String, String>{
+            'mod': 'space',
+            'do': 'friend',
+            'view': 'blacklist',
+          },
+        ),
+        expectedAccountId: owner?.uid,
       ),
     );
   }
@@ -469,9 +501,8 @@ class _MorePageState extends ConsumerState<MorePage> {
       final message = l10n.moreLogoutFailed(
         LocalizedErrorSummary.resolve(l10n, failure),
       );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _confirmingLogout = false);
     }

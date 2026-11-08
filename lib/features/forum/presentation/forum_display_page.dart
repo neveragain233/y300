@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/composer_shared/presentation/services/read_access_feedback.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -88,6 +90,8 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
         ? _searchFidFor(state)
         : null;
     final mode = ref.watch(appServerContentConversionModeProvider);
+    final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
+    final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final projection = _projectionOrRaw(
       state,
       mode: mode,
@@ -144,6 +148,8 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
               onRefresh: () => controller.refresh(forceNetwork: true),
               child: ForumDisplayContent(
                 projection: projection,
+                blockedThreadIds: blockedThreadIds,
+                blacklistedUserIds: blacklistedUserIds,
                 scrollController: _scrollController,
                 filterAnchorKey: _filterAnchorKey,
                 headImageKey: _headImageKey,
@@ -492,9 +498,8 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
       result!.readAccess,
     );
     if (feedback != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(feedback)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(feedback)));
     }
   }
 }
@@ -617,8 +622,7 @@ final ForumThreadSummary _forumDisplayPreviewThread = ForumThreadSummary(
   views: 4096,
   dateline: '2026-06-23 12:48',
   uid: '278948',
-  avatarUrl:
-      'https://bbs.yamibo.com/uc_server/data/avatar/000/27/89/48_avatar_small.jpg',
+  avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/27/89/48_avatar_small.jpg',
   authorUrl: 'https://bbs.yamibo.com/home.php?mod=space&uid=278948',
   threadUrl: 'https://bbs.yamibo.com/thread-preview-1-1.html',
   excerpt: '那篇很好啊我很喜欢，角色之间的互动很轻盈，读起来像是在夏天的海边慢慢展开的一封信。',

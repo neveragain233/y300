@@ -8,6 +8,8 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/document_cache_models.dart';
+import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/favorites/data/providers/favorite_directory_providers.dart';
 import 'package:y300/features/forum/data/models/forum_home_chrome_models.dart';
 import 'package:y300/features/forum/data/services/forum_home_request_profile_resolver.dart';
@@ -430,6 +432,11 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
     });
     final l10n = AppLocalizations.of(context);
     final palette = ForumHomeNativePalette.resolve(Theme.of(context));
+    final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
+    final carouselItems = [
+      for (final item in widget.state.viewData.carouselItems)
+        if (!_isBlockedCarouselItem(item, blockedThreadIds)) item,
+    ];
     return RefreshIndicator(
       onRefresh: () => ref
           .read(forumHomeControllerProvider.notifier)
@@ -444,13 +451,13 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
               padding: const EdgeInsets.only(bottom: 10),
               children: [
                 ForumHomeCarousel(
-                  items: widget.state.viewData.carouselItems,
+                  items: carouselItems,
                   imageReferer: widget.imageReferer,
                   onOpen: (item) => _openCarouselTarget(context, ref, item),
                   isActive: widget.isActive,
                 ),
                 if (widget.state.viewData.sections.isEmpty &&
-                    widget.state.viewData.carouselItems.isEmpty)
+                    carouselItems.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(32),
                     child: Center(child: Text(l10n.forumHomeEmpty)),
@@ -529,6 +536,22 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
           onTap: rows[index].onTap,
         ),
     ];
+  }
+
+  bool _isBlockedCarouselItem(
+    ForumHomeCarouselItem item,
+    Set<String> blockedThreadIds,
+  ) {
+    if (blockedThreadIds.isEmpty) {
+      return false;
+    }
+    const parser = ForumReferenceResolver();
+    final normalized = parser.normalizeHref(item.targetUrl);
+    if (normalized == null) {
+      return false;
+    }
+    final tid = ThreadBlockIdentity.normalizeTid(parser.extractTid(normalized));
+    return tid != null && blockedThreadIds.contains(tid);
   }
 
   Future<void> _openCarouselTarget(

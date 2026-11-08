@@ -5,6 +5,7 @@ import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/domain/services/forum_image_precache_service.dart';
@@ -54,6 +55,8 @@ part 'thread_detail_card.dart';
 part 'thread_detail_loading.dart';
 part 'thread_detail_chunk_body.dart';
 part 'thread_detail_endpoint_navigation.dart';
+part 'thread_topic_tag_bar.dart';
+part 'thread_blacklisted_post.dart';
 
 typedef ThreadPollOptionActionCallback = void Function(
   ThreadPost post,
@@ -93,11 +96,16 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.onLoadMoreComments,
     this.displayExtraCommentsByPostId = const {},
     this.enableBodyChunking = true,
+    this.allowedBlacklistedAuthorId,
   });
 
   final ThreadDetailPageState state;
   final ThreadDetailContentProjection? projection;
   final bool enableBodyChunking;
+
+  /// Topic author allowed for this route when the whole-thread prompt was
+  /// accepted; their floors are not collapsed for this session.
+  final String? allowedBlacklistedAuthorId;
   final ScrollController? scrollController;
   final ThreadImageReaderReturnCoordinator? imageReaderReturnCoordinator;
   final ThreadBodyReadingCoordinator? bodyReadingCoordinator;
@@ -146,6 +154,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   late final _bodyHandoffs = ThreadBodyPreparationHandoff(_preparedBodies);
   late final _chunkPreparation = ThreadBodyChunkPreparation(_preparedBodies);
   final _footerExpansions = <String, _ThreadPostFooterExpansion>{};
+  final _expandedBlacklistedPids = <String>{};
   final _wholeBodyPresentations = ThreadBodyPresentationStore();
   // Saved body percentages require complete actual geometry. Source reading
   // pages keep their existing whole-body renderer and reading observer.
@@ -225,6 +234,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage) {
       _clearFooterExpansions();
+    }
+    if (oldWidget.state.tid != widget.state.tid) {
+      _expandedBlacklistedPids.clear();
     }
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage ||
@@ -376,11 +388,22 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           projection.sourcePost.pid: projection.displayPost.message,
       },
     );
+    final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final entries = _entryPlanner.buildProjectionEntries(
       posts: _postProjections,
       targetPid: _endpointTarget == null ? widget.targetPid : null,
       landing: _endpointTarget == null ? widget.landing : ThreadPostLanding.top,
       bodyManifests: _preparedBodies.manifests,
+      isCollapsed: (post) {
+        final authorId = post.authorId.trim();
+        if (authorId.isNotEmpty &&
+            authorId == widget.allowedBlacklistedAuthorId) {
+          return false;
+        }
+        return authorId.isNotEmpty &&
+            blacklistedUserIds.contains(authorId) &&
+            !_expandedBlacklistedPids.contains(post.pid);
+      },
     );
     _projectionAnchorCoordinator.prune(
       _postProjections.map((post) => post.sourcePost.pid),
@@ -401,10 +424,14 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         : entries.indexWhere(
             (entry) =>
                 (widget.landing == ThreadPostLanding.bodyEnd
-                    ? entry.kind == ThreadDetailRenderEntryKind.postFooter
+                    ? entry.kind == ThreadDetailRenderEntryKind.postFooter ||
+                          entry.kind ==
+                              ThreadDetailRenderEntryKind.blacklistedPost
                     : entry.kind == ThreadDetailRenderEntryKind.postCard ||
                           entry.kind ==
-                              ThreadDetailRenderEntryKind.postHeader) &&
+                              ThreadDetailRenderEntryKind.postHeader ||
+                          entry.kind ==
+                              ThreadDetailRenderEntryKind.blacklistedPost) &&
                 entry.sourcePost?.pid == targetPid,
           );
     if (targetEntryIndex >= 0) {
@@ -792,7 +819,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                       widget.landing == ThreadPostLanding.bodyEnd ||
                   (entry.kind == ThreadDetailRenderEntryKind.postCard ||
                           entry.kind ==
-                              ThreadDetailRenderEntryKind.postHeader) &&
+                              ThreadDetailRenderEntryKind.postHeader ||
+                          entry.kind ==
+                              ThreadDetailRenderEntryKind.blacklistedPost) &&
                       widget.landing == ThreadPostLanding.top)) {
             child = KeyedSubtree(key: _targetVisibilityKey, child: child);
           }
@@ -1020,6 +1049,18 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                 widget.landing == ThreadPostLanding.bodyEnd &&
                 widget.targetPid == entry.sourcePost!.pid,
             palette: palette,
+          ),
+        );
+      case ThreadDetailRenderEntryKind.blacklistedPost:
+        final pid = entry.sourcePost!.pid;
+        return KeyedSubtree(
+          key: _projectionAnchorCoordinator.keyForPid(pid),
+          child: ThreadBlacklistedPostPlaceholder(
+            post: entry.displayPost!,
+            palette: palette,
+            onExpand: () {
+              setState(() => _expandedBlacklistedPids.add(pid));
+            },
           ),
         );
       case ThreadDetailRenderEntryKind.pagination:

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/thread/domain/models/thread_post_target.dart';
 import 'package:y300/features/thread/presentation/thread_detail_content_projection.dart';
+
 import 'thread_detail_prepared_body.dart';
 
 /// Builds stable visual entries without parsing or caching post bodies.
@@ -14,6 +15,7 @@ class ThreadDetailRenderEntryPlanner {
     String? targetPid,
     ThreadPostLanding landing = ThreadPostLanding.top,
     Map<String, ThreadDetailBodyManifest> bodyManifests = const {},
+    bool Function(ThreadPost sourcePost)? isCollapsed,
   }) {
     return buildProjectionEntries(
       posts: [
@@ -23,6 +25,7 @@ class ThreadDetailRenderEntryPlanner {
       targetPid: targetPid,
       landing: landing,
       bodyManifests: bodyManifests,
+      isCollapsed: isCollapsed,
     );
   }
 
@@ -31,11 +34,23 @@ class ThreadDetailRenderEntryPlanner {
     String? targetPid,
     ThreadPostLanding landing = ThreadPostLanding.top,
     Map<String, ThreadDetailBodyManifest> bodyManifests = const {},
+    bool Function(ThreadPost sourcePost)? isCollapsed,
   }) {
     final entries = <ThreadDetailRenderEntry>[];
     final normalizedTargetPid = targetPid?.trim();
     for (var index = 0; index < posts.length; index++) {
       final post = posts[index];
+      if (isCollapsed?.call(post.sourcePost) ?? false) {
+        entries.add(
+          ThreadDetailRenderEntry.blacklistedPost(
+            key: 'thread-post-blacklisted-entry-${post.sourcePost.pid}',
+            sourcePost: post.sourcePost,
+            displayPost: post.displayPost,
+            postIndex: index,
+          ),
+        );
+        continue;
+      }
       final manifest = bodyManifests[post.sourcePost.pid];
       if (manifest != null ||
           landing == ThreadPostLanding.bodyEnd &&
@@ -97,6 +112,7 @@ enum ThreadDetailRenderEntryKind {
   postBody,
   postBodyChunk,
   postFooter,
+  blacklistedPost,
   pagination,
   targetSpacer,
 }
@@ -180,6 +196,19 @@ class ThreadDetailRenderEntry {
          postIndex: postIndex,
          bodyManifest: bodyManifest,
          chunkOrdinal: chunkOrdinal,
+       );
+
+  const ThreadDetailRenderEntry.blacklistedPost({
+    required String key,
+    required ThreadPost sourcePost,
+    required ThreadPost displayPost,
+    required int postIndex,
+  }) : this._(
+         kind: ThreadDetailRenderEntryKind.blacklistedPost,
+         key: key,
+         sourcePost: sourcePost,
+         displayPost: displayPost,
+         postIndex: postIndex,
        );
 
   const ThreadDetailRenderEntry.pagination()
