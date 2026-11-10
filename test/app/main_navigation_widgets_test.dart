@@ -145,6 +145,41 @@ void swipeTests() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('swipe ignores velocity and cancels without committing', (
+    tester,
+  ) async {
+    final selected = ValueNotifier<int>(0);
+    final commits = <int>[];
+    addTearDown(selected.dispose);
+    await _pumpSwipeCapsule(
+      tester,
+      selected: selected,
+      commits: commits,
+      swipeEnabled: true,
+    );
+
+    // 同一起始位置下，快速小幅甩动仍按落点回到原项。
+    await tester.fling(
+      find.byType(MainNavigationCapsule),
+      const Offset(30, 0),
+      2000,
+    );
+    await tester.pumpAndSettle();
+    expect(selected.value, 0);
+    expect(commits, isEmpty);
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(MainNavigationCapsule)),
+    );
+    await gesture.moveBy(const Offset(100, 0));
+    await tester.pump();
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+    expect(selected.value, 0);
+    expect(commits, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('swipe disabled leaves taps as the only commit', (tester) async {
     final selected = ValueNotifier<int>(0);
     final commits = <int>[];
