@@ -2616,13 +2616,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String novelReadingStatusPaged(int current, int total, int count) {
-    return '第 $current / $total 页 · 剩 $count 页';
-  }
-
-  @override
-  String novelReadingStatusPagedEnd(int current, int total) {
-    return '第 $current / $total 页 · 本章完';
+  String novelReadingStatusPaged(int current, int total) {
+    return '第 $current / $total 页';
   }
 
   @override
@@ -8490,13 +8485,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String novelReadingStatusPaged(int current, int total, int count) {
-    return '第 $current / $total 頁 · 剩 $count 頁';
-  }
-
-  @override
-  String novelReadingStatusPagedEnd(int current, int total) {
-    return '第 $current / $total 頁 · 本章完';
+  String novelReadingStatusPaged(int current, int total) {
+    return '第 $current / $total 頁';
   }
 
   @override

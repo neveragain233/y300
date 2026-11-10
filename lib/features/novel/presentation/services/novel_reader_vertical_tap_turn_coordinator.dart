@@ -14,10 +14,12 @@ final class NovelReaderVerticalTapTurnCoordinator {
   NovelReaderVerticalTapTurnCoordinator({
     required ScrollController scrollController,
     this.duration = const Duration(milliseconds: 260),
+    this.curve = Curves.easeOutCubic,
   }) : _scrollController = scrollController;
 
   final ScrollController _scrollController;
   final Duration duration;
+  final Curve curve;
 
   _PendingTurn? _pending;
   NovelReaderVerticalTurnDirection? _runningDirection;
@@ -29,11 +31,19 @@ final class NovelReaderVerticalTapTurnCoordinator {
     required NovelReaderVerticalTurnDirection direction,
     required double step,
     required VoidCallback onCommitted,
+    Duration? duration,
+    Curve? curve,
   }) {
     if (_disposed || !step.isFinite || step <= 0) {
       return;
     }
-    final pending = _PendingTurn(direction, step, onCommitted);
+    final pending = _PendingTurn(
+      direction,
+      step,
+      onCommitted,
+      duration ?? this.duration,
+      curve ?? this.curve,
+    );
     _pending = pending;
     if (_running) {
       if (direction != _runningDirection) {
@@ -106,8 +116,8 @@ final class NovelReaderVerticalTapTurnCoordinator {
     _runningDirection = pending.direction;
     await _scrollController.animateTo(
       target,
-      duration: duration,
-      curve: Curves.easeOutCubic,
+      duration: pending.duration,
+      curve: pending.curve,
     );
     if (_disposed ||
         generation != _generation ||
@@ -135,9 +145,17 @@ final class NovelReaderVerticalTapTurnCoordinator {
 }
 
 final class _PendingTurn {
-  const _PendingTurn(this.direction, this.step, this.onCommitted);
+  const _PendingTurn(
+    this.direction,
+    this.step,
+    this.onCommitted,
+    this.duration,
+    this.curve,
+  );
 
   final NovelReaderVerticalTurnDirection direction;
   final double step;
   final VoidCallback onCommitted;
+  final Duration duration;
+  final Curve curve;
 }

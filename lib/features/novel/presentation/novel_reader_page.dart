@@ -57,6 +57,7 @@ import 'package:y300/features/novel/presentation/widgets/novel_reader_display_se
 import 'package:y300/features/novel/presentation/widgets/novel_reader_delayed_loading_boundary.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_document_view.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_paged_surface.dart';
+import 'package:y300/features/novel/presentation/widgets/novel_reader_page_motion.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_chapter_interactions_button.dart';
 import 'package:y300/features/thread/domain/models/thread_image_open_models.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
@@ -512,19 +513,13 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
                       ),
                       bottomSafeFraction: 0,
                       onLeftTap: isVertical
-                          ? () => _turnVerticalByTap(
-                              backward: true,
-                              typography: typography,
-                            )
+                          ? () => _turnVerticalByTap(backward: true)
                           : () => _turnPagedByPhysicalTap(
                               surfaceIdentity: readerSurfaceIdentity,
                               isLeftTap: true,
                             ),
                       onRightTap: isVertical
-                          ? () => _turnVerticalByTap(
-                              backward: false,
-                              typography: typography,
-                            )
+                          ? () => _turnVerticalByTap(backward: false)
                           : () => _turnPagedByPhysicalTap(
                               surfaceIdentity: readerSurfaceIdentity,
                               isLeftTap: false,
@@ -697,10 +692,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     }
   }
 
-  void _turnVerticalByTap({
-    required bool backward,
-    required NovelReaderTypography typography,
-  }) {
+  void _turnVerticalByTap({required bool backward}) {
     final current = ref
         .read(novelReaderControllerProvider(_args))
         .asData
@@ -724,19 +716,26 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
             _bodyGeometryOwner == session.surfaceIdentity
         ? geometry.effectiveViewportHeight
         : _scrollController.position.viewportDimension;
-    final body = typography.body;
-    // About one body viewport per tap, keeping roughly two lines of overlap.
-    final lineHeight = (body.fontSize ?? 14) * (body.height ?? 1.5);
-    final step = viewport - lineHeight * 2;
+    // 与翻页模式一致：一次前进一个阅读视口，并使用同一档位的时长与曲线。
+    final step = viewport;
     if (!step.isFinite || step <= 0) {
       return;
     }
     _overlayController.hideMenu();
+    final animationsDisabled = MediaQuery.disableAnimationsOf(context);
+    final effect = current.preferences.pageEffect;
     _verticalTapTurn.turn(
       direction: backward
           ? NovelReaderVerticalTurnDirection.backward
           : NovelReaderVerticalTurnDirection.forward,
       step: step,
+      duration: animationsDisabled
+          ? Duration.zero
+          : NovelReaderPageMotion.duration(
+              effect,
+              current.preferences.pageSpeed,
+            ),
+      curve: NovelReaderPageMotion.curve(effect),
       onCommitted: _commitVerticalTapReadingProgress,
     );
   }
@@ -840,8 +839,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       status: _buildReadingStatus(viewState, verticalMetrics),
       background: palette.background,
       foreground: palette.muted,
-      divider: palette.foreground.withValues(alpha: 0.08),
-      progressColor: palette.accent.withValues(alpha: 0.7),
     );
   }
 
@@ -863,8 +860,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         final pending = l10n.novelPageCountPending;
         return ReaderReadingStatus(
           leading: leading,
-          center: pending,
-          trailing: '',
+          trailing: pending,
           semanticsLabel: [
             leading,
             pending,
@@ -875,7 +871,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
           .round()
           .clamp(0, 100)
           .toInt();
-      final center = verticalMetrics.remainingPages <= 0
+      final trailing = verticalMetrics.remainingPages <= 0
           ? l10n.novelReadingStatusVerticalEnd(percent)
           : verticalMetrics.isEstimate
           ? l10n.novelReadingStatusVerticalApprox(
@@ -888,12 +884,10 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
             );
       return ReaderReadingStatus(
         leading: leading,
-        center: center,
-        trailing: '',
-        progress: verticalMetrics.progress,
+        trailing: trailing,
         semanticsLabel: [
           leading,
-          center,
+          trailing,
         ].where((value) => value.isNotEmpty).join('，'),
       );
     }
@@ -908,30 +902,18 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         ? position.pageIndex
         : viewState.progressSnapshot.pageIndex;
     final currentPage = pageIndex + 1;
-    final String center;
-    final double progress;
+    final String trailing;
     if (!isFinal || total == null || total <= 0) {
-      center = l10n.novelReadingStatusPagedPending(currentPage);
-      progress = 0;
-    } else if (currentPage >= total) {
-      center = l10n.novelReadingStatusPagedEnd(currentPage, total);
-      progress = 1;
+      trailing = l10n.novelReadingStatusPagedPending(currentPage);
     } else {
-      center = l10n.novelReadingStatusPaged(
-        currentPage,
-        total,
-        total - currentPage,
-      );
-      progress = currentPage / total;
+      trailing = l10n.novelReadingStatusPaged(currentPage, total);
     }
     return ReaderReadingStatus(
       leading: leading,
-      center: center,
-      trailing: '',
-      progress: progress,
+      trailing: trailing,
       semanticsLabel: [
         leading,
-        center,
+        trailing,
       ].where((value) => value.isNotEmpty).join('，'),
     );
   }

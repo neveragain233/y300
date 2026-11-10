@@ -10,33 +10,24 @@ import 'reader_models.dart';
 final class ReaderReadingStatus {
   const ReaderReadingStatus({
     required this.leading,
-    required this.center,
     required this.trailing,
     required this.semanticsLabel,
-    this.progress,
   });
 
   final String leading;
-  final String center;
   final String trailing;
   final String semanticsLabel;
-
-  /// Fraction in `0..1`; null keeps the progress line invisible but reserved.
-  final double? progress;
 
   @override
   bool operator ==(Object other) {
     return other is ReaderReadingStatus &&
         other.leading == leading &&
-        other.center == center &&
         other.trailing == trailing &&
-        other.semanticsLabel == semanticsLabel &&
-        other.progress == progress;
+        other.semanticsLabel == semanticsLabel;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(leading, center, trailing, semanticsLabel, progress);
+  int get hashCode => Object.hash(leading, trailing, semanticsLabel);
 }
 
 abstract final class ReaderReadingStatusBarLayout {
@@ -44,8 +35,6 @@ abstract final class ReaderReadingStatusBarLayout {
   static const double lineHeight = 1.2;
   static const double horizontalPadding = 12;
   static const double verticalPadding = 5;
-  static const double progressLineHeight = 2;
-  static const double borderWidth = 0.5;
   static const double minimumBottomInset = 4;
 
   /// Height of the bar content excluding the system bottom safe area.
@@ -54,10 +43,7 @@ abstract final class ReaderReadingStatusBarLayout {
   /// callers that need to sit above the bar must not add the inset twice.
   static double contentHeight(BuildContext context) {
     final textScaler = MediaQuery.textScalerOf(context);
-    return progressLineHeight +
-        textScaler.scale(fontSize) * lineHeight +
-        verticalPadding * 2 +
-        borderWidth;
+    return textScaler.scale(fontSize) * lineHeight + verticalPadding * 2;
   }
 
   /// Bottom inset used by the bar. Immersive Android reports the gesture
@@ -82,23 +68,21 @@ abstract final class ReaderReadingStatusBarLayout {
 
 /// Persistent reading status shown below the reading viewport.
 ///
-/// It deliberately avoids controls: opening the reader menu stays a center-tap
-/// action, and progress seeking stays in the overlay bottom panel.
+/// The chapter sits on the left and the mode-specific position on the right;
+/// it deliberately avoids controls and any decorative progress line. Opening
+/// the reader menu stays a center-tap action, and progress seeking stays in the
+/// overlay bottom panel.
 class ReaderReadingStatusBar extends StatelessWidget {
   const ReaderReadingStatusBar({
     super.key,
     required this.status,
     required this.background,
     required this.foreground,
-    required this.divider,
-    required this.progressColor,
   });
 
   final ReaderReadingStatus status;
   final Color background;
   final Color foreground;
-  final Color divider;
-  final Color progressColor;
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +93,6 @@ class ReaderReadingStatusBar extends StatelessWidget {
       letterSpacing: 0,
       color: foreground,
     );
-    final progress = status.progress?.clamp(0.0, 1.0).toDouble();
 
     return Semantics(
       container: true,
@@ -118,103 +101,45 @@ class ReaderReadingStatusBar extends StatelessWidget {
         child: Material(
           key: const Key('shared-reader-persistent-status-bar'),
           color: background,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: divider,
-                  width: ReaderReadingStatusBarLayout.borderWidth,
-                ),
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: ReaderReadingStatusBarLayout.bottomInset(context),
               ),
-            ),
-            child: SafeArea(
-              top: false,
-              bottom: false,
               child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: ReaderReadingStatusBarLayout.bottomInset(context),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ReaderReadingStatusBarLayout.horizontalPadding,
+                  vertical: ReaderReadingStatusBarLayout.verticalPadding,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
-                    SizedBox(
-                      height: ReaderReadingStatusBarLayout.progressLineHeight,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          ColoredBox(
-                            key: const Key(
-                              'shared-reader-persistent-status-progress-track',
+                    Expanded(
+                      child: status.leading.isEmpty
+                          ? const SizedBox.shrink()
+                          : _StatusText(
+                              key: const Key(
+                                'shared-reader-persistent-status-leading',
+                              ),
+                              text: status.leading,
+                              style: textStyle,
+                              alignment: TextAlign.start,
                             ),
-                            color: divider,
+                    ),
+                    if (status.trailing.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: _StatusText(
+                          key: const Key(
+                            'shared-reader-persistent-status-trailing',
                           ),
-                          if (progress != null)
-                            Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: FractionallySizedBox(
-                                key: const Key(
-                                  'shared-reader-persistent-status-progress',
-                                ),
-                                widthFactor: progress,
-                                child: ColoredBox(color: progressColor),
-                              ),
-                            ),
-                        ],
+                          text: status.trailing,
+                          style: textStyle,
+                          alignment: TextAlign.end,
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal:
-                            ReaderReadingStatusBarLayout.horizontalPadding,
-                        vertical: ReaderReadingStatusBarLayout.verticalPadding,
-                      ),
-                      child: Row(
-                        children: [
-                          if (status.leading.isNotEmpty)
-                            Flexible(
-                              flex: 3,
-                              child: _StatusText(
-                                key: const Key(
-                                  'shared-reader-persistent-status-leading',
-                                ),
-                                text: status.leading,
-                                style: textStyle,
-                                alignment: TextAlign.start,
-                              ),
-                            ),
-                          if (status.leading.isNotEmpty &&
-                              (status.center.isNotEmpty ||
-                                  status.trailing.isNotEmpty))
-                            const SizedBox(width: 8),
-                          if (status.center.isNotEmpty)
-                            Flexible(
-                              flex: 5,
-                              child: _StatusText(
-                                key: const Key(
-                                  'shared-reader-persistent-status-center',
-                                ),
-                                text: status.center,
-                                style: textStyle,
-                                alignment: TextAlign.center,
-                              ),
-                            ),
-                          if (status.trailing.isNotEmpty) ...[
-                            const SizedBox(width: 8),
-                            Flexible(
-                              flex: 3,
-                              child: _StatusText(
-                                key: const Key(
-                                  'shared-reader-persistent-status-trailing',
-                                ),
-                                text: status.trailing,
-                                style: textStyle,
-                                alignment: TextAlign.end,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),

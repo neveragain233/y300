@@ -855,7 +855,7 @@ void main() {
         find.byKey(const Key('shared-reader-persistent-status-bar')),
         findsOneWidget,
       );
-      final before = _readingStatusCenter(tester);
+      final before = _readingStatusTrailing(tester);
       expect(before, contains('本章'));
       expect(before, contains('剩'));
 
@@ -871,13 +871,13 @@ void main() {
       await tester.pumpAndSettle();
 
       final delta = scroll.pixels - start;
-      expect(delta, greaterThan(viewport * 0.75));
-      expect(delta, lessThan(viewport));
-      expect(_readingStatusCenter(tester), isNot(before));
+      // 滚动模式与翻页模式一致，一次推进一个完整视口。
+      expect(delta, closeTo(viewport, 0.5));
+      expect(_readingStatusTrailing(tester), isNot(before));
       expect(
         tester
             .getBottomLeft(
-              find.byKey(const Key('shared-reader-persistent-status-center')),
+              find.byKey(const Key('shared-reader-persistent-status-trailing')),
             )
             .dy,
         lessThanOrEqualTo(tester.getSize(find.byType(Scaffold)).height - 18),
@@ -2530,10 +2530,10 @@ void main() {
       find.byKey(const Key('shared-reader-persistent-status-bar')),
       findsOneWidget,
     );
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
     final statusCenter = tester.widget<Text>(
       find.descendant(
-        of: find.byKey(const Key('shared-reader-persistent-status-center')),
+        of: find.byKey(const Key('shared-reader-persistent-status-trailing')),
         matching: find.byType(Text),
       ),
     );
@@ -2880,20 +2880,20 @@ void main() {
     await tester.pumpWidget(_buildReaderApp(repository: repository));
     await tester.pumpAndSettle();
 
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
     await tester.tapAt(const Offset(720, 300));
     await tester.pump(
       ReaderPagedTurnMotion.tapConfirmationDelay -
           const Duration(milliseconds: 1),
     );
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump(ReaderPagedTurnMotion.animationDuration);
     await tester.pumpAndSettle();
-    expect(_readingStatusCenter(tester), contains('第 2 /'));
+    expect(_readingStatusTrailing(tester), contains('第 2 /'));
 
     await _tapPagedReaderZone(tester, const Offset(80, 300));
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage reverses side tap mapping in paged RTL', (
@@ -2912,10 +2912,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tapPagedReaderZone(tester, const Offset(80, 300));
-    expect(_readingStatusCenter(tester), contains('第 2 /'));
+    expect(_readingStatusTrailing(tester), contains('第 2 /'));
 
     await _tapPagedReaderZone(tester, const Offset(720, 300));
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage center tap still toggles paged chrome only', (
@@ -2939,7 +2939,7 @@ void main() {
       find.byKey(const Key('shared-reader-top-overlay-hit-test-gate')),
     );
     expect(topGate.ignoring, isFalse);
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage side taps continue across chapter boundaries', (
@@ -3035,7 +3035,7 @@ void main() {
       find.byKey(const Key('novel-reader-paged-page-view')),
     );
     expect(pageView.reverse, isTrue);
-    expect(_readingStatusCenter(tester), contains('第 1 /'));
+    expect(_readingStatusTrailing(tester), contains('第 1 /'));
   });
 
   testWidgets('NovelReaderPage constrains wide content column', (tester) async {
@@ -3184,7 +3184,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final before = _readingStatusCenter(tester);
+    final before = _readingStatusTrailing(tester);
     final action = find.byKey(
       const Key('novel-reader-chapter-interactions-button'),
     );
@@ -3210,7 +3210,7 @@ void main() {
     );
     Navigator.of(tester.element(find.byType(ThreadDetailPage))).pop();
     await tester.pumpAndSettle();
-    expect(_readingStatusCenter(tester), before);
+    expect(_readingStatusTrailing(tester), before);
     expect(locator.calls, 1);
   });
 
@@ -3234,7 +3234,7 @@ void main() {
     final page = tester.element(
       find.byKey(const Key('novel-reader-paged-page-session')),
     );
-    final status = _readingStatusCenter(tester);
+    final status = _readingStatusTrailing(tester);
 
     await _showReaderMenu(tester);
     await tester.tap(
@@ -3259,7 +3259,7 @@ void main() {
       tester.element(find.byKey(const Key('novel-reader-paged-page-session'))),
       same(page),
     );
-    expect(_readingStatusCenter(tester), status);
+    expect(_readingStatusTrailing(tester), status);
     await _showReaderMenu(tester);
     expect(
       find.byKey(const Key('shared-reader-bottom-action-chapter-interactions')),
@@ -4226,10 +4226,10 @@ ScrollPosition _verticalPosition(WidgetTester tester) => tester
     )
     .position;
 
-String _readingStatusCenter(WidgetTester tester) {
+String _readingStatusTrailing(WidgetTester tester) {
   final text = tester.widget<Text>(
     find.descendant(
-      of: find.byKey(const Key('shared-reader-persistent-status-center')),
+      of: find.byKey(const Key('shared-reader-persistent-status-trailing')),
       matching: find.byType(Text),
     ),
   );

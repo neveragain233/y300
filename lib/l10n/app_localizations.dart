@@ -4351,14 +4351,8 @@ abstract class AppLocalizations {
   /// No description provided for @novelReadingStatusPaged.
   ///
   /// In zh, this message translates to:
-  /// **'第 {current} / {total} 页 · 剩 {count} 页'**
-  String novelReadingStatusPaged(int current, int total, int count);
-
-  /// No description provided for @novelReadingStatusPagedEnd.
-  ///
-  /// In zh, this message translates to:
-  /// **'第 {current} / {total} 页 · 本章完'**
-  String novelReadingStatusPagedEnd(int current, int total);
+  /// **'第 {current} / {total} 页'**
+  String novelReadingStatusPaged(int current, int total);
 
   /// No description provided for @novelReadingStatusPagedPending.
   ///
