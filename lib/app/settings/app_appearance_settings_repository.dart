@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
@@ -32,6 +33,8 @@ class SharedPrefsAppAppearanceSettingsRepository
           return AppAppearanceSettings(
             colorSource: _parseColorSource(json['source']),
             themeFamily: _parseThemeFamily(json['family']),
+            navigationBarStyle: _parseNavigationBarStyle(json['navigation']),
+            navigationSwipeEnabled: _parseNavigationSwipe(json['swipe']),
             brightnessPreference: _parseBrightnessPreference(
               json['brightness'],
             ),
@@ -105,6 +108,8 @@ class SharedPrefsAppAppearanceSettingsRepository
     'version': 1,
     'source': settings.colorSource.name,
     'family': settings.themeFamily.name,
+    'navigation': settings.navigationBarStyle.name,
+    'swipe': settings.navigationSwipeEnabled,
     'brightness': settings.brightnessPreference.name,
     'language': settings.languagePreference.name,
   });
@@ -113,6 +118,20 @@ class SharedPrefsAppAppearanceSettingsRepository
     return raw == AppThemeColorSource.dynamic.name
         ? AppThemeColorSource.dynamic
         : AppThemeColorSource.preset;
+  }
+
+  AppNavigationBarStyle _parseNavigationBarStyle(Object? raw) {
+    for (final style in AppNavigationBarStyle.values) {
+      if (style.name == raw) {
+        return style;
+      }
+    }
+    return AppNavigationBarStyle.immersive;
+  }
+
+  /// 旧快照没有该字段，缺省保留新的默认值。
+  bool _parseNavigationSwipe(Object? raw) {
+    return raw is bool ? raw : true;
   }
 
   AppThemeFamily _parseThemeFamily(Object? raw) {

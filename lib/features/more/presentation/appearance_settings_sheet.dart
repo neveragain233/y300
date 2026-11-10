@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_dynamic_colors.dart';
@@ -103,6 +104,51 @@ class AppearanceSettingsSheet extends ConsumerWidget {
                       _setBrightnessPreference(context, ref, preference),
                 ),
             ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.moreNavigationSectionTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _AppearanceOptionStrip(
+            scrollViewKey: const Key('appearance-navigation-options-scroll'),
+            children: [
+              for (final style in AppNavigationBarStyle.values)
+                _AppearanceNavigationStyleChoice(
+                  style: style,
+                  selected: settings.navigationBarStyle == style,
+                  onPressed: () => _setNavigationBarStyle(context, ref, style),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            settings.navigationBarStyle == AppNavigationBarStyle.immersive
+                ? l10n.moreNavigationStyleImmersiveDescription
+                : l10n.moreNavigationStyleLegacyDescription,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SwitchListTile(
+            key: const Key('appearance-navigation-swipe'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.moreNavigationSwipeTitle),
+            subtitle: Text(
+              settings.navigationBarStyle == AppNavigationBarStyle.immersive
+                  ? l10n.moreNavigationSwipeDescription
+                  : l10n.moreNavigationSwipeUnavailable,
+            ),
+            value: settings.navigationSwipeEnabled,
+            onChanged:
+                settings.navigationBarStyle == AppNavigationBarStyle.immersive
+                ? (enabled) => _setNavigationSwipe(context, ref, enabled)
+                : null,
           ),
           const SizedBox(height: 20),
           Text(
@@ -208,6 +254,42 @@ class AppearanceSettingsSheet extends ConsumerWidget {
       }
       final l10n = AppLocalizations.of(context);
       showTransientSnackBar(context, l10n.appLanguageSaveFailed('$error'));
+    }
+  }
+
+  Future<void> _setNavigationBarStyle(
+    BuildContext context,
+    WidgetRef ref,
+    AppNavigationBarStyle style,
+  ) async {
+    try {
+      await ref
+          .read(appAppearanceControllerProvider.notifier)
+          .setNavigationBarStyle(style);
+    } catch (error) {
+      if (!context.mounted) return;
+      showTransientSnackBar(
+        context,
+        AppLocalizations.of(context).moreThemeSaveFailed('$error'),
+      );
+    }
+  }
+
+  Future<void> _setNavigationSwipe(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    try {
+      await ref
+          .read(appAppearanceControllerProvider.notifier)
+          .setNavigationSwipeEnabled(enabled);
+    } catch (error) {
+      if (!context.mounted) return;
+      showTransientSnackBar(
+        context,
+        AppLocalizations.of(context).moreThemeSaveFailed('$error'),
+      );
     }
   }
 }
@@ -439,6 +521,65 @@ class _AppearanceBrightnessChoice extends StatelessWidget {
       AppBrightnessPreference.dark => Icons.dark_mode_outlined,
       AppBrightnessPreference.system => Icons.brightness_auto_outlined,
     };
+  }
+}
+
+class _AppearanceNavigationStyleChoice extends StatelessWidget {
+  const _AppearanceNavigationStyleChoice({
+    required this.style,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final AppNavigationBarStyle style;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final foreground = selected ? scheme.onPrimaryContainer : scheme.onSurface;
+    final label = switch (style) {
+      AppNavigationBarStyle.immersive => l10n.moreNavigationStyleImmersive,
+      AppNavigationBarStyle.legacy => l10n.moreNavigationStyleLegacy,
+    };
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label${l10n.moreNavigationSectionTitle}',
+      child: OutlinedButton.icon(
+        key: Key('appearance-navigation-style-${style.name}'),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: foreground,
+          backgroundColor: selected ? scheme.primaryContainer : null,
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          side: BorderSide(
+            color: selected ? Colors.transparent : scheme.outlineVariant,
+            width: selected ? 0 : 1,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: TextStyle(
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+        icon: Icon(
+          switch (style) {
+            AppNavigationBarStyle.immersive => Icons.blur_on_outlined,
+            AppNavigationBarStyle.legacy => Icons.view_agenda_outlined,
+          },
+          key: Key('appearance-navigation-style-icon-${style.name}'),
+          size: 18,
+        ),
+        label: Text(label, maxLines: 1, softWrap: false),
+      ),
+    );
   }
 }
 

@@ -2796,6 +2796,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moreAppearanceModeSectionTitle => '外观模式';
 
   @override
+  String get moreNavigationSectionTitle => '导航与底栏';
+
+  @override
+  String get moreNavigationStyleImmersive => '沉浸式';
+
+  @override
+  String get moreNavigationStyleLegacy => '旧式';
+
+  @override
+  String get moreNavigationStyleImmersiveDescription => '正文延伸到悬浮底栏后方，底栏以覆盖层显示。';
+
+  @override
+  String get moreNavigationStyleLegacyDescription =>
+      '底栏占用页面底部空间，切换样式保留当前页面和滚动位置。';
+
+  @override
+  String get moreNavigationSwipeTitle => '底栏滑动切换';
+
+  @override
+  String get moreNavigationSwipeDescription => '在底栏左右拖动切换入口，松手后切页。';
+
+  @override
+  String get moreNavigationSwipeUnavailable => '仅沉浸式底栏支持滑动切换。';
+
+  @override
   String get moreThemeFamilyWarmPaper => '暖纸';
 
   @override
@@ -8643,6 +8668,31 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get moreAppearanceModeSectionTitle => '外觀模式';
+
+  @override
+  String get moreNavigationSectionTitle => '導覽與底欄';
+
+  @override
+  String get moreNavigationStyleImmersive => '沉浸式';
+
+  @override
+  String get moreNavigationStyleLegacy => '舊式';
+
+  @override
+  String get moreNavigationStyleImmersiveDescription => '正文延伸到懸浮底欄後方，底欄以覆蓋層顯示。';
+
+  @override
+  String get moreNavigationStyleLegacyDescription =>
+      '底欄佔用頁面底部空間，切換樣式保留目前頁面與捲動位置。';
+
+  @override
+  String get moreNavigationSwipeTitle => '底欄滑動切換';
+
+  @override
+  String get moreNavigationSwipeDescription => '在底欄左右拖曳切換入口，放開後切頁。';
+
+  @override
+  String get moreNavigationSwipeUnavailable => '僅沉浸式底欄支援滑動切換。';
 
   @override
   String get moreThemeFamilyWarmPaper => '暖紙';

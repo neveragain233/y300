@@ -15,7 +15,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
+import 'package:y300/app/settings/app_appearance_controller.dart';
+import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
@@ -62,6 +65,7 @@ import 'package:y300/features/library_shared/domain/models/library_state_models.
 import 'package:y300/features/library_shared/domain/services/library_task_notification_service.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_shelf_page.dart';
+import 'package:y300/features/more/presentation/more_page.dart';
 import 'package:y300/features/more/presentation/navigation_management_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_providers.dart';
@@ -120,7 +124,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationRail),
-          matching: find.text(l10n.appNavigationComic),
+          matching: find.text(l10n.appNavigationBookshelf),
         ),
       );
       await _pumpShellTab(tester);
@@ -137,15 +141,13 @@ void main() {
       tester.view.physicalSize = const Size(400, 800);
       await tester.pumpAndSettle();
       expect(find.byType(NavigationRail), findsNothing);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(MainNavigationCapsule), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
       expect(
         tester.element(find.byKey(const Key('forum-home-list'))),
         same(home),
       );
-      await tester.tap(
-        find.byKey(const ValueKey('main-shell-destination-comic')),
-      );
-      await _pumpShellTab(tester);
+      await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
       expect(
         tester.element(find.byKey(const Key('main-shell-page-comic'))),
         same(comic),
@@ -153,6 +155,334 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('immersive navigation is the default and clears content', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MainShellPage)),
+    );
+    final capsule = tester.widget<MainNavigationCapsule>(
+      find.byType(MainNavigationCapsule),
+    );
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(
+      find.byKey(const Key('main-shell-immersive-navigation')),
+      findsOneWidget,
+    );
+    expect(capsule.items.map((item) => item.label), <String>[
+      l10n.appNavigationForum,
+      l10n.appNavigationFavorites,
+      l10n.appNavigationBookshelf,
+      l10n.appNavigationMy,
+    ]);
+    expect(capsule.selectedIndex, 0);
+    expect(capsule.swipeEnabled, isTrue);
+    final pageRect = tester.getRect(
+      find.byKey(const Key('main-shell-page-forum')),
+    );
+    final listRect = tester.getRect(find.byKey(const Key('forum-home-list')));
+    final capsuleRect = tester.getRect(find.byType(MainNavigationCapsule));
+    // 正文铺到胶囊后方，可滚动区域的下缘与胶囊上缘对齐。
+    expect(listRect.bottom, closeTo(capsuleRect.top, 1));
+    expect(listRect.bottom, lessThanOrEqualTo(pageRect.bottom - 80));
+
+    await _tapNavigationGroup(tester, l10n.appNavigationFavorites);
+    final shelfList = tester.widget<ListView>(
+      find.byKey(const Key('unified-shelf-list-view')),
+    );
+    expect((shelfList.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(80));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('legacy navigation switches without losing page state', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    final home = tester.element(find.byKey(const Key('forum-home-list')));
+    final container = ProviderScope.containerOf(home);
+    final controller = container.read(appAppearanceControllerProvider.notifier);
+    await controller.setNavigationBarStyle(AppNavigationBarStyle.legacy);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(MainNavigationCapsule), findsNothing);
+    expect(_navigationLabels(tester), hasLength(4));
+    expect(
+      tester.element(find.byKey(const Key('forum-home-list'))),
+      same(home),
+    );
+    final legacyPageRect = tester.getRect(
+      find.byKey(const Key('main-shell-page-forum')),
+    );
+    final legacyListRect = tester.getRect(
+      find.byKey(const Key('forum-home-list')),
+    );
+    expect(legacyListRect.bottom, closeTo(legacyPageRect.bottom, 1));
+
+    await controller.setNavigationBarStyle(AppNavigationBarStyle.immersive);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MainNavigationCapsule), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(
+      tester.element(find.byKey(const Key('forum-home-list'))),
+      same(home),
+    );
+    final immersiveListRect = tester.getRect(
+      find.byKey(const Key('forum-home-list')),
+    );
+    final capsuleRect = tester.getRect(find.byType(MainNavigationCapsule));
+    expect(immersiveListRect.bottom, closeTo(capsuleRect.top, 1));
+
+    // 切换样式只在主壳重建底栏，入口页面的滚动位置保持。
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MainShellPage)),
+    );
+    await _tapNavigationGroup(tester, l10n.appNavigationMy);
+    await tester.drag(
+      find.byKey(const Key('more-page-list')),
+      const Offset(0, -160),
+    );
+    await tester.pumpAndSettle();
+    ScrollableState moreScrollable() => tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byKey(const Key('more-page-list')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    final offset = moreScrollable().position.pixels;
+    expect(offset, greaterThan(0));
+
+    await controller.setNavigationBarStyle(AppNavigationBarStyle.legacy);
+    await tester.pumpAndSettle();
+    expect(moreScrollable().position.pixels, offset);
+
+    await controller.setNavigationBarStyle(AppNavigationBarStyle.immersive);
+    await tester.pumpAndSettle();
+    expect(moreScrollable().position.pixels, offset);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('immersive capsule swipe switches groups on release', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    final capsuleFinder = find.byType(MainNavigationCapsule);
+    expect(
+      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
+      0,
+    );
+    await tester.drag(capsuleFinder, const Offset(100, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
+      1,
+    );
+    expect(find.byKey(const Key('main-shell-page-favorites')), findsOneWidget);
+
+    await tester.drag(capsuleFinder, const Offset(-100, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
+      0,
+    );
+    expect(find.byKey(const Key('main-shell-page-forum')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('disabled swipe leaves taps as the only group switch', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MainShellPage)),
+    );
+    await container
+        .read(appAppearanceControllerProvider.notifier)
+        .setNavigationSwipeEnabled(false);
+    await tester.pumpAndSettle();
+
+    final capsuleFinder = find.byType(MainNavigationCapsule);
+    await tester.drag(capsuleFinder, const Offset(100, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
+      0,
+    );
+    expect(find.byKey(const Key('main-shell-page-forum')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('hiding entries falls back to a visible group and keeps a bar', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MainShellPage)),
+    );
+    final controller = container.read(
+      mainNavigationSettingsControllerProvider.notifier,
+    );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MainShellPage)),
+    );
+
+    await controller.setVisibility(MainShellDestination.forum, false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('main-shell-page-favorites')), findsOneWidget);
+    expect(_navigationLabels(tester), <String>['收藏', '书架', '我的']);
+
+    await controller.setVisibility(MainShellDestination.favorites, false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('main-shell-page-comic')), findsOneWidget);
+    expect(_navigationLabels(tester), <String>['书架', '我的']);
+
+    await controller.setVisibility(MainShellDestination.comic, false);
+    await controller.setVisibility(MainShellDestination.novel, false);
+    await tester.pumpAndSettle();
+    expect(_navigationLabels(tester), <String>[l10n.appNavigationMy]);
+    expect(
+      tester
+          .widget<MainNavigationCapsule>(find.byType(MainNavigationCapsule))
+          .selectedIndex,
+      0,
+    );
+    expect(find.byType(MorePage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('bookshelf group switches members and keeps both pages', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MainShellPage)),
+    );
+    await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
+    final comic = tester.element(
+      find.byKey(const Key('main-shell-page-comic')),
+    );
+    expect(find.byKey(const Key('main-bookshelf-switcher')), findsOneWidget);
+
+    await _switchBookshelfMember(tester, '小说');
+    expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
+    expect(find.byKey(const Key('main-shell-page-comic')), findsNothing);
+
+    await _switchBookshelfMember(tester, '漫画');
+    expect(
+      tester.element(find.byKey(const Key('main-shell-page-comic'))),
+      same(comic),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keyboard hides the immersive chrome and restores it', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(find.byType(MainNavigationCapsule), findsNothing);
+    expect(
+      tester.getRect(find.byKey(const Key('main-shell-page-forum'))).bottom,
+      lessThanOrEqualTo(501),
+    );
+
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    expect(find.byType(MainNavigationCapsule), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(const Key('forum-home-list'))).bottom,
+      closeTo(tester.getRect(find.byType(MainNavigationCapsule)).top, 1),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('attention follows configured navigation without reading feeds', (
     tester,
@@ -189,34 +519,32 @@ void main() {
       messages: messages,
     );
 
-    NavigationDestination destination(MainShellDestination destination) =>
-        tester.widget<NavigationDestination>(
-          find.byKey(ValueKey('main-shell-destination-${destination.name}')),
-        );
-    void expectDot(MainShellDestination target, bool expected) {
-      final entry = destination(target);
+    MainNavigationItem groupItem(MainNavigationGroup group) => tester
+        .widget<MainNavigationCapsule>(find.byType(MainNavigationCapsule))
+        .items
+        .firstWhere((item) => item.id == group.name);
+    void expectDot(MainNavigationGroup target, bool expected) {
+      final entry = groupItem(target);
       expect((entry.icon as MessageAttentionIcon).showAttention, expected);
       expect(
-        (entry.selectedIcon! as MessageAttentionIcon).showAttention,
+        (entry.selectedIcon as MessageAttentionIcon).showAttention,
         expected,
       );
     }
 
-    expectDot(MainShellDestination.more, true);
+    expectDot(MainNavigationGroup.my, true);
     final context = tester.element(find.byType(MainShellPage));
     final l10n = AppLocalizations.of(context);
-    await tester.tap(find.text(l10n.appNavigationMore).last);
-    await _pumpShellTab(tester);
+    await _tapNavigationGroup(tester, l10n.appNavigationMy);
     await tester.pumpAndSettle();
-    expectDot(MainShellDestination.more, false);
+    expectDot(MainNavigationGroup.my, false);
     final myMessages = tester.widget<ListTile>(
       find.byKey(const Key('more-my-messages-entry')),
     );
     expect((myMessages.leading! as MessageAttentionIcon).showAttention, true);
     expect(attention.value.hasUnacknowledgedAttention, false);
 
-    await tester.tap(find.text(l10n.appNavigationForum).last);
-    await _pumpShellTab(tester);
+    await _tapNavigationGroup(tester, l10n.appNavigationForum);
     attention.accept(
       const ForumMessageAttentionObservation(
         viewerUserId: '101',
@@ -229,16 +557,15 @@ void main() {
       sequence: attention.nextRequestSequence(),
     );
     await tester.pump();
-    expectDot(MainShellDestination.more, false);
+    expectDot(MainNavigationGroup.my, false);
 
     final navigation = ProviderScope.containerOf(context)
         .read(mainNavigationSettingsControllerProvider.notifier);
     await navigation.setVisibility(MainShellDestination.messages, true);
     await tester.pump();
-    expectDot(MainShellDestination.messages, true);
-    expectDot(MainShellDestination.more, false);
-    await tester.tap(find.text(l10n.appNavigationMore).last);
-    await _pumpShellTab(tester);
+    expectDot(MainNavigationGroup.messages, true);
+    expectDot(MainNavigationGroup.my, false);
+    await _tapNavigationGroup(tester, l10n.appNavigationMy);
     expect(
       (tester
                   .widget<ListTile>(
@@ -252,13 +579,13 @@ void main() {
     final epoch = attention.value.attentionEpoch;
     await navigation.reorder(6, 0);
     await tester.pump();
-    expectDot(MainShellDestination.messages, true);
+    expectDot(MainNavigationGroup.messages, true);
     expect(attention.value.attentionEpoch, epoch);
     expect(messages.reads, isEmpty);
     expect(messages.notificationReads, isEmpty);
     await navigation.setVisibility(MainShellDestination.messages, false);
     await tester.pump();
-    expectDot(MainShellDestination.more, false);
+    expectDot(MainNavigationGroup.my, false);
     expect(attention.value.attentionEpoch, epoch);
     expect(
       (tester
@@ -342,15 +669,13 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(MainShellPage)),
       );
-      await tester.tap(find.text(l10n.appNavigationComic).last);
-      await _pumpShellTab(tester);
+      await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
       expect(
         find.byKey(const Key('main-shell-library-loading')),
         findsOneWidget,
       );
       expect(find.byType(UnifiedShelfPage), findsNothing);
-      await tester.tap(find.text(l10n.appNavigationForum).last);
-      await _pumpShellTab(tester);
+      await _tapNavigationGroup(tester, l10n.appNavigationForum);
       final reads = repository.cacheReads;
       covers.complete();
       await tester.pump();
@@ -363,8 +688,7 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
       network.complete(forumHomeReadSuccess(repository.cachedEntry!.payload));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.appNavigationComic).last);
-      await _pumpShellTab(tester);
+      await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
       expect(find.byKey(const Key('main-shell-library-loading')), findsNothing);
       expect(find.byType(UnifiedShelfPage), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -403,8 +727,7 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(MainShellPage)),
       );
-      await tester.tap(find.text(l10n.appNavigationMore).last);
-      await _pumpShellTab(tester);
+      await _tapNavigationGroup(tester, l10n.appNavigationMy);
       await tester.scrollUntilVisible(
         find.byKey(const Key('more-navigation-management-entry')),
         200,
@@ -565,24 +888,21 @@ void main() {
     final l10n = AppLocalizationsZh();
 
     expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
-    final initialNavigationBar = tester.widget<NavigationBar>(
-      find.byType(NavigationBar),
+    final capsule = tester.widget<MainNavigationCapsule>(
+      find.byType(MainNavigationCapsule),
     );
-    final destinations = initialNavigationBar.destinations
-        .cast<NavigationDestination>()
-        .toList(growable: false);
-    expect(destinations.map((destination) => destination.label), <String>[
+    expect(capsule.items.map((item) => item.label), <String>[
       l10n.appNavigationForum,
       l10n.appNavigationFavorites,
-      l10n.appNavigationComic,
-      l10n.appNavigationNovel,
-      l10n.appNavigationHistory,
-      l10n.appNavigationMore,
+      l10n.appNavigationBookshelf,
+      l10n.appNavigationMy,
     ]);
-    expect(_navigationIconData(destinations[1].icon), Icons.explore_outlined);
-    expect(_navigationIconData(destinations[1].selectedIcon!), Icons.explore);
-    expect(_navigationIconData(destinations[4].icon), Icons.history_outlined);
-    expect(_navigationIconData(destinations[4].selectedIcon!), Icons.history);
+    expect(_navigationIconData(capsule.items[1].icon), Icons.star_border);
+    expect(_navigationIconData(capsule.items[1].selectedIcon), Icons.star);
+    expect(
+      _navigationIconData(capsule.items[2].icon),
+      Icons.auto_stories_outlined,
+    );
     final initialStack = tester.widget<IndexedStack>(find.byType(IndexedStack));
     expect(
       initialStack.children,
@@ -598,61 +918,61 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 700));
     await tester.pump();
 
-    await tester.tap(find.text('收藏').last);
-    await _pumpShellTab(tester);
-    expect(find.text('收藏'), findsWidgets);
+    await _tapNavigationGroup(tester, l10n.appNavigationFavorites);
     expect(find.byKey(const Key('unified-shelf-list-view')), findsOneWidget);
 
-    await tester.tap(find.text('漫画').last);
-    await _pumpShellTab(tester);
+    await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byIcon(Icons.search), findsOneWidget);
 
-    await tester.tap(find.text('小说').last);
-    await _pumpShellTab(tester);
-    expect(find.byType(AppBar), findsOneWidget);
+    await _switchBookshelfMember(tester, '小说');
     expect(
       find.byKey(const Key('unified-shelf-category-indicator')),
       findsOneWidget,
     );
 
-    await tester.tap(find.text('记录').last);
-    await _pumpShellTab(tester);
-    expect(find.byKey(const Key('history-page')), findsOneWidget);
-    expect(find.byKey(const Key('history-empty')), findsOneWidget);
-
-    await tester.tap(find.text('更多'));
-    await _pumpShellTab(tester);
-    expect(find.text('更多'), findsWidgets);
+    await _tapNavigationGroup(tester, l10n.appNavigationMy);
     expect(find.byKey(const Key('more-login-entry')), findsOneWidget);
     final fullyBuiltStack = tester.widget<IndexedStack>(
       find.byType(IndexedStack),
     );
     final fullyBuiltTickerModes = _builtTickerModes(fullyBuiltStack);
-    expect(fullyBuiltTickerModes, hasLength(6));
+    expect(fullyBuiltTickerModes, hasLength(5));
     expect(
       fullyBuiltTickerModes.map((tickerMode) => tickerMode.enabled),
-      <bool>[false, false, false, false, false, true],
+      <bool>[false, false, false, false, true],
     );
 
     final container = ProviderScope.containerOf(
       tester.element(find.byType(MainShellPage)),
     );
+
+    // 记录与日志从“我的”进入，不再占用底栏槽位。
+    final navigator = Navigator.of(
+      tester.element(find.byKey(const Key('more-page-list'))),
+    );
+    await tester.tap(find.byKey(const ValueKey('more-destination-history')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('history-page')), findsOneWidget);
+    navigator.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(MainShellPage), findsOneWidget);
+    expect(find.byType(MorePage), findsOneWidget);
+
     await container
         .read(mainNavigationSettingsControllerProvider.notifier)
         .setVisibility(MainShellDestination.blogs, true);
     await tester.pumpAndSettle();
     expect(blogs.queries, isEmpty);
-    await tester.tap(find.text(l10n.profileBlogTitle).last);
-    await _pumpShellTab(tester);
-    final blogElement = tester.element(find.byType(ProfileBlogPage));
+    await tester.tap(find.byKey(const ValueKey('more-destination-blogs')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileBlogPage), findsOneWidget);
     expect(blogs.queries, hasLength(1));
-    await tester.tap(find.text(l10n.appNavigationMore).last);
-    await _pumpShellTab(tester);
-    await tester.tap(find.text(l10n.profileBlogTitle).last);
-    await _pumpShellTab(tester);
-    expect(tester.element(find.byType(ProfileBlogPage)), same(blogElement));
-    expect(blogs.queries, hasLength(1));
+    Navigator.of(tester.element(find.byType(ProfileBlogPage))).pop();
+    await tester.pumpAndSettle();
+
+    await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
+    expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -734,13 +1054,12 @@ void main() {
 
       await _pumpMainShellReady(tester);
 
-      expect(_navigationLabels(tester), <String>['小说', '漫画', '收藏', '更多']);
+      expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
       expect(_selectedNavigationIndex(tester), 0);
       expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
       expect(find.byKey(const Key('main-shell-page-forum')), findsNothing);
 
-      await tester.tap(find.text('漫画').last);
-      await _pumpShellTab(tester);
+      await _switchBookshelfMember(tester, '漫画');
       final comicPageFinder = find.byKey(const Key('main-shell-page-comic'));
       final originalComicElement = tester.element(comicPageFinder);
       final container = ProviderScope.containerOf(
@@ -753,27 +1072,27 @@ void main() {
       await controller.reorder(1, 0);
       await tester.pump();
 
-      expect(_navigationLabels(tester), <String>['漫画', '小说', '收藏', '更多']);
+      expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
       expect(_selectedNavigationIndex(tester), 0);
       expect(tester.element(comicPageFinder), same(originalComicElement));
 
       await controller.setVisibility(MainShellDestination.comic, false);
       await tester.pump();
 
-      expect(_navigationLabels(tester), <String>['小说', '收藏', '更多']);
+      expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
       expect(_selectedNavigationIndex(tester), 0);
       expect(comicPageFinder, findsNothing);
       expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
+      expect(find.byKey(const Key('main-bookshelf-switcher')), findsNothing);
 
       await controller.setVisibility(MainShellDestination.comic, true);
       await tester.pump();
 
-      expect(_navigationLabels(tester), <String>['漫画', '小说', '收藏', '更多']);
-      expect(_selectedNavigationIndex(tester), 1);
+      expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
+      expect(_selectedNavigationIndex(tester), 0);
       expect(comicPageFinder, findsNothing);
 
-      await tester.tap(find.text('漫画').last);
-      await _pumpShellTab(tester);
+      await _switchBookshelfMember(tester, '漫画');
 
       expect(comicPageFinder, findsOneWidget);
       expect(
@@ -784,17 +1103,15 @@ void main() {
       await controller.setVisibility(MainShellDestination.messages, true);
       await tester.pump();
       final label = AppLocalizationsZh().appNavigationMessages;
-      await tester.tap(find.text(label).last);
-      await tester.pump();
+      expect(_navigationLabels(tester), <String>['书架', '收藏', '消息', '我的']);
+      await _tapNavigationGroup(tester, label);
       expect(messages.reads, hasLength(1));
       expect(messages.notificationReads, isEmpty);
       messages.reads.single.result.complete(messageTestPage([]));
       await _pumpShellTab(tester);
       final messageElement = tester.element(find.byType(MessageCenterPage));
-      await tester.tap(find.text('漫画').last);
-      await _pumpShellTab(tester);
-      await tester.tap(find.text(label).last);
-      await _pumpShellTab(tester);
+      await _tapNavigationGroup(tester, '书架');
+      await _tapNavigationGroup(tester, label);
       expect(
         tester.element(find.byType(MessageCenterPage)),
         same(messageElement),
@@ -803,7 +1120,7 @@ void main() {
     },
   );
 
-  testWidgets('Novel tab icon changes after tap', (tester) async {
+  testWidgets('navigation group icon changes after tap', (tester) async {
     final queueSnapshot = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
       ComicSearchRefreshQueueSnapshot.empty,
     );
@@ -848,14 +1165,17 @@ void main() {
 
     await _pumpMainShellReady(tester);
 
-    expect(find.byIcon(Icons.local_library_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.local_library), findsNothing);
+    Finder capsuleIcon(IconData icon) => find.descendant(
+      of: find.byType(MainNavigationCapsule),
+      matching: find.byIcon(icon),
+    );
+    expect(capsuleIcon(Icons.auto_stories_outlined), findsOneWidget);
+    expect(capsuleIcon(Icons.auto_stories), findsNothing);
 
-    await tester.tap(find.text('小说'));
-    await _pumpShellTab(tester);
+    await _tapNavigationGroup(tester, '书架');
 
-    expect(find.byIcon(Icons.local_library_outlined), findsNothing);
-    expect(find.byIcon(Icons.local_library), findsOneWidget);
+    expect(capsuleIcon(Icons.auto_stories_outlined), findsNothing);
+    expect(capsuleIcon(Icons.auto_stories), findsOneWidget);
   });
 
   testWidgets('independent shelf search queries survive switching', (
@@ -906,24 +1226,21 @@ void main() {
     await _pumpMainShellReady(tester);
 
     final l10n = AppLocalizationsZh();
-    await tester.tap(find.text(l10n.appNavigationComic));
-    await _pumpShellTab(tester);
+    await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
     final comic = tester.element(
       find.byKey(const Key('main-shell-page-comic')),
     );
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '漫画关键词');
-    await tester.tap(find.text(l10n.appNavigationNovel));
-    await _pumpShellTab(tester);
+    await _switchBookshelfMember(tester, '小说');
     final novel = tester.element(
       find.byKey(const Key('main-shell-page-novel')),
     );
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '小说关键词');
-    await tester.tap(find.text(l10n.appNavigationComic));
-    await _pumpShellTab(tester);
+    await _switchBookshelfMember(tester, '漫画');
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       '漫画关键词',
@@ -932,8 +1249,7 @@ void main() {
       tester.element(find.byKey(const Key('main-shell-page-comic'))),
       same(comic),
     );
-    await tester.tap(find.text(l10n.appNavigationNovel));
-    await _pumpShellTab(tester);
+    await _switchBookshelfMember(tester, '小说');
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       '小说关键词',
@@ -944,19 +1260,30 @@ void main() {
     );
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.appNavigationForum).last);
-    await _pumpShellTab(tester);
-    await tester.tap(find.text(l10n.appNavigationComic).last);
-    await _pumpShellTab(tester);
+    await _tapNavigationGroup(tester, l10n.appNavigationForum);
+    await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
+    expect(
+      tester.element(find.byKey(const Key('main-shell-page-novel'))),
+      same(novel),
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '小说关键词',
+    );
+    await _switchBookshelfMember(tester, '漫画');
     expect(
       tester.element(find.byKey(const Key('main-shell-page-comic'))),
       same(comic),
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '漫画关键词',
     );
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'MainShellPage navigation bar reads the themed background color',
+    'MainShellPage immersive navigation reads the themed background color',
     (tester) async {
       final queueSnapshot = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
         ComicSearchRefreshQueueSnapshot.empty,
@@ -1005,7 +1332,9 @@ void main() {
 
       await _pumpMainShellReady(tester);
 
-      final navigationBarContext = tester.element(find.byType(NavigationBar));
+      final navigationBarContext = tester.element(
+        find.byKey(const Key('main-shell-immersive-navigation')),
+      );
       expect(
         NavigationBarTheme.of(navigationBarContext).backgroundColor,
         const Color(0xFFFDE6B9),
@@ -1230,7 +1559,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(MainNavigationCapsule), findsOneWidget);
       expect(find.byKey(const Key('selection-action-bar')), findsNothing);
 
       selectionHost.activate(
@@ -1249,13 +1578,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(MainNavigationCapsule), findsNothing);
       expect(find.byKey(const Key('selection-action-bar')), findsOneWidget);
 
       selectionHost.deactivate(selectionHost.state!.ownerToken);
       await tester.pumpAndSettle();
 
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(MainNavigationCapsule), findsOneWidget);
       expect(find.byKey(const Key('selection-action-bar')), findsNothing);
     },
   );
@@ -1619,29 +1948,70 @@ List<TickerMode> _builtTickerModes(IndexedStack stack) {
       .toList(growable: false);
 }
 
-List<String> _navigationLabels(WidgetTester tester) {
-  if (find.byType(NavigationBar).evaluate().isEmpty) {
+List<MainNavigationItem> _navigationItems(WidgetTester tester) {
+  final capsule = find.byType(MainNavigationCapsule);
+  if (capsule.evaluate().isNotEmpty) {
+    return tester.widget<MainNavigationCapsule>(capsule).items;
+  }
+  final bar = find.byType(NavigationBar);
+  if (bar.evaluate().isNotEmpty) {
     return tester
-        .widget<MainNavigationRail>(find.byType(MainNavigationRail))
-        .items
-        .map((item) => item.label)
-        .toList();
+        .widget<NavigationBar>(bar)
+        .destinations
+        .cast<NavigationDestination>()
+        .map(
+          (destination) => MainNavigationItem(
+            id: destination.label,
+            label: destination.label,
+            icon: destination.icon,
+            selectedIcon: destination.selectedIcon ?? destination.icon,
+          ),
+        )
+        .toList(growable: false);
   }
   return tester
-      .widget<NavigationBar>(find.byType(NavigationBar))
-      .destinations
-      .cast<NavigationDestination>()
-      .map((destination) => destination.label)
-      .toList(growable: false);
+      .widget<MainNavigationRail>(find.byType(MainNavigationRail))
+      .items;
 }
 
+List<String> _navigationLabels(WidgetTester tester) =>
+    _navigationItems(tester).map((item) => item.label).toList();
+
 int _selectedNavigationIndex(WidgetTester tester) {
-  if (find.byType(NavigationBar).evaluate().isEmpty) {
-    return tester
-        .widget<MainNavigationRail>(find.byType(MainNavigationRail))
-        .selectedIndex;
+  final capsule = find.byType(MainNavigationCapsule);
+  if (capsule.evaluate().isNotEmpty) {
+    return tester.widget<MainNavigationCapsule>(capsule).selectedIndex;
   }
-  return tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex;
+  final bar = find.byType(NavigationBar);
+  if (bar.evaluate().isNotEmpty) {
+    return tester.widget<NavigationBar>(bar).selectedIndex;
+  }
+  return tester
+      .widget<MainNavigationRail>(find.byType(MainNavigationRail))
+      .selectedIndex;
+}
+
+Future<void> _tapNavigationGroup(WidgetTester tester, String label) async {
+  final capsule = find.byType(MainNavigationCapsule);
+  final rail = find.byType(NavigationRail);
+  final bar = find.byType(NavigationBar);
+  final Finder target;
+  if (capsule.evaluate().isNotEmpty) {
+    target = find.descendant(of: capsule, matching: find.text(label));
+  } else if (rail.evaluate().isNotEmpty) {
+    target = find.descendant(of: rail, matching: find.text(label));
+  } else {
+    target = find.descendant(of: bar, matching: find.text(label));
+  }
+  await tester.tap(target);
+  await _pumpShellTab(tester);
+}
+
+Future<void> _switchBookshelfMember(WidgetTester tester, String label) async {
+  final switcher = find.byKey(const Key('main-bookshelf-switcher'));
+  expect(switcher, findsOneWidget);
+  await tester.tap(find.descendant(of: switcher, matching: find.text(label)));
+  await _pumpShellTab(tester);
 }
 
 IconData? _navigationIconData(Widget widget) {

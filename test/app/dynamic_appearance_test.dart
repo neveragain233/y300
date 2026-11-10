@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
+import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -347,6 +348,70 @@ void main() {
       expect(
         find.byKey(const Key('appearance-dynamic-fallback')),
         findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'appearance sheet switches navigation style and gates swipe in legacy',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(
+        ProviderScope(
+          child: LocalizedTestApp(
+            theme: AppTheme.light(),
+            home: const Scaffold(body: AppearanceSettingsSheet()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final sheet = find.byKey(const Key('appearance-settings-sheet'));
+      await tester.drag(sheet, const Offset(0, -220));
+      await tester.pumpAndSettle();
+
+      final immersive = find.byKey(
+        const Key('appearance-navigation-style-immersive'),
+      );
+      final legacy = find.byKey(
+        const Key('appearance-navigation-style-legacy'),
+      );
+      final swipe = find.byKey(const Key('appearance-navigation-swipe'));
+      expect(immersive, findsOneWidget);
+      expect(legacy, findsOneWidget);
+      expect(tester.widget<SwitchListTile>(swipe).value, isTrue);
+      expect(tester.widget<SwitchListTile>(swipe).onChanged, isNotNull);
+
+      await tester.ensureVisible(legacy);
+      await tester.tap(legacy);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(tester.element(sheet));
+      final settings = container.read(appAppearanceControllerProvider).value!;
+      expect(settings.navigationBarStyle, AppNavigationBarStyle.legacy);
+      expect(tester.widget<SwitchListTile>(swipe).onChanged, isNull);
+      final l10n = AppLocalizations.of(tester.element(sheet));
+      expect(find.text(l10n.moreNavigationSwipeUnavailable), findsOneWidget);
+
+      await tester.tap(immersive);
+      await tester.pumpAndSettle();
+      expect(
+        container
+            .read(appAppearanceControllerProvider)
+            .value!
+            .navigationBarStyle,
+        AppNavigationBarStyle.immersive,
+      );
+      expect(tester.widget<SwitchListTile>(swipe).onChanged, isNotNull);
+
+      await tester.tap(swipe);
+      await tester.pumpAndSettle();
+      expect(
+        container
+            .read(appAppearanceControllerProvider)
+            .value!
+            .navigationSwipeEnabled,
+        isFalse,
       );
       expect(tester.takeException(), isNull);
     },

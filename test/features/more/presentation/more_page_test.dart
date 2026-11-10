@@ -1283,46 +1283,57 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final familyStrip = find.byKey(
+      Future<void> scrollSheet(double dy) async {
+        await tester.drag(
+          find.byKey(const Key('appearance-settings-sheet')),
+          Offset(0, dy),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      void expectHorizontalStrip(Key key, {bool needsScroll = true}) {
+        final strip = find.byKey(key);
+        expect(strip, findsOneWidget);
+        expect(
+          tester.widget<SingleChildScrollView>(strip).scrollDirection,
+          Axis.horizontal,
+        );
+        if (!needsScroll) {
+          return;
+        }
+        final scrollable = tester.state<ScrollableState>(
+          find.descendant(of: strip, matching: find.byType(Scrollable)),
+        );
+        expect(scrollable.position.maxScrollExtent, greaterThan(0));
+      }
+
+      expectHorizontalStrip(
         const Key('appearance-theme-family-options-scroll'),
       );
-      final brightnessStrip = find.byKey(
-        const Key('appearance-brightness-options-scroll'),
-      );
-      final languageStrip = find.byKey(
-        const Key('appearance-language-options-scroll'),
-      );
-      expect(
-        tester.widget<SingleChildScrollView>(familyStrip).scrollDirection,
-        Axis.horizontal,
-      );
-      expect(
-        tester.widget<SingleChildScrollView>(brightnessStrip).scrollDirection,
-        Axis.horizontal,
-      );
-      expect(
-        tester.widget<SingleChildScrollView>(languageStrip).scrollDirection,
-        Axis.horizontal,
-      );
-
-      final familyScrollable = tester.state<ScrollableState>(
-        find.descendant(of: familyStrip, matching: find.byType(Scrollable)),
-      );
-      final brightnessScrollable = tester.state<ScrollableState>(
-        find.descendant(of: brightnessStrip, matching: find.byType(Scrollable)),
-      );
-      final languageScrollable = tester.state<ScrollableState>(
-        find.descendant(of: languageStrip, matching: find.byType(Scrollable)),
-      );
-      expect(familyScrollable.position.maxScrollExtent, greaterThan(0));
-      expect(brightnessScrollable.position.maxScrollExtent, greaterThan(0));
-      expect(languageScrollable.position.maxScrollExtent, greaterThan(0));
+      expectHorizontalStrip(const Key('appearance-brightness-options-scroll'));
 
       _expectSameVerticalCenter(tester, const <Key>[
         Key('appearance-brightness-option-light'),
         Key('appearance-brightness-option-dark'),
         Key('appearance-brightness-option-system'),
       ]);
+      _expectSingleLineButtonLabel(
+        tester,
+        const Key('appearance-brightness-option-system'),
+      );
+
+      await scrollSheet(-220);
+      expectHorizontalStrip(
+        const Key('appearance-navigation-options-scroll'),
+        needsScroll: false,
+      );
+      expect(
+        find.byKey(const Key('appearance-navigation-swipe')),
+        findsOneWidget,
+      );
+
+      await scrollSheet(-260);
+      expectHorizontalStrip(const Key('appearance-language-options-scroll'));
       _expectSameVerticalCenter(tester, const <Key>[
         Key('appearance-language-option-system'),
         Key('appearance-language-option-simplifiedChinese'),
@@ -1330,17 +1341,29 @@ void main() {
       ]);
       _expectSingleLineButtonLabel(
         tester,
-        const Key('appearance-brightness-option-system'),
-      );
-      _expectSingleLineButtonLabel(
-        tester,
         const Key('appearance-language-option-traditionalChinese'),
       );
 
+      final languageStrip = find.byKey(
+        const Key('appearance-language-options-scroll'),
+      );
+      final languageScrollable = tester.state<ScrollableState>(
+        find.descendant(of: languageStrip, matching: find.byType(Scrollable)),
+      );
       await tester.drag(languageStrip, const Offset(-160, 0));
       await tester.pumpAndSettle();
-
       expect(languageScrollable.position.pixels, greaterThan(0));
+
+      await scrollSheet(-260);
+      await scrollSheet(700);
+      expect(
+        tester
+            .widget<SingleChildScrollView>(
+              find.byKey(const Key('appearance-theme-family-options-scroll')),
+            )
+            .scrollDirection,
+        Axis.horizontal,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -1368,6 +1391,11 @@ void main() {
       find.byKey(const Key('more-appearance-entry')),
     );
     await tester.tap(find.byKey(const Key('more-appearance-entry')));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('appearance-settings-sheet')),
+      const Offset(0, -260),
+    );
     await tester.pumpAndSettle();
 
     expect(

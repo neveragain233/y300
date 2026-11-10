@@ -4624,6 +4624,54 @@ abstract class AppLocalizations {
   /// **'外观模式'**
   String get moreAppearanceModeSectionTitle;
 
+  /// 外观设置中的主导航分区标题
+  ///
+  /// In zh, this message translates to:
+  /// **'导航与底栏'**
+  String get moreNavigationSectionTitle;
+
+  /// 内容延伸到悬浮底栏后方的主导航样式
+  ///
+  /// In zh, this message translates to:
+  /// **'沉浸式'**
+  String get moreNavigationStyleImmersive;
+
+  /// 占用页面底部布局空间的传统主导航样式
+  ///
+  /// In zh, this message translates to:
+  /// **'旧式'**
+  String get moreNavigationStyleLegacy;
+
+  /// 沉浸式主导航样式说明
+  ///
+  /// In zh, this message translates to:
+  /// **'正文延伸到悬浮底栏后方，底栏以覆盖层显示。'**
+  String get moreNavigationStyleImmersiveDescription;
+
+  /// 旧式主导航样式说明
+  ///
+  /// In zh, this message translates to:
+  /// **'底栏占用页面底部空间，切换样式保留当前页面和滚动位置。'**
+  String get moreNavigationStyleLegacyDescription;
+
+  /// 在沉浸式底栏上左右拖动切换入口的开关
+  ///
+  /// In zh, this message translates to:
+  /// **'底栏滑动切换'**
+  String get moreNavigationSwipeTitle;
+
+  /// 底栏滑动切换开关说明
+  ///
+  /// In zh, this message translates to:
+  /// **'在底栏左右拖动切换入口，松手后切页。'**
+  String get moreNavigationSwipeDescription;
+
+  /// 选择旧式底栏时滑动切换不可用
+  ///
+  /// In zh, this message translates to:
+  /// **'仅沉浸式底栏支持滑动切换。'**
+  String get moreNavigationSwipeUnavailable;
+
   /// No description provided for @moreThemeFamilyWarmPaper.
   ///
   /// In zh, this message translates to:

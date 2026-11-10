@@ -1188,6 +1188,38 @@
   },
   "moreColorThemeSectionTitle": "配色主题",
   "moreAppearanceModeSectionTitle": "外观模式",
+  "moreNavigationSectionTitle": "导航与底栏",
+  "@moreNavigationSectionTitle": {
+    "description": "外观设置中的主导航分区标题"
+  },
+  "moreNavigationStyleImmersive": "沉浸式",
+  "@moreNavigationStyleImmersive": {
+    "description": "内容延伸到悬浮底栏后方的主导航样式"
+  },
+  "moreNavigationStyleLegacy": "旧式",
+  "@moreNavigationStyleLegacy": {
+    "description": "占用页面底部布局空间的传统主导航样式"
+  },
+  "moreNavigationStyleImmersiveDescription": "正文延伸到悬浮底栏后方，底栏以覆盖层显示。",
+  "@moreNavigationStyleImmersiveDescription": {
+    "description": "沉浸式主导航样式说明"
+  },
+  "moreNavigationStyleLegacyDescription": "底栏占用页面底部空间，切换样式保留当前页面和滚动位置。",
+  "@moreNavigationStyleLegacyDescription": {
+    "description": "旧式主导航样式说明"
+  },
+  "moreNavigationSwipeTitle": "底栏滑动切换",
+  "@moreNavigationSwipeTitle": {
+    "description": "在沉浸式底栏上左右拖动切换入口的开关"
+  },
+  "moreNavigationSwipeDescription": "在底栏左右拖动切换入口，松手后切页。",
+  "@moreNavigationSwipeDescription": {
+    "description": "底栏滑动切换开关说明"
+  },
+  "moreNavigationSwipeUnavailable": "仅沉浸式底栏支持滑动切换。",
+  "@moreNavigationSwipeUnavailable": {
+    "description": "选择旧式底栏时滑动切换不可用"
+  },
   "moreThemeFamilyWarmPaper": "暖纸",
   "moreThemeFamilyMoonWhite": "月白",
   "moreThemeFamilyPlumPurple": "梅紫",

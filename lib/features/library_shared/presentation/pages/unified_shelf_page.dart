@@ -1299,7 +1299,14 @@ class _WorkGrid extends StatelessWidget {
             ),
             // 大书架场景预渲染适度前后缓存，降低滑动抖动。
             scrollCacheExtent: ScrollCacheExtent.pixels(rowExtent),
-            padding: const EdgeInsets.all(ShelfGridGeometry.contentPadding),
+            // 沉浸式主导航覆盖在正文上方时，末行仍能完整滚出底栏。
+            padding: EdgeInsets.fromLTRB(
+              ShelfGridGeometry.contentPadding,
+              ShelfGridGeometry.contentPadding,
+              ShelfGridGeometry.contentPadding,
+              ShelfGridGeometry.contentPadding +
+                  MediaQuery.paddingOf(context).bottom,
+            ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columns,
               crossAxisSpacing: ShelfGridGeometry.itemSpacing,
@@ -1474,7 +1481,12 @@ class _WorkList extends StatelessWidget {
         ),
         // 大书架场景预渲染适度前后缓存，降低滑动抖动。
         scrollCacheExtent: const ScrollCacheExtent.pixels(82),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          8,
+          0,
+          8 + MediaQuery.paddingOf(context).bottom,
+        ),
         itemCount: items.length,
         separatorBuilder: (context, index) =>
             const Divider(height: 1, thickness: .5),

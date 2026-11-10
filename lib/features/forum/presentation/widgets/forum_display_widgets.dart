@@ -182,16 +182,22 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
               ),
               palette: palette,
             ),
-          SliverToBoxAdapter(
-            child: _LoadMoreSection(
-              currentPage: state.currentPage,
-              lastPage: state.lastPage,
-              canLoadPrevious: state.currentPage > 1,
-              hasMore: state.hasMore,
-              isLoadingMore: state.isLoadingMore,
-              onLoadPrevious: widget.onLoadPrevious,
-              onLoadMore: widget.onLoadMore,
-              onSelectPage: widget.onSelectPage,
+          SliverPadding(
+            // 沉浸式主导航覆盖层之下保留可滚出的页尾空间。
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: _LoadMoreSection(
+                currentPage: state.currentPage,
+                lastPage: state.lastPage,
+                canLoadPrevious: state.currentPage > 1,
+                hasMore: state.hasMore,
+                isLoadingMore: state.isLoadingMore,
+                onLoadPrevious: widget.onLoadPrevious,
+                onLoadMore: widget.onLoadMore,
+                onSelectPage: widget.onSelectPage,
+              ),
             ),
           ),
         ],

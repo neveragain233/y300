@@ -19,12 +19,11 @@ import 'package:y300/shared/widgets/native_primary_tab_bar.dart';
 
 enum MessageCenterTab { messages, notifications }
 
-typedef MessageConversationOpener =
-    void Function(
-      BuildContext context,
-      ForumConversationTarget target,
-      String title,
-    );
+typedef MessageConversationOpener = void Function(
+  BuildContext context,
+  ForumConversationTarget target,
+  String title,
+);
 
 typedef MessageUserOpener = void Function(BuildContext context, String userId);
 
@@ -132,67 +131,71 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
           ),
         ],
       ),
-      body: Column(
-        children: [
-          NativePrimaryTabBar(
-            key: const Key('message-center-tabs'),
-            controller: _tabs,
-            labels: [l10n.messageMessagesTab, l10n.messageNotificationsTab],
-            // An aggregate-only arrival cannot identify which tab needs a dot.
-            attentionHints: [
-              attention.messages ? l10n.messageAttentionAvailable : null,
-              attention.notifications ? l10n.messageAttentionAvailable : null,
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            NativePrimaryTabBar(
+              key: const Key('message-center-tabs'),
               controller: _tabs,
-              children: [
-                _MessageCenterTabPage(
-                  key: const ValueKey(MessageCenterTab.messages),
-                  child: MessageFeedList<ForumPrivateMessagePage>(
-                    controller: messages,
-                    isActive: widget.config.isActive && _tabs.index == 0,
-                    listKey: PageStorageKey(
-                      'private-message-list:${widget.accountId}',
-                    ),
-                    itemCount: (page) => page.items.length,
-                    emptyText: l10n.profileNoMessages,
-                    emptyIcon: Icons.chat_bubble_outline,
-                    itemBuilder: (context, page, index) => _ConversationRow(
-                      key: ValueKey(
-                        page.items[index].target ?? page.items[index].messageId,
-                      ),
-                      item: page.items[index],
-                      accountId: widget.accountId,
-                      onOpen: widget.config.onOpenConversation,
-                    ),
-                  ),
-                ),
-                _MessageCenterTabPage(
-                  key: const ValueKey(MessageCenterTab.notifications),
-                  child: MessageFeedList<ForumNotificationPage>(
-                    controller: notifications,
-                    isActive: widget.config.isActive && _tabs.index == 1,
-                    listKey: PageStorageKey(
-                      'notification-list:${widget.accountId}',
-                    ),
-                    itemCount: (page) => page.items.length,
-                    emptyText: l10n.profileNoNotifications,
-                    emptyIcon: Icons.notifications_none,
-                    itemBuilder: (context, page, index) => _NotificationRow(
-                      key: ValueKey(page.items[index].id),
-                      item: page.items[index],
-                      accountId: widget.accountId,
-                      onOpenLink: widget.config.onOpenLink,
-                      onOpenUser: widget.config.onOpenUser,
-                    ),
-                  ),
-                ),
+              labels: [l10n.messageMessagesTab, l10n.messageNotificationsTab],
+              // An aggregate-only arrival cannot identify which tab needs a dot.
+              attentionHints: [
+                attention.messages ? l10n.messageAttentionAvailable : null,
+                attention.notifications ? l10n.messageAttentionAvailable : null,
               ],
             ),
-          ),
-        ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabs,
+                children: [
+                  _MessageCenterTabPage(
+                    key: const ValueKey(MessageCenterTab.messages),
+                    child: MessageFeedList<ForumPrivateMessagePage>(
+                      controller: messages,
+                      isActive: widget.config.isActive && _tabs.index == 0,
+                      listKey: PageStorageKey(
+                        'private-message-list:${widget.accountId}',
+                      ),
+                      itemCount: (page) => page.items.length,
+                      emptyText: l10n.profileNoMessages,
+                      emptyIcon: Icons.chat_bubble_outline,
+                      itemBuilder: (context, page, index) => _ConversationRow(
+                        key: ValueKey(
+                          page.items[index].target ??
+                              page.items[index].messageId,
+                        ),
+                        item: page.items[index],
+                        accountId: widget.accountId,
+                        onOpen: widget.config.onOpenConversation,
+                      ),
+                    ),
+                  ),
+                  _MessageCenterTabPage(
+                    key: const ValueKey(MessageCenterTab.notifications),
+                    child: MessageFeedList<ForumNotificationPage>(
+                      controller: notifications,
+                      isActive: widget.config.isActive && _tabs.index == 1,
+                      listKey: PageStorageKey(
+                        'notification-list:${widget.accountId}',
+                      ),
+                      itemCount: (page) => page.items.length,
+                      emptyText: l10n.profileNoNotifications,
+                      emptyIcon: Icons.notifications_none,
+                      itemBuilder: (context, page, index) => _NotificationRow(
+                        key: ValueKey(page.items[index].id),
+                        item: page.items[index],
+                        accountId: widget.accountId,
+                        onOpenLink: widget.config.onOpenLink,
+                        onOpenUser: widget.config.onOpenUser,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -426,9 +429,8 @@ class _NotificationRow extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   l10n.messageRepeatedNotifications(item.duplicateCount),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: palette.supportingText,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: palette.supportingText),
                 ),
               ),
             if (item.occurredAt != null || item.rawDateline.isNotEmpty)
@@ -436,9 +438,8 @@ class _NotificationRow extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   messageTimeLabel(context, item.occurredAt, item.rawDateline),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: palette.soft),
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: palette.soft),
                 ),
               ),
           ],
@@ -454,9 +455,9 @@ class _UnreadBadge extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsetsDirectional.only(start: 8),
     child: Badge(
-      backgroundColor: Theme.of(
-        context,
-      ).y300NativeContent.notificationBadgeBackground,
+      backgroundColor: Theme.of(context)
+          .y300NativeContent
+          .notificationBadgeBackground,
       textColor: Theme.of(context).y300NativeContent.selectionForeground,
       label: Text(AppLocalizations.of(context).profileNewBadge),
     ),

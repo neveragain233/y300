@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
+import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
@@ -49,6 +50,18 @@ class AppAppearanceController extends AsyncNotifier<AppAppearanceSettings> {
     final previous = state.value ?? AppAppearanceSettings.defaults();
     if (previous.colorSource == source) return;
     await _saveOrRollback(previous.copyWith(colorSource: source));
+  }
+
+  Future<void> setNavigationBarStyle(AppNavigationBarStyle style) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.navigationBarStyle == style) return;
+    await _saveOrRollback(previous.copyWith(navigationBarStyle: style));
+  }
+
+  Future<void> setNavigationSwipeEnabled(bool enabled) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.navigationSwipeEnabled == enabled) return;
+    await _saveOrRollback(previous.copyWith(navigationSwipeEnabled: enabled));
   }
 
   Future<void> setBrightnessPreference(

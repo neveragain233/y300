@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
+import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/config/app_storage_keys.dart';
 import 'package:y300/core/preferences/preference_key_names.dart';
@@ -23,6 +24,47 @@ void main() {
         expect(settings.themeFamily, AppThemeFamily.warmPaper);
         expect(settings.brightnessPreference, AppBrightnessPreference.light);
         expect(settings.languagePreference, AppLanguage.system);
+        expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
+        expect(settings.navigationSwipeEnabled, isTrue);
+      },
+    );
+
+    test('saves and loads navigation style and swipe preference', () async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = SharedPrefsAppAppearanceSettingsRepository();
+
+      for (final style in AppNavigationBarStyle.values) {
+        for (final swipe in [true, false]) {
+          await repository.save(
+            AppAppearanceSettings(
+              navigationBarStyle: style,
+              navigationSwipeEnabled: swipe,
+              languagePreference: AppLanguage.system,
+            ),
+          );
+          final settings = await repository.load();
+          expect(settings.navigationBarStyle, style);
+          expect(settings.navigationSwipeEnabled, swipe);
+        }
+      }
+    });
+
+    test(
+      'snapshot without navigation fields keeps immersive and swipe defaults',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          PreferenceKeyNames.appAppearanceSnapshotV1:
+              '{"version":1,"source":"preset","family":"moonWhite",'
+              '"brightness":"dark","language":"traditionalChinese"}',
+        });
+        final settings = await SharedPrefsAppAppearanceSettingsRepository()
+            .load();
+
+        expect(settings.themeFamily, AppThemeFamily.moonWhite);
+        expect(settings.brightnessPreference, AppBrightnessPreference.dark);
+        expect(settings.languagePreference, AppLanguage.traditionalChinese);
+        expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
+        expect(settings.navigationSwipeEnabled, isTrue);
       },
     );
 
@@ -186,6 +228,77 @@ void main() {
         repository.savedSettings.single.languagePreference,
         AppLanguage.traditionalChinese,
       );
+    });
+
+    test('persists navigation style and swipe independently', () async {
+      final repository = _FakeAppAppearanceSettingsRepository(
+        settings: AppAppearanceSettings.defaults(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appAppearanceSettingsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(appAppearanceControllerProvider.future);
+      await container
+          .read(appAppearanceControllerProvider.notifier)
+          .setNavigationBarStyle(AppNavigationBarStyle.legacy);
+      await container
+          .read(appAppearanceControllerProvider.notifier)
+          .setNavigationSwipeEnabled(false);
+
+      expect(
+        container
+            .read(appAppearanceControllerProvider)
+            .value!
+            .navigationBarStyle,
+        AppNavigationBarStyle.legacy,
+      );
+      expect(
+        container
+            .read(appAppearanceControllerProvider)
+            .value!
+            .navigationSwipeEnabled,
+        isFalse,
+      );
+      expect(repository.savedSettings, hasLength(2));
+      expect(
+        repository.savedSettings.last.navigationBarStyle,
+        AppNavigationBarStyle.legacy,
+      );
+      expect(repository.savedSettings.last.navigationSwipeEnabled, isFalse);
+    });
+
+    test('navigation save failure rolls back state and rethrows', () async {
+      final repository = _FakeAppAppearanceSettingsRepository(
+        settings: AppAppearanceSettings.defaults(),
+        failOnSave: true,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appAppearanceSettingsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(appAppearanceControllerProvider.future);
+      await expectLater(
+        container
+            .read(appAppearanceControllerProvider.notifier)
+            .setNavigationBarStyle(AppNavigationBarStyle.legacy),
+        throwsStateError,
+      );
+      await expectLater(
+        container
+            .read(appAppearanceControllerProvider.notifier)
+            .setNavigationSwipeEnabled(false),
+        throwsStateError,
+      );
+      final settings = container.read(appAppearanceControllerProvider).value!;
+      expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
+      expect(settings.navigationSwipeEnabled, isTrue);
     });
 
     test('save failure rolls back state and rethrows', () async {
