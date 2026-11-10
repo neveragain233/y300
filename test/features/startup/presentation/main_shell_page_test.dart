@@ -191,20 +191,26 @@ void main() {
     ]);
     expect(capsule.selectedIndex, 0);
     expect(capsule.swipeEnabled, isTrue);
-    final pageRect = tester.getRect(
-      find.byKey(const Key('main-shell-page-forum')),
-    );
     final listRect = tester.getRect(find.byKey(const Key('forum-home-list')));
     final capsuleRect = tester.getRect(find.byType(MainNavigationCapsule));
-    // 正文铺到胶囊后方，可滚动区域的下缘与胶囊上缘对齐。
-    expect(listRect.bottom, closeTo(capsuleRect.top, 1));
-    expect(listRect.bottom, lessThanOrEqualTo(pageRect.bottom - 80));
+    // 正文视口铺到屏幕底部，内容从胶囊后方滚过，只在滚动尾部预留空间。
+    expect(listRect.bottom, greaterThan(capsuleRect.top));
+    final homeList = tester.widget<ListView>(
+      find.byKey(const Key('forum-home-list')),
+    );
+    expect((homeList.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(80));
 
     await _tapNavigationGroup(tester, l10n.appNavigationFavorites);
     final shelfList = tester.widget<ListView>(
       find.byKey(const Key('unified-shelf-list-view')),
     );
     expect((shelfList.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(80));
+
+    await _tapNavigationGroup(tester, l10n.appNavigationMy);
+    final moreList = tester.widget<ListView>(
+      find.byKey(const Key('more-page-list')),
+    );
+    expect((moreList.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(80));
     expect(tester.takeException(), isNull);
   });
 
@@ -258,7 +264,7 @@ void main() {
       find.byKey(const Key('forum-home-list')),
     );
     final capsuleRect = tester.getRect(find.byType(MainNavigationCapsule));
-    expect(immersiveListRect.bottom, closeTo(capsuleRect.top, 1));
+    expect(immersiveListRect.bottom, greaterThan(capsuleRect.top));
 
     // 切换样式只在主壳重建底栏，入口页面的滚动位置保持。
     final l10n = AppLocalizations.of(
@@ -479,7 +485,7 @@ void main() {
     expect(find.byType(MainNavigationCapsule), findsOneWidget);
     expect(
       tester.getRect(find.byKey(const Key('forum-home-list'))).bottom,
-      closeTo(tester.getRect(find.byType(MainNavigationCapsule)).top, 1),
+      greaterThan(tester.getRect(find.byType(MainNavigationCapsule)).top),
     );
     expect(tester.takeException(), isNull);
   });

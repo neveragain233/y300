@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/shared/widgets/forum_thread_list_tile.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,7 +85,12 @@ class YamiboTagThreadPage extends ConsumerWidget {
               onRefresh: controller.refresh,
               child: ListView(
                 key: const Key('yamibo-tag-thread-list'),
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 18),
+                padding: EdgeInsets.fromLTRB(
+                  10,
+                  8,
+                  10,
+                  18 + mainShellBottomScrollInset(context),
+                ),
                 children: [
                   _TagHeaderCard(data: data, palette: palette),
                   const SizedBox(height: 8),

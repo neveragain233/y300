@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -446,7 +447,10 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
             Expanded(
               child: ListView(
                 key: const Key('forum-search-recent-list'),
-                padding: const EdgeInsets.only(top: 4, bottom: 16),
+                padding: EdgeInsets.only(
+                  top: 4,
+                  bottom: 16 + mainShellBottomScrollInset(context),
+                ),
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
@@ -471,7 +475,12 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
               child: ListView.separated(
                 key: const Key('forum-search-result-list'),
                 controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 16),
+                padding: EdgeInsets.fromLTRB(
+                  10,
+                  8,
+                  10,
+                  16 + mainShellBottomScrollInset(context),
+                ),
                 itemCount:
                     visibleItems.length +
                     ((_loadingMore || _loadMoreNotice != null) ? 1 : 0),

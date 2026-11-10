@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/messages/presentation/message_feed_controller.dart';
 import 'package:y300/features/messages/presentation/widgets/message_feed_view.dart';
@@ -70,9 +71,9 @@ class MessageFeedList<P> extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).y300NativeContent.supportingText,
+                                  color: Theme.of(context)
+                                      .y300NativeContent
+                                      .supportingText,
                                 ),
                           ),
                         ],
@@ -123,6 +124,9 @@ class MessageFeedList<P> extends StatelessWidget {
                         : const SizedBox.shrink(),
                   ),
                 ),
+              SliverToBoxAdapter(
+                child: SizedBox(height: mainShellBottomScrollInset(context)),
+              ),
             ],
           ),
         );

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +9,7 @@ import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_destination_stack.dart';
 import 'package:y300/app/navigation/main_navigation_group_presentation.dart';
 import 'package:y300/app/navigation/main_navigation_grouping.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
@@ -239,13 +238,14 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                 final showLegacyBar = !useRail && showChrome;
                 final showImmersiveChrome =
                     isImmersive && !useRail && showChrome;
-                final bottomPadding = showImmersiveChrome
-                    ? math.max(
-                        media.padding.bottom,
-                        _chromeHeight ??
-                            media.padding.bottom +
-                                _immersiveChromeFallbackHeight,
-                      )
+                // 沉浸式正文铺到屏幕底部，覆盖层高度只作为滚动尾部预留，
+                // 不压缩视口，内容才能从底栏后方滚过。
+                final overlayInset = showImmersiveChrome
+                    ? _chromeHeight ??
+                          media.padding.bottom + _immersiveChromeFallbackHeight
+                    : 0.0;
+                final contentBottomPadding = showImmersiveChrome
+                    ? 0.0
                     : media.padding.bottom;
                 // 正文容器在所有样式下保持同一层结构，切换样式、宽屏侧栏或
                 // 键盘显隐时页面实例与滚动位置不因重新挂载而丢失。
@@ -256,10 +256,13 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                         child: MediaQuery(
                           data: media.copyWith(
                             padding: media.padding.copyWith(
-                              bottom: bottomPadding,
+                              bottom: contentBottomPadding,
                             ),
                           ),
-                          child: content,
+                          child: MainShellBottomInset(
+                            bottom: overlayInset,
+                            child: content,
+                          ),
                         ),
                       ),
                       if (showImmersiveChrome)

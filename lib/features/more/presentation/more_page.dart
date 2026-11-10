@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
@@ -112,7 +113,9 @@ class _MorePageState extends ConsumerState<MorePage> {
             child: ListView(
               key: const Key('more-page-list'),
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.only(
+                bottom: 24 + mainShellBottomScrollInset(context),
+              ),
               children: [
                 MoreAccountHeader(
                   onOpenProfile: _openingMyProfile

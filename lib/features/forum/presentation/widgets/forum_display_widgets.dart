@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
@@ -185,7 +186,7 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
           SliverPadding(
             // 沉浸式主导航覆盖层之下保留可滚出的页尾空间。
             padding: EdgeInsets.only(
-              bottom: MediaQuery.paddingOf(context).bottom,
+              bottom: mainShellBottomScrollInset(context),
             ),
             sliver: SliverToBoxAdapter(
               child: _LoadMoreSection(

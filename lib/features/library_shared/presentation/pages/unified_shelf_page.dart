@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
@@ -1305,7 +1306,7 @@ class _WorkGrid extends StatelessWidget {
               ShelfGridGeometry.contentPadding,
               ShelfGridGeometry.contentPadding,
               ShelfGridGeometry.contentPadding +
-                  MediaQuery.paddingOf(context).bottom,
+                  mainShellBottomScrollInset(context),
             ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columns,
@@ -1485,7 +1486,7 @@ class _WorkList extends StatelessWidget {
           0,
           8,
           0,
-          8 + MediaQuery.paddingOf(context).bottom,
+          8 + mainShellBottomScrollInset(context),
         ),
         itemCount: items.length,
         separatorBuilder: (context, index) =>

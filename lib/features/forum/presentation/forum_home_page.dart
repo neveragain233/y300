@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/forum_link_opener.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -475,7 +476,9 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
             child: ListView(
               key: const Key('forum-home-list'),
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(
+                bottom: 10 + mainShellBottomScrollInset(context),
+              ),
               children: [
                 for (final section in widget.projection.sections.where(
                   (section) => section.source.type == ForumSectionType.favorite,
