@@ -4,6 +4,9 @@ enum NovelReaderLegacyMarkupNormalizationReason {
   emptyFontFace,
   invalidQuoteOnlyFontFace,
   invalidNoUsableFontFamilyToken,
+
+  /// 紧挨块级元素的 `<br>` 在渲染器里不会产生额外行，测量前移除。
+  blockAdjacentLineBreak,
 }
 
 @immutable

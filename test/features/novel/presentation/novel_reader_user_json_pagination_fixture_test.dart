@@ -73,7 +73,7 @@ void main() {
     expect(result.report.bodySafeTextCharacterRate, greaterThan(0.95));
     expect(result.report.routeCounts, <NovelReaderPaginationRoute, int>{
       NovelReaderPaginationRoute.editStatus: 1,
-      NovelReaderPaginationRoute.safeText: 94,
+      NovelReaderPaginationRoute.safeText: 93,
       NovelReaderPaginationRoute.rubyInline: 2,
     });
     expect(result.plan.pageCount, inInclusiveRange(7, 15));

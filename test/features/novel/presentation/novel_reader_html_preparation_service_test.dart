@@ -328,7 +328,7 @@ void main() {
     expect(prepared.flowUnits.last.imageIndices, <int>[0]);
     expect(prepared.imageDimensionRevision, isNonZero);
     expect(prepared.html, rawHtml);
-    expect(prepared.legacyMarkupNormalization.revision, 1);
+    expect(prepared.legacyMarkupNormalization.revision, 2);
     expect(prepared.legacyMarkupNormalization.normalizedAttributeCount, 0);
   });
 
@@ -400,7 +400,7 @@ void main() {
       current.renderDocument.preparedHtml,
       legacy.renderDocument.preparedHtml,
     );
-    expect(current.legacyMarkupNormalization.revision, 1);
+    expect(current.legacyMarkupNormalization.revision, 2);
     expect(legacy.legacyMarkupNormalization.revision, 0);
     expect(current.contentHash, isNot(legacy.contentHash));
   });
@@ -443,7 +443,7 @@ void main() {
       );
 
       expect(cache.length, 2);
-      expect(current.legacyMarkupNormalization.revision, 1);
+      expect(current.legacyMarkupNormalization.revision, 2);
       expect(legacy.legacyMarkupNormalization.revision, 0);
       expect(current.html, isNot(contains('face=')));
       expect(legacy.html, contains('face='));

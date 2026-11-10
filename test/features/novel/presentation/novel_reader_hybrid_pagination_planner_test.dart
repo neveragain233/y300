@@ -453,7 +453,7 @@ void main() {
         ),
       ).paginate(chapter, _key(chapter, height: 600));
 
-      expect(plan.routeCounts[NovelReaderPaginationRoute.safeText], 88);
+      expect(plan.routeCounts[NovelReaderPaginationRoute.safeText], 87);
       expect(plan.routeCounts[NovelReaderPaginationRoute.rubyInline], 1);
       expect(plan.routeCounts[NovelReaderPaginationRoute.collapseBlock], 1);
       expect(plan.pageCount, lessThanOrEqualTo(9));

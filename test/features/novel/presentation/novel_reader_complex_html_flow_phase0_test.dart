@@ -152,38 +152,38 @@ void main() {
 
       expect(_routeCounts(blockRoutes), <NovelReaderPaginationRoute, int>{
         NovelReaderPaginationRoute.isolatedImage: 1,
-        NovelReaderPaginationRoute.safeText: 13,
+        NovelReaderPaginationRoute.safeText: 4,
         NovelReaderPaginationRoute.tableBlock: 1,
       });
       expect(
         _reasonCounts(blockRoutes),
         <NovelReaderPaginationRouteReason, int>{
           NovelReaderPaginationRouteReason.isolatedReadableImage: 1,
-          NovelReaderPaginationRouteReason.safeTextSubset: 13,
+          NovelReaderPaginationRouteReason.safeTextSubset: 4,
           NovelReaderPaginationRouteReason.containsTable: 1,
         },
       );
       expect(_routeCounts(normalizedRoutes), <NovelReaderPaginationRoute, int>{
-        NovelReaderPaginationRoute.safeText: 10,
+        NovelReaderPaginationRoute.safeText: 5,
         NovelReaderPaginationRoute.collapseBlock: 2,
       });
       expect(
         _reasonCounts(normalizedRoutes),
         <NovelReaderPaginationRouteReason, int>{
-          NovelReaderPaginationRouteReason.safeTextSubset: 10,
+          NovelReaderPaginationRouteReason.safeTextSubset: 5,
           NovelReaderPaginationRouteReason.containsCollapse: 2,
         },
       );
       expect(_routeCounts(existingRoutes), <NovelReaderPaginationRoute, int>{
         NovelReaderPaginationRoute.editStatus: 1,
-        NovelReaderPaginationRoute.safeText: 94,
+        NovelReaderPaginationRoute.safeText: 93,
         NovelReaderPaginationRoute.rubyInline: 2,
       });
       expect(
         _reasonCounts(existingRoutes),
         <NovelReaderPaginationRouteReason, int>{
           NovelReaderPaginationRouteReason.containsEditStatus: 1,
-          NovelReaderPaginationRouteReason.safeTextSubset: 94,
+          NovelReaderPaginationRouteReason.safeTextSubset: 93,
           NovelReaderPaginationRouteReason.containsRuby: 2,
         },
       );
@@ -200,7 +200,7 @@ void main() {
         episodeId: 'phase2-normalized-font',
       );
 
-      expect(normalized.chapter.legacyMarkupNormalization.revision, 1);
+      expect(normalized.chapter.legacyMarkupNormalization.revision, 2);
       expect(
         normalized.chapter.legacyMarkupNormalization.normalizedAttributeCount,
         2,

@@ -1,3 +1,4 @@
+import 'package:html/dom.dart' as html_dom;
 import 'package:y300/features/novel/presentation/models/novel_reader_legacy_markup_normalization.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 
@@ -14,16 +15,65 @@ final class DefaultNovelReaderLegacyMarkupNormalizer
         const HtmlPackageForumHtmlFragmentCodec(),
   }) : _fragmentCodec = fragmentCodec;
 
-  static const currentRevision = 1;
+  static const currentRevision = 2;
 
   final ForumHtmlFragmentCodec _fragmentCodec;
 
   @override
   int get revision => currentRevision;
 
+  static const _blockTags = <String>{
+    'address',
+    'article',
+    'aside',
+    'blockquote',
+    'center',
+    'details',
+    'div',
+    'dl',
+    'figure',
+    'footer',
+    'form',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'header',
+    'hr',
+    'li',
+    'main',
+    'nav',
+    'ol',
+    'p',
+    'pre',
+    'section',
+    'summary',
+    'table',
+    'tbody',
+    'td',
+    'tfoot',
+    'th',
+    'thead',
+    'tr',
+    'ul',
+  };
+
+  static const _preformattedTags = <String>{'pre', 'code', 'textarea'};
+
+  static final _blockBreakCandidatePattern = RegExp(
+    r'<br\b[^>]*>',
+    caseSensitive: false,
+  );
+
   @override
   NovelReaderLegacyMarkupNormalizationResult normalize(String html) {
-    if (!_fontFaceCandidatePattern.hasMatch(html)) {
+    final hasFontFace = _fontFaceCandidatePattern.hasMatch(html);
+    final hasBlockBreak =
+        _blockBreakCandidatePattern.hasMatch(html) &&
+        _blockTagCandidatePattern.hasMatch(html);
+    if (!hasFontFace && !hasBlockBreak) {
       return NovelReaderLegacyMarkupNormalizationResult(
         html: html,
         summary: const NovelReaderLegacyMarkupNormalizationSummary(
@@ -44,6 +94,20 @@ final class DefaultNovelReaderLegacyMarkupNormalizer
       reasonCounts.update(reason, (count) => count + 1, ifAbsent: () => 1);
     }
 
+    if (hasBlockBreak) {
+      for (final br in fragment.querySelectorAll('br')) {
+        if (_hasPreformattedAncestor(br) || !_isBlockAdjacentBreak(br)) {
+          continue;
+        }
+        br.remove();
+        reasonCounts.update(
+          NovelReaderLegacyMarkupNormalizationReason.blockAdjacentLineBreak,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
+      }
+    }
+
     final count = reasonCounts.values.fold<int>(
       0,
       (total, value) => total + value,
@@ -59,6 +123,28 @@ final class DefaultNovelReaderLegacyMarkupNormalizer
             ),
       ),
     );
+  }
+
+  bool _hasPreformattedAncestor(html_dom.Element element) {
+    for (var node = element.parent; node != null; node = node.parent) {
+      if (_preformattedTags.contains(node.localName?.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// `<div>…</div><br>` 在 HTML renderer 里不会多出一行：块级元素已经换行，
+  /// 紧随其后的 br 被折叠。前后相邻元素任一是块级元素时都按折叠处理；顶层
+  /// 节点的 parent 可能为空，因此只用元素兄弟而不是父节点索引。
+  bool _isBlockAdjacentBreak(html_dom.Element br) {
+    final previous = br.previousElementSibling;
+    if (previous != null &&
+        _blockTags.contains(previous.localName?.toLowerCase())) {
+      return true;
+    }
+    final next = br.nextElementSibling;
+    return next != null && _blockTags.contains(next.localName?.toLowerCase());
   }
 
   NovelReaderLegacyMarkupNormalizationReason? _invalidFaceReason(String face) {
@@ -117,6 +203,10 @@ final class DefaultNovelReaderLegacyMarkupNormalizer
   );
   static final _fontFaceCandidatePattern = RegExp(
     r'<font\b[^>]*\bface\b',
+    caseSensitive: false,
+  );
+  static final _blockTagCandidatePattern = RegExp(
+    r'<(?:div|p|table|tbody|thead|tr|td|th|ul|ol|li|blockquote|h[1-6]|hr|center|pre)\b',
     caseSensitive: false,
   );
 }

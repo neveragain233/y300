@@ -34,7 +34,7 @@ void main() {
     final result = normalizer.normalize(source);
     final fragment = html_parser.parseFragment(result.html);
 
-    expect(result.summary.revision, 1);
+    expect(result.summary.revision, 2);
     expect(result.summary.normalizedAttributeCount, 5);
     expect(result.summary.reasonCounts, {
       NovelReaderLegacyMarkupNormalizationReason.emptyFontFace: 2,
@@ -51,6 +51,34 @@ void main() {
     expect(empty.attributes['style'], contains('background-color'));
     expect(fragment.text, '空值实体引号字面引号空 family 列表布尔空属性');
     expect(fragment.querySelectorAll('strong'), hasLength(1));
+  });
+
+  test('drops line breaks that only repeat a block boundary', () {
+    const source =
+        '<strong>标题</strong><br>'
+        '<div>甲</div><br>\n<div>乙<br>行内换行</div><br>'
+        '<span>尾</span><p>丙<br>丁</p><pre>一<br>二</pre>';
+
+    final result = normalizer.normalize(source);
+    final fragment = html_parser.parseFragment(result.html);
+
+    expect(result.summary.revision, 2);
+    expect(result.summary.reasonCounts, {
+      NovelReaderLegacyMarkupNormalizationReason.blockAdjacentLineBreak: 3,
+    });
+    expect(
+      fragment
+          .querySelectorAll('br')
+          .map((br) => br.parent?.localName)
+          .toList(),
+      <String?>['div', 'p', 'pre'],
+      reason: '只保留行内、段落和预格式化块内部的换行。',
+    );
+    expect(
+      (fragment.text ?? '').replaceAll(RegExp(r'\s'), ''),
+      '标题甲乙行内换行尾丙丁一二',
+    );
+    expect(fragment.querySelectorAll('div').last.text, '乙行内换行');
   });
 
   test('preserves valid known and unknown font families byte for byte', () {
@@ -87,7 +115,7 @@ void main() {
           .readAsStringSync();
       final prepared = await _prepare(source, theme: _sepiaTheme);
 
-      expect(prepared.legacyMarkupNormalization.revision, 1);
+      expect(prepared.legacyMarkupNormalization.revision, 2);
       expect(prepared.legacyMarkupNormalization.normalizedAttributeCount, 2);
       expect(prepared.html, isNot(contains('face=')));
       expect(prepared.renderDocument.preparedHtml, isNot(contains('face=')));
