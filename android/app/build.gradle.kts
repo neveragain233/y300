@@ -64,6 +64,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 自用调试包与已交付版本共用证书，以支持覆盖安装。
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             // Use the real release keystore when configured; otherwise fall back to
             // debug signing so `flutter run --release` still works without a keystore.
@@ -76,16 +82,26 @@ android {
     }
 }
 
-// Some plugins bundle prebuilt libraries for every Android ABI. Filter those
-// libraries only from release variants so local x86/x86_64 emulator builds
-// keep working while the published APK remains truly arm64-only.
+// 插件可能携带全部架构；调试包按 Flutter 请求的平台过滤，模拟器目标继续可用。
+val flutterTargetAbis = providers.gradleProperty("target-platform").orNull
+    ?.split(",")?.mapNotNull {
+        when (it.trim()) {
+            "android-arm" -> "armeabi-v7a"
+            "android-arm64" -> "arm64-v8a"
+            "android-x86" -> "x86"
+            "android-x64" -> "x86_64"
+            else -> null
+        }
+    }?.toSet().orEmpty()
 androidComponents {
-    onVariants(selector().withBuildType("release")) { variant ->
-        variant.packaging.jniLibs.excludes.addAll(
-            "lib/armeabi-v7a/**",
-            "lib/x86/**",
-            "lib/x86_64/**",
-        )
+    onVariants { variant ->
+        val allowed = if (variant.buildType == "release") setOf("arm64-v8a") else flutterTargetAbis
+        if (allowed.isNotEmpty()) {
+            variant.packaging.jniLibs.excludes.addAll(
+                listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+                    .filterNot { it in allowed }.map { "lib/$it/**" }
+            )
+        }
     }
 }
 
