@@ -115,6 +115,8 @@ class ReaderReadingStatusBar extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
+                    // 左侧占满剩余宽度，右侧按内容宽度贴住右边缘；两者都
+                    // 用 flex 会把空白对半分，右下角就只剩半个屏宽。
                     Expanded(
                       child: status.leading.isEmpty
                           ? const SizedBox.shrink()
@@ -129,15 +131,14 @@ class ReaderReadingStatusBar extends StatelessWidget {
                     ),
                     if (status.trailing.isNotEmpty) ...[
                       const SizedBox(width: 12),
-                      Flexible(
-                        child: _StatusText(
-                          key: const Key(
-                            'shared-reader-persistent-status-trailing',
-                          ),
-                          text: status.trailing,
-                          style: textStyle,
-                          alignment: TextAlign.end,
+                      _StatusText(
+                        key: const Key(
+                          'shared-reader-persistent-status-trailing',
                         ),
+                        text: status.trailing,
+                        style: textStyle,
+                        alignment: TextAlign.end,
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.6,
                       ),
                     ],
                   ],
@@ -157,15 +158,17 @@ class _StatusText extends StatelessWidget {
     required this.text,
     required this.style,
     required this.alignment,
+    this.maxWidth,
   });
 
   final String text;
   final TextStyle style;
   final TextAlign alignment;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    final child = Text(
       text,
       maxLines: 1,
       softWrap: false,
@@ -173,5 +176,12 @@ class _StatusText extends StatelessWidget {
       textAlign: alignment,
       style: style,
     );
+    final width = maxWidth;
+    return width == null
+        ? child
+        : ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: width),
+            child: child,
+          );
   }
 }

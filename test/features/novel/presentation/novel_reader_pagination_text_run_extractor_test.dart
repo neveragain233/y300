@@ -88,6 +88,37 @@ void main() {
     expect(run.style.fontSize, closeTo(27.75, 0.001));
   });
 
+  test('html whitespace between line breaks never becomes a hard break', () {
+    final atom = _atom('<p>第一行<br />\r\n<br />\r\n第二行</p>');
+    final classified = classifier.classify(
+      atom: atom,
+      baseStyle: _baseStyle,
+      preferences: _preferences,
+      theme: _lightTheme,
+    );
+    expect(classified.route, NovelReaderPaginationRoute.safeText);
+
+    final runs = extractor.extract(
+      classifiedAtom: classified,
+      baseStyle: _baseStyle,
+      preferences: _preferences,
+      theme: _lightTheme,
+    );
+    final hardBreaks = runs.where((run) => run.isParagraphBreak).length;
+    final newlines = runs.fold<int>(
+      0,
+      (count, run) => count + '\n'.allMatches(run.text).length,
+    );
+
+    expect(hardBreaks, 2);
+    expect(newlines, 2, reason: '只有 br 产生换行，源文件中的 CRLF 不再增加文本行。');
+    expect(
+      runs.last.endAnchor.textOffset,
+      atom.textLength,
+      reason: '空白替换必须保持源锚点覆盖完整。',
+    );
+  });
+
   test('maps rune, grapheme and UTF-16 paths to the same anchor position', () {
     const prefix = 'A👩‍👩‍👧‍👦e\u0301';
     const text = '$prefix中';

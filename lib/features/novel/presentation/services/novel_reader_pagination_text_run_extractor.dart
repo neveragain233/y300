@@ -62,10 +62,18 @@ final class NovelReaderPaginationTextRunExtractor {
       if (node.data.isEmpty) {
         return;
       }
-      final length = node.data.runes.length;
+      // 源 HTML 常在 <br /> 之后保留 CRLF 缩进；渲染器按 HTML 规则把它折叠
+      // 成空白，但 TextPainter 会把 \r/\n 当成硬换行，多量的换行会让分页
+      // 提前结束、页尾留下大块空白。逐字符替换为空格，保持 rune 与锚点偏移
+      // 不变，同时不再产生多余的换行。
+      final measurementText = node.data.replaceAll(
+        RegExp(r'[\r\n\t\f\v]'),
+        ' ',
+      );
+      final length = measurementText.runes.length;
       output.add(
         NovelReaderPaginationTextRun(
-          text: node.data,
+          text: measurementText,
           style: parentStyle,
           startAnchor: _anchorAt(atom, cursor.offset),
           endAnchor: _anchorAt(atom, cursor.offset + length),
