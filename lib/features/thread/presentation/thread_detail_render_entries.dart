@@ -40,6 +40,9 @@ class ThreadDetailRenderEntryPlanner {
     final normalizedTargetPid = targetPid?.trim();
     for (var index = 0; index < posts.length; index++) {
       final post = posts[index];
+      if (index > 0 && posts[index - 1].sourcePost.isFirst) {
+        entries.add(const ThreadDetailRenderEntry.repliesHeader());
+      }
       if (isCollapsed?.call(post.sourcePost) ?? false) {
         entries.add(
           ThreadDetailRenderEntry.blacklistedPost(
@@ -98,6 +101,10 @@ class ThreadDetailRenderEntryPlanner {
         ),
       );
     }
+    // 无回复或筛选后只有首楼时，仍在首楼末尾保留切换入口。
+    if (posts.isNotEmpty && posts.last.sourcePost.isFirst) {
+      entries.add(const ThreadDetailRenderEntry.repliesHeader());
+    }
     entries.add(const ThreadDetailRenderEntry.pagination());
     if (normalizedTargetPid?.isNotEmpty == true) {
       entries.add(const ThreadDetailRenderEntry.targetSpacer());
@@ -107,6 +114,7 @@ class ThreadDetailRenderEntryPlanner {
 }
 
 enum ThreadDetailRenderEntryKind {
+  repliesHeader,
   postCard,
   postHeader,
   postBody,
@@ -128,6 +136,13 @@ class ThreadDetailRenderEntry {
     this.bodyManifest,
     this.chunkOrdinal,
   });
+
+  const ThreadDetailRenderEntry.repliesHeader()
+    : this._(
+        kind: ThreadDetailRenderEntryKind.repliesHeader,
+        key: 'thread-replies-header-entry',
+        postIndex: -1,
+      );
 
   const ThreadDetailRenderEntry.postCard({
     required String key,

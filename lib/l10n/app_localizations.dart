@@ -5505,6 +5505,30 @@ abstract class AppLocalizations {
   /// **'正序浏览'**
   String get threadDetailNormalOrder;
 
+  /// No description provided for @threadDetailReplyCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复 {count}'**
+  String threadDetailReplyCount(int count);
+
+  /// No description provided for @threadDetailOnlyOriginalPoster.
+  ///
+  /// In zh, this message translates to:
+  /// **'只看楼主'**
+  String get threadDetailOnlyOriginalPoster;
+
+  /// No description provided for @threadDetailAscendingOrder.
+  ///
+  /// In zh, this message translates to:
+  /// **'正序'**
+  String get threadDetailAscendingOrder;
+
+  /// No description provided for @threadDetailDescendingOrder.
+  ///
+  /// In zh, this message translates to:
+  /// **'倒序'**
+  String get threadDetailDescendingOrder;
+
   /// No description provided for @threadDetailPreviousPage.
   ///
   /// In zh, this message translates to:

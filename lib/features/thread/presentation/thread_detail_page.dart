@@ -629,6 +629,20 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                       ),
                                     );
                                   },
+                                  onToggleAuthorFilter: () =>
+                                      _runReadingViewAction(
+                                        state.isOnlyAuthorView
+                                            ? controller.openAllPosts
+                                            : controller.openOnlyAuthor,
+                                        userNavigation: true,
+                                      ),
+                                  onOrderChanged: (reverse) =>
+                                      _runReadingViewAction(
+                                        reverse
+                                            ? controller.openReverseOrder
+                                            : controller.openNormalOrder,
+                                        userNavigation: true,
+                                      ),
                                   onOpenAuthorProfile: _openAuthorProfile,
                                   onOpenCommentAuthorProfile:
                                       _openCommentAuthorProfile,

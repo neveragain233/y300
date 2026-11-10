@@ -271,7 +271,9 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
         !current.supports(ThreadDetailCapability.alternateViews)) {
       return;
     }
+    // 倒序页面的“只看”链接可能属于最新回复，以首楼的作者身份为准。
     final authorId =
+        _firstPostAuthorId(current.posts) ??
         _queryFromUrl(current.onlyAuthorUrl)['authorid'] ??
         _firstAvailableAuthorId(current.posts);
     if (authorId == null || authorId.trim().isEmpty) {
@@ -1308,6 +1310,16 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
       }
     }
     return Map<String, String>.unmodifiable(next);
+  }
+
+  String? _firstPostAuthorId(List<ThreadPost> posts) {
+    for (final post in posts) {
+      if ((post.isFirst || post.number == 1) &&
+          post.authorId.trim().isNotEmpty) {
+        return post.authorId.trim();
+      }
+    }
+    return null;
   }
 
   String? _firstAvailableAuthorId(List<ThreadPost> posts) {

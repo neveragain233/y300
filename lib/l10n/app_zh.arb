@@ -1441,6 +1441,13 @@
   "threadDetailAllPosts": "显示全部楼层",
   "threadDetailReverseOrder": "倒序浏览",
   "threadDetailNormalOrder": "正序浏览",
+  "threadDetailReplyCount": "回复 {count}",
+  "@threadDetailReplyCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "threadDetailOnlyOriginalPoster": "只看楼主",
+  "threadDetailAscendingOrder": "正序",
+  "threadDetailDescendingOrder": "倒序",
   "threadDetailPreviousPage": "上一页",
   "threadDetailNextPage": "下一页",
   "threadDetailNoMore": "没有更多",

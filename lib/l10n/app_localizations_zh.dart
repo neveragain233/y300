@@ -3303,6 +3303,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get threadDetailNormalOrder => '正序浏览';
 
   @override
+  String threadDetailReplyCount(int count) {
+    return '回复 $count';
+  }
+
+  @override
+  String get threadDetailOnlyOriginalPoster => '只看楼主';
+
+  @override
+  String get threadDetailAscendingOrder => '正序';
+
+  @override
+  String get threadDetailDescendingOrder => '倒序';
+
+  @override
   String get threadDetailPreviousPage => '上一页';
 
   @override
@@ -9170,6 +9184,20 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get threadDetailNormalOrder => '正序瀏覽';
+
+  @override
+  String threadDetailReplyCount(int count) {
+    return '回覆 $count';
+  }
+
+  @override
+  String get threadDetailOnlyOriginalPoster => '只看樓主';
+
+  @override
+  String get threadDetailAscendingOrder => '正序';
+
+  @override
+  String get threadDetailDescendingOrder => '倒序';
 
   @override
   String get threadDetailPreviousPage => '上一頁';

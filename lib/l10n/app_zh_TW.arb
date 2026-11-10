@@ -1040,6 +1040,13 @@
   "threadDetailAllPosts": "顯示全部樓層",
   "threadDetailReverseOrder": "倒序瀏覽",
   "threadDetailNormalOrder": "正序瀏覽",
+  "threadDetailReplyCount": "回覆 {count}",
+  "@threadDetailReplyCount": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "threadDetailOnlyOriginalPoster": "只看樓主",
+  "threadDetailAscendingOrder": "正序",
+  "threadDetailDescendingOrder": "倒序",
   "threadDetailPreviousPage": "上一頁",
   "threadDetailNextPage": "下一頁",
   "threadDetailNoMore": "沒有更多",

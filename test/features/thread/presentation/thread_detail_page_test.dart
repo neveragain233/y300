@@ -1855,7 +1855,10 @@ void main() {
       await tester.pump();
       expect(find.text('完整评分用户'), findsOneWidget);
       expect(ratingsRepository.loadCount, 1);
-      expect(find.byKey(const Key('thread-replies-header')), findsNothing);
+      expect(
+        find.byKey(const Key('thread-detail-replies-header')),
+        findsOneWidget,
+      );
       expect(find.text('全部回复'), findsNothing);
       expect(find.byKey(const Key('thread-reply-input')), findsNothing);
       expect(find.byKey(const Key('thread-reply-submit-button')), findsNothing);
@@ -3555,7 +3558,7 @@ void main() {
     });
 
     testWidgets(
-      'combines author filter with order switch and pins first post in reverse view',
+      'reply controls combine author and order filters and keep first post pinned',
       (tester) async {
         final historyRecorder = _RecordingHistoryVisitRecorder();
         final repository = _FakeThreadRepository((tid, page, query) async {
@@ -3572,7 +3575,9 @@ void main() {
               currentPage: page,
               lastPage: 1,
               reverseOrderUrl: isReverse ? null : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&ordertype=1',
-              onlyAuthorUrl: isAuthorOnly ? null : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&authorid=1',
+              onlyAuthorUrl: isAuthorOnly
+                  ? null
+                  : 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&authorid=${isReverse ? 99 : 1}',
               desktopUrl:
                   'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=$page',
               perPage: 3,
@@ -3622,13 +3627,27 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
         expect(historyRecorder.drafts, hasLength(1));
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(ThreadDetailPage)),
+        );
+        final header = find.byKey(const Key('thread-detail-replies-header'));
+        expect(find.text(l10n.threadDetailReplyCount(2)), findsOneWidget);
+        expect(
+          tester.getTopLeft(header).dy,
+          greaterThan(
+            tester
+                .getBottomLeft(find.byKey(const Key('thread-post-card-p1')))
+                .dy,
+          ),
+        );
+        expect(
+          tester.getBottomLeft(header).dy,
+          lessThanOrEqualTo(
+            tester.getTopLeft(find.byKey(const Key('thread-post-card-p2'))).dy,
+          ),
+        );
 
-        await tester.tap(find.byKey(const Key('thread-detail-more-menu')));
-        await tester.pumpAndSettle();
-        expect(_popupMenuText('只看该作者'), findsOneWidget);
-        expect(_popupMenuText('倒序浏览'), findsOneWidget);
-
-        await tester.tap(_popupMenuText('只看该作者'));
+        await tester.tap(find.byKey(const Key('thread-replies-author-filter')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
 
@@ -3636,10 +3655,10 @@ void main() {
         expect(repository.queryHistory.last.containsKey('ordertype'), isFalse);
         await tester.tap(find.byKey(const Key('thread-detail-more-menu')));
         await tester.pumpAndSettle();
-        expect(_popupMenuText('显示全部楼层'), findsOneWidget);
-        expect(_popupMenuText('倒序浏览'), findsOneWidget);
+        expect(_popupMenuText(l10n.threadDetailAllPosts), findsOneWidget);
+        expect(_popupMenuText(l10n.threadDetailReverseOrder), findsOneWidget);
 
-        await tester.tap(_popupMenuText('倒序浏览'));
+        await tester.tap(_popupMenuText(l10n.threadDetailReverseOrder));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
 
@@ -3651,29 +3670,29 @@ void main() {
             tester.getTopLeft(find.byKey(const Key('thread-post-card-p3'))).dy,
           ),
         );
-        await tester.tap(find.byKey(const Key('thread-detail-more-menu')));
-        await tester.pumpAndSettle();
-        expect(_popupMenuText('显示全部楼层'), findsOneWidget);
-        expect(_popupMenuText('正序浏览'), findsOneWidget);
-
-        await tester.tap(_popupMenuText('正序浏览'));
+        await tester.tap(find.byKey(const Key('thread-replies-normal-order')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
 
         expect(repository.queryHistory.last['authorid'], '1');
         expect(repository.queryHistory.last['ordertype'], '2');
-        await tester.tap(find.byKey(const Key('thread-detail-more-menu')));
-        await tester.pumpAndSettle();
-        expect(_popupMenuText('显示全部楼层'), findsOneWidget);
-        expect(_popupMenuText('倒序浏览'), findsOneWidget);
-
-        await tester.tap(_popupMenuText('显示全部楼层'));
+        await tester.tap(find.byKey(const Key('thread-replies-author-filter')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
 
         expect(repository.queryHistory.last.containsKey('authorid'), isFalse);
         expect(repository.queryHistory.last['ordertype'], '2');
         expect(historyRecorder.drafts, hasLength(1));
+
+        await tester.tap(find.byKey(const Key('thread-replies-reverse-order')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.tap(find.byKey(const Key('thread-replies-author-filter')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+
+        expect(repository.queryHistory.last['ordertype'], '1');
+        expect(repository.queryHistory.last['authorid'], '1');
       },
     );
 

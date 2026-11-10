@@ -18,6 +18,7 @@ void main() {
 
       expect(entries.map((entry) => entry.kind), [
         ThreadDetailRenderEntryKind.postCard,
+        ThreadDetailRenderEntryKind.repliesHeader,
         ThreadDetailRenderEntryKind.postHeader,
         ThreadDetailRenderEntryKind.postBody,
         ThreadDetailRenderEntryKind.postFooter,
@@ -27,6 +28,7 @@ void main() {
       ]);
       expect(entries.map((entry) => entry.key), [
         'thread-post-card-entry-before',
+        'thread-replies-header-entry',
         'thread-post-header-entry-target',
         'thread-post-body-entry-target',
         'thread-post-footer-entry-target',
@@ -34,8 +36,15 @@ void main() {
         'thread-detail-pagination',
         'thread-detail-target-scroll-spacer',
       ]);
-      expect(entries.take(5).map((entry) => entry.postIndex), [0, 1, 1, 1, 2]);
-      for (final entry in entries.sublist(1, 4)) {
+      expect(entries.take(6).map((entry) => entry.postIndex), [
+        0,
+        -1,
+        1,
+        1,
+        1,
+        2,
+      ]);
+      for (final entry in entries.sublist(2, 5)) {
         expect(entry.sourcePost, same(posts[1]));
         expect(entry.displayPost, same(posts[1]));
       }
@@ -49,6 +58,7 @@ void main() {
 
       expect(entries.map((entry) => entry.kind), [
         ThreadDetailRenderEntryKind.postCard,
+        ThreadDetailRenderEntryKind.repliesHeader,
         ThreadDetailRenderEntryKind.pagination,
         ThreadDetailRenderEntryKind.targetSpacer,
       ]);
@@ -65,6 +75,7 @@ void main() {
         ThreadDetailRenderEntryKind.postHeader,
         ThreadDetailRenderEntryKind.postBody,
         ThreadDetailRenderEntryKind.postFooter,
+        ThreadDetailRenderEntryKind.repliesHeader,
         ThreadDetailRenderEntryKind.pagination,
         ThreadDetailRenderEntryKind.targetSpacer,
       ]);
@@ -79,11 +90,12 @@ void main() {
 
       expect(entries.map((entry) => entry.kind), [
         ThreadDetailRenderEntryKind.postCard,
+        ThreadDetailRenderEntryKind.repliesHeader,
         ThreadDetailRenderEntryKind.postCard,
         ThreadDetailRenderEntryKind.pagination,
         ThreadDetailRenderEntryKind.targetSpacer,
       ]);
-      expect(entries.take(2).map((entry) => entry.postIndex), [0, 1]);
+      expect(entries.take(3).map((entry) => entry.postIndex), [0, -1, 1]);
     });
 
     test('omits the landing spacer when no target is requested', () {
@@ -96,6 +108,7 @@ void main() {
 
         expect(entries.map((entry) => entry.kind), [
           ThreadDetailRenderEntryKind.postCard,
+          ThreadDetailRenderEntryKind.repliesHeader,
           ThreadDetailRenderEntryKind.pagination,
         ]);
       }
@@ -111,6 +124,7 @@ void main() {
 
         expect(entries.map((entry) => entry.kind), [
           ThreadDetailRenderEntryKind.postCard,
+          ThreadDetailRenderEntryKind.repliesHeader,
           ThreadDetailRenderEntryKind.pagination,
         ]);
         expect(entries.first.key, 'thread-post-card-entry-body');
@@ -141,6 +155,36 @@ void main() {
         expect(entry.displayPost, same(display));
         expect(entry.postIndex, 0);
       }
+    });
+
+    test('reply-only pages keep their existing top edge and post indices', () {
+      final entries = planner.buildEntries(
+        posts: [_post('p21', 21), _post('p22', 22)],
+      );
+
+      expect(entries.map((entry) => entry.kind), [
+        ThreadDetailRenderEntryKind.postCard,
+        ThreadDetailRenderEntryKind.postCard,
+        ThreadDetailRenderEntryKind.pagination,
+      ]);
+      expect(entries.map((entry) => entry.postIndex), [0, 1, -1]);
+    });
+
+    test('keeps the replies header after a collapsed first post', () {
+      final entries = planner.buildProjectionEntries(
+        posts: [
+          for (final post in [_post('p1', 1), _post('p2', 2)])
+            ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+        ],
+        isCollapsed: (_) => true,
+      );
+
+      expect(entries.map((entry) => entry.kind), [
+        ThreadDetailRenderEntryKind.blacklistedPost,
+        ThreadDetailRenderEntryKind.repliesHeader,
+        ThreadDetailRenderEntryKind.blacklistedPost,
+        ThreadDetailRenderEntryKind.pagination,
+      ]);
     });
 
     test(

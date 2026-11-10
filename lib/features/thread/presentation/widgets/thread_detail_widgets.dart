@@ -33,6 +33,7 @@ import 'package:y300/features/thread/presentation/services/thread_image_preload_
 import 'package:y300/features/thread/presentation/services/thread_image_reader_return_coordinator.dart';
 import 'package:y300/features/thread/presentation/services/thread_body_reading_coordinator.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
+import 'package:y300/features/thread/presentation/widgets/thread_replies_header.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_poll_option_image.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_post_render_context.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
@@ -97,10 +98,14 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.displayExtraCommentsByPostId = const {},
     this.enableBodyChunking = true,
     this.allowedBlacklistedAuthorId,
+    this.onToggleAuthorFilter,
+    this.onOrderChanged,
   });
 
   final ThreadDetailPageState state;
   final ThreadDetailContentProjection? projection;
+  final VoidCallback? onToggleAuthorFilter;
+  final ValueChanged<bool>? onOrderChanged;
   final bool enableBodyChunking;
 
   /// Topic author allowed for this route when the whole-thread prompt was
@@ -896,6 +901,23 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     bool stabilizeImageLayout = true,
   }) {
     switch (entry.kind) {
+      case ThreadDetailRenderEntryKind.repliesHeader:
+        final canSwitchViews = widget.state.supports(
+          ThreadDetailCapability.alternateViews,
+        );
+        return ThreadRepliesHeader(
+          key: const Key('thread-detail-replies-header'),
+          replyCount: widget.state.replies,
+          isOnlyAuthor: widget.state.isOnlyAuthorView,
+          isReverseOrder: widget.state.isReverseOrderView,
+          palette: palette,
+          enabled:
+              !widget.state.isLoadingInitial && !widget.state.isLoadingMore,
+          onToggleAuthorFilter: canSwitchViews
+              ? widget.onToggleAuthorFilter
+              : null,
+          onOrderChanged: canSwitchViews ? widget.onOrderChanged : null,
+        );
       case ThreadDetailRenderEntryKind.postCard:
         return KeyedSubtree(
           key: _projectionAnchorCoordinator.keyForPid(entry.sourcePost!.pid),
