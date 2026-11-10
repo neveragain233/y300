@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
     show RenderAbstractViewport, ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/shared/widgets/reader_content_region.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/reader_shared/data/export/reader_image_export_providers.dart';
@@ -40,7 +43,7 @@ import 'package:y300/l10n/app_localizations.dart';
 ///
 /// 行为对齐自原 `ComicReaderPage`：滚动锚定/补偿、滑块 commit 状态机、PageController
 /// 同步等时序敏感逻辑均按原实现迁移，仅把业务部分替换为能力回调。
-class ImageReaderEngine extends ConsumerStatefulWidget {
+class ImageReaderEngine extends ConsumerWidget {
   const ImageReaderEngine({
     super.key,
     required this.capability,
@@ -57,10 +60,55 @@ class ImageReaderEngine extends ConsumerStatefulWidget {
   final String slotKeyPrefix;
 
   @override
-  ConsumerState<ImageReaderEngine> createState() => _ImageReaderEngineState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preferences =
+        ref.watch(readerPreferencesControllerProvider).value ??
+        ReaderPreferences.defaults();
+    return ReaderContentRegion(
+      backgroundColor: _resolveReaderBackground(Theme.of(context), preferences),
+      maxWidth: preferences.readerMode == ReaderModePreference.vertical
+          ? AppLayoutTokens.imageReadingMaxWidth
+          : double.infinity,
+      child: _ImageReaderEngineContent(
+        capability: capability,
+        flowPolicy: flowPolicy,
+        listKey: listKey,
+        pageKey: pageKey,
+        slotKeyPrefix: slotKeyPrefix,
+      ),
+    );
+  }
 }
 
-class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
+class _ImageReaderEngineContent extends ConsumerStatefulWidget {
+  const _ImageReaderEngineContent({
+    required this.capability,
+    required this.flowPolicy,
+    required this.listKey,
+    required this.pageKey,
+    required this.slotKeyPrefix,
+  });
+  final ReaderCapability capability;
+  final ContinuousImageFlowPolicy flowPolicy;
+  final Key listKey;
+  final Key pageKey;
+  final String slotKeyPrefix;
+  @override
+  ConsumerState<_ImageReaderEngineContent> createState() =>
+      _ImageReaderEngineState();
+}
+
+Color _resolveReaderBackground(
+  ThemeData theme,
+  ReaderPreferences preferences,
+) => switch (preferences.background) {
+  ReaderBackgroundPreference.followTheme => theme.colorScheme.surface,
+  ReaderBackgroundPreference.black => Colors.black,
+  ReaderBackgroundPreference.white => Colors.white,
+  ReaderBackgroundPreference.gray => const Color(0xFF202124),
+};
+
+class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     implements ReaderEngineActions {
   late ScrollController _scrollController;
   int _scrollControllerSessionGeneration = -1;
@@ -138,6 +186,10 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
   double? _appliedVerticalPageSpacing;
   int _verticalSpacingCompensationGeneration = 0;
   ScrollPosition? _observedScrollPosition;
+  Size? _verticalViewportSize;
+  int _viewportRestoreGeneration = 0;
+  int _verticalViewportRevision = 0;
+  ({int index, String itemId, double fraction})? _viewportAnchor;
 
   ReaderCapability get _capability => widget.capability;
 
@@ -320,6 +372,7 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
     ReaderPreferences preferences,
     ReaderEngineContext engineContext,
   ) {
+    _restoreVerticalViewportIfChanged(content);
     final pageSpacing = preferences.pageSpacing.clamp(0.0, 48.0).toDouble();
     final items = _applyVerticalPageSpacing(
       _applyResolvedVerticalDimensions(content.items),
@@ -357,6 +410,7 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
           ? _onVerticalScrollNotification(notification)
           : false,
       child: ContinuousImageReaderView(
+        key: ValueKey(_verticalViewportRevision),
         items: items,
         mode: ContinuousImageReaderMode.vertical,
         scrollController: scrollController,
@@ -441,6 +495,95 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
         },
       ),
     );
+  }
+
+  void _restoreVerticalViewportIfChanged(ReaderContent content) {
+    final next = MediaQuery.sizeOf(context);
+    final previous = _verticalViewportSize;
+    _verticalViewportSize = next;
+    if (previous == null ||
+        previous == next ||
+        !_scrollController.hasClients ||
+        (_positionState?.needsInitialRestore ?? true) ||
+        _latestItems.isEmpty) {
+      return;
+    }
+    final position = _scrollController.position;
+    var anchor = _viewportAnchor;
+    if (anchor == null) {
+      final index = _verticalLayoutFor(previous.width)
+          .resolve(
+            scrollOffset: position.pixels,
+            viewportExtent: position.viewportDimension,
+            userScrollDirection: ContinuousImageScrollDirection.idle,
+          )
+          .firstVisibleIndex;
+      if (index == null || index >= _latestItems.length) return;
+      final item = _latestItems[index];
+      final start = _extentRegistry.estimateOffsetForIndex(
+        index,
+        _latestItems,
+        crossAxisExtent: previous.width,
+        resolver: _layoutResolver,
+      );
+      final height =
+          _extentRegistry.extentOf(item.id)?.mainAxisExtent ??
+          previous.width /
+              _layoutResolver.resolveInitialHint(item: item).aspectRatio;
+      anchor = (
+        index: index,
+        itemId: item.id,
+        fraction: height > 0
+            ? ((position.pixels - start) / height).clamp(0.0, 1.0)
+            : 0.0,
+      );
+    }
+    _viewportAnchor = anchor;
+    // 懒列表保留的离屏像素几何属于旧宽度；替换视口，保留引擎、控制器和图片会话。
+    _verticalViewportRevision++;
+    final captured = anchor;
+    final generation = ++_viewportRestoreGeneration;
+    final session = _readerSession.current;
+    final controller = _scrollController;
+    // 布局恢复只调整视口，原阅读提交与图片可见证据保持不变。
+    _gestureCoordinator.cancelPendingTap();
+    _verticalPositionDriver.cancelActive(
+      ReaderVerticalSeekCancelReason.superseded,
+    );
+    _seekCoordinator.reset(resetThrottle: false);
+    _pendingScrollCompensationDelta = 0;
+    _pendingPageSpacingCompensationDelta = 0;
+    _extentRegistry.clearForOwner(content.ownerId);
+    _invalidateVerticalLayoutIndex();
+    bool current() =>
+        generation == _viewportRestoreGeneration &&
+        _isCurrentVerticalSessionToken(session, controller) &&
+        controller.hasClients &&
+        captured.index < _latestItems.length &&
+        _latestItems[captured.index].id == captured.itemId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!current()) return;
+      final result = await _verticalPositionDriver.seekToIndex(captured.index);
+      if (!current() || !result.reached) return;
+      final start =
+          _resolveExactVerticalOffset(captured.index) ??
+          _estimateVerticalOffset(captured.index);
+      final item = _latestItems[captured.index];
+      final height =
+          _extentRegistry.extentOf(item.id)?.mainAxisExtent ??
+          next.width /
+              _layoutResolver.resolveInitialHint(item: item).aspectRatio;
+      if (start != null) {
+        controller.jumpTo(
+          _clampVerticalOffset(start + captured.fraction * height),
+        );
+      }
+      // jumpTo 的通知与本帧尺寸通知都属于布局补偿。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (current()) _viewportAnchor = null;
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    });
   }
 
   List<ContinuousImageItem> _applyVerticalPageSpacing(
@@ -563,6 +706,9 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
   }
 
   void _resetVerticalPageSpacingTracking() {
+    _verticalViewportSize = null;
+    _viewportRestoreGeneration++;
+    _viewportAnchor = null;
     if (_verticalSpacingOwnerId == null &&
         _appliedVerticalPageSpacing == null &&
         _pendingPageSpacingCompensationDelta == 0) {
@@ -1039,6 +1185,8 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
   bool _onVerticalScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification &&
         notification.dragDetails != null) {
+      _viewportRestoreGeneration++;
+      _viewportAnchor = null;
       _verticalPositionDriver.cancelActive(
         ReaderVerticalSeekCancelReason.userScroll,
       );
@@ -1058,17 +1206,7 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
   }
 
   Color _backgroundColor(ReaderPreferences preferences) {
-    final scheme = Theme.of(context).colorScheme;
-    switch (preferences.background) {
-      case ReaderBackgroundPreference.followTheme:
-        return scheme.surface;
-      case ReaderBackgroundPreference.black:
-        return Colors.black;
-      case ReaderBackgroundPreference.white:
-        return Colors.white;
-      case ReaderBackgroundPreference.gray:
-        return const Color(0xFF202124);
-    }
+    return _resolveReaderBackground(Theme.of(context), preferences);
   }
 
   Color _loadingIndicatorColor(ReaderPreferences preferences) {
@@ -1604,6 +1742,7 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
 
   void _onVerticalScroll() {
     if (!_scrollController.hasClients ||
+        _viewportAnchor != null ||
         _isSliderCommitInFlight ||
         (_positionState?.needsInitialRestore ?? true)) {
       return;
@@ -1661,8 +1800,14 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
         extent.ownerId != session?.ownerId) {
       return;
     }
+    if ((extent.crossAxisExtent - MediaQuery.sizeOf(context).width).abs() >
+        .5) {
+      return;
+    }
     final previous = _extentRegistry.extentOf(extent.itemId);
-    final plan = _planScrollCompensation(previous, extent);
+    final plan = _viewportAnchor == null
+        ? _planScrollCompensation(previous, extent)
+        : ContinuousImageScrollCompensationPlan.none('viewportRestore');
     _extentRegistry.record(extent);
     if (previous?.mainAxisExtent != extent.mainAxisExtent) {
       _verticalLayoutIndex = null;
@@ -2537,7 +2682,7 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
         ref.read(readerPreferencesControllerProvider).value ??
         ReaderPreferences.defaults();
     final controller = ref.read(readerPreferencesControllerProvider.notifier);
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => ReaderDisplaySettingsSheet(
@@ -2559,7 +2704,7 @@ class _ImageReaderEngineState extends ConsumerState<ImageReaderEngine>
     final currentMode =
         ref.read(readerPreferencesControllerProvider).value?.readerMode ??
         ReaderPreferences.defaults().readerMode;
-    final selected = await showModalBottomSheet<ReaderModePreference>(
+    final selected = await showAdaptivePanel<ReaderModePreference>(
       context: context,
       builder: (context) => ReaderModeSheet(currentMode: currentMode),
     );

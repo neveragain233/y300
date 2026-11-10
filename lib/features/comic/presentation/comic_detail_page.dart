@@ -82,14 +82,15 @@ class ComicDetailPage extends ConsumerWidget {
       onOpenReader: (context, target) async {
         var nextTarget = target;
         while (context.mounted) {
-          final result = await Navigator.of(context).push<Object?>(
-            MaterialPageRoute<Object?>(
-              builder: (_) => ComicReaderPage(
-                comicId: nextTarget.workId,
-                episodeId: nextTarget.episodeId,
-              ),
-            ),
-          );
+          final result = await Navigator.of(context, rootNavigator: true)
+              .push<Object?>(
+                MaterialPageRoute<Object?>(
+                  builder: (_) => ComicReaderPage(
+                    comicId: nextTarget.workId,
+                    episodeId: nextTarget.episodeId,
+                  ),
+                ),
+              );
           if (result is! ComicReaderExitResult ||
               !result.shouldOpenEpisode ||
               result.lastReadEpisodeId == nextTarget.episodeId) {

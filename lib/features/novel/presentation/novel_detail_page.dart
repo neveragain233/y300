@@ -394,7 +394,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
         'openPolicy': openPolicy.name,
       },
     );
-    await Navigator.of(context).push(
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         builder: (_) => NovelReaderPage(
           novelId: target.workId,

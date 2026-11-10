@@ -47,6 +47,8 @@ void main() {
     final app = await preparing;
     // Preparing appearance must not wait for or read unrelated business data.
     expect(store.reads.toSet(), {
+      PreferenceKeys.appAppearanceSnapshotV1.name,
+      PreferenceKeys.appThemeColorSource.name,
       PreferenceKeys.appThemeFamily.name,
       PreferenceKeys.appThemePreference.name,
       PreferenceKeys.appLanguagePreference.name,

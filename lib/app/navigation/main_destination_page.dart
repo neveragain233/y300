@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/history_entry_router.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/navigation/message_routes.dart';
 import 'package:y300/app/startup/main_shell_library_gate.dart';
@@ -16,44 +17,44 @@ import 'package:y300/features/library_shared/presentation/selection/shelf_select
 import 'package:y300/features/novel/presentation/novel_tab_page.dart';
 import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 
-typedef MainDestinationRouteFactory =
-    Route<void> Function(MainShellDestination destination);
+typedef MainDestinationRouteFactory = Route<void> Function(
+  MainShellDestination destination,
+);
 
 /// Opening a destination does not change navigation visibility or tab state.
-final mainDestinationRouteFactoryProvider = Provider<MainDestinationRouteFactory>((
-  ref,
-) {
-  final libraryReady = ref.watch(mainShellLibraryReadinessProvider);
-  return (destination) {
-    if (!destination.isManaged) {
-      throw ArgumentError.value(destination, 'destination');
-    }
-    return MaterialPageRoute<void>(
-      builder: (_) => ProviderScope(
-        overrides: [
-          mainShellLibraryReadinessProvider.overrideWithValue(libraryReady),
-          // A pushed shelf must not take over the selection owner of the shell
-          // underneath it. Both the shelf and its action bar use this scope.
-          shelfSelectionHostControllerProvider.overrideWith((ref) {
-            final controller = ShelfSelectionHostController();
-            ref.onDispose(controller.dispose);
-            return controller;
-          }),
-          forumWebViewPopOnRootBackProvider.overrideWithValue(true),
-        ],
-        child: switch (destination) {
-          MainShellDestination.favorites ||
-          MainShellDestination.comic ||
-          MainShellDestination.novel => Scaffold(
-            body: MainDestinationPage(destination: destination),
-            bottomNavigationBar: const ShelfSelectionBottomBar(),
+final mainDestinationRouteFactoryProvider =
+    Provider<MainDestinationRouteFactory>((ref) {
+      final libraryReady = ref.watch(mainShellLibraryReadinessProvider);
+      return (destination) {
+        if (!destination.isManaged) {
+          throw ArgumentError.value(destination, 'destination');
+        }
+        return MaterialPageRoute<void>(
+          builder: (_) => ProviderScope(
+            overrides: [
+              mainShellLibraryReadinessProvider.overrideWithValue(libraryReady),
+              // A pushed shelf must not take over the selection owner of the shell
+              // underneath it. Both the shelf and its action bar use this scope.
+              shelfSelectionHostControllerProvider.overrideWith((ref) {
+                final controller = ShelfSelectionHostController();
+                ref.onDispose(controller.dispose);
+                return controller;
+              }),
+              forumWebViewPopOnRootBackProvider.overrideWithValue(true),
+            ],
+            child: switch (destination) {
+              MainShellDestination.favorites ||
+              MainShellDestination.comic ||
+              MainShellDestination.novel => Scaffold(
+                body: MainDestinationPage(destination: destination),
+                bottomNavigationBar: const ShelfSelectionBottomBar(),
+              ),
+              _ => MainDestinationPage(destination: destination),
+            },
           ),
-          _ => MainDestinationPage(destination: destination),
-        },
-      ),
-    );
-  };
-}, dependencies: [mainShellLibraryReadinessProvider]);
+        );
+      };
+    }, dependencies: [mainShellLibraryReadinessProvider]);
 
 /// The same feature pages serve both the lazy main shell and standalone routes.
 class MainDestinationPage extends ConsumerWidget {
@@ -61,15 +62,23 @@ class MainDestinationPage extends ConsumerWidget {
     super.key,
     required this.destination,
     this.isActive = true,
+    this.browserController,
+    this.globalOrigin = Offset.zero,
   });
 
   final MainShellDestination destination;
   final bool isActive;
+  final AdaptiveDetailController? browserController;
+  final Offset globalOrigin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return switch (destination) {
-      MainShellDestination.forum => ForumShellPage(isActive: isActive),
+    final page = switch (destination) {
+      MainShellDestination.forum => ForumShellPage(
+        isActive: isActive,
+        browserController: browserController,
+        globalOrigin: globalOrigin,
+      ),
       MainShellDestination.favorites => MainShellLibraryGate(
         child: FavoriteShelfPage(isActive: isActive),
       ),
@@ -91,6 +100,18 @@ class MainDestinationPage extends ConsumerWidget {
         destination,
         'destination',
       ),
+    };
+    return switch (destination) {
+      MainShellDestination.favorites ||
+      MainShellDestination.comic ||
+      MainShellDestination.novel ||
+      MainShellDestination.history => AdaptiveDetailHost(
+        controller: browserController,
+        isActive: isActive,
+        globalOrigin: globalOrigin,
+        child: page,
+      ),
+      _ => page,
     };
   }
 }

@@ -1,0 +1,1 @@
+enum AppThemeColorSource { preset, dynamic }

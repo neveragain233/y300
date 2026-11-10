@@ -1511,35 +1511,29 @@ class _ThreadCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LayoutBuilder(
-                  builder: (context, constraints) => Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Avatar(
-                        url: thread.avatarUrl,
-                        ownerId: thread.uid.trim().isNotEmpty
-                            ? thread.uid
-                            : thread.author,
-                        threadId: thread.tid,
+                Row(
+                  children: [
+                    _Avatar(
+                      url: thread.avatarUrl,
+                      ownerId: thread.uid.trim().isNotEmpty
+                          ? thread.uid
+                          : thread.author,
+                      threadId: thread.tid,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ThreadAuthorBlock(
+                        thread: thread,
+                        palette: palette,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ThreadAuthorBlock(
-                          thread: thread,
-                          palette: palette,
-                        ),
-                      ),
-                      if (badges.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth * 0.45,
-                          ),
-                          child: ForumThreadBadgeGroup(badges: badges),
-                        ),
-                      ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    ThreadBlockMenuButton(
+                      tid: thread.tid,
+                      subject: thread.subject,
+                      color: palette.bodyText,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 7),
                 Text(
@@ -1552,6 +1546,10 @@ class _ThreadCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (badges.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  ForumThreadBadgeGroup(badges: badges),
+                ],
                 if (thread.excerpt.trim().isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
@@ -1591,7 +1589,7 @@ class _ThreadAuthorBlock extends StatelessWidget {
       height: 1.08,
     );
     final dateStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: palette.softText,
+      color: palette.bodyText,
       fontWeight: FontWeight.w600,
       height: 1.08,
     );
@@ -1636,17 +1634,17 @@ class _ThreadFooter extends StatelessWidget {
     final tagName = _forumTagNameForDisplay(thread.sourceTagName);
     final hasTag = tagName != null;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
-          child: Row(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
             children: [
               _MetricChip(
                 icon: Icons.visibility_outlined,
                 value: thread.views,
                 palette: palette,
               ),
-              const SizedBox(width: 6),
               _MetricChip(
                 icon: Icons.chat_bubble_outline,
                 value: thread.replies,
@@ -1656,9 +1654,8 @@ class _ThreadFooter extends StatelessWidget {
           ),
         ),
         if (hasTag) ...[
-          const SizedBox(width: 10),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 118),
+          const SizedBox(width: 12),
+          Expanded(
             child: Align(
               alignment: Alignment.centerRight,
               widthFactor: 1,
@@ -1671,11 +1668,6 @@ class _ThreadFooter extends StatelessWidget {
             ),
           ),
         ],
-        ThreadBlockMenuButton(
-          tid: thread.tid,
-          subject: thread.subject,
-          color: palette.softText,
-        ),
       ],
     );
   }
@@ -1701,30 +1693,41 @@ class _ThreadTagChip extends StatelessWidget {
       key: Key('forum-thread-tag-${thread.tid}'),
       borderRadius: BorderRadius.circular(8),
       onTap: isClickable ? onTapTag : null,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: palette.surfaceContainerHigh.withValues(alpha: 0.42),
-          borderRadius: BorderRadius.circular(8),
-          border: isClickable ? null : Border.all(color: palette.outlineSoft),
-          boxShadow: isClickable
-              ? [
-                  BoxShadow(
-                    color: palette.stateLayer.withValues(alpha: 0.045),
-                    blurRadius: 5,
-                    offset: const Offset(0, 1.5),
-                  ),
-                ]
-              : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          child: Text(
-            tagName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: palette.tag, fontWeight: FontWeight.w600),
+      // 点击高度独立于标签表面，保持原版的紧凑外观。
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: isClickable ? 48 : 25),
+        child: Align(
+          alignment: Alignment.centerRight,
+          widthFactor: 1,
+          heightFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.surfaceContainerHigh.withValues(alpha: 0.42),
+              borderRadius: BorderRadius.circular(8),
+              border: isClickable
+                  ? null
+                  : Border.all(color: palette.outlineSoft),
+              boxShadow: isClickable
+                  ? [
+                      BoxShadow(
+                        color: palette.stateLayer.withValues(alpha: 0.045),
+                        blurRadius: 5,
+                        offset: const Offset(0, 1.5),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              child: Text(
+                tagName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: palette.tag, fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
         ),
       ),
@@ -1781,8 +1784,8 @@ class _MetricChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 7),
+      constraints: const BoxConstraints(minHeight: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: palette.surfaceContainerHigh.withValues(alpha: 0.42),
         borderRadius: BorderRadius.circular(8),
@@ -1790,13 +1793,17 @@ class _MetricChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: palette.softText),
+          Icon(icon, size: 13, color: palette.bodyText),
           const SizedBox(width: 4),
-          Text(
-            value.toString(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: palette.softText,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              value.toString(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: palette.bodyText,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

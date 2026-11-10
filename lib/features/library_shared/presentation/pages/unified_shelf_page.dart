@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
@@ -32,6 +35,7 @@ import 'package:y300/shared/widgets/shelf/shelf_grid_geometry.dart';
 import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
+import 'package:y300/features/library_shared/presentation/widgets/shelf_page_title_scope.dart';
 
 /// 统一书架页面（Phase 3）。
 class UnifiedShelfPage extends ConsumerStatefulWidget {
@@ -533,12 +537,15 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     final moduleActions = _moduleMenuActions();
     if (!state.isSearchMode) {
       return AppBar(
-        title: Text(
-          LibraryShelfTextResolver.moduleTitle(
-            AppLocalizations.of(context),
-            state.moduleKey,
-          ),
-        ),
+        leading: adaptiveDetailBackButton(context),
+        title:
+            ShelfPageTitleScope.titleOf(context) ??
+            Text(
+              LibraryShelfTextResolver.moduleTitle(
+                AppLocalizations.of(context),
+                state.moduleKey,
+              ),
+            ),
         actions: [
           IconButton(
             key: const Key('unified-shelf-search-button'),
@@ -587,7 +594,17 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       );
     }
 
+    final shelfTitle = ShelfPageTitleScope.titleOf(context);
     return InlineSearchAppBar(
+      bottom: shelfTitle != null
+          ? PreferredSize(
+              preferredSize: const Size.fromHeight(56),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: shelfTitle,
+              ),
+            )
+          : null,
       controller: _searchController,
       focusNode: _searchFocusNode,
       fieldKey: const Key('unified-shelf-search-input'),
@@ -681,7 +698,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     var selectedColumns = state.gridColumnCount.toDouble();
     var tabIndex = 0;
 
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) {
@@ -902,9 +919,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(
-                context,
-              ).libraryShelfDefaultCategoryCannotRename,
+              AppLocalizations.of(context)
+                  .libraryShelfDefaultCategoryCannotRename,
             ),
           ),
         );
@@ -933,9 +949,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(
-                context,
-              ).libraryShelfDefaultCategoryCannotDelete,
+              AppLocalizations.of(context)
+                  .libraryShelfDefaultCategoryCannotDelete,
             ),
           ),
         );
@@ -946,9 +961,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         builder: (dialogContext) {
           return AlertDialog(
             title: Text(
-              AppLocalizations.of(
-                dialogContext,
-              ).libraryShelfDeleteCategoryTitle,
+              AppLocalizations.of(dialogContext)
+                  .libraryShelfDeleteCategoryTitle,
             ),
             content: Text(
               AppLocalizations.of(dialogContext).libraryShelfDeleteCategoryBody,
@@ -991,9 +1005,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
             controller: textController,
             autofocus: true,
             decoration: InputDecoration(
-              hintText: AppLocalizations.of(
-                dialogContext,
-              ).libraryShelfCategoryNameHint,
+              hintText: AppLocalizations.of(dialogContext)
+                  .libraryShelfCategoryNameHint,
             ),
           ),
           actions: [
@@ -1184,12 +1197,15 @@ class _ShelfCategoryPageState extends ConsumerState<_ShelfCategoryPage>
     if (widget.displayMode == LibraryDisplayMode.list) {
       return const Size.square(52);
     }
-    final columns = widget.gridColumns.clamp(1, 20).toInt();
     final layoutWidth = context.size?.width;
     final viewportWidth =
         layoutWidth != null && layoutWidth.isFinite && layoutWidth > 0
         ? layoutWidth
         : MediaQuery.sizeOf(context).width;
+    final columns = ShelfGridGeometry.columnCount(
+      viewportWidth,
+      widget.gridColumns,
+    );
     final width =
         (viewportWidth -
             ShelfGridGeometry.contentPadding * 2 -
@@ -1205,11 +1221,12 @@ class _ShelfCategoryPageState extends ConsumerState<_ShelfCategoryPage>
           .clamp(0, widget.items.length - 1)
           .toInt();
     }
-    final columns = widget.gridColumns < 1 ? 1 : widget.gridColumns;
-    final viewportWidth = MediaQuery.sizeOf(context).width;
-    final tileWidth = (viewportWidth - 24 - ((columns - 1) * 10)) / columns;
-    final tileHeight = tileWidth * 3 / 2;
-    final rowExtent = tileHeight + 10;
+    final columns = ShelfGridGeometry.columnCount(
+      context.size?.width ?? MediaQuery.sizeOf(context).width,
+      widget.gridColumns,
+    );
+    final rowExtent =
+        _coverDisplaySize().height + ShelfGridGeometry.itemSpacing;
     return ((scrollOffset / rowExtent).floor() * columns)
         .clamp(0, widget.items.length - 1)
         .toInt();
@@ -1219,7 +1236,10 @@ class _ShelfCategoryPageState extends ConsumerState<_ShelfCategoryPage>
     if (widget.displayMode == LibraryDisplayMode.list) {
       return (MediaQuery.sizeOf(context).height / 82).ceil() + 1;
     }
-    final columns = widget.gridColumns < 1 ? 1 : widget.gridColumns;
+    final columns = ShelfGridGeometry.columnCount(
+      context.size?.width ?? MediaQuery.sizeOf(context).width,
+      widget.gridColumns,
+    );
     final size = _coverDisplaySize();
     final rows =
         (MediaQuery.sizeOf(context).height /
@@ -1260,11 +1280,14 @@ class _WorkGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final columns = ShelfGridGeometry.columnCount(
+          constraints.maxWidth,
+          gridColumns,
+        );
         final horizontalSpace =
             ShelfGridGeometry.contentPadding * 2 +
-            ShelfGridGeometry.itemSpacing * (gridColumns - 1);
-        final itemWidth =
-            (constraints.maxWidth - horizontalSpace) / gridColumns;
+            ShelfGridGeometry.itemSpacing * (columns - 1);
+        final itemWidth = (constraints.maxWidth - horizontalSpace) / columns;
         final rowExtent = itemWidth * 1.5 + ShelfGridGeometry.itemSpacing;
         return KeyedSubtree(
           key: PageStorageKey<String>('unified-shelf-grid-storage-$categoryId'),
@@ -1278,7 +1301,7 @@ class _WorkGrid extends StatelessWidget {
             scrollCacheExtent: ScrollCacheExtent.pixels(rowExtent),
             padding: const EdgeInsets.all(ShelfGridGeometry.contentPadding),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: gridColumns,
+              crossAxisCount: columns,
               crossAxisSpacing: ShelfGridGeometry.itemSpacing,
               mainAxisSpacing: ShelfGridGeometry.itemSpacing,
               childAspectRatio: 2 / 3,
@@ -1451,9 +1474,10 @@ class _WorkList extends StatelessWidget {
         ),
         // 大书架场景预渲染适度前后缓存，降低滑动抖动。
         scrollCacheExtent: const ScrollCacheExtent.pixels(82),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: items.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) =>
+            const Divider(height: 1, thickness: .5),
         itemBuilder: (context, index) {
           final item = items[index];
           final selected = selectedWorkIds.contains(item.workId);
@@ -1472,7 +1496,7 @@ class _WorkList extends StatelessWidget {
               : null;
           return AnimatedContainer(
             key: ValueKey<String>('unified-shelf-list-item-${item.workId}'),
-            duration: const Duration(milliseconds: 180),
+            duration: AppLayoutTokens.motionDuration(context),
             curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
@@ -1486,7 +1510,7 @@ class _WorkList extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Material(
-                color: shelfPalette.listItemBackground,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 child: ListTile(
                   key: ValueKey<String>(
                     'unified-shelf-list-tile-${item.workId}',

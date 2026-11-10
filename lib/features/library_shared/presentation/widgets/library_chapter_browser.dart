@@ -35,6 +35,7 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
     this.layoutBuilder,
     this.normalizeTexts,
     this.topObstruction = 0,
+    this.controlsInList = false,
   });
 
   final String workId;
@@ -57,6 +58,7 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
   layoutBuilder;
   final ChapterSearchTextNormalizer? normalizeTexts;
   final double topObstruction;
+  final bool controlsInList;
 
   static double controlsHeight(BuildContext context) =>
       math.max(48, MediaQuery.textScalerOf(context).scale(16) * 1.5 + 20) + 56;
@@ -344,6 +346,7 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
         ),
         slivers: [
           ...widget.leadingSlivers,
+          if (widget.controlsInList) SliverToBoxAdapter(child: controls),
           SliverLayoutBuilder(
             builder: (context, constraints) {
               _listStart = constraints.precedingScrollExtent;
@@ -382,7 +385,8 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
             controls.preferredSize.height + widget.itemExtent;
         return Column(
           children: [
-            compact ? buildControls(compact: true) : controls,
+            if (!widget.controlsInList)
+              compact ? buildControls(compact: true) : controls,
             Expanded(child: buildList()),
           ],
         );

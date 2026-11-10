@@ -229,6 +229,8 @@ class _ReaderZoomSurfaceState extends State<ReaderZoomSurface>
   int? _panPointer;
   bool _continuousHorizontalPanActive = false;
   bool _isZoomed = false;
+  Size? _layoutSize;
+  int _layoutGeneration = 0;
 
   @override
   void initState() {
@@ -280,38 +282,57 @@ class _ReaderZoomSurfaceState extends State<ReaderZoomSurface>
         widget.behavior == ReaderZoomBehavior.continuousVertical
         ? const Key('reader-continuous-zoom-transform')
         : const Key('reader-bounded-zoom-transform');
-    return ClipRect(
-      child: NotificationListener<OverscrollNotification>(
-        onNotification: _onContinuousOverscroll,
-        child: AnimatedBuilder(
-          animation: _transformationController,
-          child: widget.child,
-          builder: (context, child) {
-            final scrollBehavior = ScrollConfiguration.of(context);
-            final continuousZoomed =
-                widget.behavior == ReaderZoomBehavior.continuousVertical &&
-                _isZoomed;
-            return Transform(
-              key: transformKey,
-              transform: _transformationController.value,
-              alignment: Alignment.topLeft,
-              child: ScrollConfiguration(
-                behavior: continuousZoomed
-                    ? scrollBehavior.copyWith(
-                        overscroll: false,
-                        // Even a list shorter than its viewport can have
-                        // clipped content after zooming.
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: ClampingScrollPhysics(),
-                        ),
-                      )
-                    : scrollBehavior,
-                child: child!,
-              ),
-            );
-          },
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final next = constraints.biggest;
+        if (_layoutSize != next) {
+          final previous = _layoutSize;
+          _layoutSize = next;
+          final generation = ++_layoutGeneration;
+          if (previous != null) {
+            widget.gestureCoordinator.cancelPendingTap();
+            // 新窗口不沿用旧坐标的缩放和指针；保留图片与滚动子树。
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && generation == _layoutGeneration) {
+                _resetToRestingState();
+              }
+            });
+          }
+        }
+        return ClipRect(
+          child: NotificationListener<OverscrollNotification>(
+            onNotification: _onContinuousOverscroll,
+            child: AnimatedBuilder(
+              animation: _transformationController,
+              child: widget.child,
+              builder: (context, child) {
+                final scrollBehavior = ScrollConfiguration.of(context);
+                final continuousZoomed =
+                    widget.behavior == ReaderZoomBehavior.continuousVertical &&
+                    _isZoomed;
+                return Transform(
+                  key: transformKey,
+                  transform: _transformationController.value,
+                  alignment: Alignment.topLeft,
+                  child: ScrollConfiguration(
+                    behavior: continuousZoomed
+                        ? scrollBehavior.copyWith(
+                            overscroll: false,
+                            // Even a list shorter than its viewport can have
+                            // clipped content after zooming.
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: ClampingScrollPhysics(),
+                            ),
+                          )
+                        : scrollBehavior,
+                    child: child!,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -600,6 +621,12 @@ class _ReaderZoomSurfaceState extends State<ReaderZoomSurface>
   }
 
   void _animateTo(Matrix4 targetMatrix, {required bool targetZoomed}) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _stopAnimation();
+      _transformationController.value = targetMatrix;
+      _setZoomed(targetZoomed);
+      return;
+    }
     _matrixAnimation =
         Matrix4Tween(
           begin: _transformationController.value,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
@@ -115,7 +116,8 @@ class _FavoriteShelfPageState extends ConsumerState<FavoriteShelfPage> {
               await _openThread(context, target);
               return;
             }
-            await Navigator.of(context).push(
+            await openAdaptiveDetail(
+              context,
               MaterialPageRoute<void>(
                 builder: (_) => ComicDetailPage(comicId: comicId),
               ),
@@ -127,7 +129,8 @@ class _FavoriteShelfPageState extends ConsumerState<FavoriteShelfPage> {
               await _openThread(context, target);
               return;
             }
-            await Navigator.of(context).push(
+            await openAdaptiveDetail(
+              context,
               MaterialPageRoute<void>(
                 builder: (_) => NovelDetailPage(novelId: novelId),
               ),
@@ -146,7 +149,8 @@ class _FavoriteShelfPageState extends ConsumerState<FavoriteShelfPage> {
     BuildContext context,
     FavoriteRouteTarget target,
   ) async {
-    await Navigator.of(context).push(
+    await openAdaptiveDetail(
+      context,
       MaterialPageRoute<void>(
         builder: (_) => ThreadDetailPage(
           tid: target.tid,

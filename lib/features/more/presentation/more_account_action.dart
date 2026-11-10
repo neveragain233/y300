@@ -45,6 +45,9 @@ class MoreAccountAction extends ConsumerWidget {
     }
     return TextButton.icon(
       key: const Key('more-login-entry'),
+      style: TextButton.styleFrom(
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+      ),
       onPressed: busy ? null : onLogin,
       icon: const Icon(Icons.login, size: 20),
       label: Text(l10n.moreLogin),

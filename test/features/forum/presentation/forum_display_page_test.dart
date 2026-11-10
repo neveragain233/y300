@@ -528,18 +528,32 @@ void main() {
       final palette = ForumDisplayThemePalette.resolve(
         Theme.of(tester.element(find.byType(ForumDisplayPage))),
       );
-      expect(
-        _threadCardShadowDecoration(tester, '100').boxShadow,
-        ForumNativeSurfaceShadows.card(palette.stateLayer),
-      );
-      final metricChipContainer = tester.widget<Container>(
+      final threadSurface = tester.widget<Material>(
         find
-            .ancestor(of: find.text('5'), matching: find.byType(Container))
+            .ancestor(
+              of: find.byKey(const Key('forum-thread-100')),
+              matching: find.byType(Material),
+            )
             .first,
       );
-      final metricChipDecoration =
-          metricChipContainer.decoration as BoxDecoration;
-      expect(metricChipDecoration.border, isNull);
+      expect(threadSurface.color, palette.surfaceContainerLow);
+      expect(threadSurface.borderRadius, BorderRadius.circular(12));
+      final cardDecoration =
+          tester
+                  .widget<DecoratedBox>(
+                    find
+                        .ancestor(
+                          of: find.byKey(const Key('forum-thread-100')),
+                          matching: find.byType(DecoratedBox),
+                        )
+                        .first,
+                  )
+                  .decoration
+              as BoxDecoration;
+      expect(
+        cardDecoration.boxShadow,
+        ForumNativeSurfaceShadows.card(palette.stateLayer),
+      );
       expect(find.text('公告区'), findsWidgets);
       expect(find.text('第1页'), findsOneWidget);
 
@@ -1133,7 +1147,7 @@ void main() {
     });
 
     testWidgets(
-      'filter, thread tag, and pagination return scroll to filter start',
+      'filters and pagination reset locally while tag routes preserve the source',
       (tester) async {
         final repository = _FakeForumDisplayRepository((_, page, query) async {
           final typeid = query?.parameters['typeid'];
@@ -1198,10 +1212,36 @@ void main() {
         expect(repository.lastQuery?.parameters['typeid'], '65');
 
         await _dragWellPastFilter(tester);
-        await tester.tap(find.byKey(const Key('forum-thread-tag-type-65-5')));
+        final tag = find.byKey(const Key('forum-thread-tag-type-65-5'));
+        await tester.ensureVisible(tag);
         await tester.pumpAndSettle();
-        _expectReturnedToFilterStart(tester, filterStartOffset);
+        final parentList = tester.element(
+          find.byKey(const Key('forum-display-list')),
+        );
+        final parentPosition = _scrollPosition(tester);
+        final parentOffset = parentPosition.pixels;
+        await tester.tap(tag);
+        await tester.pumpAndSettle();
         expect(repository.lastQuery?.parameters['typeid'], '69');
+        expect(
+          find.byType(ForumDisplayPage, skipOffstage: false),
+          findsNWidgets(2),
+        );
+        expect(_scrollOffset(tester), 0);
+        expect(parentPosition.pixels, parentOffset);
+        await _jumpNearBottomAndTap(
+          tester,
+          find.byKey(const Key('forum-display-load-more-button')),
+        );
+        await tester.pumpAndSettle();
+        expect(repository.lastQuery?.page, 2);
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(
+          tester.element(find.byKey(const Key('forum-display-list'))),
+          same(parentList),
+        );
+        expect(_scrollOffset(tester), parentOffset);
 
         await _jumpNearBottomAndTap(
           tester,
@@ -1473,9 +1513,6 @@ void main() {
       expect(find.text('長篇連載'), findsOneWidget);
       expect(find.text('投票'), findsOneWidget);
 
-      final threadDecoration = _threadCardShadowDecoration(tester, '572604');
-      expect(threadDecoration.border, isNull);
-
       final threadBadgeDecoration = _decorationAroundText(tester, '投票');
       expect(threadBadgeDecoration.boxShadow, isNotNull);
       expect(threadBadgeDecoration.boxShadow, isNotEmpty);
@@ -1619,45 +1656,6 @@ void main() {
       );
 
       expect((shortTagRight.dx - longTagRight.dx).abs(), lessThan(0.1));
-    });
-
-    testWidgets('clickable thread tag has a light shadow cue', (tester) async {
-      final repository = _FakeForumDisplayRepository((_, page, query) async {
-        return ApiSuccess(
-          _displayData(
-            page: page,
-            total: 1,
-            threads: [
-              ForumThreadSummary(
-                tid: 'tag-clickable',
-                subject: '带 tag 的帖子',
-                author: 'alice',
-                replies: 7,
-                views: 86,
-                dateline: 'today',
-                excerpt: '摘要',
-                sourceTagName: '長篇連載',
-                sourceTagUrl: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=typeid&typeid=69&mobile=2',
-              ),
-            ],
-          ),
-        );
-      });
-
-      await tester.pumpWidget(_buildTestApp(repository));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 120));
-
-      final tagFinder = find.byKey(const Key('forum-thread-tag-tag-clickable'));
-      final decoratedBox = tester.widget<DecoratedBox>(
-        find.descendant(of: tagFinder, matching: find.byType(DecoratedBox)),
-      );
-      final decoration = decoratedBox.decoration as BoxDecoration;
-
-      expect(decoration.boxShadow, isNotNull);
-      expect(decoration.boxShadow, isNotEmpty);
-      expect(decoration.boxShadow!.single.blurRadius, 5);
-      expect(decoration.border, isNull);
     });
 
     testWidgets('dark theme uses theme-driven forum display surfaces', (
@@ -1891,6 +1889,10 @@ void main() {
     testWidgets('blocking a card hides it immediately and undo restores it', (
       tester,
     ) async {
+      tester.view.physicalSize = const Size(280, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final repository = _FakeForumDisplayRepository((fid, page, query) async {
         return ApiSuccess(
           _displayData(
@@ -1901,19 +1903,45 @@ void main() {
         );
       });
 
-      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.8)),
+              child: const SizedBox(
+                width: 280,
+                child: ForumDisplayPage(fid: '2', title: '公告区'),
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('forum-thread-201')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('thread-block-menu-201')));
+      final card = find.byKey(const Key('forum-thread-201'));
+      final menu = find.byKey(const Key('thread-block-menu-201'));
+      final avatar = find.byKey(const Key('forum-thread-summary-avatar-201'));
+      expect(card, findsOneWidget);
+      expect(
+        tester.getBottomRight(menu).dy,
+        lessThan(tester.getTopLeft(find.text('要屏蔽的帖子')).dy),
+      );
+      expect(tester.getRect(menu).overlaps(tester.getRect(avatar)), isFalse);
+      expect(tester.getSize(menu).width, greaterThanOrEqualTo(48));
+      expect(tester.getSize(menu).height, greaterThanOrEqualTo(48));
+      expect(tester.takeException(), isNull);
+      final l10n = AppLocalizations.of(tester.element(card));
+      await tester.tap(menu);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('thread-block-action-201')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('forum-thread-201')), findsNothing);
-      expect(find.text('撤销'), findsOneWidget);
+      expect(find.text(l10n.contentFilterUndo), findsOneWidget);
 
-      await tester.tap(find.text('撤销'));
+      await tester.tap(find.text(l10n.contentFilterUndo));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('forum-thread-201')), findsOneWidget);
@@ -2193,23 +2221,6 @@ BoxDecoration _decorationAroundText(WidgetTester tester, String text) {
         .first,
   );
   return decoratedBox.decoration as BoxDecoration;
-}
-
-BoxDecoration _threadCardShadowDecoration(WidgetTester tester, String tid) {
-  final threadFinder = find.byKey(Key('forum-thread-$tid'));
-  expect(threadFinder, findsOneWidget);
-  final decoratedBoxes = find
-      .ancestor(of: threadFinder, matching: find.byType(DecoratedBox))
-      .evaluate();
-  for (final element in decoratedBoxes) {
-    final widget = element.widget as DecoratedBox;
-    final decoration = widget.decoration;
-    if (decoration is BoxDecoration &&
-        decoration.boxShadow?.isNotEmpty == true) {
-      return decoration;
-    }
-  }
-  throw StateError('No thread card shadow decoration found.');
 }
 
 class _FakeForumDisplayRepository implements ForumDisplayRepository {

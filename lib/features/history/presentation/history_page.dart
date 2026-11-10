@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/history/data/providers/history_providers.dart';
 import 'package:y300/features/history/domain/models/history_models.dart';
@@ -16,11 +17,10 @@ import 'package:y300/features/recent_search/domain/models/recent_search_scope.da
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
-typedef HistoryEntryOpenCallback =
-    Future<HistoryOpenResult> Function(
-      BuildContext context,
-      HistoryEntry entry,
-    );
+typedef HistoryEntryOpenCallback = Future<HistoryOpenResult> Function(
+  BuildContext context,
+  HistoryEntry entry,
+);
 
 class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({
@@ -204,6 +204,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       );
     }
     return AppBar(
+      leading: adaptiveDetailBackButton(context),
       title: Text(l10n.historyTitle),
       actions: [
         IconButton(

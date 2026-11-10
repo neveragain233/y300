@@ -1,6 +1,8 @@
 import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +17,9 @@ import 'package:y300/core/network/api_result.dart';
 import 'package:y300/core/network/cookie_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/core/network/webview_cookie_sync_service.dart';
+
 import '../../../support/forum_auth_test_support.dart';
+
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/presentation/login_webview_page.dart';
 import 'package:y300/features/composer_shared/presentation/controllers/composer_unused_image_management_controller.dart';
@@ -40,6 +44,7 @@ import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/features/thread/presentation/html_rendering/forum_html_renderer_prototype_page.dart';
+
 import '../../profile/test_support/blog_directory_fixture.dart';
 import '../../profile/test_support/friend_read_fixture.dart';
 import '../../messages/support/message_test_repository.dart';
@@ -224,9 +229,8 @@ void main() {
               MessageCenterTab.messages,
             );
             expect(
-              ProviderScope.containerOf(
-                tester.element(destination),
-              ).read(messageAccountIdProvider),
+              ProviderScope.containerOf(tester.element(destination))
+                  .read(messageAccountIdProvider),
               '100',
             );
             expect(messages.reads.single.query.target, isNull);
@@ -515,6 +519,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Scaffold), findsOneWidget);
+    final login = tester.widget<TextButton>(
+      find.byKey(const Key('more-login-entry')),
+    );
+    expect(
+      login.style?.foregroundColor?.resolve({}),
+      AppTheme.dark().appBarTheme.foregroundColor,
+    );
+    await _scrollUntilVisibleIfNeeded(
+      tester,
+      find.byKey(const Key('more-appearance-entry')),
+    );
     expect(find.byKey(const Key('more-appearance-entry')), findsOneWidget);
     expect(find.byKey(const Key('more-data-storage-entry')), findsOneWidget);
   });
@@ -534,7 +549,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('更多'), findsWidgets);
+    expect(
+      find.text(
+        AppLocalizations.of(tester.element(find.byType(MorePage)))
+            .appNavigationMy,
+      ),
+      findsWidgets,
+    );
     expect(find.byKey(const Key('more-login-entry')), findsOneWidget);
     expect(
       find.descendant(
@@ -549,6 +570,10 @@ void main() {
     expect(find.byKey(const Key('more-unused-images-entry')), findsOneWidget);
     expect(find.text('未使用图片管理'), findsOneWidget);
     expect(find.byKey(const Key('more-forum-mode-entry')), findsNothing);
+    await _scrollUntilVisibleIfNeeded(
+      tester,
+      find.byKey(const Key('more-appearance-entry')),
+    );
     expect(find.byKey(const Key('more-appearance-entry')), findsOneWidget);
     expect(find.text('外观与文字'), findsOneWidget);
     expect(
@@ -1093,11 +1118,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _scrollUntilVisibleIfNeeded(
+      tester,
+      find.byKey(const Key('more-appearance-entry')),
+    );
     await tester.tap(find.byKey(const Key('more-appearance-entry')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('appearance-settings-sheet')), findsOneWidget);
-    expect(find.text('更多'), findsOneWidget);
+    expect(
+      find.text(
+        AppLocalizations.of(tester.element(find.byType(MorePage)))
+            .appNavigationMy,
+      ),
+      findsOneWidget,
+    );
     expect(find.text('外观与文字'), findsOneWidget);
     expect(
       find.byKey(const Key('appearance-settings-close-button')),
@@ -1328,6 +1363,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _scrollUntilVisibleIfNeeded(
+      tester,
+      find.byKey(const Key('more-appearance-entry')),
+    );
     await tester.tap(find.byKey(const Key('more-appearance-entry')));
     await tester.pumpAndSettle();
 
@@ -1359,9 +1398,12 @@ void main() {
     expect(find.text('界面语言跟随设备，服务器内容保持原文'), findsNothing);
     expect(find.text('用户名和网页模式内容保持原样'), findsNothing);
 
-    await tester.tap(
-      find.byKey(const Key('appearance-language-option-traditionalChinese')),
+    final traditionalOption = find.byKey(
+      const Key('appearance-language-option-traditionalChinese'),
     );
+    await Scrollable.ensureVisible(tester.element(traditionalOption));
+    await tester.pumpAndSettle();
+    await tester.tap(traditionalOption);
     await tester.pumpAndSettle();
 
     expect(
@@ -1394,6 +1436,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _scrollUntilVisibleIfNeeded(
+      tester,
+      find.byKey(const Key('more-appearance-entry')),
+    );
     await tester.tap(find.byKey(const Key('more-appearance-entry')));
     await tester.pumpAndSettle();
     await tester.tap(
@@ -1419,20 +1465,21 @@ void _expectMyContentEntryOrderAndLabels(
   WidgetTester tester,
   AppLocalizations l10n,
 ) {
-  final list = tester.widget<ListView>(find.byKey(const Key('more-page-list')));
-  final children = (list.childrenDelegate as SliverChildListDelegate).children;
-  final unusedIndex = children.indexWhere(
-    (child) => child.key == const Key('more-unused-images-entry'),
-  );
-  for (final (offset, name, label) in [
-    (3, 'messages', l10n.moreMyMessages),
-    (2, 'blogs', l10n.profileMyBlogs),
-    (1, 'friends', l10n.profileMyFriendsTitle),
+  double? previousBottom;
+  for (final (name, label) in [
+    ('messages', l10n.moreMyMessages),
+    ('blogs', l10n.profileMyBlogs),
+    ('friends', l10n.profileMyFriendsTitle),
   ]) {
-    final tile = children[unusedIndex - offset] as ListTile;
-    expect(tile.key, Key('more-my-$name-entry'));
+    final finder = find.byKey(Key('more-my-$name-entry'));
+    final tile = tester.widget<ListTile>(finder);
     expect((tile.title! as Text).data, label);
     expect(tile.onTap, isNotNull);
+    final rect = tester.getRect(finder);
+    if (previousBottom != null) {
+      expect(rect.top, greaterThanOrEqualTo(previousBottom));
+    }
+    previousBottom = rect.bottom;
     if (name == 'messages') {
       final icon = tile.leading! as MessageAttentionIcon;
       expect(icon.icon, Icons.mail_outline);

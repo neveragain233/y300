@@ -2359,6 +2359,26 @@
         "type": "int"
       }
     }
-  }
-
+  },
+  "moreThemeDynamic": "跟随系统",
+  "moreThemeDynamicDescription": "使用系统动态配色，安卓 12 及以上支持。不可用时沿用上次选择的预设。",
+  "moreThemeDynamicUnavailable": "系统动态配色当前不可用，正在使用「{family}」。",
+  "@moreThemeDynamicUnavailable": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "layoutExpandDetail": "展开详情",
+  "layoutRestorePanes": "恢复双栏",
+  "appNavigationBookshelf": "书架",
+  "appNavigationMy": "我的",
+  "moreSectionContent": "内容",
+  "moreSectionManagement": "管理",
+  "moreSectionSettings": "设置",
+  "moreNavigationGroupingDescription": "漫画和小说合并为“书架”，位置由顺序中第一个可见书架入口决定；记录和日志列在“我的”中。隐藏设置继续作用于对应入口。",
+  "readerCatalog": "目录",
+  "readerBookmarks": "书签",
+  "readerBookmarksEmpty": "还没有书签章节"
 }

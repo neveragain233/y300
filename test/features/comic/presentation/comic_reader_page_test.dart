@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import 'package:flutter/material.dart';
+import 'package:y300/l10n/app_localizations.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -104,7 +105,7 @@ void main() {
   Future<void> prepareLargeViewport(WidgetTester tester) async {
     // Keep a very tall viewport to make bottom reader controls consistently
     // hittable across different test environments and frame timings.
-    tester.view.physicalSize = const Size(1200, 3200);
+    tester.view.physicalSize = const Size(960, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -431,7 +432,7 @@ void main() {
       find.byKey(const Key('comic-reader-image-list')),
     );
     // viewportCacheExtentFactor 1.5 × 测试视口高度。
-    expect(listView.scrollCacheExtent, const ScrollCacheExtent.pixels(4800));
+    expect(listView.scrollCacheExtent, const ScrollCacheExtent.pixels(3600));
     expect(
       find.byKey(const Key('shared-reader-center-tap-zone')),
       findsOneWidget,
@@ -1063,7 +1064,13 @@ void main() {
       );
       await pumpReaderUiTransition(tester);
 
-      expect(find.text('章节列表'), findsOneWidget);
+      expect(
+        find.text(
+          AppLocalizations.of(tester.element(find.byType(ComicReaderPage)))
+              .readerCatalog,
+        ),
+        findsOneWidget,
+      );
 
       await tester.tap(
         find.byKey(
@@ -1451,7 +1458,7 @@ void main() {
             )
             .first,
       );
-      expect(slot.constraints.minHeight, 3600);
+      expect(slot.constraints.minHeight, 2880);
     },
   );
 

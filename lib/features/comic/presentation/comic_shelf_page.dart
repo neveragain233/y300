@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/comic/data/use_cases/bulk_download_use_case_providers.dart';
@@ -49,7 +50,8 @@ class ComicShelfPage extends ConsumerWidget {
       isActive: isActive,
       selectionHost: ref.watch(shelfSelectionHostControllerProvider),
       onOpenWork: (context, workId) async {
-        await Navigator.of(context).push(
+        await openAdaptiveDetail(
+          context,
           MaterialPageRoute<void>(
             builder: (_) => ComicDetailPage(comicId: workId),
           ),

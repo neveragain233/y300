@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
+import 'package:y300/app/theme/app_theme_color_source.dart';
+import 'package:y300/app/theme/app_dynamic_colors.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
@@ -39,11 +41,48 @@ class AppearanceSettingsSheet extends ConsumerWidget {
               for (final family in AppThemeFamily.values)
                 _AppearanceThemeFamilyChoice(
                   family: family,
-                  selected: settings.themeFamily == family,
+                  selected:
+                      settings.colorSource == AppThemeColorSource.preset &&
+                      settings.themeFamily == family,
                   onPressed: () => _setThemeFamily(context, ref, family),
                 ),
             ],
           ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _AppearanceDynamicChoice(
+              selected: settings.colorSource == AppThemeColorSource.dynamic,
+              onPressed: () => _setDynamicColor(context, ref),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            settings.colorSource == AppThemeColorSource.dynamic
+                ? l10n.moreThemeDynamicDescription
+                : MoreTextResolver.themeFamilyDescription(
+                    l10n,
+                    settings.themeFamily,
+                  ),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (settings.colorSource == AppThemeColorSource.dynamic &&
+              !(AppDynamicColors.maybeOf(context)
+                      ?.available(theme.brightness) ??
+                  false)) ...[
+            const SizedBox(height: 8),
+            Text(
+              l10n.moreThemeDynamicUnavailable(
+                MoreTextResolver.themeFamilyLabel(l10n, settings.themeFamily),
+              ),
+              key: const Key('appearance-dynamic-fallback'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           Text(
             l10n.moreAppearanceModeSectionTitle,
@@ -120,6 +159,20 @@ class AppearanceSettingsSheet extends ConsumerWidget {
     }
   }
 
+  Future<void> _setDynamicColor(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref
+          .read(appAppearanceControllerProvider.notifier)
+          .setColorSource(AppThemeColorSource.dynamic);
+    } catch (error) {
+      if (!context.mounted) return;
+      showTransientSnackBar(
+        context,
+        AppLocalizations.of(context).moreThemeSaveFailed('$error'),
+      );
+    }
+  }
+
   Future<void> _setBrightnessPreference(
     BuildContext context,
     WidgetRef ref,
@@ -186,6 +239,45 @@ class _AppearanceOptionStrip extends StatelessWidget {
   }
 }
 
+class _AppearanceDynamicChoice extends StatelessWidget {
+  const _AppearanceDynamicChoice({
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: OutlinedButton.icon(
+        key: const Key('appearance-theme-dynamic'),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: selected
+              ? scheme.onPrimaryContainer
+              : scheme.onSurface,
+          backgroundColor: selected ? scheme.primaryContainer : null,
+          minimumSize: const Size(0, 48),
+          side: BorderSide(
+            color: selected ? Colors.transparent : scheme.outlineVariant,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: const Icon(Icons.wallpaper_outlined, size: 20),
+        label: Text(l10n.moreThemeDynamic),
+      ),
+    );
+  }
+}
+
 class _AppearanceThemeFamilyChoice extends StatelessWidget {
   const _AppearanceThemeFamilyChoice({
     required this.family,
@@ -216,7 +308,7 @@ class _AppearanceThemeFamilyChoice extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: foreground,
             backgroundColor: selected ? scheme.primaryContainer : null,
-            minimumSize: const Size(0, 40),
+            minimumSize: const Size(0, 48),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             side: BorderSide(
@@ -316,7 +408,7 @@ class _AppearanceBrightnessChoice extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: foreground,
             backgroundColor: selected ? scheme.primaryContainer : null,
-            minimumSize: const Size(0, 40),
+            minimumSize: const Size(0, 48),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             side: BorderSide(
@@ -378,7 +470,7 @@ class _AppearanceLanguageChoice extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: foreground,
           backgroundColor: selected ? scheme.primaryContainer : null,
-          minimumSize: const Size(0, 40),
+          minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           side: BorderSide(

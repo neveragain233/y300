@@ -4,14 +4,19 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart'
     hide ForumHomeRepository, ForumHomeFavoriteForum;
 import 'package:y300/features/forum/data/repositories/forum_home_repository.dart';
 import 'package:y300/features/cache/domain/models/document_cache_models.dart';
+
 import '../../../support/forum_home_test_support.dart';
+
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
+import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_settings_repository.dart';
@@ -21,12 +26,16 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/application/message_attention_controller.dart';
 import 'package:y300/features/messages/application/message_attention_providers.dart';
 import 'package:y300/features/messages/presentation/widgets/message_attention_icon.dart';
+
 import '../../messages/support/message_test_repository.dart';
+
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/core/network/api_result.dart';
 import 'package:y300/core/network/cookie_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
+
 import '../../../support/forum_auth_test_support.dart';
+
 import 'package:y300/features/comic/data/providers/comic_providers.dart';
 import 'package:y300/features/comic/domain/repositories/comic_repository.dart';
 import 'package:y300/features/comic/data/providers/comic_refresh_workflow_providers.dart';
@@ -73,7 +82,77 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+    view.devicePixelRatio = 1;
+    view.physicalSize = const Size(400, 800);
+    addTearDown(view.resetPhysicalSize);
+    addTearDown(view.resetDevicePixelRatio);
   });
+
+  testWidgets(
+    'rail and phone navigation retain visited forum and shelf instances',
+    (tester) async {
+      final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+        ComicSearchRefreshQueueSnapshot.empty,
+      );
+      final selection = ShelfSelectionHostController();
+      addTearDown(queue.dispose);
+      addTearDown(selection.dispose);
+      await _pumpSelectionShell(
+        tester,
+        queueSnapshot: queue,
+        selectionHost: selection,
+        webViewDriver: _FakeForumWebViewDriver(),
+      );
+      final home = tester.element(find.byKey(const Key('forum-home-list')));
+      tester.view.physicalSize = const Size(1100, 900);
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(
+        tester.element(find.byKey(const Key('forum-home-list'))),
+        same(home),
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MainShellPage)),
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationRail),
+          matching: find.text(l10n.appNavigationComic),
+        ),
+      );
+      await _pumpShellTab(tester);
+      final comic = tester.element(
+        find.byKey(const Key('main-shell-page-comic')),
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationRail),
+          matching: find.text(l10n.appNavigationForum),
+        ),
+      );
+      await _pumpShellTab(tester);
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(
+        tester.element(find.byKey(const Key('forum-home-list'))),
+        same(home),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('main-shell-destination-comic')),
+      );
+      await _pumpShellTab(tester);
+      expect(
+        tester.element(find.byKey(const Key('main-shell-page-comic'))),
+        same(comic),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('attention follows configured navigation without reading feeds', (
     tester,
@@ -152,9 +231,8 @@ void main() {
     await tester.pump();
     expectDot(MainShellDestination.more, false);
 
-    final navigation = ProviderScope.containerOf(
-      context,
-    ).read(mainNavigationSettingsControllerProvider.notifier);
+    final navigation = ProviderScope.containerOf(context)
+        .read(mainNavigationSettingsControllerProvider.notifier);
     await navigation.setVisibility(MainShellDestination.messages, true);
     await tester.pump();
     expectDot(MainShellDestination.messages, true);
@@ -470,9 +548,8 @@ void main() {
               valueListenable: textScale,
               builder: (context, scale, _) {
                 return MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.linear(scale)),
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: TextScaler.linear(scale)),
                   child: child!,
                 );
               },
@@ -779,6 +856,103 @@ void main() {
 
     expect(find.byIcon(Icons.local_library_outlined), findsNothing);
     expect(find.byIcon(Icons.local_library), findsOneWidget);
+  });
+
+  testWidgets('independent shelf search queries survive switching', (
+    tester,
+  ) async {
+    final queueSnapshot = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final webViewDriver = _FakeForumWebViewDriver();
+    addTearDown(queueSnapshot.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
+          novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
+          libraryStateRepositoryProvider.overrideWithValue(
+            _FakeLibraryStateRepository(),
+          ),
+          localFavoriteRepositoryProvider.overrideWith(
+            (ref) => _FakeLocalFavoriteRepository(),
+          ),
+          favoriteSyncServiceProvider.overrideWith(
+            (ref) => _FakeFavoriteSyncService(),
+          ),
+          comicSearchRefreshQueueSnapshotProvider.overrideWithValue(
+            queueSnapshot,
+          ),
+          mainShellBackgroundTaskStarterProvider.overrideWithValue(
+            (_) async {},
+          ),
+          mainShellNotificationInitializerProvider.overrideWithValue(
+            (_) async {},
+          ),
+          mainShellYamiboSessionWarmupProvider.overrideWithValue(() async {}),
+          ...forumAuthOverrides(_FakeAuthRepository()),
+          forumHomeRepositoryProvider.overrideWithValue(
+            _FakeForumHomeRepository(),
+          ),
+          forumWebViewDriverFactoryProvider.overrideWithValue(
+            () => webViewDriver,
+          ),
+          cookieStoreProvider.overrideWithValue(_FakeCookieStore()),
+        ],
+        child: const LocalizedTestApp(home: MainShellPage()),
+      ),
+    );
+
+    await _pumpMainShellReady(tester);
+
+    final l10n = AppLocalizationsZh();
+    await tester.tap(find.text(l10n.appNavigationComic));
+    await _pumpShellTab(tester);
+    final comic = tester.element(
+      find.byKey(const Key('main-shell-page-comic')),
+    );
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '漫画关键词');
+    await tester.tap(find.text(l10n.appNavigationNovel));
+    await _pumpShellTab(tester);
+    final novel = tester.element(
+      find.byKey(const Key('main-shell-page-novel')),
+    );
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '小说关键词');
+    await tester.tap(find.text(l10n.appNavigationComic));
+    await _pumpShellTab(tester);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '漫画关键词',
+    );
+    expect(
+      tester.element(find.byKey(const Key('main-shell-page-comic'))),
+      same(comic),
+    );
+    await tester.tap(find.text(l10n.appNavigationNovel));
+    await _pumpShellTab(tester);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '小说关键词',
+    );
+    expect(
+      tester.element(find.byKey(const Key('main-shell-page-novel'))),
+      same(novel),
+    );
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.appNavigationForum).last);
+    await _pumpShellTab(tester);
+    await tester.tap(find.text(l10n.appNavigationComic).last);
+    await _pumpShellTab(tester);
+    expect(
+      tester.element(find.byKey(const Key('main-shell-page-comic'))),
+      same(comic),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -1446,6 +1620,13 @@ List<TickerMode> _builtTickerModes(IndexedStack stack) {
 }
 
 List<String> _navigationLabels(WidgetTester tester) {
+  if (find.byType(NavigationBar).evaluate().isEmpty) {
+    return tester
+        .widget<MainNavigationRail>(find.byType(MainNavigationRail))
+        .items
+        .map((item) => item.label)
+        .toList();
+  }
   return tester
       .widget<NavigationBar>(find.byType(NavigationBar))
       .destinations
@@ -1455,6 +1636,11 @@ List<String> _navigationLabels(WidgetTester tester) {
 }
 
 int _selectedNavigationIndex(WidgetTester tester) {
+  if (find.byType(NavigationBar).evaluate().isEmpty) {
+    return tester
+        .widget<MainNavigationRail>(find.byType(MainNavigationRail))
+        .selectedIndex;
+  }
   return tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex;
 }
 

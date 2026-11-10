@@ -170,6 +170,7 @@ final class Y300NativeContentColors {
 @immutable
 final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
   const Y300ThemeExtension({
+    this.usesDynamicColor = false,
     required this.shelfCategoryBarBackground,
     required this.shelfCategorySelectedBackground,
     required this.shelfCategorySelectedForeground,
@@ -185,6 +186,7 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
 
   factory Y300ThemeExtension.light(AppThemePalette palette) {
     return Y300ThemeExtension(
+      usesDynamicColor: palette.isDynamic,
       shelfCategoryBarBackground: palette.surfaceContainer,
       shelfCategorySelectedBackground: palette.primary,
       shelfCategorySelectedForeground: palette.onPrimary,
@@ -201,6 +203,7 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
 
   factory Y300ThemeExtension.dark(AppThemePalette palette) {
     return Y300ThemeExtension(
+      usesDynamicColor: palette.isDynamic,
       shelfCategoryBarBackground: palette.surfaceContainer,
       shelfCategorySelectedBackground: palette.primary,
       shelfCategorySelectedForeground: palette.onPrimary,
@@ -226,6 +229,7 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
   final Color contentHighlightBackground;
   final Color coverPlaceholderBackground;
   final Y300NativeContentColors nativeContent;
+  final bool usesDynamicColor;
 
   @override
   Y300ThemeExtension copyWith({
@@ -240,8 +244,10 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
     Color? contentHighlightBackground,
     Color? coverPlaceholderBackground,
     Y300NativeContentColors? nativeContent,
+    bool? usesDynamicColor,
   }) {
     return Y300ThemeExtension(
+      usesDynamicColor: usesDynamicColor ?? this.usesDynamicColor,
       shelfCategoryBarBackground:
           shelfCategoryBarBackground ?? this.shelfCategoryBarBackground,
       shelfCategorySelectedBackground:
@@ -272,6 +278,7 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
       return this;
     }
     return Y300ThemeExtension(
+      usesDynamicColor: t < 0.5 ? usesDynamicColor : other.usesDynamicColor,
       shelfCategoryBarBackground: Color.lerp(
         shelfCategoryBarBackground,
         other.shelfCategoryBarBackground,
@@ -327,7 +334,8 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
   }
 
   static Y300NativeContentColors _nativeContent(AppThemePalette palette) {
-    if (palette.family == AppThemeFamily.warmPaper &&
+    if (!palette.isDynamic &&
+        palette.family == AppThemeFamily.warmPaper &&
         palette.brightness == Brightness.light) {
       return Y300NativeContentColors(
         background: palette.scaffoldBackground,
@@ -373,7 +381,7 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
       ),
       accent: palette.primary,
       onAccent: palette.onPrimary,
-      title: palette.appBarBackground,
+      title: palette.isDynamic ? palette.onSurface : palette.appBarBackground,
       itemTitle: palette.onSurface,
       author: palette.primary,
       body: palette.onSurface,

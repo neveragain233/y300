@@ -5,14 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
-import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/features/tags/data/providers/tag_providers.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
-import 'package:y300/shared/widgets/forum_native_surface.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -102,7 +101,6 @@ void main() {
   testWidgets('renders topics and loads numeric next pages', (tester) async {
     final repository = _FakeForumTagDirectoryRepository();
     final theme = AppTheme.light();
-    final palette = ForumDisplayThemePalette.resolve(theme);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -152,23 +150,28 @@ void main() {
                 )
                 .decoration
             as BoxDecoration;
-    final threadDecoration =
-        tester
-                .widget<DecoratedBox>(
-                  find.byKey(const Key('yamibo-tag-thread-surface-572514')),
-                )
-                .decoration
-            as BoxDecoration;
-    expect(
-      headerDecoration.boxShadow,
-      ForumNativeSurfaceShadows.card(palette.stateLayer),
-    );
-    expect(
-      threadDecoration.boxShadow,
-      ForumNativeSurfaceShadows.card(palette.stateLayer),
-    );
     expect(headerDecoration.borderRadius, BorderRadius.circular(12));
-    expect(threadDecoration.borderRadius, BorderRadius.circular(12));
+    final threadSurface = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(const Key('yamibo-tag-thread-572514')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(
+      threadSurface.color,
+      ForumDisplayThemePalette.resolve(theme).surfaceContainerLow,
+    );
+    expect(threadSurface.borderRadius, BorderRadius.circular(12));
+    final menu = find.byKey(const Key('thread-block-menu-572514'));
+    final title = find.byKey(const Key('yamibo-tag-thread-title-572514'));
+    final author = find.byKey(const Key('yamibo-tag-thread-author-572514'));
+    expect(tester.getRect(menu).overlaps(tester.getRect(title)), isFalse);
+    expect(
+      tester.getBottomRight(menu).dy,
+      lessThan(tester.getTopLeft(author).dy),
+    );
 
     await tester.tap(find.byKey(const Key('yamibo-tag-next-page-button')));
     await tester.pump();

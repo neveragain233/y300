@@ -154,6 +154,7 @@ class ComicReaderChapterEntry {
     required this.sourceTid,
     required this.isCurrent,
     required this.isRead,
+    this.isBookmarked = false,
   });
 
   final String episodeId;
@@ -163,6 +164,19 @@ class ComicReaderChapterEntry {
   final String sourceTid;
   final bool isCurrent;
   final bool isRead;
+  final bool isBookmarked;
+
+  ComicReaderChapterEntry copyWith({bool? isRead, bool? isBookmarked}) =>
+      ComicReaderChapterEntry(
+        episodeId: episodeId,
+        title: title,
+        sourceTitle: sourceTitle,
+        orderIndex: orderIndex,
+        sourceTid: sourceTid,
+        isCurrent: isCurrent,
+        isRead: isRead ?? this.isRead,
+        isBookmarked: isBookmarked ?? this.isBookmarked,
+      );
 }
 
 class ComicReaderViewState {
@@ -349,15 +363,30 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
       return null;
     }
     final next = !current.isBookmarked;
+    final generation = _episodeOperationGeneration;
     await _readingStateWriter.setEpisodeBookmarked(
       comicId: _args.comicId,
       episodeId: current.episodeId,
       isBookmarked: next,
     );
-    if (!ref.mounted) {
+    if (!ref.mounted ||
+        generation != _episodeOperationGeneration ||
+        state.value?.episodeId != current.episodeId) {
       return null;
     }
-    state = AsyncData(current.copyWith(isBookmarked: next, clearNotice: true));
+    final latest = state.value!;
+    state = AsyncData(
+      latest.copyWith(
+        isBookmarked: next,
+        clearNotice: true,
+        chapters: [
+          for (final chapter in latest.chapters)
+            chapter.episodeId == current.episodeId
+                ? chapter.copyWith(isBookmarked: next)
+                : chapter,
+        ],
+      ),
+    );
     return next
         ? ComicReaderNoticeCode.bookmarkAdded
         : ComicReaderNoticeCode.bookmarkRemoved;
@@ -1500,14 +1529,9 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
       );
     }
     final episode = episodes[episodeIndex];
-    final isRead = await _readingStateWriter.isEpisodeRead(
-      comicId: _args.comicId,
-      episodeId: episodeId,
-    );
-    final isBookmarked = await _readingStateWriter.isEpisodeBookmarked(
-      comicId: _args.comicId,
-      episodeId: episodeId,
-    );
+    final currentMarks = await _readEpisodeMarks(episodeId);
+    final isRead = currentMarks.isRead;
+    final isBookmarked = currentMarks.isBookmarked;
     final images = await _ensureEpisodeImages(episode);
     if (!ref.mounted) {
       throw StateError('reader_disposed');
@@ -1534,10 +1558,9 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
     final imageStates = _mapImageStates(images);
     final chapters = <ComicReaderChapterEntry>[];
     for (final item in episodes) {
-      final read = await _readingStateWriter.isEpisodeRead(
-        comicId: _args.comicId,
-        episodeId: item.episodeId,
-      );
+      final marks = item.episodeId == episodeId
+          ? currentMarks
+          : await _readEpisodeMarks(item.episodeId);
       chapters.add(
         ComicReaderChapterEntry(
           episodeId: item.episodeId,
@@ -1546,7 +1569,8 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
           orderIndex: item.orderIndex,
           sourceTid: item.sourceTid,
           isCurrent: item.episodeId == episodeId,
-          isRead: read,
+          isRead: marks.isRead,
+          isBookmarked: marks.isBookmarked,
         ),
       );
     }
@@ -1709,6 +1733,26 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
     );
   }
 
+  Future<ComicEpisodeReadingMarks> _readEpisodeMarks(String episodeId) async {
+    final writer = _readingStateWriter;
+    if (writer is ComicReadingMarksReader) {
+      return (writer as ComicReadingMarksReader).readEpisodeMarks(
+        comicId: _args.comicId,
+        episodeId: episodeId,
+      );
+    }
+    return ComicEpisodeReadingMarks(
+      isRead: await writer.isEpisodeRead(
+        comicId: _args.comicId,
+        episodeId: episodeId,
+      ),
+      isBookmarked: await writer.isEpisodeBookmarked(
+        comicId: _args.comicId,
+        episodeId: episodeId,
+      ),
+    );
+  }
+
   List<ComicReaderChapterEntry> _markChapterRead(
     List<ComicReaderChapterEntry> chapters, {
     required String episodeId,
@@ -1717,15 +1761,7 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
     return chapters
         .map(
           (chapter) => chapter.episodeId == episodeId
-              ? ComicReaderChapterEntry(
-                  episodeId: chapter.episodeId,
-                  title: chapter.title,
-                  sourceTitle: chapter.sourceTitle,
-                  orderIndex: chapter.orderIndex,
-                  sourceTid: chapter.sourceTid,
-                  isCurrent: chapter.isCurrent,
-                  isRead: isRead,
-                )
+              ? chapter.copyWith(isRead: isRead)
               : chapter,
         )
         .toList(growable: false);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/core/network/api_result.dart';
 import 'package:y300/features/thread/domain/models/thread_post_target.dart';
 import 'package:y300/features/thread/domain/repositories/thread_post_locator.dart';
@@ -24,7 +25,8 @@ Future<void> launchThreadPostRoute({
   final ownerRoute = ModalRoute.of(context);
   return session.run(
     key: (target.tid, target.pid, target.landing),
-    isCurrent: () => context.mounted && isCurrent(),
+    isCurrent: () =>
+        context.mounted && isCurrent() && isAdaptiveSourceCurrent(context),
     action: (current) async {
       while (current() && (ownerRoute?.isCurrent ?? true)) {
         ApiResult<ThreadPostLocation> result;
@@ -44,7 +46,8 @@ Future<void> launchThreadPostRoute({
           return;
         }
         if (result case ApiSuccess(:final data)) {
-          await Navigator.of(context).push(
+          await openAdaptiveDetail(
+            context,
             MaterialPageRoute<void>(
               builder: (_) => ThreadDetailPage(
                 tid: data.tid,
@@ -94,7 +97,8 @@ Future<void> launchThreadPostRoute({
         }
         if (choice == _FailureChoice.retry) continue;
         if (choice == _FailureChoice.home) {
-          await Navigator.of(context).push(
+          await openAdaptiveDetail(
+            context,
             MaterialPageRoute<void>(
               builder: (_) =>
                   ThreadDetailPage(tid: target.tid, subject: subject),

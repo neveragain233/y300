@@ -67,7 +67,10 @@ void main() {
         hasLength(1),
       );
       expect(label, contains(l10n.novelCurrent));
-      expect(find.text(l10n.novelBookmark), findsNothing);
+      expect(
+        find.descendant(of: _tile(0), matching: find.text(l10n.novelBookmark)),
+        findsNothing,
+      );
       expect(tester.widget<ListTile>(_tile(0)).selected, isTrue);
     } finally {
       semantics.dispose();
@@ -276,9 +279,8 @@ Future<void> _pumpCatalog(
   await tester.pumpWidget(
     LocalizedTestApp(
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale)),
         child: child!,
       ),
       home: Scaffold(

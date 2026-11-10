@@ -3,6 +3,8 @@ import 'dart:io' as io;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader_chapter_panel.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -423,7 +425,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
 
   Future<void> _showMoreActionSheet(ComicReaderViewState viewState) async {
     final l10n = AppLocalizations.of(context);
-    final action = await showModalBottomSheet<_ComicReaderMoreAction>(
+    final action = await showAdaptivePanel<_ComicReaderMoreAction>(
       context: context,
       builder: (context) => ReaderActionSheet<_ComicReaderMoreAction>(
         title: l10n.comicMoreActions,
@@ -461,7 +463,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
 
   Future<void> _showChapterListSheet(ComicReaderViewState viewState) async {
     final l10n = AppLocalizations.of(context);
-    final selected = await showModalBottomSheet<ComicReaderChapterEntry>(
+    final selected = await showAdaptivePanel<ComicReaderChapterEntry>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -480,11 +482,11 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                     MediaQuery.paddingOf(context).vertical,
               ),
             ),
-            child: Column(
-              children: [
-                ReaderSheetTitle(title: l10n.comicChapterList),
-                Expanded(
-                  child: LibraryChapterBrowser<ComicReaderChapterEntry>(
+            child: ReaderChapterPanel<ComicReaderChapterEntry>(
+              entries: viewState.chapters,
+              isBookmarked: (chapter) => chapter.isBookmarked,
+              builder: (context, chapters) =>
+                  LibraryChapterBrowser<ComicReaderChapterEntry>(
                     workId: viewState.comicId,
                     keyPrefix: 'comic-reader-chapter',
                     currentId: viewState.episodeId,
@@ -493,7 +495,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                       MediaQuery.textScalerOf(context).scale(16) * 1.5 + 24,
                     ),
                     entries: [
-                      for (final chapter in viewState.chapters)
+                      for (final chapter in chapters)
                         ChapterSearchEntry(
                           id: chapter.episodeId,
                           title: chapter.title,
@@ -533,8 +535,6 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                       },
                     ),
                   ),
-                ),
-              ],
             ),
           ),
         ),

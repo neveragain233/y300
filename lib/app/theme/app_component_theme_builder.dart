@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';
+import 'package:y300/app/theme/app_system_ui.dart';
 
 /// Central place for Material component theme construction.
 ///
@@ -15,6 +16,10 @@ final class AppComponentThemeBuilder {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
+      systemOverlayStyle: AppSystemUi.onSurfaces(
+        top: palette.appBarBackground,
+        bottom: palette.navigationBarBackground,
+      ),
     );
   }
 

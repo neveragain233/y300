@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/comic/data/providers/comic_providers.dart';
 import 'package:y300/features/comic/presentation/comic_detail_page.dart';
@@ -12,14 +13,16 @@ import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 
 typedef HistoryWorkAvailabilityLoader = Future<bool> Function(String workId);
-typedef HistoryNativeThreadPageBuilder =
-    Widget Function(String tid, String subject, int? initialPage);
-typedef HistoryNativeBlogPageBuilder =
-    Widget Function({
-      required String ownerUserId,
-      required String blogId,
-      required String title,
-    });
+typedef HistoryNativeThreadPageBuilder = Widget Function(
+  String tid,
+  String subject,
+  int? initialPage,
+);
+typedef HistoryNativeBlogPageBuilder = Widget Function({
+  required String ownerUserId,
+  required String blogId,
+  required String title,
+});
 typedef HistoryWorkPageBuilder = Widget Function(String workId);
 
 final historyEntryRouterProvider = Provider<HistoryEntryRouter>((ref) {
@@ -95,9 +98,10 @@ class HistoryEntryRouter {
         );
       }
       unawaited(
-        Navigator.of(
+        openAdaptiveDetail<void>(
           context,
-        ).push<void>(MaterialPageRoute<void>(builder: (_) => page)),
+          MaterialPageRoute<void>(builder: (_) => page),
+        ),
       );
       return const HistoryOpenSuccess();
     } catch (error) {

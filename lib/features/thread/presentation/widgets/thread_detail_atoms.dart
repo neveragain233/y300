@@ -132,20 +132,10 @@ BoxDecoration _cardSegmentDecoration({
   required bool highlighted,
   required _ThreadPostCardSegmentPosition position,
 }) {
-  final radius = switch (position) {
-    _ThreadPostCardSegmentPosition.header => const BorderRadius.vertical(
-      top: Radius.circular(12),
-    ),
-    _ThreadPostCardSegmentPosition.middle => BorderRadius.zero,
-    _ThreadPostCardSegmentPosition.footer => const BorderRadius.vertical(
-      bottom: Radius.circular(12),
-    ),
-  };
   return BoxDecoration(
     color: highlighted ? palette.accent.withValues(alpha: 0.10) : palette.card,
-    borderRadius: radius,
-    boxShadow: position == _ThreadPostCardSegmentPosition.header
-        ? ForumNativeSurfaceShadows.card(palette.stateLayer)
+    border: position == _ThreadPostCardSegmentPosition.footer
+        ? Border(bottom: BorderSide(color: palette.border, width: 0.5))
         : null,
   );
 }

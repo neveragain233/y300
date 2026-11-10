@@ -3,6 +3,10 @@ import 'dart:io' as io;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/app/theme/app_system_ui.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -316,6 +320,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       key: ValueKey('detail-chapters-${widget.workId}'),
       workId: widget.workId,
       keyPrefix: 'unified-detail-chapter',
+      controlsInList: true,
       currentId: state.chapters
           .where((chapter) => chapter.progressInfo?.isCurrent == true)
           .firstOrNull
@@ -355,8 +360,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
             child: UnifiedDetailHeaderSection(
               header: header,
               moduleKey: widget.adapter.moduleKey,
-              topInset:
-                  topInset + LibraryChapterBrowser.controlsHeight(context),
+              topInset: topInset,
               palette: detailPalette,
               imageReferer: widget.imageReferer,
               onToggleShelf: () => _showMoveCategorySheet(),
@@ -379,11 +383,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
           SliverToBoxAdapter(
             child: UnifiedDetailErrorPanel(
               message: state.errorMessage!,
-              topPadding: header == null
-                  ? topInset +
-                        kToolbarHeight +
-                        LibraryChapterBrowser.controlsHeight(context)
-                  : 10,
+              topPadding: header == null ? topInset + kToolbarHeight : 10,
               onRetry: _retryLoad,
             ),
           ),
@@ -443,12 +443,10 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
         extendBodyBehindAppBar: true,
         backgroundColor: detailPalette.pageBackground,
         appBar: PreferredSize(
-          preferredSize: Size.fromHeight(
-            kToolbarHeight + LibraryChapterBrowser.controlsHeight(context),
-          ),
+          preferredSize: const Size.fromHeight(kToolbarHeight),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(end: _showCollapsedTitle ? 1 : 0),
-            duration: const Duration(milliseconds: 220),
+            duration: AppLayoutTokens.motionDuration(context),
             curve: Curves.easeInOutCubic,
             builder: (context, progress, _) {
               final appBarForeground = Color.lerp(
@@ -457,7 +455,13 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                 progress,
               )!;
               return AppBar(
-                bottom: searchControls,
+                leading: adaptiveDetailBackButton(context),
+                systemOverlayStyle: AppSystemUi.onSurfaces(
+                  top: headerHasCover && progress < 0.5
+                      ? Colors.black
+                      : detailPalette.pageBackground,
+                  bottom: detailPalette.pageBackground,
+                ),
                 backgroundColor: detailPalette.collapsedAppBarBackground
                     .withValues(alpha: progress),
                 forceMaterialTransparency: false,
@@ -495,6 +499,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                   ),
                 ),
                 actions: [
+                  const AdaptiveDetailExpandAction(),
                   if (_supportsChapterDownloads && _showsBulkDownloadActions)
                     AppPopupMenuButton<String>(
                       key: const Key('unified-detail-appbar-download'),
@@ -807,7 +812,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     }
     var selectedDirection = _controller.state.chapterSortOption.direction;
 
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -930,7 +935,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
   }
 
   Future<void> _showChapterActions(LibraryChapterItem chapter) async {
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       builder: (sheetContext) {
         final l10n = AppLocalizations.of(sheetContext);
@@ -1039,7 +1044,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       return;
     }
     var changed = false;
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -1156,7 +1161,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     final l10n = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
     final canSetCatalog = widget.adapter is DetailCatalogEditor;
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) {
@@ -1381,7 +1386,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       return;
     }
     final config = editor.metadataEditorConfig;
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) {
@@ -1484,7 +1489,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       return;
     }
 
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) {
@@ -1600,7 +1605,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     if (!mounted) {
       return;
     }
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
       builder: (sheetContext) {
         return SafeArea(

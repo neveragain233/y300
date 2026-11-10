@@ -33,7 +33,7 @@ Future<void> openBlogImageReader(
     resolver: ref.read(forumImageRequestResolverProvider),
   );
   if (request == null) return;
-  await Navigator.of(context).push<void>(
+  await Navigator.of(context, rootNavigator: true).push<void>(
     MaterialPageRoute(
       builder: (_) => BlogImageReaderPage(
         request: request,

@@ -117,6 +117,8 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   late final Animation<Offset> _topSlideAnimation;
   late final Animation<Offset> _bottomSlideAnimation;
   late bool _isMenuVisible;
+  final _topFocus = FocusScopeNode();
+  final _bottomFocus = FocusScopeNode();
 
   @override
   void initState() {
@@ -145,8 +147,24 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateAnimationDuration();
+  }
+
+  void _updateAnimationDuration() {
+    _animationController.duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : widget.animationDuration;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _animationController.value = _isMenuVisible ? 1 : 0;
+    }
+  }
+
+  @override
   void didUpdateWidget(ReaderOverlayScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _updateAnimationDuration();
     if (oldWidget.controller == widget.controller) {
       return;
     }
@@ -162,6 +180,8 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   void dispose() {
     widget.controller?._detach(this);
     _animationController.dispose();
+    _topFocus.dispose();
+    _bottomFocus.dispose();
     super.dispose();
   }
 
@@ -204,9 +224,20 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
           child: IgnorePointer(
             key: const Key('shared-reader-top-overlay-hit-test-gate'),
             ignoring: !_isMenuVisible,
-            child: SlideTransition(
-              position: _topSlideAnimation,
-              child: ReaderTopOverlayBar(config: widget.topBar),
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              excludeSemantics: !_isMenuVisible,
+              child: ExcludeFocus(
+                excluding: !_isMenuVisible,
+                child: FocusScope(
+                  node: _topFocus,
+                  child: SlideTransition(
+                    position: _topSlideAnimation,
+                    child: ReaderTopOverlayBar(config: widget.topBar),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -218,9 +249,20 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
           child: IgnorePointer(
             key: const Key('shared-reader-bottom-overlay-hit-test-gate'),
             ignoring: !_isMenuVisible,
-            child: SlideTransition(
-              position: _bottomSlideAnimation,
-              child: ReaderBottomOverlayPanel(config: widget.bottomBar),
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              excludeSemantics: !_isMenuVisible,
+              child: ExcludeFocus(
+                excluding: !_isMenuVisible,
+                child: FocusScope(
+                  node: _bottomFocus,
+                  child: SlideTransition(
+                    position: _bottomSlideAnimation,
+                    child: ReaderBottomOverlayPanel(config: widget.bottomBar),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -231,6 +273,10 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   void _setMenuVisible(bool visible) {
     if (_isMenuVisible == visible) {
       return;
+    }
+    if (!visible) {
+      if (_topFocus.hasFocus) _topFocus.unfocus();
+      if (_bottomFocus.hasFocus) _bottomFocus.unfocus();
     }
     setState(() {
       _isMenuVisible = visible;

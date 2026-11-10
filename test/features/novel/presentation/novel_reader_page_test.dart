@@ -1924,89 +1924,118 @@ void main() {
     },
   );
 
-  testWidgets(
-    'NovelReaderPage display sheet is half height and applies theme live',
-    (tester) async {
-      final repository = _FakeNovelRepository(
-        preferences: NovelReaderPreferences.defaults().copyWith(
-          flowMode: NovelReaderFlowMode.vertical,
-          themePreset: NovelReaderThemePreset.light,
-        ),
-      );
-      await tester.pumpWidget(_buildReaderApp(repository: repository));
-      await tester.pumpAndSettle();
-
-      await _showReaderMenu(tester);
-      await tester.tap(
-        find.byKey(const Key('shared-reader-bottom-action-display')),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('novel-theme-sepia')), findsOneWidget);
-      expect(find.byKey(const Key('novel-theme-follow-app')), findsOneWidget);
-      expect(
-        find.byKey(const Key('novel-reader-display-settings-sheet')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-flow-mode-control')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-content-width-slider')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-paragraph-spacing-slider')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-page-padding-slider')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-first-line-indent-slider')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-font-weight-control')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-text-align-control')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-display-settings-save')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('novel-reader-display-settings-cancel')),
-        findsNothing,
-      );
-
-      final sheetHeight = tester
+  testWidgets('NovelReaderPage phone display panel keeps half-height layout', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      _buildReaderApp(repository: _FakeNovelRepository()),
+    );
+    await tester.pumpAndSettle();
+    await _showReaderMenu(tester);
+    await tester.tap(
+      find.byKey(const Key('shared-reader-bottom-action-display')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
           .getSize(find.byKey(const Key('novel-reader-display-settings-sheet')))
-          .height;
-      final viewportHeight =
-          tester.view.physicalSize.height / tester.view.devicePixelRatio;
-      expect(sheetHeight, lessThanOrEqualTo(viewportHeight * 0.5 + 1));
+          .height,
+      lessThanOrEqualTo(401),
+    );
+    expect(find.byKey(const Key('adaptive-side-panel')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
-      await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('novel-theme-sepia')));
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pumpAndSettle();
+  testWidgets('NovelReaderPage wide display panel applies theme live', (
+    tester,
+  ) async {
+    final repository = _FakeNovelRepository(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        flowMode: NovelReaderFlowMode.vertical,
+        themePreset: NovelReaderThemePreset.light,
+      ),
+    );
+    await tester.pumpWidget(_buildReaderApp(repository: repository));
+    await tester.pumpAndSettle();
 
-      expect(repository.latestPreferences?.themeMode, 'sepia');
-      expect(
-        repository.latestPreferences?.themePreset,
-        NovelReaderThemePreset.sepia,
-      );
-      expect(repository.upsertPreferencesCallCount, 1);
-    },
-  );
+    await _showReaderMenu(tester);
+    await tester.tap(
+      find.byKey(const Key('shared-reader-bottom-action-display')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('novel-theme-sepia')), findsOneWidget);
+    expect(find.byKey(const Key('novel-theme-follow-app')), findsOneWidget);
+    expect(
+      find.byKey(const Key('novel-reader-display-settings-sheet')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-flow-mode-control')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-content-width-slider')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-paragraph-spacing-slider')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-page-padding-slider')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-first-line-indent-slider')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-font-weight-control')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-text-align-control')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-display-settings-save')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-display-settings-cancel')),
+      findsNothing,
+    );
+
+    final sheetHeight = tester
+        .getSize(find.byKey(const Key('novel-reader-display-settings-sheet')))
+        .height;
+    final viewportHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(sheetHeight, lessThanOrEqualTo(viewportHeight));
+    expect(
+      tester.getSize(find.byKey(const Key('adaptive-side-panel'))).width,
+      480,
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('novel-theme-sepia')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(repository.latestPreferences?.themeMode, 'sepia');
+    expect(
+      repository.latestPreferences?.themePreset,
+      NovelReaderThemePreset.sepia,
+    );
+    expect(repository.upsertPreferencesCallCount, 1);
+  });
 
   testWidgets('NovelReaderPage display sheet exposes paged modes', (
     tester,
@@ -3907,6 +3936,9 @@ void main() {
     await tester.pumpWidget(_buildReaderApp(repository: repository));
     await tester.pumpAndSettle();
 
+    final reader = tester.element(
+      find.byKey(const Key('novel-reader-paragraph-list')),
+    );
     await _showReaderMenu(tester);
     await tester.tap(
       find.byKey(const Key('shared-reader-bottom-action-catalog')),
@@ -3916,6 +3948,25 @@ void main() {
     expect(
       find.byKey(const Key('novel-reader-chapter-bookmark-novel:49:100:5001')),
       findsOneWidget,
+    );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byKey(const Key('reader-chapter-panel-tabs'))),
+    );
+    await tester.tap(find.text(l10n.readerBookmarks));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('novel-reader-chapter-novel:49:100:5001')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-chapter-novel:49:100:5002')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const Key('adaptive-panel-close')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.element(find.byKey(const Key('novel-reader-paragraph-list'))),
+      same(reader),
     );
   });
 
@@ -4132,7 +4183,9 @@ void _expectPagedCachesClosed(NovelReaderHtmlPagedSurface surface) {
 }
 
 Future<void> _showReaderMenu(WidgetTester tester) async {
-  await tester.tapAt(const Offset(400, 300));
+  await tester.tapAt(
+    tester.getCenter(find.byKey(const Key('shared-reader-center-tap-zone'))),
+  );
   await tester.pump(const Duration(milliseconds: 330));
   await tester.pump(const Duration(milliseconds: 260));
   await tester.pump();

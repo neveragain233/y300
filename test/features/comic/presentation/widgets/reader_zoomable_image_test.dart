@@ -10,6 +10,7 @@ import 'package:y300/features/reader_shared/presentation/engine/reader_zoomable_
 Widget _hostZoomableImage({
   ReaderZoomBehavior behavior = ReaderZoomBehavior.bounded,
   Object? resetToken,
+  Size viewport = const Size(240, 240),
   ValueChanged<bool>? onZoomStateChanged,
   Widget? child,
 }) {
@@ -17,8 +18,8 @@ Widget _hostZoomableImage({
     home: Scaffold(
       body: Center(
         child: SizedBox(
-          width: 240,
-          height: 240,
+          width: viewport.width,
+          height: viewport.height,
           child: ReaderZoomableImage(
             behavior: behavior,
             resetToken: resetToken,
@@ -309,6 +310,60 @@ void main() {
       closeTo(1, 0.001),
     );
   });
+
+  for (final behavior in ReaderZoomBehavior.values) {
+    testWidgets(
+      'window resize retires zoom animation and keeps the image in $behavior',
+      (tester) async {
+        final states = <bool>[];
+        final child = Container(
+          key: const Key('stable-zoom-content'),
+          color: Colors.blue,
+        );
+        await tester.pumpWidget(
+          _hostZoomableImage(
+            behavior: behavior,
+            onZoomStateChanged: states.add,
+            child: child,
+          ),
+        );
+        final image = tester.element(
+          find.byKey(const Key('stable-zoom-content')),
+        );
+        final target = find.byType(ReaderZoomableImage);
+        await tester.tapAt(tester.getCenter(target));
+        await tester.pump(const Duration(milliseconds: 40));
+        await tester.tapAt(tester.getCenter(target));
+        await tester.pump(const Duration(milliseconds: 40));
+        expect(states, contains(true));
+        await tester.pumpWidget(
+          _hostZoomableImage(
+            behavior: behavior,
+            viewport: const Size(180, 320),
+            onZoomStateChanged: states.add,
+            child: child,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 500));
+        final transform = tester.widget<Transform>(
+          find.byKey(
+            Key(
+              behavior == ReaderZoomBehavior.bounded
+                  ? 'reader-bounded-zoom-transform'
+                  : 'reader-continuous-zoom-transform',
+            ),
+          ),
+        );
+        expect(transform.transform.getMaxScaleOnAxis(), 1);
+        expect(states.last, false);
+        expect(
+          tester.element(find.byKey(const Key('stable-zoom-content'))),
+          same(image),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('reset token returns a zoomed surface to resting state', (
     tester,

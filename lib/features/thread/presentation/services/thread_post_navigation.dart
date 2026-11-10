@@ -51,7 +51,7 @@ class ThreadPostNavigation {
       );
       return;
     }
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<ThreadImageReaderExitResult>(
         builder: (_) => ThreadImageReaderPage(
           request: request,

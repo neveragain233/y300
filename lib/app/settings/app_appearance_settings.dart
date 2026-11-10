@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 
 enum AppBrightnessPreference {
@@ -19,6 +20,7 @@ enum AppLanguage { system, simplifiedChinese, traditionalChinese }
 
 class AppAppearanceSettings {
   const AppAppearanceSettings({
+    this.colorSource = AppThemeColorSource.preset,
     this.themeFamily = AppThemeFamily.warmPaper,
     this.brightnessPreference = AppBrightnessPreference.light,
     required this.languagePreference,
@@ -33,17 +35,20 @@ class AppAppearanceSettings {
   }
 
   final AppThemeFamily themeFamily;
+  final AppThemeColorSource colorSource;
   final AppBrightnessPreference brightnessPreference;
   final AppLanguage languagePreference;
 
   ThemeMode get themeMode => brightnessPreference.themeMode;
 
   AppAppearanceSettings copyWith({
+    AppThemeColorSource? colorSource,
     AppThemeFamily? themeFamily,
     AppBrightnessPreference? brightnessPreference,
     AppLanguage? languagePreference,
   }) {
     return AppAppearanceSettings(
+      colorSource: colorSource ?? this.colorSource,
       themeFamily: themeFamily ?? this.themeFamily,
       brightnessPreference: brightnessPreference ?? this.brightnessPreference,
       languagePreference: languagePreference ?? this.languagePreference,

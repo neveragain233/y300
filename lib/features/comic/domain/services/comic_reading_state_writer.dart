@@ -2,6 +2,23 @@ import 'package:y300/features/comic/domain/repositories/comic_repository.dart';
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 
+class ComicEpisodeReadingMarks {
+  const ComicEpisodeReadingMarks({
+    required this.isRead,
+    required this.isBookmarked,
+  });
+  final bool isRead;
+  final bool isBookmarked;
+}
+
+/// 聚合读取同一章节的状态，目录扩展书签时不重复查询同一行。
+abstract interface class ComicReadingMarksReader {
+  Future<ComicEpisodeReadingMarks> readEpisodeMarks({
+    required String comicId,
+    required String episodeId,
+  });
+}
+
 /// Reader-facing persistence boundary for comic reading state.
 ///
 /// The reader should describe what happened in reading terms: progress was
@@ -47,7 +64,8 @@ abstract class ComicReadingStateWriter {
   });
 }
 
-class DefaultComicReadingStateWriter implements ComicReadingStateWriter {
+class DefaultComicReadingStateWriter
+    implements ComicReadingStateWriter, ComicReadingMarksReader {
   const DefaultComicReadingStateWriter({
     required ComicRepository comicRepository,
     required LibraryStateRepository libraryStateRepository,
@@ -56,6 +74,21 @@ class DefaultComicReadingStateWriter implements ComicReadingStateWriter {
 
   final ComicRepository _comicRepository;
   final LibraryStateRepository _libraryStateRepository;
+
+  @override
+  Future<ComicEpisodeReadingMarks> readEpisodeMarks({
+    required String comicId,
+    required String episodeId,
+  }) async {
+    final state = await _libraryStateRepository.getEpisodeState(
+      moduleKey: LibraryModuleKey.comic,
+      episodeId: episodeId,
+    );
+    return ComicEpisodeReadingMarks(
+      isRead: state?.isRead ?? false,
+      isBookmarked: state?.isBookmarked ?? false,
+    );
+  }
 
   @override
   Future<bool> isEpisodeRead({

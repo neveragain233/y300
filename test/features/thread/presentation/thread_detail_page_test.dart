@@ -97,7 +97,6 @@ import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_default_avatar.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
-import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/features/thread/domain/contracts/thread_body_reading_observer.dart';
 
@@ -1697,16 +1696,9 @@ void main() {
       expect(find.text('第 1 / 2 页'), findsNothing);
       expect(find.byKey(const Key('thread-post-card-p1')), findsOneWidget);
       expect(find.byType(ThreadPostCard), findsNothing);
-      final postCard = tester.widget<Container>(
-        find.byKey(const Key('thread-post-card-p1')),
-      );
-      final postCardDecoration = postCard.decoration as BoxDecoration;
       final detailPalette = ThreadDetailNativePalette.resolve(
         Theme.of(tester.element(find.byType(ThreadDetailPage))),
-      );
-      expect(
-        postCardDecoration.boxShadow,
-        ForumNativeSurfaceShadows.card(detailPalette.stateLayer),
+        continuous: true,
       );
       expect(_richTextContaining('第一条回复'), findsOneWidget);
       expect(find.byKey(const Key('thread-poll-card')), findsOneWidget);
@@ -1832,8 +1824,19 @@ void main() {
       expect(find.text('积分 +2'), findsOneWidget);
       expect(find.text('子子子车'), findsOneWidget);
       expect(find.text('查看全部评分'), findsNothing);
-      await tester.tap(find.byKey(const Key('thread-post-rating-body')));
-      await tester.tap(find.byKey(const Key('thread-post-rating-body')));
+      await Scrollable.ensureVisible(
+        tester.element(find.byKey(const Key('thread-post-rating-body'))),
+        alignment: .5,
+      );
+      await tester.pump();
+      await tester.tapAt(
+        tester.getTopLeft(find.byKey(const Key('thread-post-rating-body'))) +
+            const Offset(30, 25),
+      );
+      await tester.tapAt(
+        tester.getTopLeft(find.byKey(const Key('thread-post-rating-body'))) +
+            const Offset(30, 25),
+      );
       await tester.pump();
       expect(
         find.byKey(const Key('thread-post-rating-loading-indicator')),

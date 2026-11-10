@@ -45,7 +45,10 @@ class ThreadDetailNativePalette {
   final Color avatarForeground;
   final Color pollTrack;
 
-  static ThreadDetailNativePalette resolve(ThemeData theme) {
+  static ThreadDetailNativePalette resolve(
+    ThemeData theme, {
+    bool continuous = false,
+  }) {
     final scheme = theme.colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
     final appBarBackground =
@@ -53,6 +56,8 @@ class ThreadDetailNativePalette {
     final appBarForeground =
         theme.appBarTheme.foregroundColor ?? scheme.onPrimary;
     final native = theme.y300NativeContent;
+    final usesDynamicColor =
+        theme.extension<Y300ThemeExtension>()?.usesDynamicColor ?? false;
 
     if (!isDark) {
       final listTagChipBackground =
@@ -61,13 +66,13 @@ class ThreadDetailNativePalette {
               .withValues(alpha: 0.42);
       return ThreadDetailNativePalette(
         background: native.background,
-        card: native.card,
+        card: continuous ? native.background : native.card,
         cardElevated: native.elevatedCard,
         metricBackground: native.metricBackground,
         chipBackground: listTagChipBackground,
         panelBackground: native.panelBackground,
-        accent: appBarBackground,
-        onAccent: appBarForeground,
+        accent: usesDynamicColor ? native.accent : appBarBackground,
+        onAccent: usesDynamicColor ? native.onAccent : appBarForeground,
         title: native.title,
         author: native.author,
         bodyText: native.body,
@@ -84,7 +89,11 @@ class ThreadDetailNativePalette {
 
     return ThreadDetailNativePalette(
       background: theme.scaffoldBackgroundColor,
-      card: scheme.surfaceContainer,
+      card: continuous
+          ? theme.scaffoldBackgroundColor
+          : usesDynamicColor
+          ? native.card
+          : scheme.surfaceContainer,
       cardElevated: scheme.surfaceContainerHighest.withValues(alpha: 0.68),
       metricBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.72),
       chipBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.42),

@@ -9,6 +9,7 @@ import 'package:y300/app/theme/app_theme_tokens.dart';
 @immutable
 final class AppThemePalette {
   const AppThemePalette({
+    this.isDynamic = false,
     required this.family,
     required this.brightness,
     required this.seedColor,
@@ -28,6 +29,30 @@ final class AppThemePalette {
     required this.secondaryContainer,
     required this.onSecondaryContainer,
   });
+
+  factory AppThemePalette.dynamic(ColorScheme scheme, AppThemeFamily fallback) {
+    return AppThemePalette(
+      family: fallback,
+      isDynamic: true,
+      brightness: scheme.brightness,
+      seedColor: scheme.primary,
+      scaffoldBackground: scheme.surface,
+      appBarBackground: scheme.surfaceContainer,
+      appBarForeground: scheme.onSurface,
+      navigationBarBackground: scheme.surfaceContainer,
+      primary: scheme.primary,
+      onPrimary: scheme.onPrimary,
+      surface: scheme.surface,
+      onSurface: scheme.onSurface,
+      surfaceContainerLowest: scheme.surfaceContainerLowest,
+      surfaceContainer: scheme.surfaceContainerLow,
+      surfaceContainerHighest: scheme.surfaceContainerHigh,
+      onSurfaceVariant: scheme.onSurfaceVariant,
+      outlineVariant: scheme.outlineVariant,
+      secondaryContainer: scheme.secondaryContainer,
+      onSecondaryContainer: scheme.onSecondaryContainer,
+    );
+  }
 
   factory AppThemePalette.resolve(
     AppThemeFamily family,
@@ -186,6 +211,7 @@ final class AppThemePalette {
   }
 
   final AppThemeFamily family;
+  final bool isDynamic;
   final Brightness brightness;
   final Color seedColor;
   final Color scaffoldBackground;

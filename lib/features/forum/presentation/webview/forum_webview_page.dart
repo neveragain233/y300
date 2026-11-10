@@ -484,9 +484,8 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
           _postRouteSession.invalidate();
           _redirectRouteSession.invalidate();
           unawaited(
-            Navigator.of(
-              context,
-            ).push<void>(MaterialPageRoute(builder: (_) => page)),
+            Navigator.of(context)
+                .push<void>(MaterialPageRoute(builder: (_) => page)),
           );
         }
         return ForumWebViewNavigationDecision.prevent;
@@ -643,9 +642,8 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
               destination,
             )!;
             unawaited(
-              Navigator.of(
-                context,
-              ).push<void>(MaterialPageRoute(builder: (_) => nativePage)),
+              Navigator.of(context)
+                  .push<void>(MaterialPageRoute(builder: (_) => nativePage)),
             );
           } else {
             final finalResolution = ref
@@ -1149,7 +1147,11 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
   }
 
   SystemUiOverlayStyle _resolveSystemUiOverlayStyle(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final background =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+    final isDark =
+        ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
     return (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
         .copyWith(
           statusBarColor: Colors.transparent,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -49,6 +50,83 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
+
+  testWidgets(
+    'folded paged viewport restores semantic position without another progress commit',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final window = ValueNotifier(const MediaQueryData(size: Size(1200, 800)));
+      addTearDown(window.dispose);
+      final repository = _ReadingRepository(
+        List.generate(
+          16,
+          (index) => '<p>第$index段：${List.filled(40, '小说正文').join()}。</p>',
+        ).join(),
+      );
+      await tester.pumpWidget(
+        _app(
+          repository,
+          window: window,
+          preferences: NovelReaderPreferences.defaults().copyWith(
+            flowMode: NovelReaderFlowMode.pagedLtr,
+          ),
+        ),
+      );
+      await _pumpPagedReady(tester);
+      final finder = find.byType(NovelReaderHtmlPagedSurface);
+      final mounted = tester.state(finder);
+      tester
+          .widget<NovelReaderHtmlPagedSurface>(finder)
+          .navigationController!
+          .turnNext();
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      final before = _state(tester).progressSnapshot;
+      final writes = repository.committed.length;
+      expect(before.anchorNodeId, isNotNull);
+      window.value = const MediaQueryData(
+        size: Size(1200, 800),
+        displayFeatures: [
+          DisplayFeature(
+            bounds: Rect.fromLTWH(600, 0, 20, 800),
+            type: DisplayFeatureType.hinge,
+            state: DisplayFeatureState.postureHalfOpened,
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await _pumpPagedReady(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.state(finder), same(mounted));
+      expect(
+        tester.getSize(find.byKey(const Key('reader-continuous-region'))).width,
+        600,
+      );
+      expect(_state(tester).progressSnapshot.anchorNodeId, before.anchorNodeId);
+      expect(
+        _state(tester).progressSnapshot.anchorTextOffset,
+        before.anchorTextOffset,
+      );
+      expect(repository.committed, hasLength(writes));
+      window.value = const MediaQueryData(size: Size(1200, 800));
+      await tester.pumpAndSettle();
+      await _pumpPagedReady(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.state(finder), same(mounted));
+      expect(
+        _state(tester).progressSnapshot.anchorTextOffset,
+        before.anchorTextOffset,
+      );
+      expect(repository.committed, hasLength(writes));
+      expect(repository.completed, isEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(repository.committed, hasLength(writes));
+    },
+  );
 
   testWidgets(
     'source menu actual body reading returns to the latest common position',
@@ -844,6 +922,7 @@ Widget _app(
   ThreadRepository? threadRepository,
   ThreadPostLocator? locator,
   EdgeInsets safeArea = EdgeInsets.zero,
+  ValueNotifier<MediaQueryData>? window,
 }) => ProviderScope(
   overrides: [
     novelRepositoryProvider.overrideWithValue(repository),
@@ -869,11 +948,18 @@ Widget _app(
   ],
   child: LocalizedTestApp(
     navigatorKey: navigation,
-    builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(padding: safeArea, viewPadding: safeArea),
-      child: child!,
-    ),
+    builder: (context, child) => window == null
+        ? MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(padding: safeArea, viewPadding: safeArea),
+            child: child!,
+          )
+        : ValueListenableBuilder<MediaQueryData>(
+            valueListenable: window,
+            builder: (_, media, child) =>
+                MediaQuery(data: media, child: child!),
+            child: child,
+          ),
     home: const NovelReaderPage(novelId: _work, initialEpisodeId: _chapter),
   ),
 );

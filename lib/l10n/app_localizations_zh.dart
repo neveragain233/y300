@@ -5806,6 +5806,52 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryChapterLocateCurrent => '定位当前章';
+
+  @override
+  String get moreThemeDynamic => '跟随系统';
+
+  @override
+  String get moreThemeDynamicDescription =>
+      '使用系统动态配色，安卓 12 及以上支持。不可用时沿用上次选择的预设。';
+
+  @override
+  String moreThemeDynamicUnavailable(String family) {
+    return '系统动态配色当前不可用，正在使用「$family」。';
+  }
+
+  @override
+  String get layoutExpandDetail => '展开详情';
+
+  @override
+  String get layoutRestorePanes => '恢复双栏';
+
+  @override
+  String get appNavigationBookshelf => '书架';
+
+  @override
+  String get appNavigationMy => '我的';
+
+  @override
+  String get moreSectionContent => '内容';
+
+  @override
+  String get moreSectionManagement => '管理';
+
+  @override
+  String get moreSectionSettings => '设置';
+
+  @override
+  String get moreNavigationGroupingDescription =>
+      '漫画和小说合并为“书架”，位置由顺序中第一个可见书架入口决定；记录和日志列在“我的”中。隐藏设置继续作用于对应入口。';
+
+  @override
+  String get readerCatalog => '目录';
+
+  @override
+  String get readerBookmarks => '书签';
+
+  @override
+  String get readerBookmarksEmpty => '还没有书签章节';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -11611,4 +11657,50 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get libraryChapterLocateCurrent => '定位目前章節';
+
+  @override
+  String get moreThemeDynamic => '跟隨系統';
+
+  @override
+  String get moreThemeDynamicDescription =>
+      '使用系統動態配色，安卓 12 及以上支援。無法使用時沿用上次選擇的預設。';
+
+  @override
+  String moreThemeDynamicUnavailable(String family) {
+    return '系統動態配色目前無法使用，正在使用「$family」。';
+  }
+
+  @override
+  String get layoutExpandDetail => '展開詳情';
+
+  @override
+  String get layoutRestorePanes => '恢復雙欄';
+
+  @override
+  String get appNavigationBookshelf => '書架';
+
+  @override
+  String get appNavigationMy => '我的';
+
+  @override
+  String get moreSectionContent => '內容';
+
+  @override
+  String get moreSectionManagement => '管理';
+
+  @override
+  String get moreSectionSettings => '設定';
+
+  @override
+  String get moreNavigationGroupingDescription =>
+      '漫畫和小說合併為「書架」，位置由順序中第一個可見書架入口決定；紀錄和日誌列在「我的」中。隱藏設定繼續作用於對應入口。';
+
+  @override
+  String get readerCatalog => '目錄';
+
+  @override
+  String get readerBookmarks => '書籤';
+
+  @override
+  String get readerBookmarksEmpty => '還沒有書籤章節';
 }

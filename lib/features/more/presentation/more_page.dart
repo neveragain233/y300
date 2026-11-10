@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
+import 'package:y300/app/navigation/main_navigation_grouping.dart';
+import 'package:y300/app/navigation/main_destination_page.dart';
+import 'package:y300/app/navigation/main_shell_destination_presentation.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
@@ -28,6 +32,7 @@ import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/profile/presentation/profile_action_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 
 class MorePage extends ConsumerStatefulWidget {
   const MorePage({super.key});
@@ -86,9 +91,9 @@ class _MorePageState extends ConsumerState<MorePage> {
       ),
     );
 
-    return Scaffold(
+    return Y300PageScaffold(
       appBar: AppBar(
-        title: Text(l10n.moreTitle),
+        title: Text(l10n.appNavigationMy),
         actions: [
           MoreAccountAction(
             onLogin: () => _openLoginPage(context),
@@ -101,133 +106,165 @@ class _MorePageState extends ConsumerState<MorePage> {
         onRefresh: () => ref
             .read(currentAccountSummaryControllerProvider.notifier)
             .refresh(),
-        child: ListView(
-          key: const Key('more-page-list'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            MoreAccountHeader(
-              onOpenProfile: _openingMyProfile
-                  ? null
-                  : () => _openMyProfilePage(context),
-              onOpenThreads: () =>
-                  _openMyThreadsPage(UserThreadDirectoryType.threads),
-              onOpenReplies: () =>
-                  _openMyThreadsPage(UserThreadDirectoryType.replies),
-              onOpenCredits: _openMyCreditsPage,
-              isAccountActionPending: _accountActionPending,
-            ),
-            const Divider(
-              key: Key('more-account-divider'),
-              height: 1,
-              indent: 0,
-              endIndent: 0,
-            ),
-            ListTile(
-              key: const Key('more-my-messages-entry'),
-              leading: MessageAttentionIcon(
-                icon: Icons.mail_outline,
-                showAttention: hasMessageAttention,
-              ),
-              title: Text(l10n.moreMyMessages),
-              onTap: canOpenMyContent
-                  ? () =>
-                        _openMyContentPage(ForumUserProfileActionKind.messages)
-                  : null,
-            ),
-            ListTile(
-              key: const Key('more-my-blogs-entry'),
-              leading: const Icon(Icons.auto_stories_outlined),
-              title: Text(l10n.profileMyBlogs),
-              onTap: canOpenMyContent
-                  ? () => _openMyContentPage(ForumUserProfileActionKind.blogs)
-                  : null,
-            ),
-            ListTile(
-              key: const Key('more-my-friends-entry'),
-              leading: const Icon(Icons.people_outline_rounded),
-              title: Text(l10n.profileMyFriendsTitle),
-              onTap: canOpenMyContent
-                  ? () => _openMyContentPage(ForumUserProfileActionKind.friends)
-                  : null,
-            ),
-            ListTile(
-              key: const Key('more-unused-images-entry'),
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l10n.moreUnusedImages),
-              onTap: _accountActionPending
-                  ? null
-                  : () => _openUnusedImagesPage(context, authSession),
-            ),
-            const Divider(
-              key: Key('more-settings-divider'),
-              height: 1,
-              indent: 0,
-              endIndent: 0,
-            ),
-            ListTile(
-              key: const Key('more-appearance-entry'),
-              leading: const Icon(Icons.palette_outlined),
-              title: Text(l10n.moreAppearance),
-              onTap: () => _showAppearanceSettingsSheet(context),
-            ),
-            ListTile(
-              key: const Key('more-content-filter-entry'),
-              leading: const Icon(Icons.visibility_off_outlined),
-              title: Text(l10n.contentFilterEntry),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ContentFilterPage(
-                      managedBlacklistRouteBuilder: _managedBlacklistRoute,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              key: const Key('more-navigation-management-entry'),
-              leading: const Icon(Icons.view_week_outlined),
-              title: Text(l10n.moreNavigationManagement),
-              onTap: navigationState == null
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const NavigationManagementPage(),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: ListView(
+              key: const Key('more-page-list'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                MoreAccountHeader(
+                  onOpenProfile: _openingMyProfile
+                      ? null
+                      : () => _openMyProfilePage(context),
+                  onOpenThreads: () =>
+                      _openMyThreadsPage(UserThreadDirectoryType.threads),
+                  onOpenReplies: () =>
+                      _openMyThreadsPage(UserThreadDirectoryType.replies),
+                  onOpenCredits: _openMyCreditsPage,
+                  isAccountActionPending: _accountActionPending,
+                ),
+                _MoreSection(
+                  title: l10n.moreSectionContent,
+                  children: [
+                    for (final destination in MainNavigationGrouping(
+                      navigationState?.settings ??
+                          MainNavigationSettings.defaults(),
+                    ).myDestinations)
+                      ListTile(
+                        key: ValueKey('more-destination-${destination.name}'),
+                        leading: Icon(destination.icon),
+                        title: Text(destination.localizedLabel(l10n)),
+                        onTap: () => Navigator.of(context).push(
+                          ref.read(mainDestinationRouteFactoryProvider)(
+                            destination,
+                          ),
                         ),
-                      );
-                    },
+                      ),
+                    ListTile(
+                      key: const Key('more-my-messages-entry'),
+                      leading: MessageAttentionIcon(
+                        icon: Icons.mail_outline,
+                        showAttention: hasMessageAttention,
+                      ),
+                      title: Text(l10n.moreMyMessages),
+                      onTap: canOpenMyContent
+                          ? () => _openMyContentPage(
+                              ForumUserProfileActionKind.messages,
+                            )
+                          : null,
+                    ),
+                    ListTile(
+                      key: const Key('more-my-blogs-entry'),
+                      leading: const Icon(Icons.auto_stories_outlined),
+                      title: Text(l10n.profileMyBlogs),
+                      onTap: canOpenMyContent
+                          ? () => _openMyContentPage(
+                              ForumUserProfileActionKind.blogs,
+                            )
+                          : null,
+                    ),
+                    ListTile(
+                      key: const Key('more-my-friends-entry'),
+                      leading: const Icon(Icons.people_outline_rounded),
+                      title: Text(l10n.profileMyFriendsTitle),
+                      onTap: canOpenMyContent
+                          ? () => _openMyContentPage(
+                              ForumUserProfileActionKind.friends,
+                            )
+                          : null,
+                    ),
+                  ],
+                ),
+                _MoreSection(
+                  title: l10n.moreSectionManagement,
+                  children: [
+                    ListTile(
+                      key: const Key('more-unused-images-entry'),
+                      leading: const Icon(Icons.photo_library_outlined),
+                      title: Text(l10n.moreUnusedImages),
+                      onTap: _accountActionPending
+                          ? null
+                          : () => _openUnusedImagesPage(context, authSession),
+                    ),
+                    ListTile(
+                      key: const Key('more-content-filter-entry'),
+                      leading: const Icon(Icons.visibility_off_outlined),
+                      title: Text(l10n.contentFilterEntry),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ContentFilterPage(
+                              managedBlacklistRouteBuilder:
+                                  _managedBlacklistRoute,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      key: const Key('more-download-queue-entry'),
+                      leading: const Icon(Icons.offline_pin_outlined),
+                      title: Text(l10n.moreDownloadQueue),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ComicDownloadQueuePage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                _MoreSection(
+                  title: l10n.moreSectionSettings,
+                  children: [
+                    ListTile(
+                      key: const Key('more-appearance-entry'),
+                      leading: const Icon(Icons.palette_outlined),
+                      title: Text(l10n.moreAppearance),
+                      onTap: () => _showAppearanceSettingsSheet(context),
+                    ),
+                    ListTile(
+                      key: const Key('more-navigation-management-entry'),
+                      leading: const Icon(Icons.view_week_outlined),
+                      title: Text(l10n.moreNavigationManagement),
+                      onTap: navigationState == null
+                          ? null
+                          : () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const NavigationManagementPage(),
+                                ),
+                              );
+                            },
+                    ),
+                    ListTile(
+                      key: const Key('more-data-storage-entry'),
+                      leading: const Icon(Icons.storage_outlined),
+                      title: Text(l10n.moreDataAndStorage),
+                      onTap: () => _showDataStorageSheet(context),
+                    ),
+                    ListTile(
+                      key: const Key('more-about-entry'),
+                      leading: const Icon(Icons.info_outline),
+                      title: Text(l10n.moreAbout),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AboutPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    ..._debugTools.buildTiles(context, l10n),
+                  ],
+                ),
+              ],
             ),
-            ListTile(
-              key: const Key('more-data-storage-entry'),
-              leading: const Icon(Icons.storage_outlined),
-              title: Text(l10n.moreDataAndStorage),
-              onTap: () => _showDataStorageSheet(context),
-            ),
-            ListTile(
-              key: const Key('more-download-queue-entry'),
-              leading: const Icon(Icons.offline_pin_outlined),
-              title: Text(l10n.moreDownloadQueue),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ComicDownloadQueuePage(),
-                  ),
-                );
-              },
-            ),
-            ..._debugTools.buildTiles(context, l10n),
-            ListTile(
-              key: const Key('more-about-entry'),
-              leading: const Icon(Icons.info_outline),
-              title: Text(l10n.moreAbout),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const AboutPage()),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -506,5 +543,54 @@ class _MorePageState extends ConsumerState<MorePage> {
     } finally {
       if (mounted) setState(() => _confirmingLogout = false);
     }
+  }
+}
+
+class _MoreSection extends StatelessWidget {
+  const _MoreSection({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayoutTokens.contentSpacing,
+        AppLayoutTokens.sectionSpacing,
+        AppLayoutTokens.contentSpacing,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              title,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Material(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(AppLayoutTokens.panelRadius),
+            clipBehavior: Clip.antiAlias,
+            child: ListTileTheme(
+              minVerticalPadding: 12,
+              child: Column(
+                children: [
+                  for (var i = 0; i < children.length; i++) ...[
+                    if (i > 0)
+                      const Divider(height: .5, thickness: .5, indent: 56),
+                    children[i],
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

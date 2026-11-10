@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/forum_native_surface.dart';
+import 'package:y300/shared/widgets/forum_thread_list_tile.dart';
 
-class ForumSearchResultCard extends StatefulWidget {
+class ForumSearchResultCard extends StatelessWidget {
   const ForumSearchResultCard({
     super.key,
     required this.item,
@@ -12,128 +12,53 @@ class ForumSearchResultCard extends StatefulWidget {
     this.capabilities,
     this.action,
   });
-
   final ForumSearchTopicSummary item;
   final VoidCallback onTap;
   final ForumSearchReadCapabilities? capabilities;
-
-  /// Optional topic-level action rendered beside the title.
   final Widget? action;
 
   @override
-  State<ForumSearchResultCard> createState() => _ForumSearchResultCardState();
-}
-
-class _ForumSearchResultCardState extends State<ForumSearchResultCard> {
-  static const double _cornerRadius = 12;
-
-  bool _isPressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
-    final item = widget.item;
+    final theme = Theme.of(context);
+    final palette = ForumDisplayThemePalette.resolve(theme);
     final metadata = _metadataText(item);
-
-    return AnimatedScale(
-      duration: const Duration(milliseconds: 110),
-      curve: Curves.easeOutCubic,
-      scale: _isPressed ? 0.985 : 1,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_cornerRadius),
-          boxShadow: ForumNativeSurfaceShadows.card(palette.stateLayer),
-        ),
-        child: Material(
-          color: palette.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(_cornerRadius),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(_cornerRadius),
-            onHighlightChanged: (isHighlighted) {
-              if (_isPressed != isHighlighted) {
-                setState(() => _isPressed = isHighlighted);
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                color: _isPressed
-                    ? Color.alphaBlend(
-                        palette.stateLayer,
-                        palette.surfaceContainerLow,
-                      )
-                    : palette.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(_cornerRadius),
-              ),
-              padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          key: Key('forum-search-result-title-${item.tid}'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                color: palette.threadTitle,
-                                height: 1.28,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ),
-                      if (widget.action != null) ...[
-                        const SizedBox(width: 6),
-                        widget.action!,
-                      ],
-                    ],
+    return ForumThreadListTile(
+      title: item.title,
+      titleKey: Key('forum-search-result-title-${item.tid}'),
+      titleColor: palette.threadTitle,
+      surfaceColor: palette.surfaceContainerLow,
+      shadowColor: palette.stateLayer,
+      onTap: onTap,
+      trailing: action,
+      metadata: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (metadata != null)
+                  Text(
+                    metadata,
+                    key: Key('forum-search-result-metadata-${item.tid}'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      if (metadata != null)
-                        Expanded(
-                          child: Text(
-                            metadata,
-                            key: Key(
-                              'forum-search-result-metadata-${item.tid}',
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: palette.softText,
-                                  height: 1.2,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                          ),
-                        )
-                      else
-                        const Spacer(),
-                      if (metadata != null) const SizedBox(width: 10),
-                      Text(
-                        AppLocalizations.of(context).searchResultTid(item.tid),
-                        key: Key('forum-search-result-tid-${item.tid}'),
-                        maxLines: 1,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: palette.softText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                Text(
+                  AppLocalizations.of(context).searchResultTid(item.tid),
+                  key: Key('forum-search-result-tid-${item.tid}'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -151,7 +76,7 @@ class _ForumSearchResultCardState extends State<ForumSearchResultCard> {
   }
 
   bool _supports(ForumSearchCapability capability) {
-    final readCapabilities = widget.capabilities;
+    final readCapabilities = capabilities;
     return readCapabilities == null || readCapabilities.supports(capability);
   }
 }

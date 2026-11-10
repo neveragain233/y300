@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader_chapter_panel.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -63,10 +65,11 @@ import 'package:y300/features/thread/presentation/thread_image_reader_page.dart'
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
+import 'package:y300/shared/widgets/reader_content_region.dart';
 
 const _progressDiagnostics = NovelReaderProgressDiagnostics();
 
-class NovelReaderPage extends ConsumerStatefulWidget {
+class NovelReaderPage extends ConsumerWidget {
   const NovelReaderPage({
     super.key,
     required this.novelId,
@@ -79,10 +82,45 @@ class NovelReaderPage extends ConsumerStatefulWidget {
   final NovelEpisodeOpenPolicy openPolicy;
 
   @override
-  ConsumerState<NovelReaderPage> createState() => _NovelReaderPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      novelReaderControllerProvider(
+        NovelReaderArgs(
+          novelId: novelId,
+          episodeId: initialEpisodeId,
+          openPolicy: openPolicy,
+        ),
+      ),
+    );
+    final preferences =
+        state.value?.preferences ?? NovelReaderPreferences.defaults();
+    return ReaderContentRegion(
+      backgroundColor: const NovelReaderThemeResolver()
+          .resolve(preferences: preferences, theme: Theme.of(context))
+          .background,
+      child: _NovelReaderContent(
+        novelId: novelId,
+        initialEpisodeId: initialEpisodeId,
+        openPolicy: openPolicy,
+      ),
+    );
+  }
 }
 
-class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
+class _NovelReaderContent extends ConsumerStatefulWidget {
+  const _NovelReaderContent({
+    required this.novelId,
+    required this.initialEpisodeId,
+    required this.openPolicy,
+  });
+  final String novelId;
+  final String initialEpisodeId;
+  final NovelEpisodeOpenPolicy openPolicy;
+  @override
+  ConsumerState<_NovelReaderContent> createState() => _NovelReaderPageState();
+}
+
+class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     with WidgetsBindingObserver {
   late final NovelReaderScrollController _scrollController;
   NovelReadingBodyGeometry? _bodyGeometry;
@@ -899,7 +937,9 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
   }
 
   SystemUiOverlayStyle _readerSystemUiOverlayStyle(NovelReaderPalette palette) {
-    final isDark = palette.brightness == Brightness.dark;
+    final isDark =
+        ThemeData.estimateBrightnessForColor(palette.background) ==
+        Brightness.dark;
     return SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
@@ -2440,7 +2480,7 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
   ) async {
     await controller.refreshReadingState();
     await _runWithReaderSemanticsSuspended(() async {
-      final selected = await showModalBottomSheet<_NovelReaderCatalogSelection>(
+      final selected = await showAdaptivePanel<_NovelReaderCatalogSelection>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
@@ -2566,7 +2606,7 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage>
       persistedPreferences: viewState.persistedPreferences,
     );
     await _runWithReaderSemanticsSuspended(() async {
-      await showModalBottomSheet<void>(
+      await showAdaptivePanel<void>(
         context: context,
         constraints: BoxConstraints(maxHeight: maxSheetHeight),
         builder: (context) => NovelReaderDisplaySettingsSheet(
@@ -2972,7 +3012,6 @@ class _NovelReaderChapterListSheetState
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final media = MediaQuery.of(context);
     return SafeArea(
       child: Padding(
@@ -2987,18 +3026,19 @@ class _NovelReaderChapterListSheetState
                   media.padding.vertical,
             ),
           ),
-          child: Column(
+          child: ReaderChapterPanel<NovelEpisodeItem>(
             key: const Key('novel-reader-chapter-list-sheet'),
-            children: [
-              ReaderSheetTitle(title: l10n.novelCatalog),
-              Expanded(
-                child: LibraryChapterBrowser<NovelEpisodeItem>(
+            entries: viewState.episodes,
+            isBookmarked: (episode) =>
+                viewState.bookmarkEpisodeIds.contains(episode.episodeId),
+            builder: (context, episodes) =>
+                LibraryChapterBrowser<NovelEpisodeItem>(
                   workId: viewState.currentEpisode.novelId,
                   keyPrefix: 'novel-reader-chapter',
                   currentId: viewState.currentEpisode.episodeId,
                   itemExtent: _chapterItemExtent(context),
                   entries: [
-                    for (final episode in viewState.episodes)
+                    for (final episode in episodes)
                       ChapterSearchEntry(
                         id: episode.episodeId,
                         title: episode.episodeTitle,
@@ -3023,21 +3063,19 @@ class _NovelReaderChapterListSheetState
                               .pop(_NovelReaderCatalogSelection(episode));
                         },
                         onLongPress: () async {
-                          final fromBeginning =
-                              await showModalBottomSheet<bool>(
-                                context: context,
-                                builder: (context) => SafeArea(
-                                  child: ListTile(
-                                    leading: const Icon(Icons.restart_alt),
-                                    title: Text(
-                                      AppLocalizations.of(context)
-                                          .libraryDetailStartFromBeginning,
-                                    ),
-                                    onTap: () =>
-                                        Navigator.of(context).pop(true),
-                                  ),
+                          final fromBeginning = await showAdaptivePanel<bool>(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: ListTile(
+                                leading: const Icon(Icons.restart_alt),
+                                title: Text(
+                                  AppLocalizations.of(context)
+                                      .libraryDetailStartFromBeginning,
                                 ),
-                              );
+                                onTap: () => Navigator.of(context).pop(true),
+                              ),
+                            ),
+                          );
                           if (mounted && fromBeginning == true) {
                             confirmSearch();
                             Navigator.of(this.context).pop(
@@ -3060,8 +3098,6 @@ class _NovelReaderChapterListSheetState
                               ),
                       ),
                 ),
-              ),
-            ],
           ),
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/services/forum_image_request_resolver.dart';
 import 'package:y300/features/cache/presentation/widgets/cached_library_image.dart';
@@ -12,6 +13,53 @@ import 'package:y300/features/forum/data/models/forum_home_chrome_models.dart';
 import 'package:y300/features/forum/data/services/forum_home_carousel_dimension_resolver.dart';
 import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.dart';
 import 'package:y300/shared/widgets/forum_media_loading_style.dart';
+
+class ForumHomeSearchEntry extends StatelessWidget {
+  const ForumHomeSearchEntry({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyLarge
+                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class ForumHomeCarousel extends ConsumerStatefulWidget {
   const ForumHomeCarousel({
@@ -26,6 +74,7 @@ class ForumHomeCarousel extends ConsumerStatefulWidget {
   final String imageReferer;
   final ValueChanged<ForumHomeCarouselItem> onOpen;
   final bool isActive;
+  static const double maxHeight = 180;
 
   @override
   ConsumerState<ForumHomeCarousel> createState() => _ForumHomeCarouselState();
@@ -176,7 +225,10 @@ class _ForumHomeCarouselState extends ConsumerState<ForumHomeCarousel> {
         _displayedAspectRatio;
     final aspectRatio =
         ratio ?? ForumHomeCarouselDimensionResolver.fallbackAspectRatio;
-    return Size(width, width / aspectRatio);
+    return Size(
+      width,
+      (width / aspectRatio).clamp(0, ForumHomeCarousel.maxHeight),
+    );
   }
 
   void _handleFirstImageResolved(
@@ -302,7 +354,10 @@ class _ForumHomeCarouselBody extends StatelessWidget {
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width - 24;
-        final carouselHeight = availableWidth / aspectRatio;
+        final carouselHeight = (availableWidth / aspectRatio).clamp(
+          0.0,
+          ForumHomeCarousel.maxHeight,
+        );
         final duration = MediaQuery.disableAnimationsOf(context)
             ? Duration.zero
             : ForumMediaLoadingStyle.fadeInDuration;
@@ -325,10 +380,11 @@ class _ForumHomeCarouselBody extends StatelessWidget {
                   // TickerMode alone does not cancel the slider's periodic timer.
                   autoPlay:
                       isActive &&
+                      !MediaQuery.disableAnimationsOf(context) &&
                       TickerMode.valuesOf(context).enabled &&
                       items.length > 1,
                   autoPlayInterval: const Duration(seconds: 3),
-                  autoPlayAnimationDuration: const Duration(milliseconds: 450),
+                  autoPlayAnimationDuration: const Duration(milliseconds: 240),
                   enableInfiniteScroll: items.length > 1,
                   disableCenter: true,
                   onPageChanged: onPageChanged,
@@ -455,11 +511,11 @@ class ForumHomeSectionCard extends StatelessWidget {
             ),
           ),
           AnimatedSize(
-            duration: const Duration(milliseconds: 180),
+            duration: AppLayoutTokens.motionDuration(context),
             curve: Curves.easeOutCubic,
             alignment: Alignment.topCenter,
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 160),
+              duration: AppLayoutTokens.motionDuration(context),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               transitionBuilder: (child, animation) {
@@ -513,24 +569,10 @@ class _ForumHomeSectionIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: isCollapsed ? 0.25 : 0),
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      builder: (context, turns, child) {
-        return RotationTransition(
-          turns: AlwaysStoppedAnimation<double>(turns),
-          child: child,
-        );
-      },
-      child: Text(
-        isCollapsed ? '+' : '-',
-        key: Key('forum-section-indicator-$sectionKey'),
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: palette.sectionHeaderForeground,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+    return Icon(
+      isCollapsed ? Icons.chevron_right : Icons.expand_more,
+      key: Key('forum-section-indicator-$sectionKey'),
+      color: palette.sectionHeaderForeground,
     );
   }
 }
@@ -607,7 +649,7 @@ class ForumHomeForumRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.start,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: palette.descriptionText,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.32,
                       ),
                     ),
@@ -642,7 +684,7 @@ class _TodayBadge extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerRight,
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
+          duration: AppLayoutTokens.motionDuration(context),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) {
@@ -665,15 +707,15 @@ class _TodayBadge extends StatelessWidget {
                     Text(
                       label,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: palette.todayText,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 4),
                     AnimatedFlipCounter(
                       value: todayPosts!,
-                      duration: const Duration(milliseconds: 260),
+                      duration: AppLayoutTokens.motionDuration(context),
                       textStyle: textTheme.bodyMedium?.copyWith(
-                        color: palette.todayText,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontFeatures: const <FontFeature>[
                           FontFeature.tabularFigures(),
                         ],

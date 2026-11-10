@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
+import 'package:y300/l10n/app_localizations.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/search/presentation/widgets/forum_search_result_card.dart';
-import 'package:y300/shared/widgets/forum_native_surface.dart';
 
 import '../../../../test_support/localized_test_app.dart';
 
@@ -13,7 +13,6 @@ void main() {
     tester,
   ) async {
     final theme = AppTheme.light();
-    final palette = ForumDisplayThemePalette.resolve(theme);
     var tapped = false;
 
     await tester.pumpWidget(
@@ -39,27 +38,18 @@ void main() {
 
     expect(find.text('搜索结果标题'), findsOneWidget);
     expect(find.text('测试作者 · 2026-08-11'), findsOneWidget);
-    expect(find.text('TID：571160'), findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.text('搜索结果标题')));
+    expect(find.text(l10n.searchResultTid('571160')), findsOneWidget);
 
     final card = find.byType(ForumSearchResultCard);
     final surface = tester.widget<Material>(
       find.descendant(of: card, matching: find.byType(Material)).first,
     );
-    expect(surface.color, palette.surfaceContainerLow);
-    expect(surface.borderRadius, BorderRadius.circular(12));
-    final shadowDecoration =
-        tester
-                .widget<DecoratedBox>(
-                  find
-                      .descendant(of: card, matching: find.byType(DecoratedBox))
-                      .first,
-                )
-                .decoration
-            as BoxDecoration;
     expect(
-      shadowDecoration.boxShadow,
-      ForumNativeSurfaceShadows.card(palette.stateLayer),
+      surface.color,
+      ForumDisplayThemePalette.resolve(theme).surfaceContainerLow,
     );
+    expect(surface.borderRadius, BorderRadius.circular(12));
 
     final title = tester.widget<Text>(find.text('搜索结果标题'));
     expect(title.maxLines, 2);
@@ -102,14 +92,16 @@ void main() {
       find.byKey(const Key('forum-search-result-metadata-2')),
       findsNothing,
     );
-    expect(find.text('TID：2'), findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.text('无元信息')));
+    expect(find.text(l10n.searchResultTid('2')), findsOneWidget);
   });
 
   testWidgets('keeps TID visible on a narrow large-text surface', (
     tester,
   ) async {
     final theme = AppTheme.dark();
-    final palette = ForumDisplayThemePalette.resolve(theme);
+    var opened = false;
+    var actionTapped = false;
     await tester.pumpWidget(
       LocalizedTestApp(
         theme: theme,
@@ -129,7 +121,12 @@ void main() {
                   authorName: '这是一个非常长的作者名称',
                   publishedAtText: '2026-08-11 10:33',
                 ),
-                onTap: () {},
+                onTap: () => opened = true,
+                action: IconButton(
+                  key: const Key('search-card-action'),
+                  onPressed: () => actionTapped = true,
+                  icon: const Icon(Icons.more_horiz),
+                ),
               ),
             ),
           ),
@@ -137,12 +134,31 @@ void main() {
       ),
     );
 
-    expect(find.text('TID：571160'), findsOneWidget);
+    expect(
+      find.byKey(const Key('forum-search-result-tid-571160')),
+      findsOneWidget,
+    );
     final card = find.byType(ForumSearchResultCard);
     final surface = tester.widget<Material>(
       find.descendant(of: card, matching: find.byType(Material)).first,
     );
-    expect(surface.color, palette.surfaceContainerLow);
+    expect(
+      surface.color,
+      ForumDisplayThemePalette.resolve(theme).surfaceContainerLow,
+    );
+    final action = find.byKey(const Key('search-card-action'));
+    final title = find.byKey(const Key('forum-search-result-title-571160'));
+    final metadata = find.byKey(
+      const Key('forum-search-result-metadata-571160'),
+    );
+    expect(tester.getRect(action).overlaps(tester.getRect(title)), isFalse);
+    expect(
+      tester.getBottomRight(action).dy,
+      lessThan(tester.getTopLeft(metadata).dy),
+    );
+    await tester.tap(action);
+    expect(actionTapped, isTrue);
+    expect(opened, isFalse);
     expect(tester.takeException(), isNull);
   });
 }

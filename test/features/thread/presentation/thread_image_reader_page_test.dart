@@ -3,7 +3,9 @@ import 'dart:io' as io;
 
 import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -523,7 +525,7 @@ void main() {
       SharedPreferences.setMockInitialValues(const <String, Object>{
         'reader_pref_mode': 'vertical',
       });
-      tester.view.physicalSize = const Size(1200, 1800);
+      tester.view.physicalSize = const Size(1200, 1500);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);

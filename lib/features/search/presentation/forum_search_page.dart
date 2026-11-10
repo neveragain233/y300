@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/comic/data/providers/comic_refresh_workflow_providers.dart';
@@ -453,7 +454,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                       l10n.searchScopeSummary(scopeLabel),
                       key: const Key('forum-search-scope-label'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: palette.softText,
+                        color: palette.bodyText,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -525,10 +526,11 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                     action: ThreadBlockMenuButton(
                       tid: item.tid,
                       subject: item.title,
-                      color: palette.softText,
+                      color: palette.bodyText,
                     ),
                     onTap: () {
-                      Navigator.of(context).push(
+                      openAdaptiveDetail(
+                        context,
                         MaterialPageRoute<void>(
                           builder: (_) => ThreadDetailPage(
                             tid: item.tid,

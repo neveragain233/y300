@@ -10,6 +10,8 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
@@ -433,7 +435,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       backgroundColor: palette.background,
       appBar: AppBar(
         leading: widget.bodyReadingObserver == null
-            ? null
+            ? adaptiveDetailBackButton(context)
             : BackButton(onPressed: () => unawaited(_closeReadingAndPop())),
         centerTitle: false,
         title: GestureDetector(
@@ -454,65 +456,79 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             ),
           ),
         ),
-        actions: [
-          if (state.supports(ThreadDetailCapability.favoriteEntry))
-            IconButton(
-              key: const Key('thread-detail-favorite-button'),
-              tooltip: state.isThreadFavorited
-                  ? l10n.threadDetailUnfavorite
-                  : l10n.threadDetailFavorite,
-              onPressed:
-                  asyncState.value == null ||
-                      state.isThreadFavoriteActionLoading ||
-                      state.isThreadFavorited
-                  ? null
-                  : controller.favoriteThread,
-              icon: state.isThreadFavoriteActionLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      state.isThreadFavorited
-                          ? Icons.star
-                          : Icons.star_border_outlined,
+        actions: const [AdaptiveDetailExpandAction()],
+      ),
+      bottomNavigationBar: Material(
+        color: Theme.of(context).navigationBarTheme.backgroundColor,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: [
+                if (state.supports(ThreadDetailCapability.favoriteEntry))
+                  IconButton(
+                    key: const Key('thread-detail-favorite-button'),
+                    tooltip: state.isThreadFavorited
+                        ? l10n.threadDetailUnfavorite
+                        : l10n.threadDetailFavorite,
+                    onPressed:
+                        asyncState.value == null ||
+                            state.isThreadFavoriteActionLoading ||
+                            state.isThreadFavorited
+                        ? null
+                        : controller.favoriteThread,
+                    icon: state.isThreadFavoriteActionLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            state.isThreadFavorited
+                                ? Icons.star
+                                : Icons.star_border_outlined,
+                          ),
+                  ),
+                if (state.supports(ThreadDetailCapability.replyAction))
+                  Expanded(
+                    child: TextButton.icon(
+                      key: const Key('thread-detail-appbar-reply-button'),
+                      label: Text(l10n.threadDetailReplyPost),
+                      onPressed: asyncState.value == null
+                          ? null
+                          : () {
+                              _openThreadReplyComposer(args, state);
+                            },
+                      icon: const Icon(Icons.reply),
                     ),
+                  ),
+                _ThreadDetailMoreMenu(
+                  state: state,
+                  onOnlyAuthor: () => _runReadingViewAction(
+                    controller.openOnlyAuthor,
+                    userNavigation: true,
+                  ),
+                  onAllPosts: () => _runReadingViewAction(
+                    controller.openAllPosts,
+                    userNavigation: true,
+                  ),
+                  onReverseOrder: () => _runReadingViewAction(
+                    controller.openReverseOrder,
+                    userNavigation: true,
+                  ),
+                  onNormalOrder: () => _runReadingViewAction(
+                    controller.openNormalOrder,
+                    userNavigation: true,
+                  ),
+                  onCopyUrl: _copyUrl,
+                  onDisplaySettings: _openDisplaySettings,
+                  onBlockThread: () => unawaited(_blockCurrentThread(state)),
+                ),
+              ],
             ),
-          if (state.supports(ThreadDetailCapability.replyAction))
-            IconButton(
-              key: const Key('thread-detail-appbar-reply-button'),
-              tooltip: l10n.threadDetailReplyPost,
-              onPressed: asyncState.value == null
-                  ? null
-                  : () {
-                      _openThreadReplyComposer(args, state);
-                    },
-              icon: const Icon(Icons.reply),
-            ),
-          _ThreadDetailMoreMenu(
-            state: state,
-            onOnlyAuthor: () => _runReadingViewAction(
-              controller.openOnlyAuthor,
-              userNavigation: true,
-            ),
-            onAllPosts: () => _runReadingViewAction(
-              controller.openAllPosts,
-              userNavigation: true,
-            ),
-            onReverseOrder: () => _runReadingViewAction(
-              controller.openReverseOrder,
-              userNavigation: true,
-            ),
-            onNormalOrder: () => _runReadingViewAction(
-              controller.openNormalOrder,
-              userNavigation: true,
-            ),
-            onCopyUrl: _copyUrl,
-            onDisplaySettings: _openDisplaySettings,
-            onBlockThread: () => unawaited(_blockCurrentThread(state)),
           ),
-        ],
+        ),
       ),
       body: NotificationListener<ScrollMetricsNotification>(
         onNotification: _handleQuickScrollMetricsNotification,
@@ -523,117 +539,140 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
               if (_topicTagsFor(state) case final tags when tags.isNotEmpty)
                 ThreadTopicTagBar(tags: tags, onOpenTag: _openThreadTag),
               Expanded(
-                child: (asyncState.isLoading && state.posts.isEmpty)
-                    ? ThreadDetailLoading(
-                        key: ValueKey(args),
-                        subject: projection.displaySubject,
-                      )
-                    : (asyncState.hasError || state.errorMessage != null) &&
-                          state.posts.isEmpty
-                    ? _ThreadErrorView(
-                        subject: projection.displaySubject,
-                        message: state.loadFailure == null
-                            ? ThreadTextResolver.loadFailure(
-                                l10n,
-                                ThreadUiErrorCode.loadFailed,
-                                state.errorMessage,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: AppLayoutTokens.readingMaxWidth,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => MediaQuery(
+                        data: MediaQuery.of(context)
+                            .copyWith(size: constraints.biggest),
+                        child: (asyncState.isLoading && state.posts.isEmpty)
+                            ? ThreadDetailLoading(
+                                key: ValueKey(args),
+                                subject: projection.displaySubject,
                               )
-                            : ThreadTextResolver.loadFailure(
-                                l10n,
-                                state.loadFailure!.code,
-                                state.loadFailure!.detail,
+                            : (asyncState.hasError ||
+                                      state.errorMessage != null) &&
+                                  state.posts.isEmpty
+                            ? _ThreadErrorView(
+                                subject: projection.displaySubject,
+                                message: state.loadFailure == null
+                                    ? ThreadTextResolver.loadFailure(
+                                        l10n,
+                                        ThreadUiErrorCode.loadFailed,
+                                        state.errorMessage,
+                                      )
+                                    : ThreadTextResolver.loadFailure(
+                                        l10n,
+                                        state.loadFailure!.code,
+                                        state.loadFailure!.detail,
+                                      ),
+                                onRetry: controller.refresh,
+                                onOpenHome: widget.targetPid == null
+                                    ? null
+                                    : () {
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute<void>(
+                                            builder: (_) => ThreadDetailPage(
+                                              tid: widget.tid,
+                                              subject: widget.subject,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                              )
+                            : ForumPullToRefresh(
+                                onRefresh: () => _runReadingViewAction(
+                                  () => controller.refresh(forceNetwork: true),
+                                ),
+                                child: ThreadDetailContent(
+                                  quickScrollCoordinator:
+                                      _quickScrollCoordinator,
+                                  imageReaderReturnCoordinator:
+                                      _imageReaderReturnCoordinator,
+                                  bodyReadingCoordinator:
+                                      _bodyReadingCoordinator,
+                                  state: state,
+                                  projection: projection,
+                                  allowedBlacklistedAuthorId:
+                                      _allowedBlacklistedAuthorView
+                                      ? blacklistedTopicAuthorId
+                                      : null,
+                                  displayExtraCommentsByPostId: extraComments,
+                                  scrollController: _scrollController,
+                                  highlightPostPid: _highlightPostPid,
+                                  targetPid: widget.targetPid,
+                                  landing: widget.landing,
+                                  onTargetVisible: _onTargetVisible,
+                                  imageReferer: _imageRefererFor(state),
+                                  onLoadPreviousPage: () {
+                                    unawaited(
+                                      _runPageActionAndScrollTop(
+                                        controller.loadPreviousPage,
+                                      ),
+                                    );
+                                  },
+                                  onLoadNextPage: () {
+                                    unawaited(
+                                      _runPageActionAndScrollTop(
+                                        controller.loadNextPage,
+                                      ),
+                                    );
+                                  },
+                                  onLoadPageNumber: (page) {
+                                    unawaited(
+                                      _runPageActionAndScrollTop(
+                                        () => controller.loadPage(page),
+                                      ),
+                                    );
+                                  },
+                                  onOpenAuthorProfile: _openAuthorProfile,
+                                  onOpenCommentAuthorProfile:
+                                      _openCommentAuthorProfile,
+                                  onCopyActionUrl: _copyActionUrl,
+                                  onOpenPostLink: _openForumLink,
+                                  onOpenPostImages: _openPostImages,
+                                  onOpenPostActions: (post) {
+                                    final postProjection = projection.findByPid(
+                                      post.pid,
+                                    );
+                                    _openPostActions(
+                                      args,
+                                      state,
+                                      controller,
+                                      post,
+                                      postProjection?.displayPost ?? post,
+                                    );
+                                  },
+                                  htmlImagePrecacheService:
+                                      htmlFirstPrecacheService,
+                                  onOpenPollOptionActions: (post, option) =>
+                                      _openPostActions(
+                                        args,
+                                        state,
+                                        controller,
+                                        post,
+                                        projection
+                                                .findByPid(post.pid)
+                                                ?.displayPost ??
+                                            post,
+                                        pollOption: option,
+                                      ),
+                                  onTogglePollOption:
+                                      controller.togglePollOption,
+                                  onSubmitPollVote: controller.submitPollVote,
+                                  onLoadAllRatings: controller.loadAllRatings,
+                                  onLoadMoreComments:
+                                      controller.loadMoreComments,
+                                ),
                               ),
-                        onRetry: controller.refresh,
-                        onOpenHome: widget.targetPid == null
-                            ? null
-                            : () {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => ThreadDetailPage(
-                                      tid: widget.tid,
-                                      subject: widget.subject,
-                                    ),
-                                  ),
-                                );
-                              },
-                      )
-                    : ForumPullToRefresh(
-                        onRefresh: () => _runReadingViewAction(
-                          () => controller.refresh(forceNetwork: true),
-                        ),
-                        child: ThreadDetailContent(
-                          quickScrollCoordinator: _quickScrollCoordinator,
-                          imageReaderReturnCoordinator:
-                              _imageReaderReturnCoordinator,
-                          bodyReadingCoordinator: _bodyReadingCoordinator,
-                          state: state,
-                          projection: projection,
-                          allowedBlacklistedAuthorId:
-                              _allowedBlacklistedAuthorView
-                              ? blacklistedTopicAuthorId
-                              : null,
-                          displayExtraCommentsByPostId: extraComments,
-                          scrollController: _scrollController,
-                          highlightPostPid: _highlightPostPid,
-                          targetPid: widget.targetPid,
-                          landing: widget.landing,
-                          onTargetVisible: _onTargetVisible,
-                          imageReferer: _imageRefererFor(state),
-                          onLoadPreviousPage: () {
-                            unawaited(
-                              _runPageActionAndScrollTop(
-                                controller.loadPreviousPage,
-                              ),
-                            );
-                          },
-                          onLoadNextPage: () {
-                            unawaited(
-                              _runPageActionAndScrollTop(
-                                controller.loadNextPage,
-                              ),
-                            );
-                          },
-                          onLoadPageNumber: (page) {
-                            unawaited(
-                              _runPageActionAndScrollTop(
-                                () => controller.loadPage(page),
-                              ),
-                            );
-                          },
-                          onOpenAuthorProfile: _openAuthorProfile,
-                          onOpenCommentAuthorProfile: _openCommentAuthorProfile,
-                          onCopyActionUrl: _copyActionUrl,
-                          onOpenPostLink: _openForumLink,
-                          onOpenPostImages: _openPostImages,
-                          onOpenPostActions: (post) {
-                            final postProjection = projection.findByPid(
-                              post.pid,
-                            );
-                            _openPostActions(
-                              args,
-                              state,
-                              controller,
-                              post,
-                              postProjection?.displayPost ?? post,
-                            );
-                          },
-                          htmlImagePrecacheService: htmlFirstPrecacheService,
-                          onOpenPollOptionActions: (post, option) =>
-                              _openPostActions(
-                                args,
-                                state,
-                                controller,
-                                post,
-                                projection.findByPid(post.pid)?.displayPost ??
-                                    post,
-                                pollOption: option,
-                              ),
-                          onTogglePollOption: controller.togglePollOption,
-                          onSubmitPollVote: controller.submitPollVote,
-                          onLoadAllRatings: controller.loadAllRatings,
-                          onLoadMoreComments: controller.loadMoreComments,
-                        ),
                       ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

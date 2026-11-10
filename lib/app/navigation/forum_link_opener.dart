@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/forum_link_routes.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
@@ -77,7 +78,9 @@ final class ForumLinkOpener {
   }) async {
     if (!isActive() || !context.mounted || !isCurrent()) return;
     final sourceRoute = ModalRoute.of(context);
-    if (sourceRoute?.isCurrent == false) return;
+    if (sourceRoute?.isCurrent == false || !isAdaptiveSourceCurrent(context)) {
+      return;
+    }
     final owner = readOwner();
     // Reissuing the same target after an account change must not join an old
     // owner's pending request. Weak keys do not retain departed source pages.
@@ -86,7 +89,11 @@ final class ForumLinkOpener {
       _sessionOwners[session] = (owner,);
     }
     bool current() =>
-        isActive() && context.mounted && isCurrent() && owner == readOwner();
+        isActive() &&
+        context.mounted &&
+        isCurrent() &&
+        owner == readOwner() &&
+        isAdaptiveSourceCurrent(context);
     bool sourceCurrent() => current() && sourceRoute?.isCurrent != false;
     bool Function() failureCurrent = sourceCurrent;
 
@@ -172,8 +179,12 @@ final class ForumLinkOpener {
             failure();
             return;
           }
-          await Navigator.of(context)
-              .push(MaterialPageRoute<void>(builder: (_) => page));
+          final route = MaterialPageRoute<void>(builder: (_) => page);
+          if (destination.kind == YamiboForumLinkKind.thread) {
+            await openAdaptiveDetail(context, route);
+          } else {
+            await Navigator.of(context).push(route);
+          }
         },
       );
     } on Object {

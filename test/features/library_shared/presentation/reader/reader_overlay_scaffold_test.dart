@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
@@ -170,6 +172,80 @@ void main() {
       expect(bottom.color, palette.chromeBackground);
     },
   );
+  testWidgets(
+    'hidden overlays release focus and semantics without changing the body',
+    (tester) async {
+      final controller = ReaderOverlayController()..showMenu();
+      addTearDown(controller.dispose);
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _buildScaffold(
+          controller: controller,
+          topActions: [
+            ReaderToolbarAction(
+              id: 'search',
+              icon: Icons.search,
+              label: '查找章节',
+              onPressed: () {},
+            ),
+          ],
+        ),
+      );
+      final body = find.byKey(const Key('reader-test-body'));
+      final element = tester.element(body);
+      final rect = tester.getRect(body);
+      final focus = Focus.of(tester.element(find.byIcon(Icons.search)));
+      focus.requestFocus();
+      await tester.pump();
+      expect(focus.hasFocus, isTrue);
+      bool hasAction() => tester.semantics
+          .simulatedAccessibilityTraversal()
+          .any((node) => node.getSemanticsData().tooltip == '查找章节');
+      expect(hasAction(), isTrue);
+      controller.hideMenu();
+      await tester.pump();
+      expect(focus.hasFocus, isFalse);
+      expect(hasAction(), isFalse);
+      expect(tester.element(body), same(element));
+      expect(tester.getRect(body), rect);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
+    'large phone toolbar respects reduced motion and preserves body budget',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(280, 650);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = ReaderOverlayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _buildScaffold(
+          controller: controller,
+          textScale: 2,
+          reduceMotion: true,
+          animationDuration: const Duration(milliseconds: 600),
+        ),
+      );
+      final before = tester.getRect(find.byKey(const Key('reader-test-body')));
+      controller.showMenu();
+      await tester.pump();
+      final top = tester.widget<SlideTransition>(
+        find.descendant(
+          of: find.byKey(const Key('shared-reader-top-overlay')),
+          matching: find.byType(SlideTransition),
+        ),
+      );
+      expect(top.position.value, Offset.zero);
+      expect(tester.getRect(find.byKey(const Key('reader-test-body'))), before);
+      controller.hideMenu();
+      await tester.pump();
+      expect(top.position.value, const Offset(0, -1));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _pumpTapAndOverlayAnimation(WidgetTester tester) async {
@@ -185,14 +261,24 @@ Widget _buildScaffold({
   VoidCallback? onCenterTap,
   ReaderOverlayController? controller,
   ThemeData? theme,
+  double textScale = 1,
+  bool reduceMotion = false,
+  Duration animationDuration = Duration.zero,
 }) {
   return LocalizedTestApp(
     theme: theme,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+        disableAnimations: reduceMotion,
+      ),
+      child: child!,
+    ),
     home: Scaffold(
       body: ReaderOverlayScaffold(
         controller: controller,
         menuInitiallyVisible: menuInitiallyVisible,
-        animationDuration: Duration.zero,
+        animationDuration: animationDuration,
         onCenterTap: onCenterTap,
         topBar: ReaderTopBarConfig(
           title: '作品名',
@@ -209,7 +295,10 @@ Widget _buildScaffold({
           ),
           actions: bottomActions,
         ),
-        child: const ColoredBox(color: Colors.white),
+        child: const ColoredBox(
+          key: Key('reader-test-body'),
+          color: Colors.white,
+        ),
       ),
     ),
   );

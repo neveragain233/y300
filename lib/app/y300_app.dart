@@ -9,6 +9,7 @@ import 'package:y300/app/startup/blacklist_sync_host.dart';
 import 'package:y300/app/startup/message_attention_visibility_host.dart';
 import 'package:y300/app/startup/message_attention_probe_host.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/app/theme/app_dynamic_colors.dart';
 import 'package:y300/features/app_update/presentation/widgets/app_update_alert_host.dart';
 import 'package:y300/features/forum/presentation/webview/waf_challenge_recovery_host.dart';
 import 'package:y300/features/startup/presentation/daily_sign_in_automation_host.dart';
@@ -36,41 +37,52 @@ class Y300App extends ConsumerWidget {
           data: (settings) => settings,
           orElse: AppAppearanceSettings.defaults,
         );
-    return MaterialApp(
-      title: 'Y300',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.build(
-        family: settings.themeFamily,
-        brightness: Brightness.light,
-      ),
-      darkTheme: AppTheme.build(
-        family: settings.themeFamily,
-        brightness: Brightness.dark,
-      ),
-      themeMode: settings.themeMode,
-      localizationsDelegates: const [
-        ...AppLocalizations.localizationsDelegates,
-        FlutterQuillLocalizations.delegate,
-      ],
-      locale: localeForAppLanguage(settings.languagePreference),
-      localeListResolutionCallback: (locales, _) => resolveAppLocale(locales),
-      supportedLocales: AppLocalizations.supportedLocales,
-      navigatorObservers: [
-        ref.watch(forumClipboardRouteObserverProvider),
-        ref.watch(messageAttentionRouteObserverProvider),
-      ],
-      builder: (context, child) => WafChallengeRecoveryHost(
-        onBusyChanged: clipboard.setWafBusy,
-        child: MessageAttentionProbeHost(
-          child: BlacklistSyncHost(child: child ?? const SizedBox.shrink()),
+    return AppDynamicColorBuilder(
+      builder: (light, dark) => AppDynamicColors(
+        light: light,
+        dark: dark,
+        child: MaterialApp(
+          title: 'Y300',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.build(
+            family: settings.themeFamily,
+            brightness: Brightness.light,
+            colorSource: settings.colorSource,
+            dynamicScheme: light,
+          ),
+          darkTheme: AppTheme.build(
+            family: settings.themeFamily,
+            brightness: Brightness.dark,
+            colorSource: settings.colorSource,
+            dynamicScheme: dark,
+          ),
+          themeMode: settings.themeMode,
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            FlutterQuillLocalizations.delegate,
+          ],
+          locale: localeForAppLanguage(settings.languagePreference),
+          localeListResolutionCallback: (locales, _) =>
+              resolveAppLocale(locales),
+          supportedLocales: AppLocalizations.supportedLocales,
+          navigatorObservers: [
+            ref.watch(forumClipboardRouteObserverProvider),
+            ref.watch(messageAttentionRouteObserverProvider),
+          ],
+          builder: (context, child) => WafChallengeRecoveryHost(
+            onBusyChanged: clipboard.setWafBusy,
+            child: MessageAttentionProbeHost(
+              child: BlacklistSyncHost(child: child ?? const SizedBox.shrink()),
+            ),
+          ),
+          home: enableAppUpdatePrompt
+              ? AppUpdateAlertHost(
+                  onBlockedChanged: clipboard.setUpdateBlocked,
+                  child: home,
+                )
+              : home,
         ),
       ),
-      home: enableAppUpdatePrompt
-          ? AppUpdateAlertHost(
-              onBlockedChanged: clipboard.setUpdateBlocked,
-              child: home,
-            )
-          : home,
     );
   }
 }

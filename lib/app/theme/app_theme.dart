@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_component_theme_builder.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
+import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/app/theme/forum_thread_badge_theme.dart';
@@ -23,24 +24,36 @@ final class AppTheme {
   static ThemeData build({
     required AppThemeFamily family,
     required Brightness brightness,
+    AppThemeColorSource colorSource = AppThemeColorSource.preset,
+    ColorScheme? dynamicScheme,
   }) {
+    if (colorSource == AppThemeColorSource.dynamic &&
+        dynamicScheme != null &&
+        dynamicScheme.brightness == brightness) {
+      return _buildTheme(
+        AppThemePalette.dynamic(dynamicScheme, family),
+        scheme: dynamicScheme,
+      );
+    }
     return _buildTheme(AppThemePalette.resolve(family, brightness));
   }
 
-  static ThemeData _buildTheme(AppThemePalette palette) {
-    final colorScheme = _buildColorScheme(palette).copyWith(
-      primary: palette.primary,
-      onPrimary: palette.onPrimary,
-      surface: palette.surface,
-      onSurface: palette.onSurface,
-      surfaceContainerLowest: palette.surfaceContainerLowest,
-      surfaceContainer: palette.surfaceContainer,
-      surfaceContainerHighest: palette.surfaceContainerHighest,
-      onSurfaceVariant: palette.onSurfaceVariant,
-      outlineVariant: palette.outlineVariant,
-      secondaryContainer: palette.secondaryContainer,
-      onSecondaryContainer: palette.onSecondaryContainer,
-    );
+  static ThemeData _buildTheme(AppThemePalette palette, {ColorScheme? scheme}) {
+    final colorScheme =
+        scheme ??
+        _buildColorScheme(palette).copyWith(
+          primary: palette.primary,
+          onPrimary: palette.onPrimary,
+          surface: palette.surface,
+          onSurface: palette.onSurface,
+          surfaceContainerLowest: palette.surfaceContainerLowest,
+          surfaceContainer: palette.surfaceContainer,
+          surfaceContainerHighest: palette.surfaceContainerHighest,
+          onSurfaceVariant: palette.onSurfaceVariant,
+          outlineVariant: palette.outlineVariant,
+          secondaryContainer: palette.secondaryContainer,
+          onSecondaryContainer: palette.onSecondaryContainer,
+        );
     return ThemeData(
       useMaterial3: true,
       brightness: palette.brightness,
@@ -67,7 +80,8 @@ final class AppTheme {
         colorScheme,
       ),
       chipTheme: AppComponentThemeBuilder.chipTheme(colorScheme),
-      cardTheme: AppComponentThemeBuilder.cardTheme(colorScheme),
+      cardTheme: AppComponentThemeBuilder.cardTheme(colorScheme)
+          .copyWith(color: palette.surfaceContainer),
       extensions: <ThemeExtension<dynamic>>[
         ForumThreadBadgeTheme.fromColorScheme(
           colorScheme,

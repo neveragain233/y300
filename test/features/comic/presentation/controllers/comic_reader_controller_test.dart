@@ -1,4 +1,5 @@
 import 'package:y300/features/comic/domain/services/comic_download_service.dart';
+
 import 'dart:async';
 import 'dart:io' as io;
 
@@ -231,16 +232,17 @@ void main() {
       final repository = _ReaderRepoForControllerTest();
       final service = _ReaderServiceSpy();
       final writer = _ReadingStateWriterSpy(repository);
-      final downloadService =
-          _DownloadedComicServiceFake(const <ComicEpisodeImageItem>[
-            ComicEpisodeImageItem(
-              episodeId: 'yamibo:100:101',
-              imageUrl: 'downloaded://001.jpg',
-              imageIndex: 0,
-              cacheStatus: 'downloaded',
-              localPath: '/storage/001.jpg',
-            ),
-          ]);
+      final downloadService = _DownloadedComicServiceFake(
+        const <ComicEpisodeImageItem>[
+          ComicEpisodeImageItem(
+            episodeId: 'yamibo:100:101',
+            imageUrl: 'downloaded://001.jpg',
+            imageIndex: 0,
+            cacheStatus: 'downloaded',
+            localPath: '/storage/001.jpg',
+          ),
+        ],
+      );
       final container = ProviderContainer(
         overrides: [
           comicRepositoryProvider.overrideWithValue(repository),
@@ -392,93 +394,87 @@ void main() {
     },
   );
 
-  test(
-    'persisted dimensions alone do not complete last page before display resolves',
-    () async {
-      final repository = _ReaderRepoForControllerTest(
-        lastImageWidth: 900,
-        lastImageHeight: 1600,
-      );
-      final service = _ReaderServiceSpy();
-      final writer = _ReadingStateWriterSpy(repository);
-      final container = ProviderContainer(
-        overrides: [
-          comicRepositoryProvider.overrideWithValue(repository),
-          comicReadingStateWriterProvider.overrideWithValue(writer),
-          comicReaderServiceProvider.overrideWith((ref) async => service),
-          comicDownloadServiceProvider.overrideWithValue(
-            _NoopComicDownloadService(),
-          ),
-          imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
-        ],
-      );
-      addTearDown(container.dispose);
+  test('persisted dimensions alone do not complete last page before display resolves', () async {
+    final repository = _ReaderRepoForControllerTest(
+      lastImageWidth: 900,
+      lastImageHeight: 1600,
+    );
+    final service = _ReaderServiceSpy();
+    final writer = _ReadingStateWriterSpy(repository);
+    final container = ProviderContainer(
+      overrides: [
+        comicRepositoryProvider.overrideWithValue(repository),
+        comicReadingStateWriterProvider.overrideWithValue(writer),
+        comicReaderServiceProvider.overrideWith((ref) async => service),
+        comicDownloadServiceProvider.overrideWithValue(
+          _NoopComicDownloadService(),
+        ),
+        imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      const args = ComicReaderArgs(
-        comicId: 'yamibo:100',
-        episodeId: 'yamibo:100:101',
-      );
-      await container.read(comicReaderControllerProvider(args).future);
+    const args = ComicReaderArgs(
+      comicId: 'yamibo:100',
+      episodeId: 'yamibo:100:101',
+    );
+    await container.read(comicReaderControllerProvider(args).future);
 
-      final notifier = container.read(
-        comicReaderControllerProvider(args).notifier,
-      );
-      await notifier.onImageVisible(4);
+    final notifier = container.read(
+      comicReaderControllerProvider(args).notifier,
+    );
+    await notifier.onImageVisible(4);
 
-      expect(writer.completedEpisodeIds, isEmpty);
+    expect(writer.completedEpisodeIds, isEmpty);
 
-      await notifier.onImageResolved(
-        imageIndex: 4,
-        imageUrl: 'https://img.test/101-5.jpg',
-        width: 900,
-        height: 1600,
-      );
+    await notifier.onImageResolved(
+      imageIndex: 4,
+      imageUrl: 'https://img.test/101-5.jpg',
+      width: 900,
+      height: 1600,
+    );
 
-      expect(writer.completedEpisodeIds, <String>['yamibo:100:101']);
-    },
-  );
+    expect(writer.completedEpisodeIds, <String>['yamibo:100:101']);
+  });
 
-  test(
-    'stale image resolution callback is ignored when url no longer matches slot',
-    () async {
-      final repository = _ReaderRepoForControllerTest();
-      final service = _ReaderServiceSpy();
-      final writer = _ReadingStateWriterSpy(repository);
-      final container = ProviderContainer(
-        overrides: [
-          comicRepositoryProvider.overrideWithValue(repository),
-          comicReadingStateWriterProvider.overrideWithValue(writer),
-          comicReaderServiceProvider.overrideWith((ref) async => service),
-          comicDownloadServiceProvider.overrideWithValue(
-            _NoopComicDownloadService(),
-          ),
-          imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
-        ],
-      );
-      addTearDown(container.dispose);
+  test('stale image resolution callback is ignored when url no longer matches slot', () async {
+    final repository = _ReaderRepoForControllerTest();
+    final service = _ReaderServiceSpy();
+    final writer = _ReadingStateWriterSpy(repository);
+    final container = ProviderContainer(
+      overrides: [
+        comicRepositoryProvider.overrideWithValue(repository),
+        comicReadingStateWriterProvider.overrideWithValue(writer),
+        comicReaderServiceProvider.overrideWith((ref) async => service),
+        comicDownloadServiceProvider.overrideWithValue(
+          _NoopComicDownloadService(),
+        ),
+        imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      const args = ComicReaderArgs(
-        comicId: 'yamibo:100',
-        episodeId: 'yamibo:100:101',
-      );
-      await container.read(comicReaderControllerProvider(args).future);
+    const args = ComicReaderArgs(
+      comicId: 'yamibo:100',
+      episodeId: 'yamibo:100:101',
+    );
+    await container.read(comicReaderControllerProvider(args).future);
 
-      final notifier = container.read(
-        comicReaderControllerProvider(args).notifier,
-      );
-      await notifier.onImageVisible(4);
-      await notifier.onImageResolved(
-        imageIndex: 4,
-        imageUrl: 'https://img.test/stale.jpg',
-        width: 900,
-        height: 1600,
-      );
-      await notifier.onImageVisible(4);
+    final notifier = container.read(
+      comicReaderControllerProvider(args).notifier,
+    );
+    await notifier.onImageVisible(4);
+    await notifier.onImageResolved(
+      imageIndex: 4,
+      imageUrl: 'https://img.test/stale.jpg',
+      width: 900,
+      height: 1600,
+    );
+    await notifier.onImageVisible(4);
 
-      expect(writer.completedEpisodeIds, isEmpty);
-      expect(repository.imageMetadataWrites, isEmpty);
-    },
-  );
+    expect(writer.completedEpisodeIds, isEmpty);
+    expect(repository.imageMetadataWrites, isEmpty);
+  });
 
   test(
     'display failed image writes failed status and blocks completion',
@@ -638,43 +634,40 @@ void main() {
     },
   );
 
-  test(
-    'strict complete flag disabled allows last visible page without decode gate',
-    () async {
-      final repository = _ReaderRepoForControllerTest();
-      final service = _ReaderServiceSpy();
-      final writer = _ReadingStateWriterSpy(repository);
-      final container = ProviderContainer(
-        overrides: [
-          comicRepositoryProvider.overrideWithValue(repository),
-          comicReadingStateWriterProvider.overrideWithValue(writer),
-          comicReaderFeatureFlagsProvider.overrideWithValue(
-            ComicReaderFeatureFlags.defaults.copyWith(
-              readerStrictCompleteRead: false,
-            ),
+  test('strict complete flag disabled allows last visible page without decode gate', () async {
+    final repository = _ReaderRepoForControllerTest();
+    final service = _ReaderServiceSpy();
+    final writer = _ReadingStateWriterSpy(repository);
+    final container = ProviderContainer(
+      overrides: [
+        comicRepositoryProvider.overrideWithValue(repository),
+        comicReadingStateWriterProvider.overrideWithValue(writer),
+        comicReaderFeatureFlagsProvider.overrideWithValue(
+          ComicReaderFeatureFlags.defaults.copyWith(
+            readerStrictCompleteRead: false,
           ),
-          comicReaderServiceProvider.overrideWith((ref) async => service),
-          comicDownloadServiceProvider.overrideWithValue(
-            _NoopComicDownloadService(),
-          ),
-          imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
-        ],
-      );
-      addTearDown(container.dispose);
+        ),
+        comicReaderServiceProvider.overrideWith((ref) async => service),
+        comicDownloadServiceProvider.overrideWithValue(
+          _NoopComicDownloadService(),
+        ),
+        imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      const args = ComicReaderArgs(
-        comicId: 'yamibo:100',
-        episodeId: 'yamibo:100:101',
-      );
-      await container.read(comicReaderControllerProvider(args).future);
+    const args = ComicReaderArgs(
+      comicId: 'yamibo:100',
+      episodeId: 'yamibo:100:101',
+    );
+    await container.read(comicReaderControllerProvider(args).future);
 
-      await container
-          .read(comicReaderControllerProvider(args).notifier)
-          .onImageVisible(4);
+    await container
+        .read(comicReaderControllerProvider(args).notifier)
+        .onImageVisible(4);
 
-      expect(writer.completedEpisodeIds, <String>['yamibo:100:101']);
-    },
-  );
+    expect(writer.completedEpisodeIds, <String>['yamibo:100:101']);
+  });
 
   test('toggleBookmark persists bookmark state', () async {
     final repository = _ReaderRepoForControllerTest();
@@ -705,9 +698,71 @@ void main() {
 
     final state = container.read(comicReaderControllerProvider(args)).value!;
     expect(state.isBookmarked, isTrue);
+    expect(
+      state.chapters
+          .singleWhere((chapter) => chapter.episodeId == state.episodeId)
+          .isBookmarked,
+      isTrue,
+    );
     expect(writer.bookmarkedEpisodeIds, contains('yamibo:100:101'));
     expect(notice, ComicReaderNoticeCode.bookmarkAdded);
   });
+
+  test(
+    'catalog reads chapter marks once and keeps bookmarks for every chapter',
+    () async {
+      final repository = _ReaderRepoForControllerTest();
+      final writer = _AggregatedReadingStateWriterSpy(repository)
+        ..bookmarkedEpisodeIds.add('yamibo:100:102');
+      final container = _marksContainer(repository, writer);
+      addTearDown(container.dispose);
+      const args = ComicReaderArgs(
+        comicId: 'yamibo:100',
+        episodeId: 'yamibo:100:101',
+      );
+      final state = await container.read(
+        comicReaderControllerProvider(args).future,
+      );
+      expect(writer.reads, [
+        'yamibo:100:101',
+        'yamibo:100:102',
+        'yamibo:100:103',
+      ]);
+      expect(
+        state.chapters
+            .where((chapter) => chapter.isBookmarked)
+            .map((chapter) => chapter.episodeId),
+        ['yamibo:100:102'],
+      );
+    },
+  );
+
+  test(
+    'late bookmark write cannot replace the chapter selected in the meantime',
+    () async {
+      final repository = _ReaderRepoForControllerTest();
+      final writer = _AggregatedReadingStateWriterSpy(repository);
+      final container = _marksContainer(repository, writer);
+      addTearDown(container.dispose);
+      const args = ComicReaderArgs(
+        comicId: 'yamibo:100',
+        episodeId: 'yamibo:100:101',
+      );
+      await container.read(comicReaderControllerProvider(args).future);
+      final controller = container.read(
+        comicReaderControllerProvider(args).notifier,
+      );
+      writer.bookmarkGate = Completer<void>();
+      final pending = controller.toggleBookmark();
+      expect(await controller.openEpisode(episodeId: 'yamibo:100:102'), isTrue);
+      writer.bookmarkGate!.complete();
+      expect(await pending, isNull);
+      final state = container.read(comicReaderControllerProvider(args)).value!;
+      expect(state.episodeId, 'yamibo:100:102');
+      expect(state.isBookmarked, isFalse);
+      expect(state.chapters.first.isBookmarked, isTrue);
+    },
+  );
 
   test('setCurrentEpisodeRead updates current chapter state', () async {
     final repository = _ReaderRepoForControllerTest();
@@ -1810,6 +1865,64 @@ class _ImageMetadataWrite {
   final String imageUrl;
   final int? width;
   final int? height;
+}
+
+ProviderContainer _marksContainer(
+  _ReaderRepoForControllerTest repository,
+  ComicReadingStateWriter writer,
+) => ProviderContainer(
+  overrides: [
+    comicRepositoryProvider.overrideWithValue(repository),
+    comicReadingStateWriterProvider.overrideWithValue(writer),
+    comicReaderServiceProvider.overrideWith((ref) async => _ReaderServiceSpy()),
+    comicDownloadServiceProvider.overrideWithValue(_NoopComicDownloadService()),
+    imageCacheServiceProvider.overrideWithValue(_FakeImageCacheService()),
+  ],
+);
+
+class _AggregatedReadingStateWriterSpy extends _ReadingStateWriterSpy
+    implements ComicReadingMarksReader {
+  _AggregatedReadingStateWriterSpy(super.repository);
+  final reads = <String>[];
+  Completer<void>? bookmarkGate;
+
+  @override
+  Future<ComicEpisodeReadingMarks> readEpisodeMarks({
+    required String comicId,
+    required String episodeId,
+  }) async {
+    reads.add(episodeId);
+    return ComicEpisodeReadingMarks(
+      isRead: initiallyReadEpisodeIds.contains(episodeId),
+      isBookmarked: bookmarkedEpisodeIds.contains(episodeId),
+    );
+  }
+
+  @override
+  Future<bool> isEpisodeRead({
+    required String comicId,
+    required String episodeId,
+  }) => throw StateError('aggregate reader expected');
+
+  @override
+  Future<bool> isEpisodeBookmarked({
+    required String comicId,
+    required String episodeId,
+  }) => throw StateError('aggregate reader expected');
+
+  @override
+  Future<void> setEpisodeBookmarked({
+    required String comicId,
+    required String episodeId,
+    required bool isBookmarked,
+  }) async {
+    await super.setEpisodeBookmarked(
+      comicId: comicId,
+      episodeId: episodeId,
+      isBookmarked: isBookmarked,
+    );
+    await bookmarkGate?.future;
+  }
 }
 
 class _ReadingStateWriterSpy implements ComicReadingStateWriter {

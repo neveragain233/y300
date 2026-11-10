@@ -27,6 +27,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 
@@ -101,22 +102,33 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
     final l10n = AppLocalizations.of(context);
     final imageReferer = ref.watch(forumImageRefererProvider);
 
-    return Scaffold(
+    return Y300PageScaffold(
       appBar: AppBar(
         title: Text(l10n.forumHomeTitle),
-        actions: [
-          IconButton(
-            key: const Key('forum-home-search-button'),
-            tooltip: l10n.forumHomeSearch,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ForumSearchPage(),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(72),
+          child: ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 960),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: ForumHomeSearchEntry(
+                    key: const Key('forum-home-search-button'),
+                    label: l10n.forumHomeSearch,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ForumSearchPage(),
+                      ),
+                    ),
+                  ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.search),
+              ),
+            ),
           ),
+        ),
+        actions: [
           AppPopupMenuButton<String>(
             key: const Key('forum-home-more-button'),
             icon: const Icon(Icons.more_vert),
@@ -138,18 +150,33 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
           ),
         ],
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Offstage(
-            offstage: _isSwitchingAuthContext,
-            child: _ResolvedForumHomeBody(
-              imageReferer: imageReferer,
-              isActive: widget.isActive,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: LayoutBuilder(
+            builder: (context, constraints) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                size: Size(
+                  constraints.maxWidth,
+                  MediaQuery.sizeOf(context).height,
+                ),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Offstage(
+                    offstage: _isSwitchingAuthContext,
+                    child: _ResolvedForumHomeBody(
+                      imageReferer: imageReferer,
+                      isActive: widget.isActive,
+                    ),
+                  ),
+                  if (_isSwitchingAuthContext) const _ForumHomeBlankBody(),
+                ],
+              ),
             ),
           ),
-          if (_isSwitchingAuthContext) const _ForumHomeBlankBody(),
-        ],
+        ),
       ),
     );
   }
@@ -450,6 +477,10 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 10),
               children: [
+                for (final section in widget.projection.sections.where(
+                  (section) => section.source.type == ForumSectionType.favorite,
+                ))
+                  _buildSection(context, section, l10n),
                 ForumHomeCarousel(
                   items: carouselItems,
                   imageReferer: widget.imageReferer,
@@ -462,18 +493,10 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
                     padding: const EdgeInsets.all(32),
                     child: Center(child: Text(l10n.forumHomeEmpty)),
                   ),
-                for (final section in widget.projection.sections)
-                  ForumHomeSectionCard(
-                    sectionKey: _sectionKey(section),
-                    title:
-                        section.displayTitle ??
-                        ForumTextResolver.sectionTitle(l10n, section.source),
-                    isCollapsed: _collapsedSectionKeys.contains(
-                      _sectionKey(section),
-                    ),
-                    onToggle: () => _toggleSection(section),
-                    children: _buildRows(context, section, l10n),
-                  ),
+                for (final section in widget.projection.sections.where(
+                  (section) => section.source.type != ForumSectionType.favorite,
+                ))
+                  _buildSection(context, section, l10n),
               ],
             ),
           ),
@@ -490,6 +513,20 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
       }
     });
   }
+
+  Widget _buildSection(
+    BuildContext context,
+    ForumHomeSectionProjection section,
+    AppLocalizations l10n,
+  ) => ForumHomeSectionCard(
+    sectionKey: _sectionKey(section),
+    title:
+        section.displayTitle ??
+        ForumTextResolver.sectionTitle(l10n, section.source),
+    isCollapsed: _collapsedSectionKeys.contains(_sectionKey(section)),
+    onToggle: () => _toggleSection(section),
+    children: _buildRows(context, section, l10n),
+  );
 
   String _sectionKey(ForumHomeSectionProjection section) {
     return section.source.sourceIdentity;

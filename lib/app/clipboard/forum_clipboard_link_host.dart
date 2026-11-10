@@ -120,7 +120,7 @@ class _ForumClipboardLinkHostState extends ConsumerState<ForumClipboardLinkHost>
       _authReady &&
       _runtime.isUnblocked &&
       _route?.isCurrent != false &&
-      !_routes.isTransitioning;
+      !_routes.isBlocked;
 
   void _sync() {
     if (!mounted || !_runtime.owns(_host)) return;

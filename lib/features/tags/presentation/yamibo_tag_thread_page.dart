@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/forum_thread_list_tile.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
@@ -105,13 +107,15 @@ class YamiboTagThreadPage extends ConsumerWidget {
                                   data.pagination.totalPages!),
                     )
                   else
-                    for (final thread in visibleTopics)
+                    for (final thread in visibleTopics) ...[
                       _TagThreadCard(
                         thread: thread,
                         capabilities: state.capabilities,
                         palette: palette,
                         onTap: () => _openThread(context, thread),
                       ),
+                      const SizedBox(height: 8),
+                    ],
                   _TagPager(
                     data: data,
                     capabilities: state.capabilities,
@@ -126,7 +130,8 @@ class YamiboTagThreadPage extends ConsumerWidget {
   }
 
   void _openThread(BuildContext context, ForumTagTopicSummary thread) {
-    Navigator.of(context).push(
+    openAdaptiveDetail(
+      context,
       MaterialPageRoute<void>(
         builder: (_) =>
             ThreadDetailPage(tid: thread.tid, subject: thread.title),
@@ -185,7 +190,7 @@ class _TagHeaderCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: palette.softText,
+                    color: palette.bodyText,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -198,7 +203,7 @@ class _TagHeaderCard extends StatelessWidget {
   }
 }
 
-class _TagThreadCard extends StatefulWidget {
+class _TagThreadCard extends StatelessWidget {
   const _TagThreadCard({
     required this.thread,
     required this.capabilities,
@@ -212,18 +217,7 @@ class _TagThreadCard extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_TagThreadCard> createState() => _TagThreadCardState();
-}
-
-class _TagThreadCardState extends State<_TagThreadCard> {
-  bool _isPressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final thread = widget.thread;
-    final capabilities = widget.capabilities;
-    final palette = widget.palette;
-    final textTheme = Theme.of(context).textTheme;
     final lastPostLine = <String>[
       if (capabilities?.supports(ForumTagDirectoryCapability.topicLastPost) ==
               true &&
@@ -234,133 +228,75 @@ class _TagThreadCardState extends State<_TagThreadCard> {
           thread.lastPostAt?.trim().isNotEmpty == true)
         thread.lastPostAt!,
     ].join(' · ');
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        scale: _isPressed ? 0.985 : 1,
-        child: DecoratedBox(
-          key: Key('yamibo-tag-thread-surface-${thread.tid}'),
-          decoration: _tagSurfaceDecoration(palette),
-          child: Material(
-            color: palette.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              key: Key('yamibo-tag-thread-${thread.tid}'),
-              borderRadius: BorderRadius.circular(12),
-              onTap: widget.onTap,
-              onHighlightChanged: (isHighlighted) {
-                if (_isPressed != isHighlighted) {
-                  setState(() => _isPressed = isHighlighted);
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOutCubic,
-                decoration: BoxDecoration(
-                  color: _isPressed
-                      ? Color.alphaBlend(
-                          palette.stateLayer,
-                          palette.surfaceContainerLow,
-                        )
-                      : palette.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            thread.title,
-                            key: Key('yamibo-tag-thread-title-${thread.tid}'),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleSmall?.copyWith(
-                              color: palette.threadTitle,
-                              fontWeight: FontWeight.w700,
-                              height: 1.28,
-                            ),
-                          ),
-                        ),
-                        if (capabilities?.supports(
-                                  ForumTagDirectoryCapability
-                                      .topicAttachmentFlags,
-                                ) ==
-                                true &&
-                            thread.hasImageAttachment == true) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.image_outlined,
-                            key: Key(
-                              'yamibo-tag-thread-attachment-${thread.tid}',
-                            ),
-                            size: 16,
-                            color: palette.softText,
-                          ),
-                        ],
-                        ThreadBlockMenuButton(
-                          tid: thread.tid,
-                          subject: thread.title,
-                          color: palette.softText,
-                        ),
-                      ],
-                    ),
-                    if (_hasAuthorMetadata(thread)) ...[
-                      const SizedBox(height: 6),
-                      _TagAuthorMetadata(
-                        thread: thread,
-                        capabilities: capabilities,
-                        palette: palette,
-                      ),
-                    ],
-                    if (lastPostLine.isNotEmpty) ...[
-                      const SizedBox(height: 7),
-                      Text(
-                        AppLocalizations.of(context).tagLastPost(lastPostLine),
-                        key: Key('yamibo-tag-thread-last-post-${thread.tid}'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: palette.softText,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                    if (_hasFooterMetadata(thread)) ...[
-                      const SizedBox(height: 9),
-                      _TagThreadFooter(
-                        thread: thread,
-                        capabilities: capabilities,
-                        palette: palette,
-                      ),
-                    ],
-                  ],
+    return ForumThreadListTile(
+      key: Key('yamibo-tag-thread-${thread.tid}'),
+      title: thread.title,
+      titleKey: Key('yamibo-tag-thread-title-${thread.tid}'),
+      titleColor: palette.threadTitle,
+      surfaceColor: palette.surfaceContainerLow,
+      shadowColor: palette.stateLayer,
+      onTap: onTap,
+      trailing: ThreadBlockMenuButton(
+        tid: thread.tid,
+        subject: thread.title,
+        color: palette.bodyText,
+      ),
+      metadata: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_hasAuthorMetadata(thread))
+            _TagAuthorMetadata(
+              thread: thread,
+              capabilities: capabilities,
+              palette: palette,
+            ),
+          if (lastPostLine.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                AppLocalizations.of(context).tagLastPost(lastPostLine),
+                key: Key('yamibo-tag-thread-last-post-${thread.tid}'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
+        ],
+      ),
+      footer: Row(
+        children: [
+          Expanded(
+            child: _hasFooterMetadata(thread)
+                ? _TagThreadFooter(
+                    thread: thread,
+                    capabilities: capabilities,
+                    palette: palette,
+                  )
+                : const SizedBox.shrink(),
           ),
-        ),
+          if (capabilities?.supports(
+                    ForumTagDirectoryCapability.topicAttachmentFlags,
+                  ) ==
+                  true &&
+              thread.hasImageAttachment == true)
+            Icon(
+              Icons.image_outlined,
+              key: Key('yamibo-tag-thread-attachment-${thread.tid}'),
+              size: 18,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+        ],
       ),
     );
   }
 
   bool _hasAuthorMetadata(ForumTagTopicSummary thread) {
     final canAuthor =
-        widget.capabilities?.supports(
-          ForumTagDirectoryCapability.topicAuthor,
-        ) ==
-        true;
+        capabilities?.supports(ForumTagDirectoryCapability.topicAuthor) == true;
     final canCreatedAt =
-        widget.capabilities?.supports(
-          ForumTagDirectoryCapability.topicCreationTime,
-        ) ==
+        capabilities?.supports(ForumTagDirectoryCapability.topicCreationTime) ==
         true;
     return (canAuthor && thread.authorName?.trim().isNotEmpty == true) ||
         (canCreatedAt && thread.createdAt?.trim().isNotEmpty == true);
@@ -368,17 +304,12 @@ class _TagThreadCardState extends State<_TagThreadCard> {
 
   bool _hasFooterMetadata(ForumTagTopicSummary thread) {
     final canForum =
-        widget.capabilities?.supports(ForumTagDirectoryCapability.topicForum) ==
-        true;
+        capabilities?.supports(ForumTagDirectoryCapability.topicForum) == true;
     final canReplies =
-        widget.capabilities?.supports(
-          ForumTagDirectoryCapability.topicReplyCount,
-        ) ==
+        capabilities?.supports(ForumTagDirectoryCapability.topicReplyCount) ==
         true;
     final canViews =
-        widget.capabilities?.supports(
-          ForumTagDirectoryCapability.topicViewCount,
-        ) ==
+        capabilities?.supports(ForumTagDirectoryCapability.topicViewCount) ==
         true;
     return (canReplies && thread.replyCount != null) ||
         (canViews && thread.viewCount != null) ||
@@ -409,7 +340,7 @@ class _TagAuthorMetadata extends StatelessWidget {
         ? thread.createdAt?.trim()
         : null;
     final baseStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: palette.softText,
+      color: palette.bodyText,
       fontWeight: FontWeight.w500,
       height: 1.2,
     );
@@ -455,43 +386,36 @@ class _TagThreadFooter extends StatelessWidget {
         capabilities?.supports(ForumTagDirectoryCapability.topicForum) == true
         ? thread.forumName?.trim()
         : null;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Expanded(
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              if (capabilities?.supports(
-                        ForumTagDirectoryCapability.topicReplyCount,
-                      ) ==
-                      true &&
-                  thread.replyCount != null)
-                _TagMetric(
-                  key: Key('yamibo-tag-thread-replies-${thread.tid}'),
-                  icon: Icons.chat_bubble_outline,
-                  value: thread.replyCount!,
-                  semanticsLabel: l10n.tagReplies(thread.replyCount!),
-                  palette: palette,
-                ),
-              if (capabilities?.supports(
-                        ForumTagDirectoryCapability.topicViewCount,
-                      ) ==
-                      true &&
-                  thread.viewCount != null)
-                _TagMetric(
-                  key: Key('yamibo-tag-thread-views-${thread.tid}'),
-                  icon: Icons.visibility_outlined,
-                  value: thread.viewCount!,
-                  semanticsLabel: l10n.tagViews(thread.viewCount!),
-                  palette: palette,
-                ),
-            ],
+        if (capabilities?.supports(
+                  ForumTagDirectoryCapability.topicReplyCount,
+                ) ==
+                true &&
+            thread.replyCount != null)
+          _TagMetric(
+            key: Key('yamibo-tag-thread-replies-${thread.tid}'),
+            icon: Icons.chat_bubble_outline,
+            value: thread.replyCount!,
+            semanticsLabel: l10n.tagReplies(thread.replyCount!),
+            palette: palette,
           ),
-        ),
-        if (forumName?.isNotEmpty == true) ...[
-          const SizedBox(width: 10),
+        if (capabilities?.supports(
+                  ForumTagDirectoryCapability.topicViewCount,
+                ) ==
+                true &&
+            thread.viewCount != null)
+          _TagMetric(
+            key: Key('yamibo-tag-thread-views-${thread.tid}'),
+            icon: Icons.visibility_outlined,
+            value: thread.viewCount!,
+            semanticsLabel: l10n.tagViews(thread.viewCount!),
+            palette: palette,
+          ),
+        if (forumName?.isNotEmpty == true)
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 154),
             child: _TagForumChip(
@@ -500,7 +424,6 @@ class _TagThreadFooter extends StatelessWidget {
               palette: palette,
             ),
           ),
-        ],
       ],
     );
   }
@@ -537,14 +460,17 @@ class _TagMetric extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 13, color: palette.softText),
+                  Icon(icon, size: 13, color: palette.bodyText),
                   const SizedBox(width: 4),
-                  Text(
-                    value.toString(),
-                    maxLines: 1,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: palette.softText,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      value.toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: palette.bodyText,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

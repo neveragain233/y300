@@ -10,11 +10,13 @@ class ThreadBlacklistedPostPlaceholder extends StatelessWidget {
     required this.post,
     required this.palette,
     required this.onExpand,
+    this.continuous = false,
   });
 
   final ThreadPost post;
   final ThreadDetailNativePalette palette;
   final VoidCallback onExpand;
+  final bool continuous;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,14 @@ class ThreadBlacklistedPostPlaceholder extends StatelessWidget {
         ForumContentSpacing.postBodyHorizontal,
         ForumContentSpacing.postCardSingleBottom,
       ),
-      decoration: _cardDecoration(palette),
+      decoration: continuous
+          ? BoxDecoration(
+              color: palette.background,
+              border: Border(
+                bottom: BorderSide(color: palette.border, width: 0.5),
+              ),
+            )
+          : _cardDecoration(palette),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

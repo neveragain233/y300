@@ -67,6 +67,24 @@ void main() {
         final input = find.byKey(
           const Key('unified-detail-chapter-search-field'),
         );
+        expect(tester.widget<AppBar>(find.byType(AppBar)).bottom, isNull);
+        expect(
+          tester
+              .widget<AppBar>(find.byType(AppBar))
+              .systemOverlayStyle
+              ?.statusBarIconBrightness,
+          Brightness.dark,
+        );
+        expect(
+          tester.getTopLeft(input).dy,
+          greaterThanOrEqualTo(
+            tester
+                .getBottomLeft(
+                  find.byKey(const Key('unified-detail-chapter-toolbar')),
+                )
+                .dy,
+          ),
+        );
         expect(tester.widget<TextField>(input).autofocus, isFalse);
         await tester.enterText(input, '2');
         await tester.pumpAndSettle();

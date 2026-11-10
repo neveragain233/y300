@@ -14,29 +14,57 @@ final class ForumClipboardRouteObserver extends NavigatorObserver
   final Set<TransitionRoute<dynamic>> _exits = Set.identity();
   bool _isTransitioning = false;
   bool _disposed = false;
+  bool _enabled = true;
+  bool _blocked = false;
+  VoidCallback? _onDisposed;
+  final _routes = <Route<dynamic>>[];
+  final _nested = <ForumClipboardRouteObserver>{};
 
   bool get isTransitioning => _isTransitioning;
+  bool get isBlocked => _enabled && _blocked;
+
+  set enabled(bool value) {
+    if (_enabled == value) return;
+    _enabled = value;
+    notifyListeners();
+  }
+
+  ForumClipboardRouteObserver createNestedObserver() {
+    final child = ForumClipboardRouteObserver();
+    _nested.add(child);
+    child.addListener(_publish);
+    child._onDisposed = () {
+      _nested.remove(child);
+      if (!_disposed) _publish();
+    };
+    return child;
+  }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _routes.add(route);
     _watchEntrance(route);
     _publish();
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _routes.remove(route);
     _watchExit(route);
     _publish();
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _routes.remove(route);
     _watchExit(route);
     _publish();
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    final index = oldRoute == null ? -1 : _routes.indexOf(oldRoute);
+    if (index >= 0 && newRoute != null) _routes[index] = newRoute;
     _watchExit(oldRoute);
     _watchEntrance(newRoute);
     _publish();
@@ -124,8 +152,13 @@ final class ForumClipboardRouteObserver extends NavigatorObserver
       return;
     }
     final transitioning = _entrances.isNotEmpty || _exits.isNotEmpty;
-    if (transitioning != _isTransitioning) {
+    final blocked =
+        transitioning ||
+        _routes.lastOrNull is PopupRoute<dynamic> ||
+        _nested.any((child) => child.isBlocked);
+    if (transitioning != _isTransitioning || blocked != _blocked) {
       _isTransitioning = transitioning;
+      _blocked = blocked;
       notifyListeners();
     }
   }
@@ -138,6 +171,13 @@ final class ForumClipboardRouteObserver extends NavigatorObserver
     }
     _entrances.clear();
     _exits.clear();
+    _routes.clear();
+    for (final child in _nested) {
+      child.removeListener(_publish);
+      child._onDisposed = null;
+    }
+    _nested.clear();
+    _onDisposed?.call();
     _isTransitioning = false;
     super.dispose();
   }

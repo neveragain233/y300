@@ -366,7 +366,10 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     }
     // Validate a queued rebase against this build's actual layout inputs first.
     _prepareEndpointBuild();
-    final palette = ThreadDetailNativePalette.resolve(Theme.of(context));
+    final palette = ThreadDetailNativePalette.resolve(
+      Theme.of(context),
+      continuous: true,
+    );
     widget.bodyReadingCoordinator?.bindContent(
       tid: widget.state.tid,
       page: widget.state.currentPage,
@@ -633,7 +636,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final preferences =
         ref.read(forumHtmlReaderPreferencesControllerProvider).value ??
         ForumHtmlReaderPreferences.defaults();
-    final palette = ThreadDetailNativePalette.resolve(Theme.of(context));
+    // 异步结果校验与可见正文使用同一表面，保证准备结果能交接到分块列表。
+    final palette = ThreadDetailNativePalette.resolve(
+      Theme.of(context),
+      continuous: true,
+    );
     final theme = const ForumHtmlRenderThemeFactory().fromThreadPalette(
       palette: palette,
       brightness: Theme.of(context).brightness,
@@ -1056,6 +1063,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         return KeyedSubtree(
           key: _projectionAnchorCoordinator.keyForPid(pid),
           child: ThreadBlacklistedPostPlaceholder(
+            continuous: true,
             post: entry.displayPost!,
             palette: palette,
             onExpand: () {

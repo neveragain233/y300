@@ -433,7 +433,27 @@ void main() {
     final grid = tester.widget<GridView>(
       find.byKey(const Key('unified-shelf-grid-view')),
     );
-    expect(grid.scrollCacheExtent, const ScrollCacheExtent.pixels(392));
+    expect(
+      grid.scrollCacheExtent,
+      ScrollCacheExtent.pixels(
+        ((tester
+                            .getSize(
+                              find.byKey(const Key('unified-shelf-grid-view')),
+                            )
+                            .width -
+                        16 -
+                        4 *
+                            ((grid.gridDelegate
+                                        as SliverGridDelegateWithFixedCrossAxisCount)
+                                    .crossAxisCount -
+                                1)) /
+                    (grid.gridDelegate
+                            as SliverGridDelegateWithFixedCrossAxisCount)
+                        .crossAxisCount) *
+                1.5 +
+            4,
+      ),
+    );
 
     await tester.tap(find.byIcon(Icons.filter_list).first);
     await tester.pumpAndSettle();
@@ -454,7 +474,7 @@ void main() {
     tester,
   ) async {
     final items = List<LibraryWorkItem>.generate(
-      12,
+      40,
       (index) => _item(
         workId: 'cached-$index',
         title: 'Cached $index',
@@ -998,7 +1018,7 @@ void main() {
 
     expect(headerMaterial.color, palette.categoryBarBackground);
     expect(bannerMaterial.color, palette.taskProgressBackground);
-    expect(listItemMaterial.color, palette.listItemBackground);
+    expect(listItemMaterial.color, AppTheme.dark().scaffoldBackgroundColor);
 
     await tester.tap(find.byIcon(Icons.filter_list).first);
     await tester.pumpAndSettle();

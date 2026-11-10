@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/features/composer_shared/presentation/services/read_access_feedback.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
@@ -35,11 +36,13 @@ class ForumDisplayPage extends ConsumerStatefulWidget {
     required this.fid,
     this.title = '',
     this.initialPage = 1,
+    this.initialUrl,
   });
 
   final String fid;
   final String title;
   final int initialPage;
+  final String? initialUrl;
 
   @override
   ConsumerState<ForumDisplayPage> createState() => _ForumDisplayPageState();
@@ -70,6 +73,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
       fid: widget.fid,
       title: widget.title,
       initialPage: widget.initialPage,
+      initialUrl: widget.initialUrl,
     );
     final asyncState = ref.watch(forumDisplayControllerProvider(args));
     final controller = ref.read(forumDisplayControllerProvider(args).notifier);
@@ -104,6 +108,9 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     return Scaffold(
       backgroundColor: palette.background,
       appBar: AppBar(
+        leading:
+            adaptiveDetailBackButton(context) ??
+            (widget.initialUrl != null ? const BackButton() : null),
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsetsDirectional.only(
@@ -161,14 +168,27 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
                 ),
                 onOpenFilter: (item) =>
                     _runAndReturnToFilter(() => controller.openFilter(item)),
-                onOpenThreadTag: (thread) => _runAndReturnToFilter(
-                  () => controller.openThreadTag(thread),
-                ),
+                onOpenThreadTag: (thread) => _openThreadTag(context, thread),
                 onOpenThread: (thread) => _openThread(context, state, thread),
                 onOpenTopEntry: (entry) => _openTopEntry(context, state, entry),
                 onOpenSubForum: (subForum) => _openSubForum(context, subForum),
               ),
             ),
+    );
+  }
+
+  void _openThreadTag(BuildContext context, ForumThreadSummary thread) {
+    final url = thread.sourceTagUrl?.trim();
+    if (url == null || url.isEmpty) return;
+    // 分类页持有独立查询，返回时保留来源板块的列表和滚动位置。
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ForumDisplayPage(
+          fid: widget.fid,
+          title: thread.sourceTagName ?? widget.title,
+          initialUrl: url,
+        ),
+      ),
     );
   }
 
@@ -437,7 +457,8 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     ForumDisplayPageState state,
     ForumThreadSummary thread,
   ) {
-    Navigator.of(context).push(
+    openAdaptiveDetail(
+      context,
       MaterialPageRoute<void>(
         builder: (_) => ThreadDetailPage(
           tid: thread.tid,
@@ -456,7 +477,8 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     if (entry.tid.trim().isEmpty) {
       return;
     }
-    Navigator.of(context).push(
+    openAdaptiveDetail(
+      context,
       MaterialPageRoute<void>(
         builder: (_) => ThreadDetailPage(
           tid: entry.tid,

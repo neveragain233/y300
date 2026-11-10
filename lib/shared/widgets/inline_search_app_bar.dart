@@ -23,6 +23,7 @@ class InlineSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.onSubmit,
     this.submitEnabled = true,
     this.autofocus = true,
+    this.bottom,
   });
 
   final TextEditingController controller;
@@ -41,9 +42,11 @@ class InlineSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback? onSubmit;
   final bool submitEnabled;
   final bool autofocus;
+  final PreferredSizeWidget? bottom;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 
   @override
   State<InlineSearchAppBar> createState() => _InlineSearchAppBarState();
@@ -64,6 +67,7 @@ class _InlineSearchAppBarState extends State<InlineSearchAppBar> {
         );
 
     return AppBar(
+      bottom: widget.bottom,
       automaticallyImplyLeading: false,
       leading: BackButton(key: widget.backButtonKey, onPressed: _handleBack),
       titleSpacing: 0,

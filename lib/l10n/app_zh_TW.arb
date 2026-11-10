@@ -1979,6 +1979,26 @@
         "type": "int"
       }
     }
-  }
-
+  },
+  "moreThemeDynamic": "跟隨系統",
+  "moreThemeDynamicDescription": "使用系統動態配色，安卓 12 及以上支援。無法使用時沿用上次選擇的預設。",
+  "moreThemeDynamicUnavailable": "系統動態配色目前無法使用，正在使用「{family}」。",
+  "@moreThemeDynamicUnavailable": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "layoutExpandDetail": "展開詳情",
+  "layoutRestorePanes": "恢復雙欄",
+  "appNavigationBookshelf": "書架",
+  "appNavigationMy": "我的",
+  "moreSectionContent": "內容",
+  "moreSectionManagement": "管理",
+  "moreSectionSettings": "設定",
+  "moreNavigationGroupingDescription": "漫畫和小說合併為「書架」，位置由順序中第一個可見書架入口決定；紀錄和日誌列在「我的」中。隱藏設定繼續作用於對應入口。",
+  "readerCatalog": "目錄",
+  "readerBookmarks": "書籤",
+  "readerBookmarksEmpty": "還沒有書籤章節"
 }

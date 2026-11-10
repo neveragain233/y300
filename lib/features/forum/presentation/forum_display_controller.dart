@@ -16,11 +16,13 @@ class ForumDisplayArgs {
     required this.fid,
     this.title = '',
     this.initialPage = 1,
+    this.initialUrl,
   });
 
   final String fid;
   final String title;
   final int initialPage;
+  final String? initialUrl;
 
   @override
   bool operator ==(Object other) {
@@ -30,11 +32,12 @@ class ForumDisplayArgs {
     return other is ForumDisplayArgs &&
         other.fid == fid &&
         other.title == title &&
-        other.initialPage == initialPage;
+        other.initialPage == initialPage &&
+        other.initialUrl == initialUrl;
   }
 
   @override
-  int get hashCode => Object.hash(fid, title, initialPage);
+  int get hashCode => Object.hash(fid, title, initialPage, initialUrl);
 }
 
 final forumDisplayControllerProvider = AsyncNotifierProvider.autoDispose
@@ -56,7 +59,10 @@ class ForumDisplayController extends AsyncNotifier<ForumDisplayPageState> {
     _requestGeneration++;
     ref.onDispose(() => _requestGeneration++);
     return _loadQuery(
-      ForumDisplayQuery.initial(fid: _args.fid).copyWithPage(_args.initialPage),
+      _args.initialUrl != null
+          ? ForumDisplayQuery.fromUrl(_args.initialUrl!, fallbackFid: _args.fid)
+          : ForumDisplayQuery.initial(fid: _args.fid)
+                .copyWithPage(_args.initialPage),
       scope: scope,
       repository: repository,
     );
@@ -190,7 +196,11 @@ class ForumDisplayController extends AsyncNotifier<ForumDisplayPageState> {
       _ensureCurrent(scope);
       return ForumDisplayPageState(
         fid: effectiveFid,
-        title: data.forumName.isNotEmpty ? data.forumName : _args.title,
+        title: _args.initialUrl != null && _args.title.trim().isNotEmpty
+            ? _args.title
+            : data.forumName.isNotEmpty
+            ? data.forumName
+            : _args.title,
         currentPage: data.currentPage,
         hasMore: data.hasMore,
         isLoadingInitial: false,

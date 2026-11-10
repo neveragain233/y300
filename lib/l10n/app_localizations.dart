@@ -9711,6 +9711,90 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'定位当前章'**
   String get libraryChapterLocateCurrent;
+
+  /// No description provided for @moreThemeDynamic.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统'**
+  String get moreThemeDynamic;
+
+  /// No description provided for @moreThemeDynamicDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用系统动态配色，安卓 12 及以上支持。不可用时沿用上次选择的预设。'**
+  String get moreThemeDynamicDescription;
+
+  /// No description provided for @moreThemeDynamicUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统动态配色当前不可用，正在使用「{family}」。'**
+  String moreThemeDynamicUnavailable(String family);
+
+  /// No description provided for @layoutExpandDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开详情'**
+  String get layoutExpandDetail;
+
+  /// No description provided for @layoutRestorePanes.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复双栏'**
+  String get layoutRestorePanes;
+
+  /// No description provided for @appNavigationBookshelf.
+  ///
+  /// In zh, this message translates to:
+  /// **'书架'**
+  String get appNavigationBookshelf;
+
+  /// No description provided for @appNavigationMy.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的'**
+  String get appNavigationMy;
+
+  /// No description provided for @moreSectionContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容'**
+  String get moreSectionContent;
+
+  /// No description provided for @moreSectionManagement.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理'**
+  String get moreSectionManagement;
+
+  /// No description provided for @moreSectionSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置'**
+  String get moreSectionSettings;
+
+  /// No description provided for @moreNavigationGroupingDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'漫画和小说合并为“书架”，位置由顺序中第一个可见书架入口决定；记录和日志列在“我的”中。隐藏设置继续作用于对应入口。'**
+  String get moreNavigationGroupingDescription;
+
+  /// No description provided for @readerCatalog.
+  ///
+  /// In zh, this message translates to:
+  /// **'目录'**
+  String get readerCatalog;
+
+  /// No description provided for @readerBookmarks.
+  ///
+  /// In zh, this message translates to:
+  /// **'书签'**
+  String get readerBookmarks;
+
+  /// No description provided for @readerBookmarksEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有书签章节'**
+  String get readerBookmarksEmpty;
 }
 
 class _AppLocalizationsDelegate

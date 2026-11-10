@@ -293,13 +293,16 @@ void main() {
 
         final carousel = find.byKey(const Key('forum-home-carousel'));
         final width = tester.getSize(carousel).width;
-        expect(tester.getSize(carousel).height, closeTo(width / 3.45, 0.01));
+        expect(
+          tester.getSize(carousel).height,
+          closeTo((width / 3.45).clamp(0, ForumHomeCarousel.maxHeight), 0.01),
+        );
 
-        await tester.pumpWidget(build(3));
+        await tester.pumpWidget(build(6));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        expect(tester.getSize(carousel).height, closeTo(width / 3, 0.01));
+        expect(tester.getSize(carousel).height, closeTo(width / 6, 0.01));
       },
     );
 
@@ -408,7 +411,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(tester.getSize(carousel).height, closeTo(width / 3, 0.01));
+      expect(
+        tester.getSize(carousel).height,
+        closeTo((width / 3).clamp(0, ForumHomeCarousel.maxHeight), 0.01),
+      );
     });
 
     testWidgets('carousel pending item prewarm uses forum image precache', (
@@ -760,7 +766,7 @@ void main() {
     );
 
     testWidgets(
-      'section header toggles forum rows with minus and plus indicators',
+      'section header toggles forum rows with expand and collapse icons',
       (tester) async {
         final repository = _FakeForumHomeRepository(
           () async => forumHomeReadSuccess(_loggedInPayloadWithFavorites()),
@@ -770,10 +776,27 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('forum-favorite-card-2')), findsOneWidget);
-        var indicator = tester.widget<Text>(
+        var indicator = tester.widget<Icon>(
           find.byKey(const Key('forum-section-indicator-favorite:2,55')),
         );
-        expect(indicator.data, '-');
+        expect(indicator.icon, Icons.expand_more);
+        final palette = ForumHomeNativePalette.resolve(
+          Theme.of(tester.element(find.byType(ForumHomePage))),
+        );
+        final header = tester.widget<Material>(
+          find.byKey(const Key('forum-section-title-favorite:2,55')),
+        );
+        expect(header.color, palette.sectionHeaderBackground);
+        expect(indicator.color, palette.sectionHeaderForeground);
+        final body = tester.widget<DecoratedBox>(
+          find.byKey(
+            const ValueKey('forum-home-section-expanded-favorite:2,55'),
+          ),
+        );
+        expect(
+          (body.decoration as BoxDecoration).color,
+          palette.sectionBodyBackground,
+        );
 
         await tester.tap(
           find.byKey(const Key('forum-section-toggle-favorite:2,55')),
@@ -781,27 +804,15 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 90));
 
-        final rotatingIndicator = tester.widget<RotationTransition>(
-          find
-              .ancestor(
-                of: find.byKey(
-                  const Key('forum-section-indicator-favorite:2,55'),
-                ),
-                matching: find.byType(RotationTransition),
-              )
-              .first,
-        );
-        expect(rotatingIndicator.turns.value, greaterThan(0));
-        expect(rotatingIndicator.turns.value, lessThanOrEqualTo(0.25));
         expect(find.byKey(const Key('forum-favorite-card-2')), findsOneWidget);
 
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('forum-favorite-card-2')), findsNothing);
-        indicator = tester.widget<Text>(
+        indicator = tester.widget<Icon>(
           find.byKey(const Key('forum-section-indicator-favorite:2,55')),
         );
-        expect(indicator.data, '+');
+        expect(indicator.icon, Icons.chevron_right);
 
         await tester.tap(
           find.byKey(const Key('forum-section-toggle-favorite:2,55')),
@@ -809,10 +820,10 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('forum-favorite-card-2')), findsOneWidget);
-        indicator = tester.widget<Text>(
+        indicator = tester.widget<Icon>(
           find.byKey(const Key('forum-section-indicator-favorite:2,55')),
         );
-        expect(indicator.data, '-');
+        expect(indicator.icon, Icons.expand_more);
       },
     );
 

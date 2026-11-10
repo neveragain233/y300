@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,58 @@ import 'package:y300/features/reader_shared/presentation/reader_preferences/read
 import '../../../../test_support/localized_test_app.dart';
 
 void main() {
+  testWidgets(
+    'hinge resize preserves image identity and intra-image position without progress writes',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final window = ValueNotifier(const MediaQueryData(size: Size(1200, 800)));
+      final recorder = _Recorder();
+      final preferences = _Preferences();
+      final capability = _Capability(recorder, initialIndex: 3);
+      final active = ValueNotifier(capability);
+      addTearDown(window.dispose);
+      addTearDown(active.dispose);
+      await tester.pumpWidget(_host(active, preferences, window: window));
+      await tester.pumpAndSettle();
+      final controller = _scroll(tester);
+      controller.jumpTo(3 * 960 + 240);
+      await tester.pumpAndSettle();
+      final writes = capability.progress.length;
+      final visible = capability.visible.length;
+      final restoreCount = recorder.restoreStarted.length;
+      window.value = const MediaQueryData(
+        size: Size(1200, 800),
+        displayFeatures: [
+          DisplayFeature(
+            bounds: Rect.fromLTWH(600, 0, 20, 800),
+            type: DisplayFeatureType.hinge,
+            state: DisplayFeatureState.postureHalfOpened,
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+      expect(_scroll(tester), same(controller));
+      expect(controller.offset, closeTo(3 * 600 + 150, 1));
+      expect(
+        tester.getSize(find.byKey(const Key('reader-continuous-region'))).width,
+        600,
+      );
+      expect(capability.progress, hasLength(writes));
+      expect(capability.visible, hasLength(visible));
+      expect(capability.seeks, isEmpty);
+      expect(recorder.restoreStarted, hasLength(restoreCount));
+      window.value = const MediaQueryData(size: Size(1200, 800));
+      await tester.pumpAndSettle();
+      expect(controller.offset, closeTo(3 * 960 + 240, 1));
+      expect(capability.progress, hasLength(writes));
+      expect(preferences.saved, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'rebuild while initial restore waits for layout shares one seek',
     (tester) async {
@@ -125,33 +178,40 @@ ScrollController _scroll(WidgetTester tester) => tester
 double? _page(WidgetTester tester) =>
     tester.widget<PageView>(find.byType(PageView)).controller!.page;
 
-Widget _host(ValueNotifier<_Capability> active, _Preferences preferences) =>
-    ProviderScope(
-      overrides: [
-        readerPreferencesRepositoryProvider.overrideWithValue(preferences),
-        forumImagePrecacheServiceProvider.overrideWithValue(_Precache()),
-      ],
-      child: LocalizedTestApp(
-        home: MediaQuery(
-          data: const MediaQueryData(size: Size(800, 600)),
-          child: Consumer(
-            builder: (context, ref, child) {
-              if (ref.watch(readerPreferencesControllerProvider).value ==
-                  null) {
-                return const SizedBox.shrink();
-              }
-              return ValueListenableBuilder<_Capability>(
-                valueListenable: active,
-                builder: (_, capability, _) => ImageReaderEngine(
-                  capability: capability,
-                  listKey: const Key('restore-lifecycle-list'),
-                ),
-              );
-            },
-          ),
-        ),
+Widget _host(
+  ValueNotifier<_Capability> active,
+  _Preferences preferences, {
+  ValueNotifier<MediaQueryData>? window,
+}) => ProviderScope(
+  overrides: [
+    readerPreferencesRepositoryProvider.overrideWithValue(preferences),
+    forumImagePrecacheServiceProvider.overrideWithValue(_Precache()),
+  ],
+  child: LocalizedTestApp(
+    home: ValueListenableBuilder<MediaQueryData>(
+      valueListenable: window ?? _defaultWindow,
+      builder: (_, media, child) => MediaQuery(data: media, child: child!),
+      child: Consumer(
+        builder: (context, ref, child) {
+          if (ref.watch(readerPreferencesControllerProvider).value == null) {
+            return const SizedBox.shrink();
+          }
+          return ValueListenableBuilder<_Capability>(
+            valueListenable: active,
+            builder: (_, capability, _) => ImageReaderEngine(
+              capability: capability,
+              listKey: const Key('restore-lifecycle-list'),
+            ),
+          );
+        },
       ),
-    );
+    ),
+  ),
+);
+
+final _defaultWindow = ValueNotifier(
+  const MediaQueryData(size: Size(800, 600)),
+);
 
 class _Capability extends ReaderCapability {
   _Capability(this.recorder, {this.revision = 0, this.initialIndex = 0});
@@ -159,6 +219,13 @@ class _Capability extends ReaderCapability {
   final int revision;
   final int initialIndex;
   final seeks = <int>[];
+  final progress = <int>[];
+  final visible = <int>[];
+  @override
+  void onScrollProgress({required int index, required double offset}) =>
+      progress.add(index);
+  @override
+  void onImageVisible(int index) => visible.add(index);
   ReaderEngineActions? actions;
   ReaderEngineContext? latestContext;
   int exitCalls = 0;
