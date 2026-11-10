@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -354,7 +356,13 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
   }
 
   void _selectDestination(MainShellDestination destination) {
-    if (destination == _currentDestination) return;
+    if (destination == _currentDestination) {
+      // 再点当前入口回到该入口根页，论坛从分区页返回论坛首页。
+      if (destination == MainShellDestination.forum) {
+        unawaited(_forumBrowser.resetToRoot());
+      }
+      return;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _currentDestination = destination;

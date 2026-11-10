@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:ui' show DisplayFeature;
 
 import 'package:flutter/material.dart';
@@ -16,6 +18,9 @@ class AdaptiveDetailController extends ChangeNotifier {
   bool get hasDetail => _hasDetail;
   bool get expanded => _expanded;
   bool get canSplit => _canSplit;
+
+  /// 回到该入口的根页：先清空详情栈，再清空来源栈。
+  Future<void> resetToRoot() => _host?._resetToRoot() ?? Future<void>.value();
 
   void _update({
     required bool hasDetail,
@@ -178,15 +183,45 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
     }
   }
 
+  /// 同一次系统返回只能消费一层路由；返回手势可能重复派发，若不拦截会
+  /// 连续关闭详情和来源两级页面。
+  bool _backInFlight = false;
+  bool _detailBackSettling = false;
+  Timer? _detailBackSettleTimer;
+
   Future<void> _back() async {
-    if (!_isActive) return;
-    if (_canSplit && _expanded) {
-      _toggleExpanded();
-    } else if (_hasDetail) {
-      await _detailKey.currentState?.maybePop();
-    } else {
-      await _sourceKey.currentState?.maybePop();
+    if (!_isActive || _backInFlight || _detailBackSettling) return;
+    _backInFlight = true;
+    final poppedDetail = !(_canSplit && _expanded) && _hasDetail;
+    try {
+      if (_canSplit && _expanded) {
+        _toggleExpanded();
+      } else if (_hasDetail) {
+        await _detailKey.currentState?.maybePop();
+      } else {
+        await _sourceKey.currentState?.maybePop();
+      }
+    } finally {
+      _backInFlight = false;
+      if (poppedDetail) {
+        // 手势返回在详情关闭动画期间可能再派发一次；短窗口内只消费一层。
+        _detailBackSettling = true;
+        _detailBackSettleTimer?.cancel();
+        _detailBackSettleTimer = Timer(const Duration(milliseconds: 320), () {
+          _detailBackSettling = false;
+        });
+      }
     }
+  }
+
+  Future<void> _resetToRoot() async {
+    _detailKey.currentState?.popUntil((route) => route.isFirst);
+    _sourceKey.currentState?.popUntil((route) => route.isFirst);
+    if (_expanded) {
+      _expanded = false;
+      _revision++;
+    }
+    _scheduleSync();
   }
 
   void _toggleExpanded() {
@@ -199,6 +234,7 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
 
   @override
   void dispose() {
+    _detailBackSettleTimer?.cancel();
     if (identical(_controller._host, this)) _controller._host = null;
     _sourceClipboard.dispose();
     _detailClipboard.dispose();

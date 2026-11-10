@@ -157,6 +157,71 @@ void main() {
       expect(isAdaptiveSourceCurrent(fixture.source.currentContext!), isTrue);
     },
   );
+
+  testWidgets('repeated system back consumes only the detail route', (
+    tester,
+  ) async {
+    final fixture = _Fixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    unawaited(
+      Navigator.of(fixture.source.currentContext!).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Center(child: Text('section'))),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(
+      openAdaptiveDetail(
+        tester.element(find.text('section')),
+        MaterialPageRoute<void>(builder: (_) => const _Detail(id: 'thread')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('thread'), findsOneWidget);
+
+    // 系统返回手势可能在同一帧重复派发；第二次不能继续弹掉来源分区页。
+    await tester.binding.handlePopRoute();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('thread'), findsNothing);
+    expect(find.text('section'), findsOneWidget);
+    expect(fixture.controller.hasDetail, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('resetToRoot clears detail and source stacks', (tester) async {
+    final fixture = _Fixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    unawaited(
+      Navigator.of(fixture.source.currentContext!).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Center(child: Text('section'))),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(
+      openAdaptiveDetail(
+        tester.element(find.text('section')),
+        MaterialPageRoute<void>(builder: (_) => const _Detail(id: 'thread')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('thread'), findsOneWidget);
+
+    await fixture.controller.resetToRoot();
+    await tester.pumpAndSettle();
+
+    expect(find.text('thread'), findsNothing);
+    expect(find.text('section'), findsNothing);
+    expect(find.text('source'), findsOneWidget);
+    expect(fixture.controller.hasDetail, isFalse);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _Fixture {
