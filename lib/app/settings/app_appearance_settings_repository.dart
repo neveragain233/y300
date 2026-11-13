@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -35,6 +36,7 @@ class SharedPrefsAppAppearanceSettingsRepository
             themeFamily: _parseThemeFamily(json['family']),
             navigationBarStyle: _parseNavigationBarStyle(json['navigation']),
             navigationSwipeEnabled: _parseNavigationSwipe(json['swipe']),
+            glassLevel: _parseGlassLevel(json['glass']),
             brightnessPreference: _parseBrightnessPreference(
               json['brightness'],
             ),
@@ -110,6 +112,7 @@ class SharedPrefsAppAppearanceSettingsRepository
     'family': settings.themeFamily.name,
     'navigation': settings.navigationBarStyle.name,
     'swipe': settings.navigationSwipeEnabled,
+    'glass': settings.glassLevel.name,
     'brightness': settings.brightnessPreference.name,
     'language': settings.languagePreference.name,
   });
@@ -127,6 +130,15 @@ class SharedPrefsAppAppearanceSettingsRepository
       }
     }
     return AppNavigationBarStyle.immersive;
+  }
+
+  AppGlassLevel _parseGlassLevel(Object? raw) {
+    for (final level in AppGlassLevel.values) {
+      if (level.name == raw) {
+        return level;
+      }
+    }
+    return AppGlassLevel.standard;
   }
 
   /// 旧快照没有该字段，缺省保留新的默认值。

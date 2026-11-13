@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
+import 'package:y300/app/navigation/main_navigation_group_presentation.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
-import 'package:y300/app/navigation/main_shell_destination_presentation.dart';
-import 'package:y300/features/more/presentation/more_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
@@ -50,100 +50,143 @@ class NavigationManagementPage extends ConsumerWidget {
           ),
         ),
         data: (state) {
-          final order = state.settings.managedOrder;
+          final order = MainNavigationGrouping.configurableGroups(
+            state.settings,
+          );
           return Stack(
             children: [
-              ReorderableListView.builder(
-                key: const Key('navigation-management-list'),
-                buildDefaultDragHandles: false,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: order.length,
-                onReorderItem: state.isSaving
-                    ? (_, _) {}
-                    : (oldIndex, newIndex) => unawaited(
-                        _runMutation(
-                          context,
-                          () => controller.reorder(oldIndex, newIndex),
+              Column(
+                children: [
+                  ListTile(
+                    title: Text(l10n.navigationStartupPage),
+                    trailing: DropdownButton<MainStartupPage>(
+                      key: const Key('navigation-startup-page'),
+                      value: state.settings.startupPage,
+                      items: [
+                        DropdownMenuItem(
+                          value: MainStartupPage.forum,
+                          child: Text(l10n.appNavigationForum),
                         ),
-                      ),
-                itemBuilder: (context, index) {
-                  final destination = order[index];
-                  final visible = state.settings.isVisible(destination);
-                  return Column(
-                    key: ValueKey<String>(
-                      'navigation-management-item-${destination.name}',
-                    ),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ListTile(
-                              key: ValueKey<String>(
-                                'navigation-management-open-${destination.name}',
-                              ),
-                              leading: Icon(destination.icon),
-                              title: Text(
-                                MoreTextResolver.navigationLabel(
-                                  l10n,
-                                  destination,
-                                ),
-                              ),
-                              onTap: () => unawaited(
-                                Navigator.of(context).push<void>(
-                                  ref.read(mainDestinationRouteFactoryProvider)(
-                                    destination,
+                        DropdownMenuItem(
+                          value: MainStartupPage.bookshelf,
+                          child: Text(l10n.appNavigationBookshelf),
+                        ),
+                      ],
+                      onChanged: state.isSaving
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                unawaited(
+                                  _runMutation(
+                                    context,
+                                    () => controller.setStartupPage(value),
                                   ),
-                                ),
+                                );
+                              }
+                            },
+                    ),
+                  ),
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      key: const Key('navigation-management-list'),
+                      buildDefaultDragHandles: false,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: order.length,
+                      onReorderItem: state.isSaving
+                          ? (_, _) {}
+                          : (oldIndex, newIndex) => unawaited(
+                              _runMutation(
+                                context,
+                                () =>
+                                    controller.reorderGroup(oldIndex, newIndex),
                               ),
                             ),
+                      itemBuilder: (context, index) {
+                        final destination = order[index];
+                        final visible = MainNavigationGrouping.members(
+                          destination,
+                        ).any(state.settings.isVisible);
+                        return Column(
+                          key: ValueKey<String>(
+                            'navigation-management-item-${destination.name}',
                           ),
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(end: 16),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
                               children: [
-                                Switch(
-                                  key: ValueKey<String>(
-                                    'navigation-management-visible-${destination.name}',
+                                Expanded(
+                                  child: ListTile(
+                                    key: ValueKey<String>(
+                                      'navigation-management-open-${destination.name}',
+                                    ),
+                                    onTap: () => Navigator.of(context).push(
+                                      ref.read(
+                                        mainDestinationRouteFactoryProvider,
+                                      )(
+                                        MainNavigationGrouping.members(
+                                          destination,
+                                        ).first,
+                                      ),
+                                    ),
+                                    leading: Icon(destination.icon),
+                                    title: Text(
+                                      destination.localizedLabel(l10n),
+                                    ),
                                   ),
-                                  value: visible,
-                                  onChanged: state.isSaving
-                                      ? null
-                                      : (nextVisible) => unawaited(
-                                          _runMutation(
-                                            context,
-                                            () => controller.setVisibility(
-                                              destination,
-                                              nextVisible,
-                                            ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    end: 16,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Switch(
+                                        key: ValueKey<String>(
+                                          'navigation-management-visible-${destination.name}',
+                                        ),
+                                        value: visible,
+                                        onChanged: state.isSaving
+                                            ? null
+                                            : (nextVisible) => unawaited(
+                                                _runMutation(
+                                                  context,
+                                                  () => controller
+                                                      .setGroupVisibility(
+                                                        destination,
+                                                        nextVisible,
+                                                      ),
+                                                ),
+                                              ),
+                                      ),
+                                      Tooltip(
+                                        message:
+                                            l10n.moreNavigationDragToReorder,
+                                        child: ReorderableDragStartListener(
+                                          key: ValueKey<String>(
+                                            'navigation-management-drag-${destination.name}',
+                                          ),
+                                          index: index,
+                                          enabled: !state.isSaving,
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(12),
+                                            child: Icon(Icons.drag_handle),
                                           ),
                                         ),
-                                ),
-                                Tooltip(
-                                  message: l10n.moreNavigationDragToReorder,
-                                  child: ReorderableDragStartListener(
-                                    key: ValueKey<String>(
-                                      'navigation-management-drag-${destination.name}',
-                                    ),
-                                    index: index,
-                                    enabled: !state.isSaving,
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(12),
-                                      child: Icon(Icons.drag_handle),
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      if (index != order.length - 1)
-                        const Divider(height: 1, indent: 56),
-                    ],
-                  );
-                },
+                            if (index != order.length - 1)
+                              const Divider(height: 1, indent: 56),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
               if (state.isSaving)
                 const Align(

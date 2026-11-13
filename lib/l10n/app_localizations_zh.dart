@@ -25,6 +25,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get comicCommentRefreshFailed => '评论刷新失败，已保留原有评论';
 
   @override
+  String get navigationStartupPage => '启动页面';
+
+  @override
   String get clipboardLinkFoundThread => '发现百合会帖子链接';
 
   @override
@@ -2816,6 +2819,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moreNavigationSwipeUnavailable => '仅沉浸式底栏支持滑动切换。';
 
   @override
+  String get moreGlassSectionTitle => '玻璃效果';
+
+  @override
+  String get moreGlassLevelOff => '关闭';
+
+  @override
+  String get moreGlassLevelStandard => '标准';
+
+  @override
+  String get moreGlassLevelEnhanced => '增强';
+
+  @override
+  String get moreGlassDescription =>
+      '标准档为底栏提供有色磨砂和边缘高光，增强档叠加色散与更强的边缘光学；关闭时使用主题实色。';
+
+  @override
   String get moreThemeFamilyWarmPaper => '暖纸';
 
   @override
@@ -3280,6 +3299,73 @@ class AppLocalizationsZh extends AppLocalizations {
   String moreStorageHistoryEntries(int count) {
     return '浏览记录：$count';
   }
+
+  @override
+  String get threadControlsTitle => '帖子悬浮操作';
+
+  @override
+  String get threadControlsCompact => '紧凑操作栏';
+
+  @override
+  String get threadControlsSide => '紧凑栏停靠位置';
+
+  @override
+  String get threadControlsLeft => '左侧';
+
+  @override
+  String get threadControlsRight => '右侧';
+
+  @override
+  String get threadControlsFavorite => '紧凑栏显示收藏';
+
+  @override
+  String get threadControlsNavigation => '显示翻楼导航';
+
+  @override
+  String get threadControlsSingleNavigation => '使用单键翻楼';
+
+  @override
+  String get threadControlsHoldToFirst => '单键长按回到首楼';
+
+  @override
+  String get threadControlsHoldToFirstHint => '关闭时长按切换翻楼方向';
+
+  @override
+  String get threadControlsHideOnScroll => '向下滚动时隐藏操作栏';
+
+  @override
+  String get threadControlsHideOnScrollHint => '向上滚动时恢复，默认关闭';
+
+  @override
+  String get threadControlsSaveFailed => '保存失败，已恢复上次设置';
+
+  @override
+  String get threadControlsJumpPage => '跳页';
+
+  @override
+  String get threadControlsPreviousPost => '上一楼';
+
+  @override
+  String get threadControlsNextPost => '下一楼';
+
+  @override
+  String get threadControlsFirstPost => '回到首楼';
+
+  @override
+  String threadControlsPageSummary(int page, int total) {
+    return '第 $page / $total 页';
+  }
+
+  @override
+  String threadControlsPageUnknown(int page) {
+    return '第 $page 页，总页数未知';
+  }
+
+  @override
+  String get threadControlsPageInput => '输入页码';
+
+  @override
+  String get threadControlsInvalidPage => '请输入有效页码';
 
   @override
   String get threadDetailTitle => '帖子详情';
@@ -5906,6 +5992,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get comicCommentRefreshFailed => '評論重新整理失敗，已保留原有評論';
+
+  @override
+  String get navigationStartupPage => '啟動頁面';
 
   @override
   String get clipboardLinkFoundThread => '發現百合會帖子連結';
@@ -8699,6 +8788,22 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get moreNavigationSwipeUnavailable => '僅沉浸式底欄支援滑動切換。';
 
   @override
+  String get moreGlassSectionTitle => '玻璃效果';
+
+  @override
+  String get moreGlassLevelOff => '關閉';
+
+  @override
+  String get moreGlassLevelStandard => '標準';
+
+  @override
+  String get moreGlassLevelEnhanced => '增強';
+
+  @override
+  String get moreGlassDescription =>
+      '標準檔為底欄提供有色磨砂和邊緣高光，增強檔疊加色散與更強的邊緣光學；關閉時使用主題實色。';
+
+  @override
   String get moreThemeFamilyWarmPaper => '暖紙';
 
   @override
@@ -9163,6 +9268,73 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String moreStorageHistoryEntries(int count) {
     return '瀏覽記錄：$count';
   }
+
+  @override
+  String get threadControlsTitle => '帖子懸浮操作';
+
+  @override
+  String get threadControlsCompact => '精簡操作列';
+
+  @override
+  String get threadControlsSide => '精簡列停靠位置';
+
+  @override
+  String get threadControlsLeft => '左側';
+
+  @override
+  String get threadControlsRight => '右側';
+
+  @override
+  String get threadControlsFavorite => '精簡列顯示收藏';
+
+  @override
+  String get threadControlsNavigation => '顯示樓層導覽';
+
+  @override
+  String get threadControlsSingleNavigation => '使用單鍵切換樓層';
+
+  @override
+  String get threadControlsHoldToFirst => '單鍵長按回到首樓';
+
+  @override
+  String get threadControlsHoldToFirstHint => '關閉時長按切換樓層方向';
+
+  @override
+  String get threadControlsHideOnScroll => '向下捲動時隱藏操作列';
+
+  @override
+  String get threadControlsHideOnScrollHint => '向上捲動時恢復，預設關閉';
+
+  @override
+  String get threadControlsSaveFailed => '儲存失敗，已恢復上次設定';
+
+  @override
+  String get threadControlsJumpPage => '跳頁';
+
+  @override
+  String get threadControlsPreviousPost => '上一樓';
+
+  @override
+  String get threadControlsNextPost => '下一樓';
+
+  @override
+  String get threadControlsFirstPost => '回到首樓';
+
+  @override
+  String threadControlsPageSummary(int page, int total) {
+    return '第 $page / $total 頁';
+  }
+
+  @override
+  String threadControlsPageUnknown(int page) {
+    return '第 $page 頁，總頁數未知';
+  }
+
+  @override
+  String get threadControlsPageInput => '輸入頁碼';
+
+  @override
+  String get threadControlsInvalidPage => '請輸入有效頁碼';
 
   @override
   String get threadDetailTitle => '帖子詳情';

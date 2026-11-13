@@ -100,8 +100,9 @@ final class ThreadPostViewportAnchorCoordinator {
       return null;
     }
 
-    final viewportTop = viewport.localToGlobal(Offset.zero).dy;
-    final viewportBottom = viewportTop + viewport.size.height;
+    // 只在正文视口内比较坐标；重挂载期间外层过渡可能尚未布局。
+    const viewportTop = 0.0;
+    final viewportBottom = viewport.size.height;
     String? firstVisiblePid;
     var firstVisibleTop = double.infinity;
     int? firstVisibleChunk;
@@ -124,7 +125,9 @@ final class ThreadPostViewportAnchorCoordinator {
             !renderObject.hasSize) {
           continue;
         }
-        final top = renderObject.localToGlobal(Offset.zero).dy;
+        final top = renderObject
+            .localToGlobal(Offset.zero, ancestor: viewport)
+            .dy;
         final bottom = top + renderObject.size.height;
         if (bottom <= viewportTop || top >= viewportBottom) {
           continue;
@@ -209,9 +212,9 @@ final class ThreadPostViewportAnchorCoordinator {
           post is RenderBox &&
           post.attached &&
           post.hasSize) {
-        final viewportTop = viewport.localToGlobal(Offset.zero).dy;
-        final postTop = post.localToGlobal(Offset.zero).dy;
-        final currentRelativeTop = postTop - viewportTop;
+        final currentRelativeTop = post
+            .localToGlobal(Offset.zero, ancestor: viewport)
+            .dy;
         final delta = currentRelativeTop - snapshot.relativeTop;
         _jumpIfNeeded(controller, position.pixels + delta);
         return;
@@ -231,9 +234,12 @@ final class ThreadPostViewportAnchorCoordinator {
               !previous.hasSize) {
             continue;
           }
-          final edge =
-              previous.localToGlobal(Offset(0, previous.size.height)).dy -
-              viewport.localToGlobal(Offset.zero).dy;
+          final edge = previous
+              .localToGlobal(
+                Offset(0, previous.size.height),
+                ancestor: viewport,
+              )
+              .dy;
           _jumpIfNeeded(
             controller,
             position.pixels + edge - snapshot.relativeTop,

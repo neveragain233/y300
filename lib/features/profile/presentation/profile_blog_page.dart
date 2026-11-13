@@ -1,3 +1,6 @@
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+
 import 'dart:async';
 
 import 'package:y300/app/content_rendering/native_forum_html_render_theme_factory.dart';
@@ -103,31 +106,36 @@ class _ProfileBlogPageState extends ConsumerState<ProfileBlogPage> {
       builder: (context, state, _) => Scaffold(
         backgroundColor: palette.background,
         appBar: AppBar(
+          leading: adaptiveDetailBackButton(context),
           title: Text(l10n.profileBlogTitle),
           actions: [
-            IconButton(
-              key: const Key('blog-write'),
-              tooltip: l10n.profileBlogWrite,
-              onPressed: () async {
-                final result = await openBlogEditorPage(context, ref);
-                if (!mounted ||
-                    result == null ||
-                    !context.mounted ||
-                    ref.read(blogAccountIdProvider) !=
-                        result.receipt.target.actorUserId) {
-                  return;
-                }
-                await Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => ProfileBlogDetailPage(
-                      ownerUserId: result.receipt.target.ownerUserId,
-                      blogId: result.receipt.blogId,
-                      initialTitle: result.subject,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.edit_note),
+            AppToolbarActions(
+              children: [
+                IconButton(
+                  key: const Key('blog-write'),
+                  tooltip: l10n.profileBlogWrite,
+                  onPressed: () async {
+                    final result = await openBlogEditorPage(context, ref);
+                    if (!mounted ||
+                        result == null ||
+                        !context.mounted ||
+                        ref.read(blogAccountIdProvider) !=
+                            result.receipt.target.actorUserId) {
+                      return;
+                    }
+                    await Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => ProfileBlogDetailPage(
+                          ownerUserId: result.receipt.target.ownerUserId,
+                          blogId: result.receipt.blogId,
+                          initialTitle: result.subject,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.edit_note),
+                ),
+              ],
             ),
           ],
         ),

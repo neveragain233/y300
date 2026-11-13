@@ -5,6 +5,7 @@
   "comicReplyUnavailable": "当前帖子暂不支持回复",
   "comicCommentRefreshFailed": "评论刷新失败，已保留原有评论",
 
+  "navigationStartupPage": "启动页面",
   "@@locale": "zh",
 
   "clipboardLinkFoundThread": "发现百合会帖子链接",
@@ -1218,6 +1219,26 @@
   "@moreNavigationSwipeUnavailable": {
     "description": "选择旧式底栏时滑动切换不可用"
   },
+  "moreGlassSectionTitle": "玻璃效果",
+  "@moreGlassSectionTitle": {
+    "description": "外观设置中的玻璃材质档位分组标题"
+  },
+  "moreGlassLevelOff": "关闭",
+  "@moreGlassLevelOff": {
+    "description": "玻璃效果关闭档位"
+  },
+  "moreGlassLevelStandard": "标准",
+  "@moreGlassLevelStandard": {
+    "description": "标准玻璃档位"
+  },
+  "moreGlassLevelEnhanced": "增强",
+  "@moreGlassLevelEnhanced": {
+    "description": "增强玻璃档位"
+  },
+  "moreGlassDescription": "标准档为底栏提供有色磨砂和边缘高光，增强档叠加色散与更强的边缘光学；关闭时使用主题实色。",
+  "@moreGlassDescription": {
+    "description": "玻璃效果档位说明"
+  },
   "moreThemeFamilyWarmPaper": "暖纸",
   "moreThemeFamilyMoonWhite": "月白",
   "moreThemeFamilyPlumPurple": "梅紫",
@@ -1433,6 +1454,30 @@
   "@moreStorageHistoryEntries": {
     "placeholders": {"count": {"type": "int"}}
   },
+
+  "threadControlsTitle": "帖子悬浮操作",
+  "threadControlsCompact": "紧凑操作栏",
+  "threadControlsSide": "紧凑栏停靠位置",
+  "threadControlsLeft": "左侧",
+  "threadControlsRight": "右侧",
+  "threadControlsFavorite": "紧凑栏显示收藏",
+  "threadControlsNavigation": "显示翻楼导航",
+  "threadControlsSingleNavigation": "使用单键翻楼",
+  "threadControlsHoldToFirst": "单键长按回到首楼",
+  "threadControlsHoldToFirstHint": "关闭时长按切换翻楼方向",
+  "threadControlsHideOnScroll": "向下滚动时隐藏操作栏",
+  "threadControlsHideOnScrollHint": "向上滚动时恢复，默认关闭",
+  "threadControlsSaveFailed": "保存失败，已恢复上次设置",
+  "threadControlsJumpPage": "跳页",
+  "threadControlsPreviousPost": "上一楼",
+  "threadControlsNextPost": "下一楼",
+  "threadControlsFirstPost": "回到首楼",
+  "threadControlsPageSummary": "第 {page} / {total} 页",
+  "@threadControlsPageSummary": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "threadControlsPageUnknown": "第 {page} 页，总页数未知",
+  "@threadControlsPageUnknown": {"placeholders": {"page": {"type": "int"}}},
+  "threadControlsPageInput": "输入页码",
+  "threadControlsInvalidPage": "请输入有效页码",
 
   "threadDetailTitle": "帖子详情",
   "threadDetailLoading": "正在读取帖子",

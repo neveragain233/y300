@@ -26,6 +26,7 @@ import 'package:y300/features/forum/domain/services/forum_webview_thread_link_ro
 import 'package:y300/features/forum/domain/services/forum_webview_visual_policy_resolver.dart';
 import 'package:y300/features/forum/presentation/forum_text_resolver.dart';
 import 'package:y300/features/forum/presentation/mappers/forum_webview_history_visit_mapper.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_controller.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_driver.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_history_coordinator.dart';
@@ -483,10 +484,7 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
         if (_canOpenNativeRoute) {
           _postRouteSession.invalidate();
           _redirectRouteSession.invalidate();
-          unawaited(
-            Navigator.of(context)
-                .push<void>(MaterialPageRoute(builder: (_) => page)),
-          );
+          _pushNativeDestination(page, destination);
         }
         return ForumWebViewNavigationDecision.prevent;
       }
@@ -604,6 +602,20 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     );
   }
 
+  /// 帖子页交回来源的详情宿主，主壳才能隐藏底栏并让悬浮控件可点；
+  /// 板块、搜索等来源页仍按原栈推入。
+  void _pushNativeDestination(
+    Widget page,
+    YamiboForumLinkDestination destination,
+  ) {
+    final route = MaterialPageRoute<void>(builder: (_) => page);
+    unawaited(
+      destination.kind == YamiboForumLinkKind.thread
+          ? openAdaptiveDetail(context, route)
+          : Navigator.of(context).push(route),
+    );
+  }
+
   Future<void> _openNativeFindPostRedirect(
     ForumWebViewThreadLinkResolution resolution,
   ) async {
@@ -641,10 +653,7 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
             final nativePage = ref.read(nativeForumLinkPageFactoryProvider)(
               destination,
             )!;
-            unawaited(
-              Navigator.of(context)
-                  .push<void>(MaterialPageRoute(builder: (_) => nativePage)),
-            );
+            _pushNativeDestination(nativePage, destination);
           } else {
             final finalResolution = ref
                 .read(forumWebViewThreadLinkRouterProvider)

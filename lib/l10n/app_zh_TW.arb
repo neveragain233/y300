@@ -5,6 +5,7 @@
   "comicReplyUnavailable": "目前帖子暫不支援回覆",
   "comicCommentRefreshFailed": "評論重新整理失敗，已保留原有評論",
 
+  "navigationStartupPage": "啟動頁面",
   "@@locale": "zh_TW",
 
   "clipboardLinkFoundThread": "發現百合會帖子連結",
@@ -653,6 +654,26 @@
   "moreNavigationSwipeTitle": "底欄滑動切換",
   "moreNavigationSwipeDescription": "在底欄左右拖曳切換入口，放開後切頁。",
   "moreNavigationSwipeUnavailable": "僅沉浸式底欄支援滑動切換。",
+  "moreGlassSectionTitle": "玻璃效果",
+  "@moreGlassSectionTitle": {
+    "description": "外觀設定中的玻璃材質檔位分組標題"
+  },
+  "moreGlassLevelOff": "關閉",
+  "@moreGlassLevelOff": {
+    "description": "玻璃效果關閉檔位"
+  },
+  "moreGlassLevelStandard": "標準",
+  "@moreGlassLevelStandard": {
+    "description": "標準玻璃檔位"
+  },
+  "moreGlassLevelEnhanced": "增強",
+  "@moreGlassLevelEnhanced": {
+    "description": "增強玻璃檔位"
+  },
+  "moreGlassDescription": "標準檔為底欄提供有色磨砂和邊緣高光，增強檔疊加色散與更強的邊緣光學；關閉時使用主題實色。",
+  "@moreGlassDescription": {
+    "description": "玻璃效果檔位說明"
+  },
   "moreThemeFamilyWarmPaper": "暖紙",
   "moreThemeFamilyMoonWhite": "月白",
   "moreThemeFamilyPlumPurple": "梅紫",
@@ -1032,6 +1053,30 @@
   "libraryOperationUnsupported": "目前模組不支援此操作",
   "libraryOperationCacheWriteFailed": "快取寫入失敗，請重試",
   "libraryOperationDefaultCategoryImmutable": "預設分類不能修改或刪除",
+
+  "threadControlsTitle": "帖子懸浮操作",
+  "threadControlsCompact": "精簡操作列",
+  "threadControlsSide": "精簡列停靠位置",
+  "threadControlsLeft": "左側",
+  "threadControlsRight": "右側",
+  "threadControlsFavorite": "精簡列顯示收藏",
+  "threadControlsNavigation": "顯示樓層導覽",
+  "threadControlsSingleNavigation": "使用單鍵切換樓層",
+  "threadControlsHoldToFirst": "單鍵長按回到首樓",
+  "threadControlsHoldToFirstHint": "關閉時長按切換樓層方向",
+  "threadControlsHideOnScroll": "向下捲動時隱藏操作列",
+  "threadControlsHideOnScrollHint": "向上捲動時恢復，預設關閉",
+  "threadControlsSaveFailed": "儲存失敗，已恢復上次設定",
+  "threadControlsJumpPage": "跳頁",
+  "threadControlsPreviousPost": "上一樓",
+  "threadControlsNextPost": "下一樓",
+  "threadControlsFirstPost": "回到首樓",
+  "threadControlsPageSummary": "第 {page} / {total} 頁",
+  "@threadControlsPageSummary": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "threadControlsPageUnknown": "第 {page} 頁，總頁數未知",
+  "@threadControlsPageUnknown": {"placeholders": {"page": {"type": "int"}}},
+  "threadControlsPageInput": "輸入頁碼",
+  "threadControlsInvalidPage": "請輸入有效頁碼",
 
   "threadDetailTitle": "帖子詳情",
   "threadDetailLoading": "正在讀取帖子",

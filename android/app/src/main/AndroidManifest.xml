@@ -27,7 +27,8 @@
     <application
         android:label="Y300"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round">
         <!-- open_filex owns the Intent bridge, but its default root-path is
              replaced here with the smallest verified-update-only scope. -->
         <provider

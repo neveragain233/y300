@@ -1,9 +1,10 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:flutter/material.dart';
+import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
-import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_shell_destination_presentation.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
@@ -82,6 +83,9 @@ class _MorePageState extends ConsumerState<MorePage> {
         .watch(mainNavigationSettingsControllerProvider)
         .value;
     final l10n = AppLocalizations.of(context);
+    final forumVisible =
+        (navigationState?.settings ?? MainNavigationSettings.defaults())
+            .isVisible(MainShellDestination.forum);
     final messagesVisible =
         (navigationState?.settings ?? MainNavigationSettings.defaults())
             .isVisible(MainShellDestination.messages);
@@ -96,10 +100,14 @@ class _MorePageState extends ConsumerState<MorePage> {
       appBar: AppBar(
         title: Text(l10n.appNavigationMy),
         actions: [
-          MoreAccountAction(
-            onLogin: () => _openLoginPage(context),
-            onLogout: () => _confirmAndLogout(context, ref),
-            isPending: _accountActionPending,
+          AppToolbarActions(
+            children: [
+              MoreAccountAction(
+                onLogin: () => _openLoginPage(context),
+                onLogout: () => _confirmAndLogout(context, ref),
+                isPending: _accountActionPending,
+              ),
+            ],
           ),
         ],
       ),
@@ -131,10 +139,10 @@ class _MorePageState extends ConsumerState<MorePage> {
                 _MoreSection(
                   title: l10n.moreSectionContent,
                   children: [
-                    for (final destination in MainNavigationGrouping(
-                      navigationState?.settings ??
-                          MainNavigationSettings.defaults(),
-                    ).myDestinations)
+                    for (final destination in [
+                      if (!forumVisible) MainShellDestination.history,
+                      MainShellDestination.blogs,
+                    ])
                       ListTile(
                         key: ValueKey('more-destination-${destination.name}'),
                         leading: Icon(destination.icon),
@@ -145,19 +153,20 @@ class _MorePageState extends ConsumerState<MorePage> {
                           ),
                         ),
                       ),
-                    ListTile(
-                      key: const Key('more-my-messages-entry'),
-                      leading: MessageAttentionIcon(
-                        icon: Icons.mail_outline,
-                        showAttention: hasMessageAttention,
+                    if (!forumVisible)
+                      ListTile(
+                        key: const Key('more-my-messages-entry'),
+                        leading: MessageAttentionIcon(
+                          icon: Icons.mail_outline,
+                          showAttention: hasMessageAttention,
+                        ),
+                        title: Text(l10n.moreMyMessages),
+                        onTap: canOpenMyContent
+                            ? () => _openMyContentPage(
+                                ForumUserProfileActionKind.messages,
+                              )
+                            : null,
                       ),
-                      title: Text(l10n.moreMyMessages),
-                      onTap: canOpenMyContent
-                          ? () => _openMyContentPage(
-                              ForumUserProfileActionKind.messages,
-                            )
-                          : null,
-                    ),
                     ListTile(
                       key: const Key('more-my-blogs-entry'),
                       leading: const Icon(Icons.auto_stories_outlined),
@@ -243,6 +252,16 @@ class _MorePageState extends ConsumerState<MorePage> {
                                 ),
                               );
                             },
+                    ),
+                    ListTile(
+                      key: const Key('more-thread-controls-entry'),
+                      leading: const Icon(Icons.touch_app_outlined),
+                      title: Text(l10n.threadControlsTitle),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ThreadControlsSettingsPage(),
+                        ),
+                      ),
                     ),
                     ListTile(
                       key: const Key('more-data-storage-entry'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 /// A search-mode app bar whose text field is visually part of the toolbar.
 ///
@@ -69,7 +70,10 @@ class _InlineSearchAppBarState extends State<InlineSearchAppBar> {
     return AppBar(
       bottom: widget.bottom,
       automaticallyImplyLeading: false,
-      leading: BackButton(key: widget.backButtonKey, onPressed: _handleBack),
+      leading: AppToolbarBackButton(
+        key: widget.backButtonKey,
+        onPressed: _handleBack,
+      ),
       titleSpacing: 0,
       title: TextField(
         key: widget.fieldKey,
@@ -100,32 +104,36 @@ class _InlineSearchAppBarState extends State<InlineSearchAppBar> {
         onSubmitted: widget.onSubmitted,
       ),
       actions: [
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: widget.controller,
-          builder: (context, value, _) {
-            final hasQuery = value.text.trim().isNotEmpty;
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (value.text.isNotEmpty)
-                  IconButton(
-                    key: widget.clearButtonKey,
-                    tooltip: widget.clearTooltip,
-                    onPressed: _handleClear,
-                    icon: const Icon(Icons.close),
-                  ),
-                if (widget.onSubmit != null)
-                  IconButton(
-                    key: widget.submitButtonKey,
-                    tooltip: widget.submitTooltip,
-                    onPressed: widget.submitEnabled && hasQuery
-                        ? widget.onSubmit
-                        : null,
-                    icon: const Icon(Icons.search),
-                  ),
-              ],
-            );
-          },
+        AppToolbarActions(
+          children: [
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: widget.controller,
+              builder: (context, value, _) {
+                final hasQuery = value.text.trim().isNotEmpty;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (value.text.isNotEmpty)
+                      IconButton(
+                        key: widget.clearButtonKey,
+                        tooltip: widget.clearTooltip,
+                        onPressed: _handleClear,
+                        icon: const Icon(Icons.close),
+                      ),
+                    if (widget.onSubmit != null)
+                      IconButton(
+                        key: widget.submitButtonKey,
+                        tooltip: widget.submitTooltip,
+                        onPressed: widget.submitEnabled && hasQuery
+                            ? widget.onSubmit
+                            : null,
+                        icon: const Icon(Icons.search),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ],
     );

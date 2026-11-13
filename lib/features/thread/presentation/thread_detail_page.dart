@@ -4,7 +4,20 @@ import 'package:y300/features/thread/presentation/services/thread_post_actions.d
 
 import 'dart:async';
 
+import 'package:y300/features/auth/application/verified_session_owner.dart';
+
+import 'package:y300/features/thread/domain/models/thread_controls_preferences.dart';
+import 'package:y300/features/thread/presentation/thread_controls_preferences_controller.dart';
+import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
+import 'package:y300/features/thread/presentation/services/thread_floor_navigation_coordinator.dart';
+import 'package:y300/features/thread/presentation/services/thread_controls_visibility_controller.dart';
+import 'package:y300/features/thread/presentation/widgets/thread_floating_controls.dart';
+import 'package:y300/features/thread/presentation/widgets/thread_page_picker_sheet.dart';
+
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+import 'package:y300/shared/widgets/transient_feedback_layout.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,13 +58,8 @@ import 'package:y300/features/thread/presentation/thread_detail_content_projecti
 import 'package:y300/features/thread/presentation/thread_detail_content_projector.dart';
 import 'package:y300/features/thread/presentation/mappers/thread_history_visit_mapper.dart';
 import 'package:y300/features/thread/presentation/services/thread_history_commit_guard.dart';
-import 'package:y300/features/thread/presentation/services/thread_detail_quick_scroll_coordinator.dart';
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
 import 'package:y300/features/thread/presentation/thread_text_resolver.dart';
-import 'package:y300/features/thread/domain/models/thread_quick_scroll_dock_side.dart';
-import 'package:y300/features/thread/presentation/thread_quick_scroll_preferences_controller.dart';
-import 'package:y300/features/thread/presentation/widgets/thread_detail_quick_scroll_dock.dart';
-import 'package:y300/features/thread/presentation/widgets/thread_quick_scroll_dock_location.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
@@ -103,12 +111,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     with WidgetsBindingObserver {
   late final ScrollController _scrollController;
   late final ThreadImageReaderReturnCoordinator _imageReaderReturnCoordinator;
-  late final ThreadDetailQuickScrollCoordinator _quickScrollCoordinator;
+  late final ThreadFloorNavigationCoordinator _floorNavigation;
+  final _controlsVisibility = ThreadControlsVisibilityController();
+  double _controlsHeight = 56;
   Timer? _highlightClearTimer;
   String? _highlightPostPid;
   bool _targetHighlightStarted = false;
   String? _latestImageReferer;
-  bool _quickScrollMetricsSyncScheduled = false;
 
   final ThreadHistoryCommitGuard _historyCommitGuard =
       ThreadHistoryCommitGuard();
@@ -133,11 +142,18 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     _imageReaderReturnCoordinator = ThreadImageReaderReturnCoordinator(
       scrollController: _scrollController,
     );
-    _quickScrollCoordinator = ThreadDetailQuickScrollCoordinator(
-      scrollController: _scrollController,
-      onUserNavigation: () => _bodyReadingCoordinator?.markUserNavigation(),
-      onNavigationStarted: () =>
-          _bodyReadingCoordinator?.beginExplicitNavigation(),
+
+    _floorNavigation = ThreadFloorNavigationCoordinator(
+      readPage: _readFloorPage,
+      loadAdjacent: _loadAdjacentFloor,
+      onStarted: () {
+        ref
+            .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
+            .cancelFloorPageLoad();
+        _controlsVisibility.reset();
+        _bodyReadingCoordinator?.beginExplicitNavigation();
+      },
+      onConfirmed: () => _bodyReadingCoordinator?.markUserNavigation(),
     );
     _bindReadingObserver();
   }
@@ -166,10 +182,14 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   }
 
   void _syncReadingVisibility() {
+    if (!mounted) return;
+    final routeCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+    if (!routeCurrent && _floorNavigation.isNavigating) {
+      _cancelFloorNavigation();
+    }
     final observer = widget.bodyReadingObserver;
     if (observer == null || !mounted || _readingClosing) return;
-    final frontmost =
-        (ModalRoute.of(context)?.isCurrent ?? true) && _readingSuspensions == 0;
+    final frontmost = routeCurrent && _readingSuspensions == 0;
     final visible = frontmost && _readingResumed;
     if (_readingVisible == visible) return;
     _readingVisible = visible;
@@ -180,7 +200,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       return;
     }
     _bodyReadingCoordinator?.setActive(false);
-    _quickScrollCoordinator.cancelNavigation();
     _pauseReading(observer);
     // Stop new measurements immediately, then flush the last confirmed lease
     // before changing producer visibility and invalidating that lease.
@@ -212,9 +231,11 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   Future<void> _runReadingViewAction(
     FutureOr<void> Function() action, {
     bool userNavigation = false,
+    bool preserveFloorNavigation = false,
   }) async {
     final observer = widget.bodyReadingObserver;
-    _quickScrollCoordinator.cancelNavigation();
+    if (!preserveFloorNavigation) _cancelFloorNavigation();
+    _controlsVisibility.reset();
     final ownerRevision = _readingOwnerRevision;
     if (observer == null) {
       await action();
@@ -250,7 +271,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         tid == widget.tid &&
         targetPid == widget.targetPid;
     _readingClosing = true;
-    _quickScrollCoordinator.cancelNavigation();
     _readingVisibilityRevision++;
     _bodyReadingCoordinator?.setActive(false);
     _pauseReading(observer);
@@ -270,7 +290,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         oldWidget.tid != widget.tid ||
         oldWidget.targetPid != widget.targetPid) {
       _readingCloseRevision++;
-      _quickScrollCoordinator.cancelNavigation();
+      _floorNavigation.cancel();
       _readingOwnerRevision++;
       _readingVisibilityRevision++;
       _readingClosing = false;
@@ -319,7 +339,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     }
     _postRouteSession.dispose();
     _highlightClearTimer?.cancel();
-    _quickScrollCoordinator.dispose();
+    _floorNavigation.dispose();
+    _controlsVisibility.dispose();
     _imageReaderReturnCoordinator.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -356,6 +377,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       initialHandoff: widget.initialHandoff,
     );
     final asyncState = ref.watch(threadDetailControllerProvider(args));
+    ref.watch(sessionRevisionProvider);
+    ref.listen<AsyncValue<int>>(sessionRevisionProvider, (previous, next) {
+      if (previous?.value != null && previous?.value != next.value) {
+        _cancelFloorNavigation();
+      }
+    });
     final controller = ref.read(threadDetailControllerProvider(args).notifier);
     final state =
         asyncState.value ??
@@ -418,12 +445,18 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       },
     );
     final palette = ThreadDetailNativePalette.resolve(Theme.of(context));
-    final quickScrollSide =
-        ref.watch(threadQuickScrollPreferencesControllerProvider).value ??
-        ThreadQuickScrollDockSide.right;
-    if (state.posts.isNotEmpty) {
-      _scheduleQuickScrollMetricsSync();
-    }
+    final controlsPreferences =
+        ref.watch(threadControlsPreferencesControllerProvider).value ??
+        const ThreadControlsPreferences();
+    ref.listen<AsyncValue<ThreadControlsPreferences>>(
+      threadControlsPreferencesControllerProvider,
+      (previous, next) {
+        if (previous?.value?.hideOnScroll != next.value?.hideOnScroll) {
+          _controlsVisibility.reset();
+        }
+      },
+    );
+    _floorNavigation.refresh();
     _scheduleHistoryVisit(
       asyncState: asyncState,
       state: state,
@@ -436,7 +469,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       appBar: AppBar(
         leading: widget.bodyReadingObserver == null
             ? adaptiveDetailBackButton(context)
-            : BackButton(onPressed: () => unawaited(_closeReadingAndPop())),
+            : AppToolbarBackButton(
+                onPressed: () => unawaited(_closeReadingAndPop()),
+              ),
         centerTitle: false,
         title: GestureDetector(
           key: const Key('thread-detail-appbar-copy-link-area'),
@@ -458,82 +493,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         ),
         actions: const [AdaptiveDetailExpandAction()],
       ),
-      bottomNavigationBar: Material(
-        color: Theme.of(context).navigationBarTheme.backgroundColor,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
-              children: [
-                if (state.supports(ThreadDetailCapability.favoriteEntry))
-                  IconButton(
-                    key: const Key('thread-detail-favorite-button'),
-                    tooltip: state.isThreadFavorited
-                        ? l10n.threadDetailUnfavorite
-                        : l10n.threadDetailFavorite,
-                    onPressed:
-                        asyncState.value == null ||
-                            state.isThreadFavoriteActionLoading ||
-                            state.isThreadFavorited
-                        ? null
-                        : controller.favoriteThread,
-                    icon: state.isThreadFavoriteActionLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            state.isThreadFavorited
-                                ? Icons.star
-                                : Icons.star_border_outlined,
-                          ),
-                  ),
-                if (state.supports(ThreadDetailCapability.replyAction))
-                  Expanded(
-                    child: TextButton.icon(
-                      key: const Key('thread-detail-appbar-reply-button'),
-                      label: Text(l10n.threadDetailReplyPost),
-                      onPressed: asyncState.value == null
-                          ? null
-                          : () {
-                              _openThreadReplyComposer(args, state);
-                            },
-                      icon: const Icon(Icons.reply),
-                    ),
-                  ),
-                _ThreadDetailMoreMenu(
-                  state: state,
-                  onOnlyAuthor: () => _runReadingViewAction(
-                    controller.openOnlyAuthor,
-                    userNavigation: true,
-                  ),
-                  onAllPosts: () => _runReadingViewAction(
-                    controller.openAllPosts,
-                    userNavigation: true,
-                  ),
-                  onReverseOrder: () => _runReadingViewAction(
-                    controller.openReverseOrder,
-                    userNavigation: true,
-                  ),
-                  onNormalOrder: () => _runReadingViewAction(
-                    controller.openNormalOrder,
-                    userNavigation: true,
-                  ),
-                  onCopyUrl: _copyUrl,
-                  onDisplaySettings: _openDisplaySettings,
-                  onBlockThread: () => unawaited(_blockCurrentThread(state)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
       body: NotificationListener<ScrollMetricsNotification>(
-        onNotification: _handleQuickScrollMetricsNotification,
+        onNotification: _handleThreadMetricsNotification,
         child: NotificationListener<ScrollNotification>(
-          onNotification: _handleQuickScrollNotification,
+          onNotification: _handleThreadScrollNotification,
           child: Column(
             children: [
               if (_topicTagsFor(state) case final tags when tags.isNotEmpty)
@@ -589,8 +552,15 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                   () => controller.refresh(forceNetwork: true),
                                 ),
                                 child: ThreadDetailContent(
-                                  quickScrollCoordinator:
-                                      _quickScrollCoordinator,
+                                  floorNavigation: _floorNavigation,
+                                  bottomInset:
+                                      MediaQuery.viewInsetsOf(context).bottom >
+                                          0
+                                      ? 0
+                                      : _controlsHeight +
+                                            32 +
+                                            MediaQuery.paddingOf(context)
+                                                .bottom,
                                   imageReaderReturnCoordinator:
                                       _imageReaderReturnCoordinator,
                                   bodyReadingCoordinator:
@@ -692,65 +662,148 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           ),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: ThreadDetailQuickScrollDock(
-          coordinator: _quickScrollCoordinator,
-          hasContent: state.posts.isNotEmpty,
-          backgroundColor: palette.cardElevated,
-          foregroundColor: palette.title,
+      floatingActionButton: ThreadFloatingControls(
+        preferences: controlsPreferences,
+        navigation: _floorNavigation,
+        visibility: _controlsVisibility,
+        hasContent: state.posts.isNotEmpty,
+        onHeightChanged: (height) {
+          if (mounted && (_controlsHeight - height).abs() > .5) {
+            setState(() => _controlsHeight = height);
+          }
+        },
+        favorite: state.supports(ThreadDetailCapability.favoriteEntry)
+            ? IconButton(
+                key: const Key('thread-detail-favorite-button'),
+                tooltip: state.isThreadFavorited
+                    ? l10n.threadDetailUnfavorite
+                    : l10n.threadDetailFavorite,
+                onPressed:
+                    asyncState.value == null ||
+                        state.isThreadFavoriteActionLoading ||
+                        state.isThreadFavorited
+                    ? null
+                    : controller.favoriteThread,
+                icon: state.isThreadFavoriteActionLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        state.isThreadFavorited
+                            ? Icons.star
+                            : Icons.star_border_outlined,
+                      ),
+              )
+            : null,
+        reply:
+            state.supports(ThreadDetailCapability.replyAction) &&
+                asyncState.value != null
+            ? () => _openThreadReplyComposer(args, state)
+            : null,
+        jumpPage: IconButton(
+          key: const Key('thread-detail-jump-page-button'),
+          tooltip: l10n.threadControlsJumpPage,
+          onPressed: state.posts.isNotEmpty && !state.isLoadingMore
+              ? () => _selectThreadPage(controller, state)
+              : null,
+          icon: const Icon(Icons.numbers),
         ),
+        more: _ThreadDetailMoreMenu(
+          state: state,
+          onOnlyAuthor: () => _runReadingViewAction(
+            controller.openOnlyAuthor,
+            userNavigation: true,
+          ),
+          onAllPosts: () => _runReadingViewAction(
+            controller.openAllPosts,
+            userNavigation: true,
+          ),
+          onReverseOrder: () => _runReadingViewAction(
+            controller.openReverseOrder,
+            userNavigation: true,
+          ),
+          onNormalOrder: () => _runReadingViewAction(
+            controller.openNormalOrder,
+            userNavigation: true,
+          ),
+          onCopyUrl: _copyUrl,
+          onDisplaySettings: _openDisplaySettings,
+          onControlsSettings: _openControlsSettings,
+          onBlockThread: () => unawaited(_blockCurrentThread(state)),
+        ),
+        onFirstPost: () {
+          if (_readFloorPage()?.page == 1) {
+            _floorNavigation.firstPost(
+              animate: !MediaQuery.disableAnimationsOf(context),
+            );
+          } else {
+            _runPageActionAndScrollTop(() => controller.loadPage(1));
+          }
+        },
       ),
-      floatingActionButtonLocation: ThreadQuickScrollDockLocation(
-        quickScrollSide,
-      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButtonAnimator: FloatingActionButtonAnimator.noAnimation,
     );
+    final feedbackPage = ValueListenableBuilder<bool>(
+      valueListenable: _controlsVisibility,
+      builder: (context, visible, _) => TransientFeedbackObstacle(
+        bottom: (controlsPreferences.hideOnScroll && !visible)
+            ? 0
+            : _controlsHeight + 32 + MediaQuery.paddingOf(context).bottom,
+        child: page,
+      ),
+    );
     return widget.bodyReadingObserver == null
-        ? page
+        ? feedbackPage
         : PopScope<void>(
             canPop: _readingClosing,
             onPopInvokedWithResult: (didPop, _) {
               if (!didPop) unawaited(_closeReadingAndPop());
             },
-            child: page,
+            child: feedbackPage,
           );
   }
 
-  bool _handleQuickScrollNotification(ScrollNotification notification) {
+  bool _handleThreadScrollNotification(ScrollNotification notification) {
     if (notification.depth != 0) {
       return false;
     }
     _bodyReadingCoordinator?.handleScroll(notification);
-    if (notification case UserScrollNotification(:final direction)) {
-      _quickScrollCoordinator.updateUserDirection(direction);
+    _controlsVisibility.handle(
+      notification,
+      enabled:
+          ref
+              .read(threadControlsPreferencesControllerProvider)
+              .value
+              ?.hideOnScroll ??
+          false,
+    );
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _floorNavigation.userScrolled();
+      ref
+          .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
+          .cancelFloorPageLoad();
     }
-    _quickScrollCoordinator.updateMetrics(notification.metrics);
+    if (notification is ScrollEndNotification) _floorNavigation.refresh();
+    if (notification case UserScrollNotification(:final direction)) {
+      if (direction != ScrollDirection.idle) {
+        _floorNavigation.userScrolled();
+      }
+    }
     return false;
   }
 
-  bool _handleQuickScrollMetricsNotification(
+  bool _handleThreadMetricsNotification(
     ScrollMetricsNotification notification,
   ) {
     if (notification.depth == 0) {
-      _quickScrollCoordinator.updateMetrics(notification.metrics);
       _bodyReadingCoordinator?.schedule();
+      _floorNavigation.refresh();
     }
     return false;
-  }
-
-  void _scheduleQuickScrollMetricsSync() {
-    if (_quickScrollMetricsSyncScheduled) {
-      return;
-    }
-    _quickScrollMetricsSyncScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _quickScrollMetricsSyncScheduled = false;
-      if (!mounted || !_scrollController.hasClients) {
-        return;
-      }
-      _quickScrollCoordinator.updateMetrics(_scrollController.position);
-    });
   }
 
   void _scheduleHistoryVisit({
@@ -876,12 +929,99 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     Navigator.of(context).maybePop();
   }
 
+  void _cancelFloorNavigation() {
+    _floorNavigation.cancel();
+    if (mounted) {
+      ref
+          .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
+          .cancelFloorPageLoad();
+    }
+  }
+
+  ThreadDetailArgs get _currentThreadArgs => ThreadDetailArgs(
+    tid: widget.tid,
+    subject: widget.subject,
+    initialPage: widget.initialPage,
+    targetPid: widget.targetPid,
+    initialHandoff: widget.initialHandoff,
+  );
+
+  ThreadFloorPage? _readFloorPage() {
+    if (!mounted) return null;
+    final value = ref
+        .read(threadDetailControllerProvider(_currentThreadArgs))
+        .value;
+    if (value == null) return null;
+    final entries = value.queryParameters.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return ThreadFloorPage(
+      owner: (
+        value.tid,
+        Uri(queryParameters: Map.fromEntries(entries)).query,
+        ref.read(sessionRevisionProvider).value ?? 0,
+      ),
+      page: value.currentPage,
+      pids: value.posts.map((post) => post.pid).toList(growable: false),
+      hasPrevious: value.currentPage > 1,
+      hasNext: value.hasMore,
+      loading: value.isLoadingMore,
+    );
+  }
+
+  Future<bool> _loadAdjacentFloor(bool forward, bool Function() current) async {
+    var loaded = false;
+    await _runReadingViewAction(
+      () async {
+        if (!current() || !mounted) return;
+        loaded = await ref
+            .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
+            .loadAdjacentForFloor(forward: forward, isCurrent: current);
+      },
+      userNavigation: true,
+      preserveFloorNavigation: true,
+    );
+    return loaded;
+  }
+
+  Future<void> _selectThreadPage(
+    ThreadDetailController controller,
+    ThreadDetailPageState state,
+  ) async {
+    _cancelFloorNavigation();
+    _controlsVisibility.reset();
+    final owner = _readFloorPage()?.owner;
+    final selected = await showThreadPagePicker(
+      context,
+      currentPage: state.currentPage,
+      lastPage: state.lastPage,
+      hasMore: state.hasMore,
+    );
+    if (!mounted ||
+        selected == null ||
+        selected == state.currentPage ||
+        _readFloorPage()?.owner != owner) {
+      return;
+    }
+    await _runPageActionAndScrollTop(() => controller.loadPage(selected));
+  }
+
+  void _openControlsSettings() {
+    _cancelFloorNavigation();
+    _controlsVisibility.reset();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const ThreadControlsSettingsPage(),
+      ),
+    );
+  }
+
   Future<void> _runPageActionAndScrollTop(
     FutureOr<void> Function() action,
   ) async {
     final observer = widget.bodyReadingObserver;
     final ownerRevision = _readingOwnerRevision;
-    _quickScrollCoordinator.cancelNavigation();
+    _cancelFloorNavigation();
+    _controlsVisibility.reset();
     if (observer != null) {
       _readingSuspensions++;
       _bodyReadingCoordinator?.markUserNavigation();
@@ -1211,6 +1351,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
     required this.onNormalOrder,
     required this.onCopyUrl,
     required this.onDisplaySettings,
+    required this.onControlsSettings,
     required this.onBlockThread,
   });
 
@@ -1221,6 +1362,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
   final VoidCallback onNormalOrder;
   final void Function(String label, String url) onCopyUrl;
   final VoidCallback onDisplaySettings;
+  final VoidCallback onControlsSettings;
   final VoidCallback onBlockThread;
 
   @override
@@ -1244,6 +1386,10 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
                 : l10n.threadDetailReverseOrder,
           ),
         ],
+        AppPopupMenuItem<String>(
+          value: 'controls-settings',
+          label: l10n.threadControlsTitle,
+        ),
         AppPopupMenuItem<String>(
           key: const Key('thread-detail-display-settings-menu-item'),
           value: 'display-settings',
@@ -1273,6 +1419,9 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
             return;
           case 'normal-order':
             onNormalOrder();
+            return;
+          case 'controls-settings':
+            onControlsSettings();
             return;
           case 'display-settings':
             onDisplaySettings();

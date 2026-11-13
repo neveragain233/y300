@@ -101,17 +101,21 @@ class MainDestinationPage extends ConsumerWidget {
         'destination',
       ),
     };
-    return switch (destination) {
+    final needsDetailHost = switch (destination) {
       MainShellDestination.favorites ||
       MainShellDestination.comic ||
       MainShellDestination.novel ||
-      MainShellDestination.history => AdaptiveDetailHost(
-        controller: browserController,
-        isActive: isActive,
-        globalOrigin: globalOrigin,
-        child: page,
-      ),
-      _ => page,
+      MainShellDestination.history => true,
+      _ => false,
     };
+    // 已在外层宿主内（从论坛根页推入的记录等）时复用外层宿主，详情才能
+    // 驱动主壳隐藏底栏；独立推入根导航栈的页面仍自带宿主。
+    if (!needsDetailHost || hasAdaptiveDetailHost(context)) return page;
+    return AdaptiveDetailHost(
+      controller: browserController,
+      isActive: isActive,
+      globalOrigin: globalOrigin,
+      child: page,
+    );
   }
 }

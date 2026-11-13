@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 
 @immutable
 class MainNavigationItem {
@@ -90,6 +92,7 @@ class MainNavigationCapsule extends StatefulWidget {
     required this.selectedIndex,
     this.onSelected,
     this.swipeEnabled = false,
+    this.glassLevel = AppGlassLevel.off,
   }) : assert(items.length >= 1 && items.length <= 5);
 
   final List<MainNavigationItem> items;
@@ -98,6 +101,9 @@ class MainNavigationCapsule extends StatefulWidget {
 
   /// 拖动期间只移动指示层，页面切换和语义选中态在松手后才提交。
   final bool swipeEnabled;
+
+  /// 沉浸式胶囊的玻璃档位；关闭时保持主题实色。
+  final AppGlassLevel glassLevel;
 
   @override
   State<MainNavigationCapsule> createState() => _MainNavigationCapsuleState();
@@ -206,14 +212,11 @@ class _MainNavigationCapsuleState extends State<MainNavigationCapsule> {
                   physics: widget.swipeEnabled
                       ? const NeverScrollableScrollPhysics()
                       : null,
-                  child: Material(
+                  child: AppGlassSurface(
                     key: const Key('main-shell-immersive-navigation'),
-                    color:
-                        Theme.of(context).navigationBarTheme.backgroundColor ??
-                        scheme.surfaceContainer,
+                    level: widget.glassLevel,
+                    borderRadius: 40,
                     elevation: 3,
-                    borderRadius: BorderRadius.circular(40),
-                    clipBehavior: Clip.antiAlias,
                     child: SizedBox(
                       width: width,
                       child: GestureDetector(
@@ -280,9 +283,42 @@ class _MainNavigationCapsuleState extends State<MainNavigationCapsule> {
                                               ),
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
-                                              color: scheme.primary,
                                               borderRadius:
                                                   BorderRadius.circular(34),
+                                              gradient:
+                                                  widget.glassLevel ==
+                                                      AppGlassLevel.enhanced
+                                                  ? LinearGradient(
+                                                      begin: Alignment.topLeft,
+                                                      end:
+                                                          Alignment.bottomRight,
+                                                      colors: [
+                                                        Color.alphaBlend(
+                                                          Colors.white
+                                                              .withValues(
+                                                                alpha: 0.18,
+                                                              ),
+                                                          scheme.primary,
+                                                        ),
+                                                        scheme.primary,
+                                                      ],
+                                                    )
+                                                  : null,
+                                              color:
+                                                  widget.glassLevel ==
+                                                      AppGlassLevel.enhanced
+                                                  ? null
+                                                  : scheme.primary,
+                                              border:
+                                                  widget.glassLevel ==
+                                                      AppGlassLevel.enhanced
+                                                  ? Border.all(
+                                                      color: Colors.white
+                                                          .withValues(
+                                                            alpha: 0.32,
+                                                          ),
+                                                    )
+                                                  : null,
                                             ),
                                           ),
                                         ),
@@ -300,6 +336,7 @@ class _MainNavigationCapsuleState extends State<MainNavigationCapsule> {
                                           key: ValueKey(widget.items[index].id),
                                           child: _CapsuleDestination(
                                             item: widget.items[index],
+                                            glassLevel: widget.glassLevel,
                                             selected:
                                                 index == widget.selectedIndex,
                                             onSelected:
@@ -332,10 +369,12 @@ class _MainNavigationCapsuleState extends State<MainNavigationCapsule> {
 class _CapsuleDestination extends StatefulWidget {
   const _CapsuleDestination({
     required this.item,
+    required this.glassLevel,
     required this.selected,
     required this.onSelected,
   });
   final MainNavigationItem item;
+  final AppGlassLevel glassLevel;
   final bool selected;
   final VoidCallback? onSelected;
   @override
@@ -344,11 +383,24 @@ class _CapsuleDestination extends StatefulWidget {
 
 class _CapsuleDestinationState extends State<_CapsuleDestination> {
   bool _focused = false;
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // 增强档的按压形变只作用于条目外观，不改变 48 逻辑像素触区；
+    // 减少动态效果时保持静态。
+    final pressScale = widget.glassLevel == AppGlassLevel.enhanced && _pressed
+        ? 0.96
+        : 1.0;
+    final pressDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : AppLayoutTokens.feedbackDuration;
+    // 玻璃着色后的表面比实色导航栏更接近正文亮度，未选中标签改用正文色。
     final foreground = widget.selected
         ? scheme.onPrimary
+        : widget.glassLevel.enabled
+        ? scheme.onSurface
         : scheme.onSurfaceVariant;
     return FocusableActionDetector(
       shortcuts: const {
@@ -374,35 +426,43 @@ class _CapsuleDestinationState extends State<_CapsuleDestination> {
           canRequestFocus: false,
           borderRadius: BorderRadius.circular(34),
           onTap: widget.onSelected,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56, minWidth: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(34),
-              border: Border.all(
-                color: _focused ? scheme.primary : Colors.transparent,
-                width: 2,
+          onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
+          child: AnimatedScale(
+            scale: pressScale,
+            duration: pressDuration,
+            curve: Curves.easeOut,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 56, minWidth: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(34),
+                border: Border.all(
+                  color: _focused ? scheme.primary : Colors.transparent,
+                  width: 2,
+                ),
               ),
-            ),
-            child: IconTheme(
-              data: IconThemeData(color: foreground, size: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  widget.selected ? widget.item.selectedIcon : widget.item.icon,
-                  const SizedBox(height: 3),
-                  Text(
-                    widget.item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: foreground,
-                      fontWeight: widget.selected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+              child: IconTheme(
+                data: IconThemeData(color: foreground, size: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    widget.selected
+                        ? widget.item.selectedIcon
+                        : widget.item.icon,
+                    const SizedBox(height: 3),
+                    Text(
+                      widget.item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: foreground,
+                        fontWeight: widget.selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -1,9 +1,15 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/forum_link_opener.dart';
+import 'package:y300/app/navigation/main_destination_page.dart';
+import 'package:y300/app/navigation/main_navigation_settings.dart';
+import 'package:y300/features/messages/application/message_attention_providers.dart';
+import 'package:y300/features/messages/presentation/widgets/message_attention_icon.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
@@ -130,22 +136,51 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
           ),
         ),
         actions: [
-          AppPopupMenuButton<String>(
-            key: const Key('forum-home-more-button'),
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              unawaited(_handleMoreMenuSelected(context, value));
-            },
-            itemBuilder: (context) => [
-              AppPopupMenuItem<String>(
-                key: const Key('forum-home-refresh-action'),
-                value: _refreshPageAction,
-                label: l10n.forumRefreshPage,
+          AppToolbarActions(
+            children: [
+              IconButton(
+                key: const Key('forum-home-messages-button'),
+                tooltip: l10n.moreMyMessages,
+                icon: MessageAttentionIcon(
+                  icon: Icons.mail_outline,
+                  showAttention: ref
+                      .watch(messageAttentionStateProvider)
+                      .hasAttention,
+                ),
+                onPressed: () => Navigator.of(context).push(
+                  ref.read(mainDestinationRouteFactoryProvider)(
+                    MainShellDestination.messages,
+                  ),
+                ),
               ),
-              AppPopupMenuItem<String>(
-                key: const Key('forum-home-unfavorite-action'),
-                value: _unfavoriteAction,
-                label: l10n.forumUnfavoriteForum,
+              IconButton(
+                key: const Key('forum-home-history-button'),
+                tooltip: l10n.appNavigationHistory,
+                icon: const Icon(Icons.history),
+                onPressed: () => Navigator.of(context).push(
+                  ref.read(mainDestinationRouteFactoryProvider)(
+                    MainShellDestination.history,
+                  ),
+                ),
+              ),
+              AppPopupMenuButton<String>(
+                key: const Key('forum-home-more-button'),
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  unawaited(_handleMoreMenuSelected(context, value));
+                },
+                itemBuilder: (context) => [
+                  AppPopupMenuItem<String>(
+                    key: const Key('forum-home-refresh-action'),
+                    value: _refreshPageAction,
+                    label: l10n.forumRefreshPage,
+                  ),
+                  AppPopupMenuItem<String>(
+                    key: const Key('forum-home-unfavorite-action'),
+                    value: _unfavoriteAction,
+                    label: l10n.forumUnfavoriteForum,
+                  ),
+                ],
               ),
             ],
           ),
@@ -283,6 +318,7 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
     final l10n = AppLocalizations.of(context);
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       builder: (_) => ForumFavoriteForumPicker(
         loadFavoriteForums: () =>
             directoryRepository.load(const FavoriteForumDirectoryQuery()),

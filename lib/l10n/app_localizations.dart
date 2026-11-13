@@ -127,6 +127,12 @@ abstract class AppLocalizations {
   /// **'评论刷新失败，已保留原有评论'**
   String get comicCommentRefreshFailed;
 
+  /// No description provided for @navigationStartupPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'启动页面'**
+  String get navigationStartupPage;
+
   /// 剪贴板中唯一可推荐目标为论坛帖子
   ///
   /// In zh, this message translates to:
@@ -4666,6 +4672,36 @@ abstract class AppLocalizations {
   /// **'仅沉浸式底栏支持滑动切换。'**
   String get moreNavigationSwipeUnavailable;
 
+  /// 外观设置中的玻璃材质档位分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'玻璃效果'**
+  String get moreGlassSectionTitle;
+
+  /// 玻璃效果关闭档位
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get moreGlassLevelOff;
+
+  /// 标准玻璃档位
+  ///
+  /// In zh, this message translates to:
+  /// **'标准'**
+  String get moreGlassLevelStandard;
+
+  /// 增强玻璃档位
+  ///
+  /// In zh, this message translates to:
+  /// **'增强'**
+  String get moreGlassLevelEnhanced;
+
+  /// 玻璃效果档位说明
+  ///
+  /// In zh, this message translates to:
+  /// **'标准档为底栏提供有色磨砂和边缘高光，增强档叠加色散与更强的边缘光学；关闭时使用主题实色。'**
+  String get moreGlassDescription;
+
   /// No description provided for @moreThemeFamilyWarmPaper.
   ///
   /// In zh, this message translates to:
@@ -5462,6 +5498,132 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'浏览记录：{count}'**
   String moreStorageHistoryEntries(int count);
+
+  /// No description provided for @threadControlsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子悬浮操作'**
+  String get threadControlsTitle;
+
+  /// No description provided for @threadControlsCompact.
+  ///
+  /// In zh, this message translates to:
+  /// **'紧凑操作栏'**
+  String get threadControlsCompact;
+
+  /// No description provided for @threadControlsSide.
+  ///
+  /// In zh, this message translates to:
+  /// **'紧凑栏停靠位置'**
+  String get threadControlsSide;
+
+  /// No description provided for @threadControlsLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'左侧'**
+  String get threadControlsLeft;
+
+  /// No description provided for @threadControlsRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'右侧'**
+  String get threadControlsRight;
+
+  /// No description provided for @threadControlsFavorite.
+  ///
+  /// In zh, this message translates to:
+  /// **'紧凑栏显示收藏'**
+  String get threadControlsFavorite;
+
+  /// No description provided for @threadControlsNavigation.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示翻楼导航'**
+  String get threadControlsNavigation;
+
+  /// No description provided for @threadControlsSingleNavigation.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用单键翻楼'**
+  String get threadControlsSingleNavigation;
+
+  /// No description provided for @threadControlsHoldToFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'单键长按回到首楼'**
+  String get threadControlsHoldToFirst;
+
+  /// No description provided for @threadControlsHoldToFirstHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭时长按切换翻楼方向'**
+  String get threadControlsHoldToFirstHint;
+
+  /// No description provided for @threadControlsHideOnScroll.
+  ///
+  /// In zh, this message translates to:
+  /// **'向下滚动时隐藏操作栏'**
+  String get threadControlsHideOnScroll;
+
+  /// No description provided for @threadControlsHideOnScrollHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'向上滚动时恢复，默认关闭'**
+  String get threadControlsHideOnScrollHint;
+
+  /// No description provided for @threadControlsSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败，已恢复上次设置'**
+  String get threadControlsSaveFailed;
+
+  /// No description provided for @threadControlsJumpPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'跳页'**
+  String get threadControlsJumpPage;
+
+  /// No description provided for @threadControlsPreviousPost.
+  ///
+  /// In zh, this message translates to:
+  /// **'上一楼'**
+  String get threadControlsPreviousPost;
+
+  /// No description provided for @threadControlsNextPost.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一楼'**
+  String get threadControlsNextPost;
+
+  /// No description provided for @threadControlsFirstPost.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到首楼'**
+  String get threadControlsFirstPost;
+
+  /// No description provided for @threadControlsPageSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {page} / {total} 页'**
+  String threadControlsPageSummary(int page, int total);
+
+  /// No description provided for @threadControlsPageUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {page} 页，总页数未知'**
+  String threadControlsPageUnknown(int page);
+
+  /// No description provided for @threadControlsPageInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入页码'**
+  String get threadControlsPageInput;
+
+  /// No description provided for @threadControlsInvalidPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效页码'**
+  String get threadControlsInvalidPage;
 
   /// No description provided for @threadDetailTitle.
   ///

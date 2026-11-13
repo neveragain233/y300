@@ -1,3 +1,5 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+
 import 'dart:async';
 import 'dart:io' as io;
 import 'dart:math' as math;
@@ -499,79 +501,86 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                   ),
                 ),
                 actions: [
-                  const AdaptiveDetailExpandAction(),
-                  if (_supportsChapterDownloads && _showsBulkDownloadActions)
-                    AppPopupMenuButton<String>(
-                      key: const Key('unified-detail-appbar-download'),
-                      tooltip: l10n.libraryDetailDownload,
-                      icon: const Icon(Icons.file_download),
-                      onSelected: _handleDownloadMenuAction,
-                      itemBuilder: _downloadMenuItems,
-                    ),
-                  IconButton(
-                    key: const Key('unified-detail-appbar-filter'),
-                    tooltip: l10n.libraryDetailFilterAndSort,
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: _showChapterFilterSheet,
-                  ),
-                  AppPopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert),
-                    itemBuilder: (context) => [
-                      AppPopupMenuItem<String>(
-                        value: 'refresh',
-                        label: l10n.libraryDetailRefresh,
+                  AppToolbarActions(
+                    children: [
+                      const AdaptiveDetailExpandAction(),
+                      if (_supportsChapterDownloads &&
+                          _showsBulkDownloadActions)
+                        AppPopupMenuButton<String>(
+                          key: const Key('unified-detail-appbar-download'),
+                          tooltip: l10n.libraryDetailDownload,
+                          icon: const Icon(Icons.file_download),
+                          onSelected: _handleDownloadMenuAction,
+                          itemBuilder: _downloadMenuItems,
+                        ),
+                      IconButton(
+                        key: const Key('unified-detail-appbar-filter'),
+                        tooltip: l10n.libraryDetailFilterAndSort,
+                        icon: const Icon(Icons.filter_list),
+                        onPressed: _showChapterFilterSheet,
                       ),
-                      AppPopupMenuItem<String>(
-                        value: 'change-category',
-                        label: l10n.libraryDetailChangeCategory,
-                      ),
-                      if (widget.adapter is DetailMetadataEditor)
-                        AppPopupMenuItem<String>(
-                          key: const Key('unified-detail-edit-metadata'),
-                          value: 'edit-metadata',
-                          label: l10n.libraryDetailEditMetadata,
-                        ),
-                      if (widget.adapter is DetailCatalogEditor)
-                        AppPopupMenuItem<String>(
-                          key: const Key('unified-detail-configure-catalog'),
-                          value: 'configure-catalog',
-                          label: l10n.libraryDetailConfigureCatalog,
-                        ),
-                      if (_sourceTagsAdapter != null)
-                        AppPopupMenuItem<String>(
-                          key: const Key('unified-detail-source-tags'),
-                          value: 'source-tags',
-                          label: l10n.libraryDetailSourceTags,
-                        ),
-                      // 章节长按之外的第二个入口：隐藏全部章节后列表为空，
-                      // 长按目标随之消失，只靠长按会把“全部显示”永久锁死。
-                      if (_chapterManagementAdapter != null)
-                        AppPopupMenuItem<String>(
-                          key: const Key('unified-detail-manage-chapters'),
-                          value: 'manage-chapters',
-                          label: l10n.libraryDetailManageChapters,
-                        ),
-                      if (_supportsCoverEditing) ...[
-                        AppPopupMenuItem<String>(
-                          key: const Key('unified-detail-set-cover'),
-                          value: 'set-custom-cover',
-                          label: l10n.libraryDetailSetCustomCover,
-                        ),
-                        if (_canRemoveCover)
+                      AppPopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        itemBuilder: (context) => [
                           AppPopupMenuItem<String>(
-                            key: const Key('unified-detail-remove-cover'),
-                            value: 'remove-custom-cover',
-                            label: l10n.libraryDetailRemoveCustomCover,
+                            value: 'refresh',
+                            label: l10n.libraryDetailRefresh,
                           ),
-                      ],
-                      AppPopupMenuItem<String>(
-                        value: 'edit-intro',
-                        label: l10n.libraryDetailEditIntro,
+                          AppPopupMenuItem<String>(
+                            value: 'change-category',
+                            label: l10n.libraryDetailChangeCategory,
+                          ),
+                          if (widget.adapter is DetailMetadataEditor)
+                            AppPopupMenuItem<String>(
+                              key: const Key('unified-detail-edit-metadata'),
+                              value: 'edit-metadata',
+                              label: l10n.libraryDetailEditMetadata,
+                            ),
+                          if (widget.adapter is DetailCatalogEditor)
+                            AppPopupMenuItem<String>(
+                              key: const Key(
+                                'unified-detail-configure-catalog',
+                              ),
+                              value: 'configure-catalog',
+                              label: l10n.libraryDetailConfigureCatalog,
+                            ),
+                          if (_sourceTagsAdapter != null)
+                            AppPopupMenuItem<String>(
+                              key: const Key('unified-detail-source-tags'),
+                              value: 'source-tags',
+                              label: l10n.libraryDetailSourceTags,
+                            ),
+                          // 章节长按之外的第二个入口：隐藏全部章节后列表为空，
+                          // 长按目标随之消失，只靠长按会把“全部显示”永久锁死。
+                          if (_chapterManagementAdapter != null)
+                            AppPopupMenuItem<String>(
+                              key: const Key('unified-detail-manage-chapters'),
+                              value: 'manage-chapters',
+                              label: l10n.libraryDetailManageChapters,
+                            ),
+                          if (_supportsCoverEditing) ...[
+                            AppPopupMenuItem<String>(
+                              key: const Key('unified-detail-set-cover'),
+                              value: 'set-custom-cover',
+                              label: l10n.libraryDetailSetCustomCover,
+                            ),
+                            if (_canRemoveCover)
+                              AppPopupMenuItem<String>(
+                                key: const Key('unified-detail-remove-cover'),
+                                value: 'remove-custom-cover',
+                                label: l10n.libraryDetailRemoveCustomCover,
+                              ),
+                          ],
+                          AppPopupMenuItem<String>(
+                            value: 'edit-intro',
+                            label: l10n.libraryDetailEditIntro,
+                          ),
+                        ],
+                        onSelected: (value) async {
+                          await _handleMoreAction(value);
+                        },
                       ),
                     ],
-                    onSelected: (value) async {
-                      await _handleMoreAction(value);
-                    },
                   ),
                 ],
               );

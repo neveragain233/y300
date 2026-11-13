@@ -22,6 +22,7 @@ import '../thread_detail_prepared_body.dart';
 import '../services/thread_body_preparation_handoff.dart';
 import '../services/thread_body_chunk_preparation.dart';
 import '../services/thread_body_presentation.dart';
+import '../services/thread_floor_navigation_coordinator.dart';
 import '../services/thread_detail_quick_scroll_coordinator.dart';
 
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
@@ -41,7 +42,6 @@ import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/forum_metric_pill.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
-import 'package:y300/shared/widgets/native_pagination_bar.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 // File split (Phase 5b): cohesive widget groups live in part files under the
@@ -56,6 +56,7 @@ part 'thread_detail_card.dart';
 part 'thread_detail_loading.dart';
 part 'thread_detail_chunk_body.dart';
 part 'thread_detail_endpoint_navigation.dart';
+part 'thread_detail_floor_navigation.dart';
 part 'thread_topic_tag_bar.dart';
 part 'thread_blacklisted_post.dart';
 
@@ -100,12 +101,16 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.allowedBlacklistedAuthorId,
     this.onToggleAuthorFilter,
     this.onOrderChanged,
+    this.floorNavigation,
+    this.bottomInset = 0,
   });
 
   final ThreadDetailPageState state;
   final ThreadDetailContentProjection? projection;
   final VoidCallback? onToggleAuthorFilter;
   final ValueChanged<bool>? onOrderChanged;
+  final ThreadFloorNavigationCoordinator? floorNavigation;
+  final double bottomInset;
   final bool enableBodyChunking;
 
   /// Topic author allowed for this route when the whole-thread prompt was
@@ -149,7 +154,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
 }
 
 class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
-    with _ThreadDetailEndpointNavigation {
+    with _ThreadDetailEndpointNavigation, _ThreadDetailFloorNavigation {
   late final _isLowRamDevice =
       DeviceMemoryProfileStore.current?.isLowRamDevice ?? false;
   @override
@@ -208,6 +213,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     );
     _syncImageViewportCoordinator();
     _bindEndpointNavigation();
+    _bindFloorNavigation();
   }
 
   @override
@@ -226,6 +232,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   void didUpdateWidget(covariant ThreadDetailContent oldWidget) {
     super.didUpdateWidget(oldWidget);
     _updateEndpointNavigation(oldWidget);
+    _updateFloorNavigation(oldWidget);
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage ||
         oldWidget.state.queryParameters['authorid'] !=
@@ -313,6 +320,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   @override
   void dispose() {
     _disposeEndpointNavigation();
+    _disposeFloorNavigation();
     _clearFooterExpansions();
     _wholeBodyPresentations.clear();
     _retirePreparedBodies();
@@ -371,6 +379,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     }
     // Validate a queued rebase against this build's actual layout inputs first.
     _prepareEndpointBuild();
+    _prepareFloorBuild();
     final palette = ThreadDetailNativePalette.resolve(
       Theme.of(context),
       continuous: true,
@@ -399,8 +408,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final entries = _entryPlanner.buildProjectionEntries(
       posts: _postProjections,
-      targetPid: _endpointTarget == null ? widget.targetPid : null,
-      landing: _endpointTarget == null ? widget.landing : ThreadPostLanding.top,
+      targetPid: _endpointTarget == null ? _activeTargetPid : null,
+      landing: _endpointTarget == null ? _activeLanding : ThreadPostLanding.top,
       bodyManifests: _preparedBodies.manifests,
       isCollapsed: (post) {
         final authorId = post.authorId.trim();
@@ -426,12 +435,12 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         palette: palette,
       );
     }
-    final targetPid = widget.targetPid?.trim();
+    final targetPid = _activeTargetPid?.trim();
     final targetEntryIndex = targetPid == null || targetPid.isEmpty
         ? -1
         : entries.indexWhere(
             (entry) =>
-                (widget.landing == ThreadPostLanding.bodyEnd
+                (_activeLanding == ThreadPostLanding.bodyEnd
                     ? entry.kind == ThreadDetailRenderEntryKind.postFooter ||
                           entry.kind ==
                               ThreadDetailRenderEntryKind.blacklistedPost
@@ -460,11 +469,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           semanticChildCount: entries.length,
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 ForumContentSpacing.pageHorizontal,
                 ForumContentSpacing.listTop,
                 ForumContentSpacing.pageHorizontal,
-                ForumContentSpacing.listBottom,
+                ForumContentSpacing.listBottom + widget.bottomInset,
               ),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -490,11 +499,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         controller: widget.scrollController,
         // 只有一楼的短帖也要能下拉刷新，见 ForumPullToRefresh.scrollPhysics。
         physics: ForumPullToRefresh.scrollPhysics,
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           ForumContentSpacing.pageHorizontal,
           ForumContentSpacing.listTop,
           ForumContentSpacing.pageHorizontal,
-          ForumContentSpacing.listBottom,
+          ForumContentSpacing.listBottom + widget.bottomInset,
         ),
         scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
         itemCount: entries.length,
@@ -671,6 +680,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     ];
   }
 
+  @override
   Iterable<String> _sourcePidsFor(ThreadDetailContent target) sync* {
     final projections = target.projection?.posts;
     if (projections != null) {
@@ -691,7 +701,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   }) {
     final endpoint = _endpointTarget;
     final atBodyEnd =
-        endpoint == null && widget.landing == ThreadPostLanding.bodyEnd;
+        endpoint == null && _activeLanding == ThreadPostLanding.bodyEnd;
     if (endpoint == null) _scheduleTargetVisibilityCheck();
     return SizedBox.expand(
       key: _viewportKey,
@@ -747,7 +757,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                       key: _targetCenterKey,
                       padding: EdgeInsets.only(
                         top: atBodyEnd ? 0 : ForumContentSpacing.listTop,
-                        bottom: ForumContentSpacing.listBottom,
+                        bottom:
+                            ForumContentSpacing.listBottom + widget.bottomInset,
                       ),
                       sliver: _buildTargetEntrySliver(
                         entries: entries,
@@ -770,6 +781,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   }
 
   void _scheduleTargetVisibilityCheck() {
+    if (_floorTargetPid != null) return;
     final pid = widget.targetPid?.trim();
     if (pid == null || pid.isEmpty || widget.onTargetVisible == null) return;
     final identity = '${widget.state.tid}:$pid:${widget.landing.name}';
@@ -826,15 +838,15 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             child = KeyedSubtree(key: _endpointBoundaryKey, child: child);
           }
           if (_endpointTarget == null &&
-              entry.sourcePost?.pid == widget.targetPid?.trim() &&
+              entry.sourcePost?.pid == _activeTargetPid &&
               (entry.kind == ThreadDetailRenderEntryKind.postFooter &&
-                      widget.landing == ThreadPostLanding.bodyEnd ||
+                      _activeLanding == ThreadPostLanding.bodyEnd ||
                   (entry.kind == ThreadDetailRenderEntryKind.postCard ||
                           entry.kind ==
                               ThreadDetailRenderEntryKind.postHeader ||
                           entry.kind ==
                               ThreadDetailRenderEntryKind.blacklistedPost) &&
-                      widget.landing == ThreadPostLanding.top)) {
+                      _activeLanding == ThreadPostLanding.top)) {
             child = KeyedSubtree(key: _targetVisibilityKey, child: child);
           }
           if (widget.bodyReadingCoordinator != null &&
@@ -977,6 +989,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         );
       case ThreadDetailRenderEntryKind.postHeader:
         final header = _ThreadPostCardHeaderEntry(
+          key: widget.floorNavigation == null
+              ? null
+              : _floorHeaderKey(entry.sourcePost!.pid),
           sourcePost: entry.sourcePost!,
           displayPost: entry.displayPost!,
           displaySubject:
@@ -1095,6 +1110,13 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         );
       case ThreadDetailRenderEntryKind.pagination:
         return ThreadLoadMoreSection(
+          failure: widget.state.loadFailure == null
+              ? null
+              : ThreadTextResolver.loadFailure(
+                  AppLocalizations.of(context),
+                  widget.state.loadFailure!.code,
+                  widget.state.loadFailure!.detail,
+                ),
           hasMore: widget.state.hasMore,
           isLoadingMore: widget.state.isLoadingMore,
           currentPage: widget.state.currentPage <= 0

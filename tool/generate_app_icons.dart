@@ -1,123 +1,179 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:image/image.dart' as img;
 
-/// Run from the repository root after replacing the approved source PNG.
+import 'app_icons/icon_artwork.dart';
+
+/// 从仓库根目录执行；原图、标志覆盖率、底色及系统裁切分别管理。
 Future<void> main() async {
   const sourcePath = 'assets/app_icon_source.png';
   final source = img.decodePng(await File(sourcePath).readAsBytes());
   if (source == null ||
       source.width != source.height ||
       source.width < 1024 ||
-      source.frames.length != 1) {
-    throw StateError('Expected one square PNG of at least 1024px: $sourcePath');
+      source.frames.length != 1 ||
+      source.any((pixel) => pixel.a != pixel.maxChannelValue)) {
+    throw StateError(
+      'Expected one opaque square PNG of at least 1024px: $sourcePath',
+    );
   }
-  if (source.any((pixel) => pixel.a != pixel.maxChannelValue)) {
-    throw StateError('The approved square source must be fully opaque.');
+  final artwork = extractIconArtwork(source);
+  await _writePng(
+    'assets/app_icon.png',
+    renderIconTile(artwork, size: 1024, shape: IconShape.square),
+  );
+  await _writePng(
+    'assets/app_icon_transparent.png',
+    renderIconTile(artwork, size: 1024, shape: IconShape.roundedSquare),
+  );
+  await _writePng(
+    'assets/app_icon_foreground.png',
+    renderIconMark(artwork, size: 432, viewportSize: 288),
+  );
+  await _writePng(
+    'assets/app_icon_foreground_dark.png',
+    renderIconMark(
+      artwork,
+      size: 432,
+      viewportSize: 288,
+      tint: IconPalette.brandDark.foreground,
+    ),
+  );
+  await _writePng(
+    'assets/app_icon_monochrome.png',
+    renderIconMark(artwork, size: 432, viewportSize: 288, tint: 0xffffff),
+  );
+
+  for (final variant in const {
+    '': IconPalette.brand,
+    '_dark': IconPalette.brandDark,
+  }.entries) {
+    // 旧系统只有这一层底板；安卓12以后由系统统一裁切前景和背景。
+    final splashPlate = renderIconTile(
+      artwork,
+      size: 640,
+      shape: IconShape.roundedSquare,
+      palette: variant.value,
+    );
+    final splash = img.Image(width: 768, height: 768, numChannels: 4);
+    img.compositeImage(splash, splashPlate, dstX: 64, dstY: 64);
+    await _writePng('assets/splash_logo${variant.key}.png', splash);
+    await _writePng(
+      'assets/splash_logo_android12${variant.key}.png',
+      renderIconMark(
+        artwork,
+        size: 960,
+        viewportSize: 640,
+        tint: variant.value.foreground,
+      ),
+    );
   }
 
-  final square = _resize(source, 1024);
-  final rounded = _roundCorners(square);
-  final logo = _extractLogo(rounded);
-  await _writePng('assets/app_icon.png', square);
-  await _writePng('assets/app_icon_transparent.png', rounded);
-  await _writePng('assets/splash_logo.png', _logoCanvas(logo, 768, 480));
-  await _writePng(
-    'assets/splash_logo_android12.png',
-    _logoCanvas(logo, 1152, 512),
-  );
   for (final entry in const {
-    'mdpi': 48,
-    'hdpi': 72,
-    'xhdpi': 96,
-    'xxhdpi': 144,
-    'xxxhdpi': 192,
+    'mdpi': 1.0,
+    'hdpi': 1.5,
+    'xhdpi': 2.0,
+    'xxhdpi': 3.0,
+    'xxxhdpi': 4.0,
   }.entries) {
+    final size = (48 * entry.value).round();
     await _writePng(
       'android/app/src/main/res/mipmap-${entry.key}/ic_launcher.png',
-      _resize(rounded, entry.value),
+      renderIconTile(artwork, size: size, shape: IconShape.roundedSquare),
     );
-  }
-  stdout.writeln('Generated app icons and splash logo sources from $sourcePath.');
-  stdout.writeln('Next: dart run flutter_native_splash:create');
-}
-
-img.Image _resize(img.Image source, int size) => img.copyResize(
-  source,
-  width: size,
-  height: size,
-  interpolation: img.Interpolation.average,
-);
-
-img.Image _roundCorners(img.Image source) {
-  final rounded = source.convert(numChannels: 4);
-  final half = source.width / 2;
-  final radius = source.width * 0.21;
-  for (final pixel in rounded) {
-    // Geometry alone changes alpha. Pale interior pixels are never mistaken
-    // for background, unlike color-based removal of the whole icon tile.
-    final dx = (pixel.x + 0.5 - half).abs() - (half - radius);
-    final dy = (pixel.y + 0.5 - half).abs() - (half - radius);
-    final outsideX = math.max(dx, 0.0);
-    final outsideY = math.max(dy, 0.0);
-    final distance =
-        math.sqrt(outsideX * outsideX + outsideY * outsideY) +
-        math.min(math.max(dx, dy), 0.0) -
-        radius;
-    pixel.a = (255 * (0.5 - distance).clamp(0.0, 1.0)).round();
-  }
-  return rounded;
-}
-
-img.Image _extractLogo(img.Image rounded) {
-  final logo = img.Image(
-    width: rounded.width,
-    height: rounded.height,
-    numChannels: 4,
-  );
-  // This is the approved cream/red artwork's matte, not a general-purpose
-  // background remover. Recover edge coverage from green, then unmatte RGB
-  // so its anti-aliased edges do not carry cream halos onto the splash.
-  const background = [253.0, 252.0, 241.0];
-  const foregroundGreen = 6.0;
-  for (final pixel in rounded) {
-    final coverage = ((background[1] - pixel.g) /
-            (background[1] - foregroundGreen))
-        .clamp(0.0, 1.0);
-    if (pixel.a == 0 || coverage < 0.02) {
-      continue;
+    await _writePng(
+      'android/app/src/main/res/mipmap-${entry.key}/ic_launcher_round.png',
+      renderIconTile(artwork, size: size, shape: IconShape.circle),
+    );
+    await _writePng(
+      'android/app/src/main/res/drawable-${entry.key}/ic_launcher_monochrome.png',
+      renderIconMark(
+        artwork,
+        size: (108 * entry.value).round(),
+        viewportSize: (72 * entry.value).round(),
+        tint: 0xffffff,
+      ),
+    );
+    await _writePng(
+      'android/app/src/main/res/drawable-night-${entry.key}/ic_launcher_foreground.png',
+      renderIconMark(
+        artwork,
+        size: (108 * entry.value).round(),
+        viewportSize: (72 * entry.value).round(),
+        tint: IconPalette.brandDark.foreground,
+      ),
+    );
+    for (final shape in const {
+      'ic_launcher': IconShape.roundedSquare,
+      'ic_launcher_round': IconShape.circle,
+    }.entries) {
+      await _writePng(
+        'android/app/src/main/res/mipmap-night-${entry.key}/${shape.key}.png',
+        renderIconTile(
+          artwork,
+          size: size,
+          shape: shape.value,
+          palette: IconPalette.brandDark,
+        ),
+      );
     }
-    int unmatte(num channel, double matte) =>
-        ((channel - matte * (1 - coverage)) / coverage)
-            .round()
-            .clamp(0, 255)
-            .toInt();
-    logo.setPixelRgba(
-      pixel.x,
-      pixel.y,
-      unmatte(pixel.r, background[0]),
-      unmatte(pixel.g, background[1]),
-      unmatte(pixel.b, background[2]),
-      (pixel.a * coverage).round(),
+    await _writePng(
+      'android/app/src/main/res/drawable-${entry.key}/ic_launcher_foreground.png',
+      renderIconMark(
+        artwork,
+        size: (108 * entry.value).round(),
+        viewportSize: (72 * entry.value).round(),
+      ),
     );
   }
-  return logo;
-}
-
-img.Image _logoCanvas(img.Image logo, int size, int logoSize) {
-  final canvas = img.Image(width: size, height: size, numChannels: 4);
-  final inset = (size - logoSize) ~/ 2;
-  return img.compositeImage(
-    canvas,
-    _resize(logo, logoSize),
-    dstX: inset,
-    dstY: inset,
+  // 夜间限定符优先于密度；夜间自适应入口须覆盖同名旧版夜间位图。
+  for (final version in [26, 33]) {
+    for (final name in ['ic_launcher', 'ic_launcher_round']) {
+      for (final night in ['', '-night']) {
+        final monochrome = version >= 33
+            ? '    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />\n'
+            : '';
+        await _writeText(
+          'android/app/src/main/res/mipmap$night-anydpi-v$version/$name.xml',
+          '''<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/y300_icon_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+$monochrome</adaptive-icon>
+''',
+        );
+      }
+    }
+  }
+  for (final variant in const {
+    'values': IconPalette.brand,
+    'values-night': IconPalette.brandDark,
+  }.entries) {
+    final background =
+        '#${variant.value.background.toRadixString(16).padLeft(6, '0').toUpperCase()}';
+    await _writeText(
+      'android/app/src/main/res/${variant.key}/y300_icon_colors.xml',
+      '''<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="y300_icon_background">$background</color>
+</resources>
+''',
+    );
+  }
+  stdout.writeln(
+    'Generated layered launcher icons, legacy fallbacks and splash sources.',
   );
+  stdout.writeln('Next: dart run flutter_native_splash:create');
 }
 
 Future<void> _writePng(String path, img.Image image) async {
   final file = File(path);
   await file.parent.create(recursive: true);
   await file.writeAsBytes(img.encodePng(image));
+}
+
+Future<void> _writeText(String path, String value) async {
+  final file = File(path);
+  await file.parent.create(recursive: true);
+  await file.writeAsString(value);
 }

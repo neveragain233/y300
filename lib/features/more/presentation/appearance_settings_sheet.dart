@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
@@ -152,6 +153,33 @@ class AppearanceSettingsSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           Text(
+            l10n.moreGlassSectionTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _AppearanceOptionStrip(
+            scrollViewKey: const Key('appearance-glass-options-scroll'),
+            children: [
+              for (final level in AppGlassLevel.values)
+                _AppearanceGlassChoice(
+                  level: level,
+                  selected: settings.glassLevel == level,
+                  onPressed: () => _setGlassLevel(context, ref, level),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.moreGlassDescription,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
             l10n.appLanguageSectionTitle,
             style: theme.textTheme.titleSmall?.copyWith(
               color: theme.colorScheme.primary,
@@ -266,6 +294,24 @@ class AppearanceSettingsSheet extends ConsumerWidget {
       await ref
           .read(appAppearanceControllerProvider.notifier)
           .setNavigationBarStyle(style);
+    } catch (error) {
+      if (!context.mounted) return;
+      showTransientSnackBar(
+        context,
+        AppLocalizations.of(context).moreThemeSaveFailed('$error'),
+      );
+    }
+  }
+
+  Future<void> _setGlassLevel(
+    BuildContext context,
+    WidgetRef ref,
+    AppGlassLevel level,
+  ) async {
+    try {
+      await ref
+          .read(appAppearanceControllerProvider.notifier)
+          .setGlassLevel(level);
     } catch (error) {
       if (!context.mounted) return;
       showTransientSnackBar(
@@ -575,6 +621,67 @@ class _AppearanceNavigationStyleChoice extends StatelessWidget {
             AppNavigationBarStyle.legacy => Icons.view_agenda_outlined,
           },
           key: Key('appearance-navigation-style-icon-${style.name}'),
+          size: 18,
+        ),
+        label: Text(label, maxLines: 1, softWrap: false),
+      ),
+    );
+  }
+}
+
+class _AppearanceGlassChoice extends StatelessWidget {
+  const _AppearanceGlassChoice({
+    required this.level,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final AppGlassLevel level;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final foreground = selected ? scheme.onPrimaryContainer : scheme.onSurface;
+    final label = switch (level) {
+      AppGlassLevel.off => l10n.moreGlassLevelOff,
+      AppGlassLevel.standard => l10n.moreGlassLevelStandard,
+      AppGlassLevel.enhanced => l10n.moreGlassLevelEnhanced,
+    };
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label${l10n.moreGlassSectionTitle}',
+      child: OutlinedButton.icon(
+        key: Key('appearance-glass-level-${level.name}'),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: foreground,
+          backgroundColor: selected ? scheme.primaryContainer : null,
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          side: BorderSide(
+            color: selected ? Colors.transparent : scheme.outlineVariant,
+            width: selected ? 0 : 1,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: TextStyle(
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+        icon: Icon(
+          switch (level) {
+            AppGlassLevel.off => Icons.layers_clear_outlined,
+            AppGlassLevel.standard => Icons.blur_on_outlined,
+            AppGlassLevel.enhanced => Icons.auto_awesome_outlined,
+          },
+          key: Key('appearance-glass-level-icon-${level.name}'),
           size: 18,
         ),
         label: Text(label, maxLines: 1, softWrap: false),

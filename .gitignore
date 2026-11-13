@@ -57,6 +57,18 @@ information/
 docs/
 ios/
 android/
+!/android/
+/android/**
+!/android/**/
+# Generated launcher resources accompany their tracked generator and manifest.
+!android/app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml
+!android/app/src/main/res/mipmap-anydpi-v33/ic_launcher*.xml
+!android/app/src/main/res/mipmap-night-anydpi-v26/ic_launcher*.xml
+!android/app/src/main/res/mipmap-night-anydpi-v33/ic_launcher*.xml
+!android/app/src/main/res/mipmap-*/ic_launcher*.png
+!android/app/src/main/res/drawable-*/ic_launcher_foreground.png
+!android/app/src/main/res/drawable-*/ic_launcher_monochrome.png
+!android/app/src/main/res/values*/y300_icon_colors.xml
 .qoder/
 .claude/
 .loacl/

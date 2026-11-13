@@ -29,11 +29,14 @@ enum MainShellDestination {
   bool get isManaged => this != MainShellDestination.more;
 }
 
+enum MainStartupPage { forum, bookshelf }
+
 @immutable
 final class MainNavigationSettings {
   factory MainNavigationSettings({
     required Iterable<MainShellDestination> managedOrder,
     required Iterable<MainShellDestination> hiddenDestinations,
+    MainStartupPage startupPage = MainStartupPage.forum,
   }) {
     final normalizedOrder = _normalizeOrder(managedOrder);
     final normalizedHidden = hiddenDestinations
@@ -45,6 +48,7 @@ final class MainNavigationSettings {
     return MainNavigationSettings._(
       List<MainShellDestination>.unmodifiable(normalizedOrder),
       Set<MainShellDestination>.unmodifiable(normalizedHidden),
+      startupPage,
     );
   }
 
@@ -55,10 +59,15 @@ final class MainNavigationSettings {
     );
   }
 
-  const MainNavigationSettings._(this.managedOrder, this.hiddenDestinations);
+  const MainNavigationSettings._(
+    this.managedOrder,
+    this.hiddenDestinations,
+    this.startupPage,
+  );
 
   final List<MainShellDestination> managedOrder;
   final Set<MainShellDestination> hiddenDestinations;
+  final MainStartupPage startupPage;
 
   List<MainShellDestination> get visibleManagedDestinations =>
       List<MainShellDestination>.unmodifiable(
@@ -81,10 +90,12 @@ final class MainNavigationSettings {
   MainNavigationSettings copyWith({
     Iterable<MainShellDestination>? managedOrder,
     Iterable<MainShellDestination>? hiddenDestinations,
+    MainStartupPage? startupPage,
   }) {
     return MainNavigationSettings(
       managedOrder: managedOrder ?? this.managedOrder,
       hiddenDestinations: hiddenDestinations ?? this.hiddenDestinations,
+      startupPage: startupPage ?? this.startupPage,
     );
   }
 
@@ -92,12 +103,14 @@ final class MainNavigationSettings {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is MainNavigationSettings &&
+            other.startupPage == startupPage &&
             listEquals(other.managedOrder, managedOrder) &&
             setEquals(other.hiddenDestinations, hiddenDestinations);
   }
 
   @override
   int get hashCode => Object.hash(
+    startupPage,
     Object.hashAll(managedOrder),
     Object.hashAllUnordered(hiddenDestinations),
   );

@@ -3,6 +3,78 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_viewport_anchor_coordinator.dart';
 
 void main() {
+  testWidgets('preceding chunk boundary restores in viewport coordinates', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final viewportKey = GlobalKey();
+    final coordinator = ThreadPostViewportAnchorCoordinator(
+      scrollController: controller,
+      viewportKey: viewportKey,
+    );
+    addTearDown(coordinator.dispose);
+    final previousKey = coordinator.keyForChunk('post', 0, endUnit: 10);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: Transform.scale(
+            scale: 2,
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              key: viewportKey,
+              width: 300,
+              height: 200,
+              child: ListView(
+                padding: EdgeInsets.zero,
+                controller: controller,
+                children: [
+                  SizedBox(key: previousKey, height: 100),
+                  const SizedBox(height: 1000),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    coordinator.restoreAfterFrame(
+      const ThreadPostViewportAnchorSnapshot(
+        pid: 'post',
+        chunkStartUnit: 10,
+        relativeTop: 0,
+        scrollPixels: 0,
+        wasAtLeadingEdge: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.offset, closeTo(100, .5));
+  });
+  testWidgets(
+    'captures inside a reparented viewport before its outer transition lays out',
+    (tester) async {
+      final key = GlobalKey<_AnchorHarnessState>();
+      await tester.pumpWidget(MaterialApp(home: _AnchorHarness(key: key)));
+      key.currentState!.controller.jumpTo(120);
+      await tester.pump();
+      ThreadPostViewportAnchorSnapshot? captured;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FractionalTranslation(
+            translation: const Offset(.1, .1),
+            child: _AnchorHarness(
+              key: key,
+              onBuildCapture: (snapshot) => captured = snapshot,
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(captured?.pid, '2');
+      expect(captured?.relativeTop, closeTo(-20, .5));
+    },
+  );
   testWidgets(
     'an explicit rebase retires correction without needing a pixel change',
     (tester) async {
@@ -112,7 +184,9 @@ double _relativeTop(WidgetTester tester, String pid) {
 }
 
 class _AnchorHarness extends StatefulWidget {
-  const _AnchorHarness({super.key});
+  const _AnchorHarness({super.key, this.onBuildCapture});
+
+  final ValueChanged<ThreadPostViewportAnchorSnapshot?>? onBuildCapture;
 
   @override
   State<_AnchorHarness> createState() => _AnchorHarnessState();
@@ -155,6 +229,7 @@ class _AnchorHarnessState extends State<_AnchorHarness> {
 
   @override
   Widget build(BuildContext context) {
+    widget.onBuildCapture?.call(coordinator.capture(pids));
     return Scaffold(
       body: Align(
         alignment: Alignment.topLeft,

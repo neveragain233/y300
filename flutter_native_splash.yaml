@@ -4,13 +4,15 @@ flutter_native_splash:
   web: false
 
   color: "#FFF9E2"
-  color_dark: "#FFF9E2"
+  color_dark: "#20201D"
   image: assets/splash_logo.png
-  image_dark: assets/splash_logo.png
+  image_dark: assets/splash_logo_dark.png
   android_gravity: center
 
   android_12:
     color: "#FFF9E2"
-    color_dark: "#FFF9E2"
+    color_dark: "#20201D"
     image: assets/splash_logo_android12.png
-    image_dark: assets/splash_logo_android12.png
+    image_dark: assets/splash_logo_android12_dark.png
+    icon_background_color: "#FFF9E2"
+    icon_background_color_dark: "#20201D"

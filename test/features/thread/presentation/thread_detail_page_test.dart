@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
@@ -1193,98 +1194,358 @@ void main() {
     });
 
     testWidgets(
-      'quick scroll button drags and scrolls within the loaded page without fetching',
+      'floor navigation stops at the last loaded post before a separate cross-page tap',
       (tester) async {
-        var requestCount = 0;
+        tester.view.physicalSize = const Size(411, 850);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final pages = <int>[];
+        final next = Completer<ApiResult<ThreadDetailData>>();
+        ThreadDetailData data(String tid, int page) => ThreadDetailData(
+          tid: tid,
+          fid: '33',
+          subject: '测试主题',
+          author: 'alice',
+          replies: 5,
+          views: 12,
+          currentPage: page,
+          lastPage: 2,
+          perPage: 3,
+          posts: [
+            for (var index = 0; index < 3; index++)
+              _post(
+                pid: 'floor-${(page - 1) * 3 + index + 1}',
+                author: 'alice',
+                authorId: '1',
+                number: (page - 1) * 3 + index + 1,
+                isFirst: page == 1 && index == 0,
+                message: List.generate(
+                  60,
+                  (line) => '<p>第$page页第$index楼正文第$line段</p>',
+                ).join(),
+              ),
+          ],
+        );
         final repository = _FakeThreadRepository((tid, page, query) async {
-          requestCount++;
+          pages.add(page);
+          if (page == 2) return await next.future;
+          return ApiSuccess(data(tid, page));
+        });
+        await tester.pumpWidget(_buildTestApp(repository));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('thread-detail-quick-scroll-button')),
+          findsNothing,
+        );
+        final forward = find.byKey(const Key('thread-next-post-button'));
+        await tester.tap(forward);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('thread-post-card-floor-2')),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .getTopLeft(find.byKey(const Key('thread-post-card-floor-2')))
+              .dy,
+          lessThan(120),
+        );
+        expect(pages, [1]);
+        await tester.tap(forward);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getTopLeft(find.byKey(const Key('thread-post-card-floor-3')))
+              .dy,
+          lessThan(120),
+        );
+        expect(pages, [1]);
+        await tester.tap(forward);
+        await tester.pump();
+        await tester.tap(forward);
+        await tester.pump();
+        expect(pages, [1, 2]);
+        next.complete(ApiSuccess(data('100', 2)));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getTopLeft(find.byKey(const Key('thread-post-card-floor-4')))
+              .dy,
+          lessThan(120),
+        );
+        await tester.tap(find.byKey(const Key('thread-previous-post-button')));
+        await tester.pumpAndSettle();
+        expect(pages, [1, 2, 1]);
+        expect(
+          tester
+              .getTopLeft(find.byKey(const Key('thread-post-card-floor-3')))
+              .dy,
+          lessThan(120),
+        );
+      },
+    );
+
+    testWidgets(
+      'cancelled adjacent load preserves the visible page and ignores the late response',
+      (tester) async {
+        var failNext = false;
+        final next = Completer<ApiResult<ThreadDetailData>>();
+        final repository = _FakeThreadRepository((tid, page, query) async {
+          if (page == 2) {
+            if (failNext) throw StateError('test transport failure');
+            return next.future;
+          }
+          return ApiSuccess(
+            ThreadDetailData(
+              tid: tid,
+              fid: '33',
+              subject: '测试主题',
+              author: 'alice',
+              replies: 2,
+              views: 12,
+              currentPage: 1,
+              lastPage: 2,
+              perPage: 1,
+              posts: [
+                _post(
+                  pid: 'p1',
+                  author: 'alice',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: '<p>原页正文</p>',
+                ),
+              ],
+            ),
+          );
+        });
+        await tester.pumpWidget(_buildTestApp(repository));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ThreadDetailPage)),
+        );
+        const args = ThreadDetailArgs(tid: '100', subject: '测试主题');
+        final controller = container.read(
+          threadDetailControllerProvider(args).notifier,
+        );
+        final pending = controller.loadAdjacentForFloor(
+          forward: true,
+          isCurrent: () => true,
+        );
+        await tester.pump();
+        controller.cancelFloorPageLoad();
+        next.complete(
+          ApiSuccess(
+            ThreadDetailData(
+              tid: '100',
+              fid: '33',
+              subject: '测试主题',
+              author: 'alice',
+              replies: 2,
+              views: 12,
+              currentPage: 2,
+              lastPage: 2,
+              perPage: 1,
+              posts: [
+                _post(
+                  pid: 'p2',
+                  author: 'bob',
+                  authorId: '2',
+                  number: 2,
+                  message: '<p>迟到正文</p>',
+                ),
+              ],
+            ),
+          ),
+        );
+        expect(await pending, isFalse);
+        await tester.pumpAndSettle();
+        final state = container
+            .read(threadDetailControllerProvider(args))
+            .requireValue;
+        expect(state.currentPage, 1);
+        expect(state.isLoadingMore, isFalse);
+        expect(state.posts.single.pid, 'p1');
+        expect(_richTextContaining('原页正文'), findsOneWidget);
+        expect(_richTextContaining('迟到正文'), findsNothing);
+        failNext = true;
+        expect(
+          await controller.loadAdjacentForFloor(
+            forward: true,
+            isCurrent: () => true,
+          ),
+          isFalse,
+        );
+        await tester.pumpAndSettle();
+        final failed = container
+            .read(threadDetailControllerProvider(args))
+            .requireValue;
+        expect(failed.currentPage, 1);
+        expect(failed.posts.single.pid, 'p1');
+        expect(failed.isLoadingMore, isFalse);
+        expect(failed.loadFailure, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'single navigation reads the last body before returning to its header',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          PreferenceKeys.threadControlsV1.name: jsonEncode({
+            'schemaVersion': 1,
+            'singleNavigationButton': true,
+          }),
+        });
+        final requests = <int>[];
+        final repository = _FakeThreadRepository((tid, page, query) async {
+          requests.add(page);
           return ApiSuccess(
             _threadDetailData(
               tid: tid,
               posts: [
                 _post(
-                  pid: 'quick-scroll-post',
+                  pid: 'single-last',
                   author: 'alice',
                   authorId: '1',
                   number: 1,
                   isFirst: true,
-                  message: List<String>.generate(
-                    160,
-                    (index) => '<p>当前分页长正文第 $index 段</p>',
+                  message: List.generate(
+                    180,
+                    (line) => '<p>末楼正文第$line段</p>',
                   ).join(),
                 ),
               ],
             ),
           );
         });
-
         await tester.pumpWidget(_buildTestApp(repository));
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 360));
+        await tester.pump(const Duration(milliseconds: 120));
         await tester.pumpAndSettle();
-
-        final button = find.byKey(
-          const Key('thread-detail-quick-scroll-button'),
-        );
-        expect(button, findsOneWidget);
-        final l10n = AppLocalizations.of(tester.element(button));
-        expect(find.byTooltip(l10n.threadDetailScrollBottom), findsOneWidget);
-        expect(requestCount, 1);
-
-        final listFinder = find.byKey(const Key('thread-detail-list'));
-        final list = tester.widget<ScrollView>(listFinder);
-        final padding = list is ListView
-            ? list.padding!
-            : tester
-                  .widget<SliverPadding>(
-                    find.descendant(
-                      of: listFinder,
-                      matching: find.byType(SliverPadding),
-                    ),
-                  )
-                  .padding;
+        final button = find.byKey(const Key('thread-single-navigation-button'));
+        Finder icon(IconData icon) =>
+            find.descendant(of: button, matching: find.byIcon(icon));
+        expect(icon(Icons.keyboard_arrow_down), findsOneWidget);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(icon(Icons.vertical_align_top), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(icon(Icons.keyboard_arrow_down), findsOneWidget);
         expect(
-          padding.resolve(Directionality.of(tester.element(listFinder))).left,
-          ForumContentSpacing.pageHorizontal,
+          tester
+              .getTopLeft(find.byKey(const Key('thread-post-card-single-last')))
+              .dy,
+          lessThan(120),
         );
-        final scrollController = list.controller!;
-        expect(scrollController.position.pixels, 0);
+        expect(requests, [1]);
+      },
+    );
 
-        final originalCenter = tester.getCenter(button);
-        final gesture = await tester.startGesture(originalCenter);
-        await tester.pump(const Duration(milliseconds: 650));
+    testWidgets(
+      'first-post navigation from a body-end landing reveals the header',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          PreferenceKeys.threadControlsV1.name: jsonEncode({
+            'schemaVersion': 1,
+            'singleNavigationButton': true,
+            'holdToFirstPost': true,
+          }),
+        });
+        final repository = _FakeThreadRepository(
+          (tid, page, query) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _post(
+                  pid: 'p1',
+                  author: 'alice',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: List.generate(
+                    100,
+                    (line) => '<p>正文第$line段</p>',
+                  ).join(),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            home: const ThreadDetailPage(
+              tid: '100',
+              subject: '测试主题',
+              targetPid: 'p1',
+              landing: ThreadPostLanding.bodyEnd,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.pumpAndSettle();
+        await tester.longPress(
+          find.byKey(const Key('thread-single-navigation-button')),
+        );
+        await tester.pumpAndSettle();
         expect(
-          find.byKey(const Key('thread-quick-scroll-drag-feedback')),
+          tester.getTopLeft(find.byKey(const Key('thread-post-card-p1'))).dy,
+          lessThan(120),
+        );
+      },
+    );
+
+    testWidgets(
+      'floating controls survive a dark theme and font scale change',
+      (tester) async {
+        final repository = _FakeThreadRepository(
+          (tid, page, query) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                for (var i = 0; i < 4; i++)
+                  _post(
+                    pid: 'p$i',
+                    author: 'alice',
+                    authorId: '1',
+                    number: i + 1,
+                    isFirst: i == 0,
+                    message: '<p>测试正文</p>',
+                  ),
+              ],
+            ),
+          ),
+        );
+        Widget app(bool dark, double scale) => _buildTestApp(
+          repository,
+          theme: dark ? AppTheme.dark() : AppTheme.light(),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: const ThreadDetailPage(tid: '100', subject: '测试主题'),
+            ),
+          ),
+        );
+        await tester.pumpWidget(app(false, 1));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(app(true, 1.3));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(
+          find.byKey(const Key('thread-next-post-button')),
           findsOneWidget,
         );
-        await gesture.moveTo(const Offset(100, 200));
-        await tester.pump();
-        await gesture.up();
-        await tester.pumpAndSettle();
-        expect(tester.getCenter(button).dx, lessThan(originalCenter.dx));
-        expect(tester.getCenter(button).dy, originalCenter.dy);
-        expect(scrollController.position.pixels, 0);
-        expect(requestCount, 1);
-
-        await tester.tap(button);
-        await tester.pumpAndSettle();
-
-        expect(
-          scrollController.position.pixels,
-          closeTo(scrollController.position.maxScrollExtent, 0.5),
-        );
-        expect(find.byTooltip(l10n.threadDetailScrollTop), findsOneWidget);
-        expect(requestCount, 1);
-
-        await tester.tap(button);
-        await tester.pumpAndSettle();
-
-        expect(
-          scrollController.position.pixels,
-          closeTo(scrollController.position.minScrollExtent, 0.5),
-        );
-        expect(find.byTooltip(l10n.threadDetailScrollBottom), findsOneWidget);
-        expect(requestCount, 1);
       },
     );
 
@@ -1874,27 +2135,18 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('thread-detail-current-page-button')),
+        find.byKey(const Key('thread-detail-jump-page-button')),
         findsOneWidget,
       );
       expect(find.text('下一页'), findsOneWidget);
-      final detailPageButtonKeys = [
-        const Key('thread-detail-previous-page-button'),
-        const Key('thread-detail-current-page-button'),
-        const Key('thread-detail-load-more-button'),
-      ];
-      for (final key in detailPageButtonKeys) {
-        final pageButton = tester.widget<TextButton>(
-          find.descendant(
-            of: find.byKey(key),
-            matching: find.byType(TextButton),
-          ),
-        );
-        expect(
-          pageButton.style?.backgroundColor?.resolve({}),
-          detailPalette.chipBackground,
-        );
-      }
+      expect(find.byKey(const Key('thread-detail-page-label')), findsOneWidget);
+      expect(
+        find.ancestor(
+          of: find.byKey(const Key('thread-detail-page-label')),
+          matching: find.byType(TextButton),
+        ),
+        findsNothing,
+      );
       await tester.tap(find.byKey(const Key('thread-detail-load-more-button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 260));
@@ -3489,18 +3741,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 120));
 
       await tester.dragUntilVisible(
-        find.byKey(const Key('thread-detail-current-page-button')),
+        find.byKey(const Key('thread-detail-jump-page-button')),
         find.byKey(const Key('thread-detail-list')),
         const Offset(0, -260),
       );
       await tester.pump();
-      await tester.tap(
-        find.byKey(const Key('thread-detail-current-page-button')),
-      );
+      await tester.tap(find.byKey(const Key('thread-detail-jump-page-button')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('thread-detail-page-list')), findsOneWidget);
-      expect(find.byKey(const Key('thread-detail-page-input')), findsNothing);
+      expect(find.byKey(const Key('thread-detail-page-input')), findsOneWidget);
       expect(
         find.byKey(const Key('thread-detail-page-option-1')),
         findsOneWidget,
@@ -3517,16 +3767,23 @@ void main() {
       );
 
       await tester.dragUntilVisible(
-        find.byKey(const Key('thread-detail-current-page-button')),
+        find.byKey(const Key('thread-detail-jump-page-button')),
         find.byKey(const Key('thread-detail-list')),
         const Offset(0, -260),
       );
       await tester.pump();
-      await tester.tap(
-        find.byKey(const Key('thread-detail-current-page-button')),
-      );
+      await tester.tap(find.byKey(const Key('thread-detail-jump-page-button')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('thread-detail-page-option-8')));
+      await tester.enterText(
+        find.byKey(const Key('thread-detail-page-input')),
+        '8',
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThreadDetailPage)),
+      );
+      await tester.tap(
+        find.widgetWithText(FilledButton, l10n.threadControlsJumpPage),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 260));
 
@@ -4942,7 +5199,16 @@ void main() {
       await _pumpThreadUiTransition(tester);
 
       expect(find.byKey(const Key('thread-post-action-sheet')), findsOneWidget);
-      expect(find.text('回复'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('thread-post-action-sheet')),
+          matching: find.text(
+            AppLocalizations.of(tester.element(find.byType(ThreadDetailPage)))
+                .threadDetailReply,
+          ),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('选择复制'), findsOneWidget);
       expect(find.text('全部复制'), findsOneWidget);
 

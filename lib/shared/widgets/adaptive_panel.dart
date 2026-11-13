@@ -11,9 +11,11 @@ Future<T?> showAdaptivePanel<T>({
   required WidgetBuilder builder,
   bool isScrollControlled = true,
   bool useSafeArea = true,
+  bool useRootNavigator = false,
   BoxConstraints? constraints,
 }) {
-  final navigator = Navigator.of(context);
+  // 根页面操作覆盖主壳导航；阅读器与分栏详情默认仍归所属区域。
+  final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
   final overlay = navigator.overlay!.context.findRenderObject() as RenderBox;
   final source = context.findRenderObject();
   final sourceCenter = source is RenderBox && source.hasSize
@@ -33,6 +35,7 @@ Future<T?> showAdaptivePanel<T>({
       context: context,
       isScrollControlled: isScrollControlled,
       useSafeArea: useSafeArea,
+      useRootNavigator: useRootNavigator,
       constraints: constraints,
       anchorPoint: anchor,
       sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
@@ -44,7 +47,7 @@ Future<T?> showAdaptivePanel<T>({
   return showGeneralDialog<T>(
     context: context,
     anchorPoint: anchor,
-    useRootNavigator: false,
+    useRootNavigator: useRootNavigator,
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     transitionDuration: AppLayoutTokens.motionDuration(context),

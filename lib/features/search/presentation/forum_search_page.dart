@@ -380,7 +380,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
         clearTooltip: l10n.commonClear,
         submitTooltip: l10n.commonSearch,
         submitEnabled: !_loading,
-        onBack: () => Navigator.of(context).maybePop(),
+        onBack: () => popAdaptivePage(context),
         onChanged: _handleQueryChanged,
         onCleared: _clearSearch,
         onSubmitted: (_) => _search(),

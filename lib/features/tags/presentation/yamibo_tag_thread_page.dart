@@ -61,6 +61,7 @@ class YamiboTagThreadPage extends ConsumerWidget {
       key: const Key('yamibo-tag-thread-page'),
       backgroundColor: palette.background,
       appBar: AppBar(
+        leading: adaptiveDetailBackButton(context),
         title: Text(
           data?.tag.name?.trim().isNotEmpty == true
               ? data!.tag.name!

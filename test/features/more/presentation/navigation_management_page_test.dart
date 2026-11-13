@@ -1,121 +1,80 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
-import 'package:y300/app/navigation/main_shell_destination_presentation.dart';
+import 'package:y300/app/navigation/main_navigation_grouping.dart';
+import 'package:y300/app/navigation/main_navigation_group_presentation.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_settings_repository.dart';
 import 'package:y300/features/messages/presentation/message_center_page.dart';
 import 'package:y300/features/messages/presentation/message_feed_providers.dart';
 import 'package:y300/features/more/presentation/navigation_management_page.dart';
-import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
-import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
-import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
-import '../../profile/test_support/blog_directory_fixture.dart';
-
 void main() {
-  testWidgets(
-    'opens visible and hidden destinations without changing settings',
-    (tester) async {
-      final initialSettings = MainNavigationSettings(
-        managedOrder: MainShellDestination.defaultManagedOrder.reversed
-            .toList(),
-        hiddenDestinations: MainShellDestination.defaultManagedOrder
-            .where((destination) => destination != MainShellDestination.comic)
-            .toSet(),
-      );
-      final repository = _FakeMainNavigationSettingsRepository(
-        settings: initialSettings,
-      );
-      final opened = <MainShellDestination>[];
-      await _pumpPage(tester, repository, opened: opened);
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(NavigationManagementPage)),
-      );
-
-      for (final destination in initialSettings.managedOrder) {
-        final entry = find.byKey(
-          ValueKey('navigation-management-open-${destination.name}'),
-        );
-        // Icon, title and the remaining middle area all open the same route.
-        for (final hit in ['icon', 'title', 'space']) {
-          if (hit == 'space') {
-            final rect = tester.getRect(entry);
-            await tester.tapAt(Offset(rect.right - 8, rect.center.dy));
-          } else {
-            await tester.tap(
-              find.descendant(
-                of: entry,
-                matching: hit == 'icon'
-                    ? find.byIcon(destination.icon)
-                    : find.text(destination.localizedLabel(l10n)),
-              ),
-            );
-          }
-          await tester.pumpAndSettle();
-          expect(opened.last, destination);
-          expect(
-            find.byKey(ValueKey('opened-${destination.name}')),
-            findsOneWidget,
-          );
-          await tester.tap(find.byType(BackButton));
-          await tester.pumpAndSettle();
-          expect(find.byType(NavigationManagementPage), findsOneWidget);
-        }
-      }
-      expect(opened, hasLength(initialSettings.managedOrder.length * 3));
-      expect(repository.savedSettings, isEmpty);
-      expect(await repository.load(), initialSettings);
-    },
-  );
-
-  testWidgets('opens hidden blogs through the shared native destination', (
+  testWidgets('opens visible and hidden destinations without changing settings', (
     tester,
   ) async {
-    final repository = _FakeMainNavigationSettingsRepository();
-    final blogs = BlogDirectoryFixture();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mainNavigationSettingsRepositoryProvider.overrideWithValue(
-            repository,
-          ),
-          blogAccountIdProvider.overrideWithValue('101'),
-          userBlogDirectoryRepositoryProvider.overrideWithValue(blogs),
-          forumImageRefererProvider.overrideWithValue('https://example.test/'),
-        ],
-        child: const LocalizedTestApp(home: NavigationManagementPage()),
-      ),
+    final initialSettings = MainNavigationSettings(
+      managedOrder: MainShellDestination.defaultManagedOrder.reversed.toList(),
+      hiddenDestinations: MainShellDestination.defaultManagedOrder
+          .where((destination) => destination != MainShellDestination.comic)
+          .toSet(),
     );
-    await tester.pumpAndSettle();
-    expect(blogs.queries, isEmpty);
-    await tester.tap(find.byKey(const Key('navigation-management-open-blogs')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ProfileBlogPage), findsOneWidget);
+    final repository = _FakeMainNavigationSettingsRepository(
+      settings: initialSettings,
+    );
+    final opened = <MainShellDestination>[];
+    await _pumpPage(tester, repository, opened: opened);
     final l10n = AppLocalizations.of(
-      tester.element(find.byType(ProfileBlogPage)),
+      tester.element(find.byType(NavigationManagementPage)),
     );
-    expect(find.text(l10n.profileBlogFriends), findsOneWidget);
-    expect(blogs.queries, hasLength(1));
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.byType(NavigationManagementPage), findsOneWidget);
-    expect(
-      tester
-          .widget<Switch>(
-            find.byKey(const Key('navigation-management-visible-blogs')),
-          )
-          .value,
-      isFalse,
-    );
+
+    for (final destination in MainNavigationGrouping.configurableGroups(
+      initialSettings,
+    )) {
+      final entry = find.byKey(
+        ValueKey('navigation-management-open-${destination.name}'),
+      );
+      // Icon, title and the remaining middle area all open the same route.
+      for (final hit in ['icon', 'title', 'space']) {
+        if (hit == 'space') {
+          final rect = tester.getRect(entry);
+          await tester.tapAt(Offset(rect.right - 8, rect.center.dy));
+        } else {
+          await tester.tap(
+            find.descendant(
+              of: entry,
+              matching: hit == 'icon'
+                  ? find.byIcon(destination.icon)
+                  : find.text(destination.localizedLabel(l10n)),
+            ),
+          );
+        }
+        await tester.pumpAndSettle();
+        expect(opened.last, MainNavigationGrouping.members(destination).first);
+        expect(
+          find.byKey(
+            ValueKey(
+              'opened-${MainNavigationGrouping.members(destination).first.name}',
+            ),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(find.byType(NavigationManagementPage), findsOneWidget);
+      }
+    }
+    expect(opened, hasLength(12));
     expect(repository.savedSettings, isEmpty);
-    expect(tester.takeException(), isNull);
+    expect(await repository.load(), initialSettings);
   });
 
   testWidgets('opens the hidden message center through the shared route', (
@@ -163,7 +122,7 @@ void main() {
     final opened = <MainShellDestination>[];
     await _pumpPage(tester, repository, opened: opened);
     await tester.tap(
-      find.byKey(const Key('navigation-management-visible-history')),
+      find.byKey(const Key('navigation-management-visible-favorites')),
     );
     await tester.pumpAndSettle();
     final handle = find.byKey(const Key('navigation-management-drag-forum'));
@@ -194,17 +153,21 @@ void main() {
     final opened = <MainShellDestination>[];
     await _pumpPage(tester, repository, opened: opened);
     await tester.tap(
-      find.byKey(const Key('navigation-management-visible-history')),
+      find.byKey(const Key('navigation-management-visible-favorites')),
     );
     await tester.pump();
     await tester.tap(
-      find.byKey(const Key('navigation-management-visible-novel')),
+      find.byKey(const Key('navigation-management-visible-bookshelf')),
     );
-    await tester.tap(find.byKey(const Key('navigation-management-drag-novel')));
+    await tester.tap(
+      find.byKey(const Key('navigation-management-drag-bookshelf')),
+    );
     expect(opened, isEmpty);
-    await tester.tap(find.byKey(const Key('navigation-management-open-novel')));
+    await tester.tap(
+      find.byKey(const Key('navigation-management-open-bookshelf')),
+    );
     await tester.pump(const Duration(milliseconds: 300));
-    expect(opened, [MainShellDestination.novel]);
+    expect(opened, [MainShellDestination.comic]);
     saveCompleter.complete();
     await tester.pumpAndSettle();
     await tester.tap(find.byType(BackButton));
@@ -258,21 +221,25 @@ void main() {
     final repository = _FakeMainNavigationSettingsRepository();
     await _pumpPage(tester, repository);
 
-    expect(find.text('论坛'), findsOneWidget);
-    expect(find.text('收藏'), findsOneWidget);
-    expect(find.text('漫画'), findsOneWidget);
-    expect(find.text('小说'), findsOneWidget);
-    expect(find.text('记录'), findsOneWidget);
-    expect(find.text('更多'), findsNothing);
     final l10n = AppLocalizations.of(
       tester.element(find.byType(NavigationManagementPage)),
     );
-    expect(find.text(l10n.profileBlogTitle), findsOneWidget);
-    expect(find.text(l10n.appNavigationMessages), findsOneWidget);
+    for (final name in ['forum', 'favorites', 'bookshelf', 'messages']) {
+      expect(
+        find.byKey(ValueKey('navigation-management-item-$name')),
+        findsOneWidget,
+      );
+    }
     expect(
-      find.byType(Switch),
-      findsNWidgets(MainShellDestination.defaultManagedOrder.length),
+      find.byKey(const Key('navigation-management-item-history')),
+      findsNothing,
     );
+    expect(
+      find.byKey(const Key('navigation-management-item-blogs')),
+      findsNothing,
+    );
+    expect(find.text(l10n.navigationStartupPage), findsOneWidget);
+    expect(find.byType(Switch), findsNWidgets(4));
     final messageToggle = find.byKey(
       const ValueKey<String>('navigation-management-visible-messages'),
     );
@@ -291,7 +258,7 @@ void main() {
 
     await tester.tap(
       find.byKey(
-        const ValueKey<String>('navigation-management-visible-history'),
+        const ValueKey<String>('navigation-management-visible-favorites'),
       ),
     );
     await tester.pumpAndSettle();
@@ -299,7 +266,7 @@ void main() {
     expect(repository.savedSettings, hasLength(1));
     expect(
       repository.savedSettings.single.hiddenDestinations,
-      contains(MainShellDestination.history),
+      contains(MainShellDestination.favorites),
     );
   });
 
@@ -325,7 +292,7 @@ void main() {
     expect(repository.savedSettings.single.managedOrder.take(3), const [
       MainShellDestination.favorites,
       MainShellDestination.comic,
-      MainShellDestination.forum,
+      MainShellDestination.novel,
     ]);
     expect(
       repository.savedSettings.single.hiddenDestinations,
@@ -369,7 +336,7 @@ void main() {
 
     await tester.tap(
       find.byKey(
-        const ValueKey<String>('navigation-management-visible-history'),
+        const ValueKey<String>('navigation-management-visible-favorites'),
       ),
     );
     await tester.pump();
@@ -379,7 +346,9 @@ void main() {
       findsOneWidget,
     );
     final novelSwitch = tester.widget<Switch>(
-      find.byKey(const ValueKey<String>('navigation-management-visible-novel')),
+      find.byKey(
+        const ValueKey<String>('navigation-management-visible-bookshelf'),
+      ),
     );
     expect(novelSwitch.onChanged, isNull);
 
@@ -396,7 +365,7 @@ void main() {
 
     await tester.tap(
       find.byKey(
-        const ValueKey<String>('navigation-management-visible-history'),
+        const ValueKey<String>('navigation-management-visible-favorites'),
       ),
     );
     await tester.pumpAndSettle();
@@ -406,7 +375,7 @@ void main() {
       tester
           .widget<Switch>(
             find.byKey(
-              const ValueKey<String>('navigation-management-visible-history'),
+              const ValueKey<String>('navigation-management-visible-favorites'),
             ),
           )
           .value,

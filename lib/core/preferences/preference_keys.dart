@@ -34,6 +34,9 @@ abstract final class PreferenceKeys {
   static const threadQuickScrollDockSide = PreferenceKey<String>(
     PreferenceKeyNames.threadQuickScrollDockSide,
   );
+  static const threadControlsV1 = PreferenceKey<String>(
+    PreferenceKeyNames.threadControlsV1,
+  );
 
   static const forumHtmlReaderFontScale = PreferenceKey<double>(
     PreferenceKeyNames.forumHtmlReaderFontScale,

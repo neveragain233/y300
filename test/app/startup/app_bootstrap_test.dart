@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/localization/app_locale_resolution.dart';
+import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
+import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/startup/app_bootstrap.dart';
@@ -47,6 +49,7 @@ void main() {
     final app = await preparing;
     // Preparing appearance must not wait for or read unrelated business data.
     expect(store.reads.toSet(), {
+      PreferenceKeys.appNavigationSnapshotV1.name,
       PreferenceKeys.appAppearanceSnapshotV1.name,
       PreferenceKeys.appThemeColorSource.name,
       PreferenceKeys.appThemeFamily.name,
@@ -73,6 +76,14 @@ void main() {
       expect(frame.locale, appTraditionalLocale);
     }
     expect(mountedContainer!.read(preferencesStoreProvider), same(store));
+    expect(
+      mountedContainer!
+          .read(mainNavigationSettingsControllerProvider)
+          .requireValue
+          .settings
+          .startupPage,
+      MainStartupPage.bookshelf,
+    );
     expect(
       mountedContainer!.read(appAppearanceControllerProvider).hasValue,
       isTrue,
@@ -256,6 +267,8 @@ void main() {
 }
 
 Map<String, Object> _savedAppearance() => {
+  PreferenceKeys.appNavigationSnapshotV1.name:
+      '{"schemaVersion":1,"order":[],"hidden":[],"startupPage":"bookshelf"}',
   PreferenceKeys.appThemeFamily.name: 'moonWhite',
   PreferenceKeys.appThemePreference.name: 'dark',
   PreferenceKeys.appLanguagePreference.name: 'traditionalChinese',

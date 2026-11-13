@@ -13,6 +13,7 @@ class ThreadLoadMoreSection extends StatelessWidget {
     required this.onLoadPreviousPage,
     required this.onLoadNextPage,
     required this.onLoadPageNumber,
+    this.failure,
   });
 
   final bool hasMore;
@@ -23,6 +24,7 @@ class ThreadLoadMoreSection extends StatelessWidget {
   final VoidCallback onLoadPreviousPage;
   final VoidCallback onLoadNextPage;
   final ValueChanged<int> onLoadPageNumber;
+  final String? failure;
 
   @override
   Widget build(BuildContext context) {
@@ -34,24 +36,45 @@ class ThreadLoadMoreSection extends StatelessWidget {
       );
     }
 
-    return NativePaginationBar(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
-      spacing: 6,
-      currentPage: currentPage,
-      lastPage: lastPage,
-      hasMore: hasMore,
-      canLoadPrevious: canLoadPrevious,
-      isLoading: isLoadingMore,
-      onLoadPrevious: onLoadPreviousPage,
-      onLoadNext: onLoadNextPage,
-      onSelectPage: onLoadPageNumber,
-      previousLabel: l10n.threadDetailPreviousPage,
-      currentLabel: l10n.threadDetailPage(currentPage),
-      nextLabel: hasMore ? l10n.threadDetailNextPage : l10n.threadDetailNoMore,
-      previousButtonKey: const Key('thread-detail-previous-page-button'),
-      currentPageButtonKey: const Key('thread-detail-current-page-button'),
-      nextButtonKey: const Key('thread-detail-load-more-button'),
-      menuKeyPrefix: 'thread-detail',
+      child: Column(
+        children: [
+          if (failure != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                failure!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              TextButton(
+                key: const Key('thread-detail-previous-page-button'),
+                onPressed: canLoadPrevious ? onLoadPreviousPage : null,
+                child: Text(l10n.threadDetailPreviousPage),
+              ),
+              Text(
+                lastPage == null
+                    ? l10n.threadDetailPage(currentPage)
+                    : l10n.threadControlsPageSummary(currentPage, lastPage!),
+                key: const Key('thread-detail-page-label'),
+              ),
+              TextButton(
+                key: const Key('thread-detail-load-more-button'),
+                onPressed: hasMore ? onLoadNextPage : null,
+                child: Text(
+                  hasMore ? l10n.threadDetailNextPage : l10n.threadDetailNoMore,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

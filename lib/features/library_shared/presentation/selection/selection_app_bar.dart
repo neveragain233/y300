@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -26,6 +27,10 @@ class SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
       key: const Key('selection-app-bar'),
       leading: IconButton(
         key: const Key('selection-app-bar-close'),
+        style: IconButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+        ),
         tooltip: l10n.librarySelectionExit,
         icon: const Icon(Icons.close),
         onPressed: onClose,
@@ -35,17 +40,21 @@ class SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
         key: const Key('selection-app-bar-title'),
       ),
       actions: [
-        IconButton(
-          key: const Key('selection-app-bar-select-all'),
-          tooltip: l10n.librarySelectionSelectAll,
-          icon: const Icon(Icons.select_all),
-          onPressed: onSelectAll,
-        ),
-        IconButton(
-          key: const Key('selection-app-bar-invert'),
-          tooltip: l10n.librarySelectionInvert,
-          icon: const Icon(Icons.flip_to_back),
-          onPressed: onInvertSelection,
+        AppToolbarActions(
+          children: [
+            IconButton(
+              key: const Key('selection-app-bar-select-all'),
+              tooltip: l10n.librarySelectionSelectAll,
+              icon: const Icon(Icons.select_all),
+              onPressed: onSelectAll,
+            ),
+            IconButton(
+              key: const Key('selection-app-bar-invert'),
+              tooltip: l10n.librarySelectionInvert,
+              icon: const Icon(Icons.flip_to_back),
+              onPressed: onInvertSelection,
+            ),
+          ],
         ),
       ],
     );

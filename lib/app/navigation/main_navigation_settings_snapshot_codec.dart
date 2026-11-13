@@ -8,6 +8,7 @@ abstract final class MainNavigationSettingsSnapshotCodec {
   static String encode(MainNavigationSettings settings) {
     return jsonEncode(<String, Object?>{
       'schemaVersion': schemaVersion,
+      'startupPage': settings.startupPage.name,
       'order': settings.managedOrder
           .map((destination) => destination.name)
           .toList(growable: false),
@@ -30,6 +31,9 @@ abstract final class MainNavigationSettingsSnapshotCodec {
       final order = _decodeDestinations(decoded['order']).toList();
       return MainNavigationSettings(
         managedOrder: order,
+        startupPage: decoded['startupPage'] == MainStartupPage.bookshelf.name
+            ? MainStartupPage.bookshelf
+            : MainStartupPage.forum,
         hiddenDestinations: {
           ..._decodeDestinations(decoded['hidden']),
           // A newly introduced optional feature must not appear on upgrade.

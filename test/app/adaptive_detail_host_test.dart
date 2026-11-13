@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/clipboard/forum_clipboard_runtime.dart';
@@ -9,6 +10,162 @@ import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import '../test_support/localized_test_app.dart';
 
 void main() {
+  testWidgets(
+    'Android predictive back leaves the source section on its stack',
+    (tester) async {
+      final fixture = _Fixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester, platform: TargetPlatform.android);
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+      final sectionKey = GlobalKey<_DetailState>();
+      final sourceNavigator = Navigator.of(fixture.source.currentContext!);
+      final section = MaterialPageRoute<void>(
+        builder: (_) => _Detail(key: sectionKey, id: 'section'),
+      );
+      unawaited(sourceNavigator.push(section));
+      await tester.pumpAndSettle();
+      final sectionState = sectionKey.currentState!;
+      sectionState.scroll.jumpTo(320);
+      unawaited(
+        openAdaptiveDetail(
+          tester.element(find.text('section')),
+          MaterialPageRoute<void>(builder: (_) => const _Detail(id: 'thread')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _predictiveBack(tester, 'startBackGesture', progress: 0);
+      await _predictiveBack(tester, 'updateBackGestureProgress', progress: .5);
+      await _predictiveBack(tester, 'commitBackGesture');
+      await tester.pumpAndSettle();
+
+      expect(section.isActive, isTrue);
+      expect(sourceNavigator.canPop(), isTrue);
+      expect(find.text('section'), findsOneWidget);
+      expect(find.text('thread'), findsNothing);
+      expect(sectionKey.currentState, same(sectionState));
+      expect(sectionState.scroll.offset, 320);
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('section'), findsOneWidget);
+
+      await _predictiveBack(tester, 'startBackGesture', progress: 0);
+      await _predictiveBack(tester, 'updateBackGestureProgress', progress: .6);
+      await _predictiveBack(tester, 'commitBackGesture');
+      await tester.pumpAndSettle();
+      expect(find.text('source'), findsOneWidget);
+      expect(find.text('section'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Android predictive cancellation preserves both navigator stacks',
+    (tester) async {
+      final fixture = _Fixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester, platform: TargetPlatform.android);
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+      final section = MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('section')),
+      );
+      unawaited(Navigator.of(fixture.source.currentContext!).push(section));
+      await tester.pumpAndSettle();
+      unawaited(
+        openAdaptiveDetail(
+          tester.element(find.text('section')),
+          MaterialPageRoute<void>(
+            builder: (_) => _Detail(key: fixture.detail, id: 'thread'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final detail = fixture.detail.currentState!;
+      detail.scroll.jumpTo(280);
+
+      await _predictiveBack(tester, 'startBackGesture', progress: 0);
+      await _predictiveBack(tester, 'updateBackGestureProgress', progress: .6);
+      await _predictiveBack(tester, 'cancelBackGesture');
+      await tester.pumpAndSettle();
+
+      expect(section.isActive, isTrue);
+      expect(fixture.detail.currentState, same(detail));
+      expect(detail.scroll.offset, 280);
+      expect(find.text('thread'), findsOneWidget);
+      expect(fixture.controller.hasDetail, isTrue);
+    },
+  );
+
+  testWidgets(
+    'predictive back on a root reader does not pop covered pane routes',
+    (tester) async {
+      final fixture = _Fixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester, platform: TargetPlatform.android);
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+      final section = MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('section')),
+      );
+      unawaited(Navigator.of(fixture.source.currentContext!).push(section));
+      await tester.pumpAndSettle();
+      unawaited(
+        openAdaptiveDetail(
+          tester.element(find.text('section')),
+          MaterialPageRoute<void>(
+            builder: (_) => _Detail(key: fixture.detail, id: 'thread'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final detail = fixture.detail.currentState;
+      unawaited(
+        fixture.navigator.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('reader')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _predictiveBack(tester, 'startBackGesture', progress: 0);
+      await _predictiveBack(tester, 'updateBackGestureProgress', progress: .5);
+      await _predictiveBack(tester, 'commitBackGesture');
+      await tester.pumpAndSettle();
+
+      expect(find.text('reader'), findsNothing);
+      expect(find.text('thread'), findsOneWidget);
+      expect(section.isActive, isTrue);
+      expect(fixture.detail.currentState, same(detail));
+      expect(fixture.controller.hasDetail, isTrue);
+    },
+  );
+
+  testWidgets(
+    'predictive back restores expanded panes before popping details',
+    (tester) async {
+      final fixture = _Fixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester, platform: TargetPlatform.android);
+      fixture.source.currentState!.show('thread', key: fixture.detail);
+      await tester.pumpAndSettle();
+      final detail = fixture.detail.currentState;
+      await tester.tap(find.byKey(const Key('adaptive-detail-expand')));
+      await tester.pumpAndSettle();
+
+      await _predictiveBack(tester, 'startBackGesture', progress: 0);
+      await _predictiveBack(tester, 'updateBackGestureProgress', progress: .5);
+      await _predictiveBack(tester, 'commitBackGesture');
+      await tester.pumpAndSettle();
+
+      expect(fixture.controller.expanded, isFalse);
+      expect(fixture.controller.hasDetail, isTrue);
+      expect(fixture.detail.currentState, same(detail));
+      expect(find.text('source'), findsOneWidget);
+      expect(find.text('thread'), findsOneWidget);
+    },
+  );
+
   testWidgets(
     'folding preserves one detail instance, list position and detail stack',
     (tester) async {
@@ -192,6 +349,72 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'slow exits block duplicate dispatch and hand back immediately on completion',
+    (tester) async {
+      final fixture = _Fixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      unawaited(
+        Navigator.of(fixture.source.currentContext!).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('section')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      unawaited(
+        openAdaptiveDetail(
+          tester.element(find.text('section')),
+          PageRouteBuilder<void>(
+            transitionDuration: const Duration(milliseconds: 900),
+            reverseTransitionDuration: const Duration(milliseconds: 900),
+            pageBuilder: (_, _, _) => const _Detail(id: 'slow-thread'),
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('section'), findsOneWidget);
+      expect(fixture.controller.hasDetail, false);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('source'), findsOneWidget);
+      expect(find.text('section'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'cancelled edge gesture preserves detail and completed gesture returns once',
+    (tester) async {
+      final fixture = _Fixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester, platform: TargetPlatform.iOS);
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+      fixture.source.currentState!.show('gesture-thread', key: fixture.detail);
+      await tester.pumpAndSettle();
+      final detail = fixture.detail.currentState;
+      final cancelled = await tester.startGesture(const Offset(1, 300));
+      await cancelled.moveBy(const Offset(80, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      await cancelled.cancel();
+      await tester.pumpAndSettle();
+      expect(fixture.detail.currentState, same(detail));
+      expect(fixture.controller.hasDetail, true);
+      await tester.dragFrom(const Offset(1, 300), const Offset(380, 0));
+      await tester.pumpAndSettle();
+      expect(fixture.controller.hasDetail, false);
+      expect(find.text('source'), findsOneWidget);
+    },
+  );
+
   testWidgets('resetToRoot clears detail and source stacks', (tester) async {
     final fixture = _Fixture();
     addTearDown(fixture.dispose);
@@ -224,6 +447,30 @@ void main() {
   });
 }
 
+Future<void> _predictiveBack(
+  WidgetTester tester,
+  String method, {
+  double? progress,
+}) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    'flutter/backgesture',
+    const StandardMethodCodec().encodeMethodCall(
+      MethodCall(
+        method,
+        progress == null
+            ? null
+            : <String, Object>{
+                'touchOffset': <double>[progress * 200, 300],
+                'progress': progress,
+                'swipeEdge': 0,
+              },
+      ),
+    ),
+    (_) {},
+  );
+  await tester.pump();
+}
+
 class _Fixture {
   final source = GlobalKey<_SourceState>();
   final detail = GlobalKey<_DetailState>();
@@ -231,7 +478,7 @@ class _Fixture {
   final controller = AdaptiveDetailController();
   final active = ValueNotifier(true);
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {TargetPlatform? platform}) async {
     tester.view.physicalSize = const Size(1100, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -240,6 +487,7 @@ class _Fixture {
       ProviderScope(
         child: LocalizedTestApp(
           navigatorKey: navigator,
+          theme: ThemeData(platform: platform),
           home: Scaffold(
             body: ValueListenableBuilder<bool>(
               valueListenable: active,

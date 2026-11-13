@@ -1,3 +1,5 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -548,46 +550,53 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
               ),
             ),
         actions: [
-          IconButton(
-            key: const Key('unified-shelf-search-button'),
-            icon: const Icon(Icons.search),
-            tooltip: AppLocalizations.of(context).libraryShelfSearch,
-            onPressed: _enterSearchMode,
-          ),
-          IconButton(
-            key: const Key('unified-shelf-filter-button'),
-            icon: const Icon(Icons.filter_list),
-            tooltip: AppLocalizations.of(context).libraryShelfFilterAndSort,
-            onPressed: _showFilterSheet,
-          ),
-          AppPopupMenuButton<String>(
-            key: const Key('unified-shelf-more-button'),
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              AppPopupMenuItem<String>(
-                value: 'add-category',
-                label: AppLocalizations.of(context).libraryShelfCreateCategory,
+          AppToolbarActions(
+            children: [
+              IconButton(
+                key: const Key('unified-shelf-search-button'),
+                icon: const Icon(Icons.search),
+                tooltip: AppLocalizations.of(context).libraryShelfSearch,
+                onPressed: _enterSearchMode,
               ),
-              AppPopupMenuItem<String>(
-                value: 'rename-category',
-                label: AppLocalizations.of(context).libraryShelfRenameCategory,
+              IconButton(
+                key: const Key('unified-shelf-filter-button'),
+                icon: const Icon(Icons.filter_list),
+                tooltip: AppLocalizations.of(context).libraryShelfFilterAndSort,
+                onPressed: _showFilterSheet,
               ),
-              AppPopupMenuItem<String>(
-                value: 'delete-category',
-                label: AppLocalizations.of(context).libraryShelfDeleteCategory,
-              ),
-              if (moduleActions.isNotEmpty) ...[
-                const PopupMenuDivider(),
-                ..._moduleActionItems(moduleActions),
-              ],
-              const PopupMenuDivider(),
-              AppPopupMenuItem<String>(
-                value: 'refresh-shelf',
-                label: AppLocalizations.of(context).libraryShelfUpdate,
-              ),
-              AppPopupMenuItem<String>(
-                value: 'random-open',
-                label: AppLocalizations.of(context).libraryShelfRandomOpen,
+              AppPopupMenuButton<String>(
+                key: const Key('unified-shelf-more-button'),
+                onSelected: _handleMenuAction,
+                itemBuilder: (context) => [
+                  AppPopupMenuItem<String>(
+                    value: 'add-category',
+                    label: AppLocalizations.of(context)
+                        .libraryShelfCreateCategory,
+                  ),
+                  AppPopupMenuItem<String>(
+                    value: 'rename-category',
+                    label: AppLocalizations.of(context)
+                        .libraryShelfRenameCategory,
+                  ),
+                  AppPopupMenuItem<String>(
+                    value: 'delete-category',
+                    label: AppLocalizations.of(context)
+                        .libraryShelfDeleteCategory,
+                  ),
+                  if (moduleActions.isNotEmpty) ...[
+                    const PopupMenuDivider(),
+                    ..._moduleActionItems(moduleActions),
+                  ],
+                  const PopupMenuDivider(),
+                  AppPopupMenuItem<String>(
+                    value: 'refresh-shelf',
+                    label: AppLocalizations.of(context).libraryShelfUpdate,
+                  ),
+                  AppPopupMenuItem<String>(
+                    value: 'random-open',
+                    label: AppLocalizations.of(context).libraryShelfRandomOpen,
+                  ),
+                ],
               ),
             ],
           ),
@@ -701,6 +710,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
     await showAdaptivePanel<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (sheetContext) {
         return StatefulBuilder(
@@ -737,31 +747,45 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                       }),
                     ),
                     const SizedBox(height: 6),
-                    if (tabIndex == 0)
-                      _FilterTab(
-                        filters: selectedFilter,
-                        showDownloaded: supportsDownloadedFilter,
-                        showReadState: capabilities.supportsReadState,
-                        showBookmarked: capabilities.supportsBookmarkFilter,
-                        onChanged: (next) =>
-                            setSheetState(() => selectedFilter = next),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (tabIndex == 0)
+                              _FilterTab(
+                                filters: selectedFilter,
+                                showDownloaded: supportsDownloadedFilter,
+                                showReadState: capabilities.supportsReadState,
+                                showBookmarked:
+                                    capabilities.supportsBookmarkFilter,
+                                onChanged: (next) =>
+                                    setSheetState(() => selectedFilter = next),
+                              ),
+                            if (tabIndex == 1)
+                              _SortTab(
+                                sortOption: selectedSort,
+                                availableFields:
+                                    capabilities.availableSortFields,
+                                onChanged: (next) =>
+                                    setSheetState(() => selectedSort = next),
+                              ),
+                            if (tabIndex == 2)
+                              _DisplayTab(
+                                displayMode: selectedMode,
+                                gridColumns: selectedColumns,
+                                onDisplayModeChanged: (mode) =>
+                                    setSheetState(() => selectedMode = mode),
+                                onGridColumnsChanged: (columns) =>
+                                    setSheetState(
+                                      () => selectedColumns = columns,
+                                    ),
+                              ),
+                          ],
+                        ),
                       ),
-                    if (tabIndex == 1)
-                      _SortTab(
-                        sortOption: selectedSort,
-                        availableFields: capabilities.availableSortFields,
-                        onChanged: (next) =>
-                            setSheetState(() => selectedSort = next),
-                      ),
-                    if (tabIndex == 2)
-                      _DisplayTab(
-                        displayMode: selectedMode,
-                        gridColumns: selectedColumns,
-                        onDisplayModeChanged: (mode) =>
-                            setSheetState(() => selectedMode = mode),
-                        onGridColumnsChanged: (columns) =>
-                            setSheetState(() => selectedColumns = columns),
-                      ),
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       children: [

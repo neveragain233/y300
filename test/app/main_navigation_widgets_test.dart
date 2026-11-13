@@ -1,11 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/liquid_glass.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 
 import '../test_support/localized_test_app.dart';
 
 void main() {
   swipeTests();
+
+  testWidgets('glass levels switch the immersive capsule material', (
+    tester,
+  ) async {
+    Future<void> pump(AppGlassLevel level) {
+      return tester.pumpWidget(
+        LocalizedTestApp(
+          home: Scaffold(
+            body: const SizedBox.expand(),
+            bottomNavigationBar: MainNavigationCapsule(
+              items: _swipeItems(),
+              selectedIndex: 0,
+              glassLevel: level,
+            ),
+          ),
+        ),
+      );
+    }
+
+    await pump(AppGlassLevel.off);
+    expect(find.byType(LiquidGlass), findsNothing);
+
+    await pump(AppGlassLevel.standard);
+    expect(find.byType(LiquidGlass), findsOneWidget);
+    expect(
+      find.byKey(const Key('main-shell-immersive-navigation')),
+      findsOneWidget,
+    );
+
+    await pump(AppGlassLevel.enhanced);
+    expect(find.byType(LiquidGlass), findsOneWidget);
+  });
+
+  testWidgets('switching the glass level rebuilds the material in place', (
+    tester,
+  ) async {
+    final level = ValueNotifier<AppGlassLevel>(AppGlassLevel.off);
+    addTearDown(level.dispose);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: ValueListenableBuilder<AppGlassLevel>(
+          valueListenable: level,
+          builder: (context, value, _) => Scaffold(
+            body: const SizedBox.expand(),
+            bottomNavigationBar: MainNavigationCapsule(
+              items: _swipeItems(),
+              selectedIndex: 0,
+              glassLevel: value,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(LiquidGlass), findsNothing);
+
+    level.value = AppGlassLevel.enhanced;
+    await tester.pumpAndSettle();
+    expect(find.byType(LiquidGlass), findsOneWidget);
+
+    level.value = AppGlassLevel.off;
+    await tester.pumpAndSettle();
+    expect(find.byType(LiquidGlass), findsNothing);
+    expect(
+      find.byKey(const Key('main-shell-immersive-navigation')),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'five narrow destinations retain 48 pixel targets at large text',

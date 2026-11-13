@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
+import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_navigation_settings_repository.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 
@@ -100,6 +101,52 @@ final class MainNavigationSettingsController
     final destination = order.removeAt(oldIndex);
     order.insert(newIndex, destination);
     await _persist(current.settings.copyWith(managedOrder: order));
+  }
+
+  Future<void> setGroupVisibility(MainNavigationGroup group, bool visible) {
+    final current = _requireReadyState();
+    final members = MainNavigationGrouping.members(group).toSet();
+    if (members.isEmpty) throw ArgumentError.value(group, 'group');
+    final hidden = current.settings.hiddenDestinations.toSet();
+    if (visible) {
+      hidden.removeAll(members);
+    } else {
+      hidden.addAll(members);
+      if (MainShellDestination.defaultManagedOrder
+          .where(
+            (value) =>
+                MainNavigationGrouping.groupFor(value) !=
+                MainNavigationGroup.my,
+          )
+          .every(hidden.contains)) {
+        throw const MainNavigationMinimumVisibleException();
+      }
+    }
+    return _persist(current.settings.copyWith(hiddenDestinations: hidden));
+  }
+
+  Future<void> reorderGroup(int oldIndex, int newIndex) {
+    final current = _requireReadyState();
+    final groups = MainNavigationGrouping.configurableGroups(current.settings)
+        .toList();
+    final moved = groups.removeAt(oldIndex);
+    groups.insert(newIndex, moved);
+    // 保留旧成员各自的相对顺序和隐藏值，记录与日志仍可兼容读取。
+    final order = [
+      for (final group in groups)
+        ...current.settings.managedOrder.where(
+          (value) => MainNavigationGrouping.groupFor(value) == group,
+        ),
+      ...current.settings.managedOrder.where(
+        (value) =>
+            MainNavigationGrouping.groupFor(value) == MainNavigationGroup.my,
+      ),
+    ];
+    return _persist(current.settings.copyWith(managedOrder: order));
+  }
+
+  Future<void> setStartupPage(MainStartupPage page) {
+    return _persist(_requireReadyState().settings.copyWith(startupPage: page));
   }
 
   Future<void> resetToDefaults() {

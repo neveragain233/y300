@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/config/app_storage_keys.dart';
@@ -26,8 +27,24 @@ void main() {
         expect(settings.languagePreference, AppLanguage.system);
         expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
         expect(settings.navigationSwipeEnabled, isTrue);
+        expect(settings.glassLevel, AppGlassLevel.standard);
       },
     );
+
+    test('saves and loads every glass level', () async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = SharedPrefsAppAppearanceSettingsRepository();
+
+      for (final level in AppGlassLevel.values) {
+        await repository.save(
+          AppAppearanceSettings(
+            glassLevel: level,
+            languagePreference: AppLanguage.system,
+          ),
+        );
+        expect((await repository.load()).glassLevel, level);
+      }
+    });
 
     test('saves and loads navigation style and swipe preference', () async {
       SharedPreferences.setMockInitialValues({});
@@ -269,6 +286,32 @@ void main() {
         AppNavigationBarStyle.legacy,
       );
       expect(repository.savedSettings.last.navigationSwipeEnabled, isFalse);
+    });
+
+    test('persists the glass level independently', () async {
+      final repository = _FakeAppAppearanceSettingsRepository(
+        settings: AppAppearanceSettings.defaults(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appAppearanceSettingsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(appAppearanceControllerProvider.future);
+      await container
+          .read(appAppearanceControllerProvider.notifier)
+          .setGlassLevel(AppGlassLevel.enhanced);
+
+      expect(
+        container.read(appAppearanceControllerProvider).value!.glassLevel,
+        AppGlassLevel.enhanced,
+      );
+      expect(
+        repository.savedSettings.single.glassLevel,
+        AppGlassLevel.enhanced,
+      );
     });
 
     test('navigation save failure rolls back state and rethrows', () async {

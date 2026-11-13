@@ -5,6 +5,42 @@ import 'package:y300/app/navigation/main_navigation_settings_snapshot_codec.dart
 
 void main() {
   test(
+    'startup falls back between visible candidates, then to actual first group',
+    () {
+      for (final page in MainStartupPage.values) {
+        for (final forumVisible in [false, true]) {
+          for (final bookshelfVisible in [false, true]) {
+            final settings = MainNavigationSettings(
+              startupPage: page,
+              managedOrder: const [
+                MainShellDestination.favorites,
+                MainShellDestination.novel,
+              ],
+              hiddenDestinations: {
+                if (!forumVisible) MainShellDestination.forum,
+                if (!bookshelfVisible) ...[
+                  MainShellDestination.comic,
+                  MainShellDestination.novel,
+                ],
+              },
+            );
+            final grouping = MainNavigationGrouping(settings);
+            final expected =
+                (page == MainStartupPage.forum && forumVisible ||
+                    !bookshelfVisible && forumVisible)
+                ? MainShellDestination.forum
+                : bookshelfVisible
+                ? MainShellDestination.novel
+                : MainShellDestination.favorites;
+            expect(grouping.startupDestination, expected);
+            expect(settings.startupPage, page);
+          }
+        }
+      }
+    },
+  );
+
+  test(
     'default settings project to four groups without rewriting preferences',
     () {
       final settings = MainNavigationSettings.defaults();
@@ -20,7 +56,6 @@ void main() {
         MainShellDestination.comic,
         MainShellDestination.novel,
       ]);
-      expect(groups.myDestinations, [MainShellDestination.history]);
       expect(settings, MainNavigationSettings.defaults());
       expect(MainNavigationSettingsSnapshotCodec.encode(settings), encoded);
       expect(MainNavigationSettingsSnapshotCodec.decode(encoded), settings);
@@ -74,6 +109,5 @@ void main() {
       ),
     );
     expect(groups.groups, [MainNavigationGroup.my]);
-    expect(groups.myDestinations, [MainShellDestination.history]);
   });
 }

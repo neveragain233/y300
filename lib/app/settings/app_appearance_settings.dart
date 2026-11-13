@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -25,6 +26,7 @@ class AppAppearanceSettings {
     this.themeFamily = AppThemeFamily.warmPaper,
     this.navigationBarStyle = AppNavigationBarStyle.immersive,
     this.navigationSwipeEnabled = true,
+    this.glassLevel = AppGlassLevel.standard,
     this.brightnessPreference = AppBrightnessPreference.light,
     required this.languagePreference,
   });
@@ -34,6 +36,7 @@ class AppAppearanceSettings {
       themeFamily: AppThemeFamily.warmPaper,
       navigationBarStyle: AppNavigationBarStyle.immersive,
       navigationSwipeEnabled: true,
+      glassLevel: AppGlassLevel.standard,
       brightnessPreference: AppBrightnessPreference.light,
       languagePreference: AppLanguage.system,
     );
@@ -43,6 +46,7 @@ class AppAppearanceSettings {
   final AppThemeColorSource colorSource;
   final AppNavigationBarStyle navigationBarStyle;
   final bool navigationSwipeEnabled;
+  final AppGlassLevel glassLevel;
   final AppBrightnessPreference brightnessPreference;
   final AppLanguage languagePreference;
 
@@ -53,6 +57,7 @@ class AppAppearanceSettings {
     AppThemeFamily? themeFamily,
     AppNavigationBarStyle? navigationBarStyle,
     bool? navigationSwipeEnabled,
+    AppGlassLevel? glassLevel,
     AppBrightnessPreference? brightnessPreference,
     AppLanguage? languagePreference,
   }) {
@@ -62,6 +67,7 @@ class AppAppearanceSettings {
       navigationBarStyle: navigationBarStyle ?? this.navigationBarStyle,
       navigationSwipeEnabled:
           navigationSwipeEnabled ?? this.navigationSwipeEnabled,
+      glassLevel: glassLevel ?? this.glassLevel,
       brightnessPreference: brightnessPreference ?? this.brightnessPreference,
       languagePreference: languagePreference ?? this.languagePreference,
     );

@@ -1,4 +1,6 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:flutter/material.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
@@ -49,6 +51,7 @@ class MessageCenterPage extends ConsumerWidget {
       return Scaffold(
         backgroundColor: Theme.of(context).y300NativeContent.background,
         appBar: AppBar(
+          leading: adaptiveDetailBackButton(context),
           title: Text(AppLocalizations.of(context).profileMessageCenterTitle),
         ),
         body: const MessageLoginPrompt(),
@@ -118,16 +121,21 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
     return Scaffold(
       backgroundColor: Theme.of(context).y300NativeContent.background,
       appBar: AppBar(
+        leading: adaptiveDetailBackButton(context),
         title: Text(l10n.profileMessageCenterTitle),
         actions: [
-          IconButton(
-            tooltip: l10n.messageNew,
-            icon: const Icon(Icons.edit_square),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const NewPrivateMessagePage(),
+          AppToolbarActions(
+            children: [
+              IconButton(
+                tooltip: l10n.messageNew,
+                icon: const Icon(Icons.edit_square),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NewPrivateMessagePage(),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

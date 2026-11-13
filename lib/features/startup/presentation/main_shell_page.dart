@@ -1,8 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prism_ui/liquid_glass.dart';
 import 'package:y300/app/clipboard/forum_clipboard_link_host.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
@@ -17,6 +17,7 @@ import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/startup/main_shell_library_gate.dart';
 import 'package:y300/app/startup/main_shell_startup_coordinator.dart';
@@ -117,10 +118,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     }
     final settings = navigationState.settings;
     final grouping = MainNavigationGrouping(settings);
-    final visibleSet = settings.visibleDestinations.toSet();
-    _builtDestinations.removeWhere(
-      (destination) => !visibleSet.contains(destination),
-    );
     final currentDestination = _resolveCurrentDestination(settings, grouping);
     _currentDestination = currentDestination;
     if (MainNavigationGrouping.isBookshelf(currentDestination)) {
@@ -128,11 +125,10 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     }
     final activeBrowser = _browsers[currentDestination];
     _builtDestinations.add(currentDestination);
-    final attention = ref
-        .watch(messageAttentionStateProvider)
-        .project(
-          messagesVisible: settings.isVisible(MainShellDestination.messages),
-        );
+    final attentionState = ref.watch(messageAttentionStateProvider);
+    final attention = attentionState.project(
+      messagesVisible: settings.isVisible(MainShellDestination.messages),
+    );
     final appearance =
         ref.watch(appAppearanceControllerProvider).value ??
         AppAppearanceSettings.defaults();
@@ -173,7 +169,12 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                   final showAttention = switch (group) {
                     MainNavigationGroup.messages =>
                       attention.messagesNavigationDot,
-                    MainNavigationGroup.my => attention.moreNavigationDot,
+                    MainNavigationGroup.forum =>
+                      !settings.isVisible(MainShellDestination.messages) &&
+                          attentionState.hasAttention,
+                    MainNavigationGroup.my =>
+                      !settings.isVisible(MainShellDestination.forum) &&
+                          attention.moreNavigationDot,
                     _ => false,
                   };
                   return MainNavigationItem(
@@ -251,79 +252,97 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                     : media.padding.bottom;
                 // 正文容器在所有样式下保持同一层结构，切换样式、宽屏侧栏或
                 // 键盘显隐时页面实例与滚动位置不因重新挂载而丢失。
-                return Scaffold(
-                  body: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: MediaQuery(
-                          data: media.copyWith(
-                            padding: media.padding.copyWith(
-                              bottom: contentBottomPadding,
+                return TransientFeedbackLayout(
+                  bottomOverlap: overlayInset,
+                  child: Scaffold(
+                    body: LiquidGlassScope(
+                      enabled:
+                          showImmersiveChrome && appearance.glassLevel.enabled,
+                      quality: appearance.glassLevel == AppGlassLevel.enhanced
+                          ? LiquidGlassQuality.ultra
+                          : LiquidGlassQuality.standard,
+                      child: LiquidGlassHost(
+                        enabled:
+                            showImmersiveChrome &&
+                            appearance.glassLevel.enabled,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: MediaQuery(
+                                data: media.copyWith(
+                                  padding: media.padding.copyWith(
+                                    bottom: contentBottomPadding,
+                                  ),
+                                ),
+                                child: MainShellBottomInset(
+                                  bottom: overlayInset,
+                                  child: content,
+                                ),
+                              ),
                             ),
-                          ),
-                          child: MainShellBottomInset(
-                            bottom: overlayInset,
-                            child: content,
-                          ),
+                            if (showImmersiveChrome)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: _BottomChromeSizeReporter(
+                                  onHeight: _updateChromeHeight,
+                                  child: ShelfSelectionBottomBar(
+                                    fallback: MainNavigationCapsule(
+                                      items: items,
+                                      selectedIndex: selectedIndex,
+                                      glassLevel: appearance.glassLevel,
+                                      swipeEnabled:
+                                          appearance.navigationSwipeEnabled &&
+                                          !selection.isActive,
+                                      onSelected: selection.isActive
+                                          ? null
+                                          : selectGroup,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      if (showImmersiveChrome)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: _BottomChromeSizeReporter(
-                            onHeight: _updateChromeHeight,
-                            child: ShelfSelectionBottomBar(
-                              fallback: MainNavigationCapsule(
-                                items: items,
-                                selectedIndex: selectedIndex,
-                                swipeEnabled:
-                                    appearance.navigationSwipeEnabled &&
-                                    !selection.isActive,
-                                onSelected: selection.isActive
-                                    ? null
-                                    : selectGroup,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  bottomNavigationBar: useRail
-                      ? const ShelfSelectionBottomBar()
-                      : isImmersive
-                      ? null
-                      : ShelfSelectionBottomBar(
-                          fallback: Offstage(
-                            offstage: !showLegacyBar,
-                            child: ExcludeFocus(
-                              excluding: !showLegacyBar,
-                              child: NavigationBar(
-                                key: const ValueKey<String>(
-                                  'main-shell-navigation-bar',
-                                ),
-                                selectedIndex: selectedIndex,
-                                onDestinationSelected: selectGroup,
-                                destinations: [
-                                  for (
-                                    var index = 0;
-                                    index < groups.length;
-                                    index++
-                                  )
-                                    NavigationDestination(
-                                      key: ValueKey<String>(
-                                        'main-shell-destination-${groups[index].name}',
+                    ),
+                    bottomNavigationBar: useRail
+                        ? const ShelfSelectionBottomBar()
+                        : isImmersive
+                        ? null
+                        : ShelfSelectionBottomBar(
+                            fallback: Offstage(
+                              offstage: !showLegacyBar,
+                              child: ExcludeFocus(
+                                excluding: !showLegacyBar,
+                                child: NavigationBar(
+                                  key: const ValueKey<String>(
+                                    'main-shell-navigation-bar',
+                                  ),
+                                  selectedIndex: selectedIndex,
+                                  onDestinationSelected: selectGroup,
+                                  destinations: [
+                                    for (
+                                      var index = 0;
+                                      index < groups.length;
+                                      index++
+                                    )
+                                      NavigationDestination(
+                                        key: ValueKey<String>(
+                                          'main-shell-destination-${groups[index].name}',
+                                        ),
+                                        icon: items[index].icon,
+                                        selectedIcon: items[index].selectedIcon,
+                                        label: groups[index].localizedLabel(
+                                          l10n,
+                                        ),
                                       ),
-                                      icon: items[index].icon,
-                                      selectedIcon: items[index].selectedIcon,
-                                      label: groups[index].localizedLabel(l10n),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                  ),
                 );
               },
             ),
@@ -357,10 +376,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
 
   void _selectDestination(MainShellDestination destination) {
     if (destination == _currentDestination) {
-      // 再点当前入口回到该入口根页，论坛从分区页返回论坛首页。
-      if (destination == MainShellDestination.forum) {
-        unawaited(_forumBrowser.resetToRoot());
-      }
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -393,6 +408,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
         return current;
       }
     }
+    if (current == null) return grouping.startupDestination;
     final firstGroup = grouping.groups.first;
     return grouping.destinationFor(firstGroup, preferredBookshelf: current);
   }
@@ -408,8 +424,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
   }) {
     return MainShellDestination.values
         .map((destination) {
-          if (!settings.isVisible(destination) ||
-              !_builtDestinations.contains(destination)) {
+          if (!_builtDestinations.contains(destination)) {
             return SizedBox.shrink(
               key: ValueKey<String>('main-shell-empty-${destination.name}'),
             );

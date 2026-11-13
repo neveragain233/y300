@@ -8,6 +8,8 @@ import 'package:y300/features/cache/domain/models/document_cache_models.dart';
 import '../../../support/forum_home_test_support.dart';
 
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
+import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -20,6 +22,8 @@ import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/navigation/history_entry_router.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_settings_repository.dart';
@@ -94,6 +98,123 @@ void main() {
     addTearDown(view.resetDevicePixelRatio);
   });
 
+  for (final style in AppNavigationBarStyle.values) {
+    testWidgets(
+      'feedback avoids $style chrome and internal overlays in the real shell',
+      (tester) async {
+        final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+          ComicSearchRefreshQueueSnapshot.empty,
+        );
+        final selection = ShelfSelectionHostController();
+        addTearDown(queue.dispose);
+        addTearDown(selection.dispose);
+        await _pumpSelectionShell(
+          tester,
+          queueSnapshot: queue,
+          selectionHost: selection,
+          webViewDriver: _FakeForumWebViewDriver(),
+        );
+        final home = tester.element(find.byKey(const Key('forum-home-list')));
+        final container = ProviderScope.containerOf(home);
+        await container
+            .read(appAppearanceControllerProvider.notifier)
+            .setNavigationBarStyle(style);
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(home);
+        var undo = 0;
+        showTransientSnackBar(
+          home,
+          l10n.contentFilterSaveFailed,
+          action: SnackBarAction(
+            label: l10n.contentFilterUndo,
+            onPressed: () => undo++,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final chrome = style == AppNavigationBarStyle.immersive
+            ? find.byType(MainNavigationCapsule)
+            : find.byType(NavigationBar);
+        expect(
+          tester.getRect(find.text(l10n.contentFilterUndo)).bottom,
+          lessThan(tester.getRect(chrome).top),
+        );
+        await tester.tap(find.text(l10n.contentFilterUndo));
+        await tester.pumpAndSettle();
+        expect(undo, 1);
+        unawaited(
+          Navigator.of(home).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const TransientFeedbackObstacle(
+                bottom: 180,
+                child: Scaffold(body: SizedBox.expand()),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        showTransientSnackBar(home, l10n.contentFilterSaveFailed);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(find.text(l10n.contentFilterSaveFailed)).bottom,
+          lessThan(620),
+        );
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final startupPage in MainStartupPage.values) {
+    testWidgets(
+      'cold launch resolves $startupPage once independently of order',
+      (tester) async {
+        final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+          ComicSearchRefreshQueueSnapshot.empty,
+        );
+        final selection = ShelfSelectionHostController();
+        addTearDown(queue.dispose);
+        addTearDown(selection.dispose);
+        final repository = _FakeMainNavigationSettingsRepository(
+          MainNavigationSettings(
+            startupPage: startupPage,
+            managedOrder: MainShellDestination.defaultManagedOrder.reversed,
+            hiddenDestinations: MainShellDestination.defaultHiddenDestinations,
+          ),
+        );
+        await _pumpSelectionShell(
+          tester,
+          queueSnapshot: queue,
+          selectionHost: selection,
+          webViewDriver: _FakeForumWebViewDriver(),
+          navigationRepository: repository,
+        );
+        final initial = startupPage == MainStartupPage.forum
+            ? 'forum'
+            : 'novel';
+        expect(find.byKey(Key('main-shell-page-$initial')), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MainShellPage)),
+        );
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MainShellPage)),
+        );
+        await _tapNavigationGroup(tester, l10n.appNavigationMy);
+        await container
+            .read(mainNavigationSettingsControllerProvider.notifier)
+            .setStartupPage(
+              startupPage == MainStartupPage.forum
+                  ? MainStartupPage.bookshelf
+                  : MainStartupPage.forum,
+            );
+        await tester.pumpAndSettle();
+        expect(find.byType(MorePage), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'rail and phone navigation retain visited forum and shelf instances',
     (tester) async {
@@ -156,45 +277,51 @@ void main() {
     },
   );
 
-  testWidgets('tapping the selected forum group returns to the forum root', (
-    tester,
-  ) async {
-    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
-      ComicSearchRefreshQueueSnapshot.empty,
-    );
-    final selection = ShelfSelectionHostController();
-    addTearDown(queue.dispose);
-    addTearDown(selection.dispose);
-    await _pumpSelectionShell(
-      tester,
-      queueSnapshot: queue,
-      selectionHost: selection,
-      webViewDriver: _FakeForumWebViewDriver(),
-    );
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(MainShellPage)),
-    );
-    final homeContext = tester.element(
-      find.byKey(const Key('forum-home-list')),
-    );
-    unawaited(
-      Navigator.of(homeContext).push(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              const Scaffold(body: Center(child: Text('fake-section'))),
+  testWidgets(
+    'reselecting and revisiting forum preserves the actual source route',
+    (tester) async {
+      final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+        ComicSearchRefreshQueueSnapshot.empty,
+      );
+      final selection = ShelfSelectionHostController();
+      addTearDown(queue.dispose);
+      addTearDown(selection.dispose);
+      await _pumpSelectionShell(
+        tester,
+        queueSnapshot: queue,
+        selectionHost: selection,
+        webViewDriver: _FakeForumWebViewDriver(),
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MainShellPage)),
+      );
+      final homeContext = tester.element(
+        find.byKey(const Key('forum-home-list')),
+      );
+      unawaited(
+        Navigator.of(homeContext).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const Scaffold(body: Center(child: Text('fake-section'))),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('fake-section'), findsOneWidget);
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('fake-section'), findsOneWidget);
 
-    await _tapNavigationGroup(tester, l10n.appNavigationForum);
-    await tester.pumpAndSettle();
+      await _tapNavigationGroup(tester, l10n.appNavigationForum);
+      await tester.pumpAndSettle();
 
-    expect(find.text('fake-section'), findsNothing);
-    expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('fake-section'), findsOneWidget);
+      await _tapNavigationGroup(tester, l10n.appNavigationMy);
+      await _tapNavigationGroup(tester, l10n.appNavigationForum);
+      expect(find.text('fake-section'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('immersive navigation is the default and clears content', (
     tester,
@@ -253,6 +380,94 @@ void main() {
     expect((moreList.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(80));
     expect(tester.takeException(), isNull);
   });
+
+  for (final style in AppNavigationBarStyle.values) {
+    for (final destination in [
+      MainShellDestination.favorites,
+      MainShellDestination.comic,
+      MainShellDestination.novel,
+    ]) {
+      testWidgets(
+        'shelf modal covers shell chrome for ${destination.name} with ${style.name}',
+        (tester) async {
+          tester.view.padding = const FakeViewPadding(bottom: 24);
+          tester.view.viewPadding = const FakeViewPadding(bottom: 24);
+          addTearDown(tester.view.resetPadding);
+          addTearDown(tester.view.resetViewPadding);
+          final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+            ComicSearchRefreshQueueSnapshot.empty,
+          );
+          final selection = ShelfSelectionHostController();
+          addTearDown(queue.dispose);
+          addTearDown(selection.dispose);
+          await _pumpSelectionShell(
+            tester,
+            queueSnapshot: queue,
+            selectionHost: selection,
+            webViewDriver: _FakeForumWebViewDriver(),
+          );
+          final shellContext = tester.element(find.byType(MainShellPage));
+          final appearance = ProviderScope.containerOf(shellContext)
+              .read(appAppearanceControllerProvider.notifier);
+          await appearance.setNavigationBarStyle(style);
+          await tester.pumpAndSettle();
+          final l10n = AppLocalizations.of(shellContext);
+          await _tapNavigationGroup(
+            tester,
+            destination == MainShellDestination.favorites
+                ? l10n.appNavigationFavorites
+                : l10n.appNavigationBookshelf,
+          );
+          if (destination == MainShellDestination.novel) {
+            await _switchBookshelfMember(tester, l10n.appNavigationNovel);
+          }
+          await tester.pumpAndSettle();
+          final page = find.byKey(Key('main-shell-page-${destination.name}'));
+          final source = tester.element(page);
+          final before = tester.getRect(page);
+          final selectedIndex = _selectedNavigationIndex(tester);
+          final navigation = style == AppNavigationBarStyle.immersive
+              ? find.byType(MainNavigationCapsule)
+              : find.byType(NavigationBar);
+          final navigationPoint =
+              tester.getTopLeft(navigation) + const Offset(30, 30);
+          await tester.tap(
+            find.byKey(const Key('unified-shelf-filter-button')),
+          );
+          await tester.pumpAndSettle();
+
+          final sheet = find.byType(BottomSheet);
+          final sheetContext = tester.element(sheet);
+          expect(
+            Navigator.of(sheetContext),
+            same(Navigator.of(shellContext, rootNavigator: true)),
+          );
+          expect(find.text(l10n.commonApply).hitTestable(), findsOneWidget);
+          expect(find.text(l10n.commonCancel).hitTestable(), findsOneWidget);
+          expect(tester.getRect(page), before);
+          await tester.tap(find.text(l10n.commonApply));
+          await tester.pumpAndSettle();
+          expect(sheet, findsNothing);
+          expect(tester.element(page), same(source));
+
+          await tester.tap(
+            find.byKey(const Key('unified-shelf-filter-button')),
+          );
+          await tester.pumpAndSettle();
+          // 底栏所在位置只能命中弹层或遮罩，不能切换背景入口。
+          await tester.tapAt(navigationPoint);
+          await tester.pumpAndSettle();
+          expect(_selectedNavigationIndex(tester), selectedIndex);
+          if (sheet.evaluate().isNotEmpty) {
+            await tester.tap(find.text(l10n.commonCancel));
+            await tester.pumpAndSettle();
+          }
+          expect(tester.element(page), same(source));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   testWidgets('legacy navigation switches without losing page state', (
     tester,
@@ -578,16 +793,14 @@ void main() {
       );
     }
 
-    expectDot(MainNavigationGroup.my, true);
+    expectDot(MainNavigationGroup.my, false);
+    expectDot(MainNavigationGroup.forum, true);
     final context = tester.element(find.byType(MainShellPage));
     final l10n = AppLocalizations.of(context);
     await _tapNavigationGroup(tester, l10n.appNavigationMy);
     await tester.pumpAndSettle();
     expectDot(MainNavigationGroup.my, false);
-    final myMessages = tester.widget<ListTile>(
-      find.byKey(const Key('more-my-messages-entry')),
-    );
-    expect((myMessages.leading! as MessageAttentionIcon).showAttention, true);
+    expect(find.byKey(const Key('more-my-messages-entry')), findsNothing);
     expect(attention.value.hasUnacknowledgedAttention, false);
 
     await _tapNavigationGroup(tester, l10n.appNavigationForum);
@@ -612,16 +825,7 @@ void main() {
     expectDot(MainNavigationGroup.messages, true);
     expectDot(MainNavigationGroup.my, false);
     await _tapNavigationGroup(tester, l10n.appNavigationMy);
-    expect(
-      (tester
-                  .widget<ListTile>(
-                    find.byKey(const Key('more-my-messages-entry')),
-                  )
-                  .leading!
-              as MessageAttentionIcon)
-          .showAttention,
-      false,
-    );
+    expect(find.byKey(const Key('more-my-messages-entry')), findsNothing);
     final epoch = attention.value.attentionEpoch;
     await navigation.reorder(6, 0);
     await tester.pump();
@@ -633,16 +837,13 @@ void main() {
     await tester.pump();
     expectDot(MainNavigationGroup.my, false);
     expect(attention.value.attentionEpoch, epoch);
-    expect(
-      (tester
-                  .widget<ListTile>(
-                    find.byKey(const Key('more-my-messages-entry')),
-                  )
-                  .leading!
-              as MessageAttentionIcon)
-          .showAttention,
-      true,
+    expect(find.byKey(const Key('more-my-messages-entry')), findsNothing);
+    await navigation.setVisibility(MainShellDestination.forum, false);
+    await tester.pumpAndSettle();
+    final fallback = tester.widget<ListTile>(
+      find.byKey(const Key('more-my-messages-entry')),
     );
+    expect((fallback.leading! as MessageAttentionIcon).showAttention, true);
     expect(tester.takeException(), isNull);
   });
 
@@ -792,15 +993,9 @@ void main() {
           .requireValue
           .settings;
 
-      for (final destination in [
-        MainShellDestination.comic,
-        MainShellDestination.novel,
-        MainShellDestination.favorites,
-      ]) {
+      for (final destination in ['bookshelf', 'favorites']) {
         await tester.tap(
-          find.byKey(
-            ValueKey('navigation-management-open-${destination.name}'),
-          ),
+          find.byKey(ValueKey('navigation-management-open-$destination')),
         );
         await _pumpShellTab(tester);
         final shelf = find.byType(UnifiedShelfPage);
@@ -993,7 +1188,11 @@ void main() {
       tester.element(find.byType(MainShellPage)),
     );
 
-    // 记录与日志从“我的”进入，不再占用底栏槽位。
+    await container
+        .read(mainNavigationSettingsControllerProvider.notifier)
+        .setVisibility(MainShellDestination.forum, false);
+    await tester.pumpAndSettle();
+    // 论坛隐藏时由“我的”接替记录入口，日志始终可用。
     final navigator = Navigator.of(
       tester.element(find.byKey(const Key('more-page-list'))),
     );
@@ -1021,6 +1220,53 @@ void main() {
     expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'history opened from forum routes its threads through the forum host',
+    (tester) async {
+      final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+        ComicSearchRefreshQueueSnapshot.empty,
+      );
+      final selection = ShelfSelectionHostController();
+      addTearDown(queue.dispose);
+      addTearDown(selection.dispose);
+      await _pumpSelectionShell(
+        tester,
+        queueSnapshot: queue,
+        selectionHost: selection,
+        webViewDriver: _FakeForumWebViewDriver(),
+        historyRepository: _FakeHistoryRepository(items: [_historyEntry()]),
+        historyEntryRouter: _NavigatingHistoryEntryRouter(),
+      );
+
+      await tester.tap(find.byKey(const Key('forum-home-history-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('history-page')), findsOneWidget);
+      // 记录页仍是主壳的来源页，底栏保留；只有打开详情才退出底栏。
+      expect(
+        find.byKey(const Key('main-shell-immersive-navigation')),
+        findsOneWidget,
+      );
+      // 不能让记录页再套一层宿主，否则详情会被截留在内层。
+      expect(find.byType(AdaptiveDetailHost), findsOneWidget);
+
+      await tester.tap(find.text('测试记录帖子'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('fake-history-detail')), findsOneWidget);
+      expect(
+        find.byKey(const Key('main-shell-immersive-navigation')),
+        findsNothing,
+      );
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('history-page')), findsOneWidget);
+      expect(
+        find.byKey(const Key('main-shell-immersive-navigation')),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     'MainShellPage applies custom order with stable lazy destination slots',
@@ -1141,10 +1387,7 @@ void main() {
       await _switchBookshelfMember(tester, '漫画');
 
       expect(comicPageFinder, findsOneWidget);
-      expect(
-        tester.element(comicPageFinder),
-        isNot(same(originalComicElement)),
-      );
+      expect(tester.element(comicPageFinder), same(originalComicElement));
       expect(messages.reads, isEmpty);
       await controller.setVisibility(MainShellDestination.messages, true);
       await tester.pump();
@@ -1921,10 +2164,17 @@ Future<void> _pumpSelectionShell(
   Future<void>? libraryReady,
   MessageAttentionController? attention,
   MessageTestRepository? messages,
+  MainNavigationSettingsRepository? navigationRepository,
+  HistoryRepository? historyRepository,
+  HistoryEntryRouter? historyEntryRouter,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        if (navigationRepository != null)
+          mainNavigationSettingsRepositoryProvider.overrideWithValue(
+            navigationRepository,
+          ),
         if (messages != null)
           messageRepositoryProvider.overrideWithValue(messages),
         if (attention != null) ...[
@@ -1963,6 +2213,11 @@ Future<void> _pumpSelectionShell(
           () => webViewDriver,
         ),
         cookieStoreProvider.overrideWithValue(_FakeCookieStore()),
+        historyRepositoryProvider.overrideWithValue(
+          historyRepository ?? const _FakeHistoryRepository(),
+        ),
+        if (historyEntryRouter != null)
+          historyEntryRouterProvider.overrideWithValue(historyEntryRouter),
       ],
       child: const LocalizedTestApp(home: MainShellPage()),
     ),
@@ -2087,15 +2342,63 @@ ShelfSelectionHostDelegate _selectionDelegate({
   );
 }
 
+HistoryEntry _historyEntry() {
+  return HistoryEntry(
+    target: const HistoryTargetKey(
+      type: HistoryTargetType.thread,
+      id: '572514',
+    ),
+    title: '测试记录帖子',
+    contextLabel: '管理版',
+    lastSurface: HistoryVisitSurface.threadNative,
+    firstVisitedAt: DateTime(2026, 11, 13),
+    lastVisitedAt: DateTime(2026, 11, 13, 12),
+    visitCount: 1,
+  );
+}
+
+class _NavigatingHistoryEntryRouter extends HistoryEntryRouter {
+  _NavigatingHistoryEntryRouter()
+    : super(
+        comicWorkExists: (_) async => true,
+        novelWorkExists: (_) async => true,
+      );
+
+  @override
+  Future<HistoryOpenResult> open(
+    BuildContext context,
+    HistoryEntry entry,
+  ) async {
+    unawaited(
+      openAdaptiveDetail<void>(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(
+            body: Center(
+              child: Text(
+                'fake-history-detail',
+                key: Key('fake-history-detail'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return const HistoryOpenSuccess();
+  }
+}
+
 class _FakeHistoryRepository implements HistoryRepository {
-  const _FakeHistoryRepository();
+  const _FakeHistoryRepository({this.items = const <HistoryEntry>[]});
+
+  final List<HistoryEntry> items;
 
   @override
   Future<void> recordVisit(HistoryEntry candidate) async {}
 
   @override
   Future<HistoryQueryPage> query(HistoryQuery query) async {
-    return const HistoryQueryPage(items: <HistoryEntry>[], hasMore: false);
+    return HistoryQueryPage(items: items, hasMore: false);
   }
 
   @override

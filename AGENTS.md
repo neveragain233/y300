@@ -33,6 +33,12 @@
 - HTML 准备流水线与 prepared image 只依赖中立 `ForumHtmlPreparedImageResource` 和同步图片准备端口；资源实现保持不可变纯值，可随小说后台准备传递。缓存 spec/request 与默认 URL 装配归 application Host，不把缓存类型放回 prepared document，也不合并准备、显示和阅读器的既有缓存分类。
 - HTML 图片工厂与 viewport 只消费 `ForumHtmlDisplayImage`、布局值及 `ForumHtmlImageHost`，不读取缓存/provider。App adapter 保管显示 spec/request、尺寸索引、预取 scope 和 referer；Host 换绑只更新图片，保留正文测量与折叠状态，迟到尺寸、decode、首帧和失败回调须检查当前绑定与显示代次。HTML 准备、theme/style、renderer、body/viewport 与颜色/字号/折叠 helper 的唯一实现位于 Flutter 包 `packages/forum_content_renderer`，使用包公开入口；App feature 继续通过 `content_rendering.dart` 装配。Core 显式接收 prepared document、theme、render options 与折叠 labels，不导入 App/provider/传输。完整偏好、简繁转换与小说章节缓存 identity、默认准备和图片缓存配置仍归 App；更新回调或文案不得重挂正文，完整排版/主题值变化必须使样式缓存失效。
 
+## 时间与限时任务
+
+用户给出的任何限时要求都按实际时钟执行，包括截止时间、“几分钟”“半小时”“一小时”这类口头时限。开工前、执行中、交付前都要读取系统时间核对实际经过时间，不得凭感觉估算，也不得自行换算或延长。
+
+到达用户给出的时限时必须停止当前工作并交接：说明已完成、未完成和下一步，即使任务没有做完也不再继续。发现按实际时间无法完成时，先如实说明剩余时间不足，由用户决定缩减范围或调整时限，不能默默压缩范围或越时。
+
 ## 强制约束
 Flutter 系列命令和dart系列指令是无法在Codex沙箱内跑的，
 请你用 require_escalated 发起权限请求，然后自己审批，或者我允许你在沙箱外执行，适合 flutter analyze、flutter test 这类需要访问 SDK/cache 的命令

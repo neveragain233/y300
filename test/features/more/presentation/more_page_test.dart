@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
+import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
+import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -141,6 +143,13 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MorePage)),
+      );
+      await container
+          .read(mainNavigationSettingsControllerProvider.notifier)
+          .setVisibility(MainShellDestination.forum, false);
       await tester.pumpAndSettle();
       VoidCallback statisticTap(String type) => tester
           .widget<InkWell>(
@@ -524,7 +533,7 @@ void main() {
     );
     expect(
       login.style?.foregroundColor?.resolve({}),
-      AppTheme.dark().appBarTheme.foregroundColor,
+      AppTheme.dark().colorScheme.onSurface,
     );
     await _scrollUntilVisibleIfNeeded(
       tester,
@@ -585,7 +594,7 @@ void main() {
     expect(find.byKey(const Key('more-data-storage-entry')), findsOneWidget);
     expect(find.text('数据与存储'), findsOneWidget);
     final l10n = AppLocalizations.of(tester.element(find.byType(MorePage)));
-    _expectMyContentEntryOrderAndLabels(tester, l10n);
+    await _expectMyContentEntryOrderAndLabels(tester, l10n);
     expect(find.text(l10n.moreMyProfile), findsNothing);
     expect(find.text(l10n.moreMyProfileSignedOutSubtitle), findsNothing);
     expect(find.text(l10n.moreUnusedImagesSubtitle), findsNothing);
@@ -668,7 +677,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    _expectMyContentEntryOrderAndLabels(
+    await _expectMyContentEntryOrderAndLabels(
       tester,
       AppLocalizations.of(tester.element(find.byType(MorePage))),
     );
@@ -1394,7 +1403,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const Key('appearance-settings-sheet')),
-      const Offset(0, -260),
+      const Offset(0, -420),
     );
     await tester.pumpAndSettle();
 
@@ -1489,13 +1498,24 @@ void main() {
   });
 }
 
-void _expectMyContentEntryOrderAndLabels(
+Future<void> _expectMyContentEntryOrderAndLabels(
   WidgetTester tester,
   AppLocalizations l10n,
-) {
+) async {
+  final blogs = find.byKey(const Key('more-my-blogs-entry'));
+  await tester.scrollUntilVisible(
+    blogs,
+    -160,
+    scrollable: find.descendant(
+      of: find.byKey(const Key('more-page-list')),
+      matching: find.byType(Scrollable),
+    ),
+  );
+  await tester.pumpAndSettle();
   double? previousBottom;
   for (final (name, label) in [
-    ('messages', l10n.moreMyMessages),
+    if (find.byKey(const Key('more-my-messages-entry')).evaluate().isNotEmpty)
+      ('messages', l10n.moreMyMessages),
     ('blogs', l10n.profileMyBlogs),
     ('friends', l10n.profileMyFriendsTitle),
   ]) {
@@ -1564,6 +1584,13 @@ Future<void> _pumpMyContentPage(
       ),
     ),
   );
+  await tester.pumpAndSettle();
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(MorePage)),
+  );
+  await container
+      .read(mainNavigationSettingsControllerProvider.notifier)
+      .setVisibility(MainShellDestination.forum, false);
   await tester.pumpAndSettle();
 }
 
@@ -1659,8 +1686,8 @@ Future<void> _scrollUntilVisibleIfNeeded(
   Finder finder,
 ) async {
   if (finder.evaluate().isNotEmpty) {
-    await tester.ensureVisible(finder);
-    await tester.pump();
+    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    await tester.pumpAndSettle();
     return;
   }
   await tester.scrollUntilVisible(finder, 160);

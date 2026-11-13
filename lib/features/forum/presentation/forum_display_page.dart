@@ -1,3 +1,5 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -110,7 +112,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
       appBar: AppBar(
         leading:
             adaptiveDetailBackButton(context) ??
-            (widget.initialUrl != null ? const BackButton() : null),
+            (widget.initialUrl != null ? const AppToolbarBackButton() : null),
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsetsDirectional.only(
@@ -119,26 +121,30 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           child: _ForumDisplayAppBarTitle(projection: projection),
         ),
         actions: [
-          if (searchFid != null)
-            IconButton(
-              key: const Key('forum-display-search-button'),
-              tooltip: l10n.forumDisplaySearch,
-              onPressed: () => _openSearch(context, searchFid),
-              icon: const Icon(Icons.search),
-            ),
-          AppPopupMenuButton<String>(
-            key: const Key('forum-display-more-button'),
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              unawaited(
-                _handleMoreMenuSelected(context, state, controller, value),
-              );
-            },
-            itemBuilder: (context) => _buildMoreMenuItems(
-              context,
-              state,
-              isLoading: asyncState.isLoading,
-            ),
+          AppToolbarActions(
+            children: [
+              if (searchFid != null)
+                IconButton(
+                  key: const Key('forum-display-search-button'),
+                  tooltip: l10n.forumDisplaySearch,
+                  onPressed: () => _openSearch(context, searchFid),
+                  icon: const Icon(Icons.search),
+                ),
+              AppPopupMenuButton<String>(
+                key: const Key('forum-display-more-button'),
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  unawaited(
+                    _handleMoreMenuSelected(context, state, controller, value),
+                  );
+                },
+                itemBuilder: (context) => _buildMoreMenuItems(
+                  context,
+                  state,
+                  isLoading: asyncState.isLoading,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -199,6 +205,11 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
   }) {
     final l10n = AppLocalizations.of(context);
     final items = <PopupMenuEntry<String>>[
+      AppPopupMenuItem<String>(
+        key: const Key('forum-display-home-action'),
+        value: 'forum-home',
+        label: l10n.forumHomeTitle,
+      ),
       AppPopupMenuItem<String>(
         key: const Key('forum-display-refresh-action'),
         value: _refreshPageAction,
@@ -267,6 +278,9 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     String action,
   ) async {
     switch (action) {
+      case 'forum-home':
+        await returnToAdaptiveRoot(context);
+        return;
       case _createThreadAction:
         _openComposer(context, state);
         return;

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
+import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
 
@@ -15,7 +16,10 @@ Future<Widget> bootstrapApplication({
   try {
     // Warming only SharedPreferences still leaves the async controller loading
     // during the first build. Reuse this resolved controller in the app scope.
-    await container.read(appAppearanceControllerProvider.future);
+    await Future.wait([
+      container.read(appAppearanceControllerProvider.future),
+      container.read(mainNavigationSettingsControllerProvider.future),
+    ]);
   } catch (_) {
     // A storage failure keeps the root's existing default-appearance fallback.
   }

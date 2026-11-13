@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:ui' show DisplayFeature;
 
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/clipboard/forum_clipboard_runtime.dart';
 import 'package:y300/app/clipboard/forum_clipboard_route_observer.dart';
@@ -40,6 +41,14 @@ class AdaptiveDetailController extends ChangeNotifier {
 }
 
 /// 独立入口沿用整页路由；论坛宿主把同一个详情导航器保留到窗口收起之后。
+/// 当前上下文是否已经处在一个详情宿主内。
+///
+/// 从论坛根页推入的记录页仍挂在论坛宿主的来源栈上；此时再创建一个宿主会
+/// 把详情截留在内层，主壳就看不到详情已打开，底栏不会退出并可遮住悬浮控件。
+bool hasAdaptiveDetailHost(BuildContext context) {
+  return context.getInheritedWidgetOfExactType<_DetailScope>() != null;
+}
+
 Future<T?> openAdaptiveDetail<T>(BuildContext context, Route<T> route) {
   final scope = context.getInheritedWidgetOfExactType<_DetailScope>();
   if (scope != null) return scope.host._open(route, fromDetail: scope.inDetail);
@@ -49,6 +58,24 @@ Future<T?> openAdaptiveDetail<T>(BuildContext context, Route<T> route) {
   return host == null
       ? Navigator.of(context).push(route)
       : host._open(route, fromDetail: false, external: true);
+}
+
+Future<void> popAdaptivePage(BuildContext context) async {
+  final scope = context.getInheritedWidgetOfExactType<_DetailScope>();
+  if (scope != null) {
+    await scope.host._back();
+  } else {
+    await Navigator.of(context).maybePop();
+  }
+}
+
+Future<void> returnToAdaptiveRoot(BuildContext context) async {
+  final scope = context.getInheritedWidgetOfExactType<_DetailScope>();
+  if (scope != null) {
+    await scope.host._resetToRoot();
+  } else {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
 }
 
 bool isAdaptiveSourceCurrent(BuildContext context) {
@@ -101,8 +128,8 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
   final _sourceKey = GlobalKey<NavigatorState>();
   final _detailKey = GlobalKey<NavigatorState>();
   final _browsingRoutes = <Route<dynamic>>{};
-  late final _sourceObserver = _PaneObserver(_scheduleSync);
-  late final _detailObserver = _PaneObserver(_scheduleSync);
+  late final _sourceObserver = _PaneObserver(_navigationChanged);
+  late final _detailObserver = _PaneObserver(_navigationChanged);
   final _sourceHero = HeroController();
   final _detailHero = HeroController();
   late final AdaptiveDetailController _controller;
@@ -113,7 +140,8 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
   bool _syncPending = false;
   int _revision = 0;
 
-  bool get _hasDetail => _detailObserver.routes.length > 1;
+  bool get _hasDetail =>
+      _detailObserver.routes.length > 1 || _detailObserver.retiring.isNotEmpty;
   bool get _canSplit => _window?.split != null;
   bool get _showSource => !_hasDetail || _canSplit && !_expanded;
   bool get _isActive =>
@@ -144,6 +172,7 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
   void _scheduleSync() {
     if (_syncPending) return;
     _syncPending = true;
+    WidgetsBinding.instance.ensureVisualUpdate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncPending = false;
       if (!mounted) return;
@@ -155,6 +184,18 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
         canSplit: _canSplit,
       );
     });
+  }
+
+  void _navigationChanged() {
+    if (!mounted) return;
+    _updatePopEligibility();
+    _scheduleSync();
+  }
+
+  void _updatePopEligibility() {
+    final canHandle = _isActive && !_transitioning && !(_canSplit && _expanded);
+    _sourceObserver.handlesBack = canHandle && !_hasDetail;
+    _detailObserver.handlesBack = canHandle && _hasDetail;
   }
 
   Future<T?> _open<T>(
@@ -183,34 +224,28 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
     }
   }
 
-  /// 同一次系统返回只能消费一层路由；返回手势可能重复派发，若不拦截会
-  /// 连续关闭详情和来源两级页面。
   bool _backInFlight = false;
-  bool _detailBackSettling = false;
-  Timer? _detailBackSettleTimer;
+  bool get _transitioning =>
+      _sourceObserver.retiring.isNotEmpty ||
+      _detailObserver.retiring.isNotEmpty;
 
   Future<void> _back() async {
-    if (!_isActive || _backInFlight || _detailBackSettling) return;
+    if (!_isActive || _backInFlight || _transitioning) return;
     _backInFlight = true;
-    final poppedDetail = !(_canSplit && _expanded) && _hasDetail;
     try {
       if (_canSplit && _expanded) {
         _toggleExpanded();
-      } else if (_hasDetail) {
-        await _detailKey.currentState?.maybePop();
       } else {
-        await _sourceKey.currentState?.maybePop();
+        final observer = _hasDetail ? _detailObserver : _sourceObserver;
+        final route = observer.routes.lastOrNull;
+        final navigator = _hasDetail ? _detailKey : _sourceKey;
+        await navigator.currentState?.maybePop();
+        // popped 在退出动画前完成；completed 才代表来源可以接管下一次返回。
+        if (route is TransitionRoute && !route.isActive) await route.completed;
       }
     } finally {
       _backInFlight = false;
-      if (poppedDetail) {
-        // 手势返回在详情关闭动画期间可能再派发一次；短窗口内只消费一层。
-        _detailBackSettling = true;
-        _detailBackSettleTimer?.cancel();
-        _detailBackSettleTimer = Timer(const Duration(milliseconds: 320), () {
-          _detailBackSettling = false;
-        });
-      }
+      if (mounted) _scheduleSync();
     }
   }
 
@@ -234,10 +269,11 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
 
   @override
   void dispose() {
-    _detailBackSettleTimer?.cancel();
     if (identical(_controller._host, this)) _controller._host = null;
     _sourceClipboard.dispose();
     _detailClipboard.dispose();
+    _sourceObserver.dispose();
+    _detailObserver.dispose();
     if (widget.controller == null) _controller.dispose();
     super.dispose();
   }
@@ -261,12 +297,16 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
         final detailRect = split != null && !_expanded
             ? split.detail
             : _window!.readingRegion;
+        final restorePanes = _canSplit && _expanded;
+        _updatePopEligibility();
+        final sourceHandlesBack = _isActive && !_hasDetail && !restorePanes;
+        final detailHandlesBack = _isActive && _hasDetail && !restorePanes;
         return PopScope<Object?>(
           canPop:
               !widget.isActive ||
-              (!_hasDetail && _sourceObserver.routes.length <= 1),
+              (!_transitioning && !_backInFlight && !(_canSplit && _expanded)),
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _back();
+            if (!didPop && _isActive && restorePanes) _back();
           },
           child: Stack(
             fit: StackFit.expand,
@@ -274,23 +314,32 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
               _pane(
                 rect: sourceRect,
                 inDetail: false,
-                visible: _showSource,
+                visible:
+                    _showSource ||
+                    _detailObserver.entering.isNotEmpty ||
+                    _detailObserver.retiring.isNotEmpty,
                 media: media,
-                child: HeroControllerScope(
-                  controller: _sourceHero,
-                  child: Navigator(
-                    key: _sourceKey,
-                    observers: [_sourceObserver, _sourceClipboard],
-                    onGenerateRoute: (settings) => MaterialPageRoute<void>(
-                      settings: settings,
-                      builder: (_) => Builder(
-                        builder: (context) {
-                          context
-                              .dependOnInheritedWidgetOfExactType<
-                                _DetailScope
-                              >();
-                          return widget.child;
-                        },
+                child: NavigatorPopHandler<Object?>(
+                  enabled: sourceHandlesBack,
+                  onPopWithResult: (_) {
+                    if (sourceHandlesBack) unawaited(_back());
+                  },
+                  child: HeroControllerScope(
+                    controller: _sourceHero,
+                    child: Navigator(
+                      key: _sourceKey,
+                      observers: [_sourceObserver, _sourceClipboard],
+                      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+                        settings: settings,
+                        builder: (_) => Builder(
+                          builder: (context) {
+                            context
+                                .dependOnInheritedWidgetOfExactType<
+                                  _DetailScope
+                                >();
+                            return widget.child;
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -301,14 +350,25 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
                 inDetail: true,
                 visible: _hasDetail,
                 media: media,
-                child: HeroControllerScope(
-                  controller: _detailHero,
-                  child: Navigator(
-                    key: _detailKey,
-                    observers: [_detailObserver, _detailClipboard],
-                    onGenerateRoute: (settings) => MaterialPageRoute<void>(
-                      settings: settings,
-                      builder: (_) => const SizedBox.expand(),
+                child: NavigatorPopHandler<Object?>(
+                  enabled: detailHandlesBack,
+                  onPopWithResult: (_) {
+                    if (detailHandlesBack) {
+                      unawaited(_back());
+                    }
+                  },
+                  child: HeroControllerScope(
+                    controller: _detailHero,
+                    child: Navigator(
+                      key: _detailKey,
+                      observers: [_detailObserver, _detailClipboard],
+                      onGenerateRoute: (settings) => PageRouteBuilder<void>(
+                        settings: settings,
+                        opaque: false,
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
+                        pageBuilder: (_, _, _) => const SizedBox.expand(),
+                      ),
                     ),
                   ),
                 ),
@@ -344,7 +404,7 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
                 ),
           ],
         );
-    final interactive = visible && (inDetail || !_sourceBlocked);
+    final interactive = visible && (inDetail || _showSource && !_sourceBlocked);
     return Positioned.fromRect(
       key: ValueKey(inDetail ? 'detail-pane' : 'source-pane'),
       rect: rect,
@@ -352,7 +412,7 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
         offstage: !visible,
         // Riverpod 会随 TickerMode 暂停订阅；页签停用由外层主壳负责。
         child: TickerMode(
-          enabled: visible,
+          enabled: visible && (inDetail || _showSource),
           child: IgnorePointer(
             ignoring: !interactive,
             child: ExcludeFocus(
@@ -379,15 +439,19 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
 /// 顶栏与系统返回共享宿主顺序：先恢复分栏，再退回详情导航。
 Widget? adaptiveDetailBackButton(BuildContext context) {
   final scope = context.dependOnInheritedWidgetOfExactType<_DetailScope>();
-  if (scope == null) return null;
+  if (scope == null) {
+    return Navigator.of(context).canPop() ? const AppToolbarBackButton() : null;
+  }
   if (!scope.inDetail) {
-    if (Navigator.of(context).canPop()) return null;
+    if (Navigator.of(context).canPop()) {
+      return AppToolbarBackButton(onPressed: scope.host._back);
+    }
     final parent = Navigator.of(scope.host.context);
     return ModalRoute.of(scope.host.context)?.canPop == true
-        ? BackButton(onPressed: () => parent.maybePop())
+        ? AppToolbarBackButton(onPressed: () => parent.maybePop())
         : null;
   }
-  return BackButton(
+  return AppToolbarBackButton(
     key: const Key('adaptive-detail-back'),
     onPressed: scope.host._back,
   );
@@ -404,6 +468,10 @@ class AdaptiveDetailExpandAction extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return IconButton(
       key: const Key('adaptive-detail-expand'),
+      style: IconButton.styleFrom(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+      ),
       tooltip: scope.expanded
           ? l10n.layoutRestorePanes
           : l10n.layoutExpandDetail,
@@ -438,28 +506,94 @@ class _PaneObserver extends NavigatorObserver {
   _PaneObserver(this.onChanged);
   final VoidCallback onChanged;
   final routes = <Route<dynamic>>[];
+  final retiring = <TransitionRoute<dynamic>>{};
+  final entering = <TransitionRoute<dynamic>>{};
+  final _popEntry = _PanePopEntry();
+  final _guardedRoutes = <ModalRoute<dynamic>>{};
+
+  set handlesBack(bool value) => _popEntry.canPopNotifier.value = value;
+
+  void _guard(Route<dynamic> route) {
+    if (route is ModalRoute && _guardedRoutes.add(route)) {
+      // 预测返回直接查询每个栈的当前路由，不经过外层返回回调。
+      // 将资格写到路由自身，隐藏来源、停用页签和展开详情不能抢同一手势。
+      route.registerPopEntry(_popEntry);
+    }
+  }
+
+  void _unguard(Route<dynamic>? route) {
+    if (route is ModalRoute && _guardedRoutes.remove(route)) {
+      route.unregisterPopEntry(_popEntry);
+    }
+  }
+
+  void dispose() {
+    for (final route in _guardedRoutes.toList()) {
+      _unguard(route);
+    }
+    _popEntry.canPopNotifier.dispose();
+  }
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     routes.add(route);
+    if (previousRoute != null) _guard(route);
+    if (route is TransitionRoute && previousRoute != null) {
+      final animation = route.animation;
+      if (animation != null && animation.status != AnimationStatus.completed) {
+        entering.add(route);
+        void settled(AnimationStatus status) {
+          if (status != AnimationStatus.completed &&
+              status != AnimationStatus.dismissed) {
+            return;
+          }
+          animation.removeStatusListener(settled);
+          entering.remove(route);
+          onChanged();
+        }
+
+        animation.addStatusListener(settled);
+      }
+    }
     onChanged();
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     routes.remove(route);
+    _unguard(route);
+    if (route is TransitionRoute) {
+      retiring.add(route);
+      unawaited(
+        route.completed.whenComplete(() {
+          retiring.remove(route);
+          onChanged();
+        }),
+      );
+    }
     onChanged();
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     routes.remove(route);
+    _unguard(route);
     onChanged();
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     final index = oldRoute == null ? -1 : routes.indexOf(oldRoute);
-    if (index >= 0 && newRoute != null) routes[index] = newRoute;
+    _unguard(oldRoute);
+    if (index >= 0 && newRoute != null) {
+      routes[index] = newRoute;
+      if (index > 0) _guard(newRoute);
+    }
     onChanged();
   }
+}
+
+class _PanePopEntry extends PopEntry<Object?> {
+  @override
+  final ValueNotifier<bool> canPopNotifier = ValueNotifier(true);
 }

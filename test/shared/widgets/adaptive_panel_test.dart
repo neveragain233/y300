@@ -8,6 +8,66 @@ import 'package:y300/shared/widgets/adaptive_panel.dart';
 import '../../test_support/localized_test_app.dart';
 
 void main() {
+  for (final useRootNavigator in [false, true]) {
+    testWidgets('nested panel respects root ownership $useRootNavigator', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final root = GlobalKey<NavigatorState>();
+      final nested = GlobalKey<NavigatorState>();
+      String? result;
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          navigatorKey: root,
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 200),
+              child: Navigator(
+                key: nested,
+                onGenerateRoute: (_) => MaterialPageRoute<void>(
+                  builder: (context) => Center(
+                    child: TextButton(
+                      onPressed: () async {
+                        result = await showAdaptivePanel<String>(
+                          context: context,
+                          useRootNavigator: useRootNavigator,
+                          builder: (context) => TextButton(
+                            onPressed: () => Navigator.of(context).pop('done'),
+                            child: const Text('confirm'),
+                          ),
+                        );
+                      },
+                      child: const Text('open'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      final panel = find.byKey(const Key('adaptive-side-panel'));
+      expect(
+        tester.getRect(panel),
+        Rect.fromLTWH(useRootNavigator ? 720 : 520, 0, 480, 800),
+      );
+      expect(
+        Navigator.of(tester.element(panel)),
+        same(useRootNavigator ? root.currentState : nested.currentState),
+      );
+      await tester.tap(find.text('confirm'));
+      await tester.pumpAndSettle();
+      expect(result, 'done');
+      expect(find.text('open'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final size in [const Size(400, 800), const Size(1200, 800)]) {
     testWidgets('panel overlays without changing source geometry at $size', (
       tester,

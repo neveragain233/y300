@@ -1,3 +1,5 @@
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -207,19 +209,23 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       leading: adaptiveDetailBackButton(context),
       title: Text(l10n.historyTitle),
       actions: [
-        IconButton(
-          key: const Key('history-search-button'),
-          tooltip: l10n.historySearchOpen,
-          onPressed: _openSearch,
-          icon: const Icon(Icons.search),
+        AppToolbarActions(
+          children: [
+            IconButton(
+              key: const Key('history-search-button'),
+              tooltip: l10n.historySearchOpen,
+              onPressed: _openSearch,
+              icon: const Icon(Icons.search),
+            ),
+            if (state.items.isNotEmpty)
+              IconButton(
+                key: const Key('history-clear-all-button'),
+                tooltip: l10n.historyClearAll,
+                onPressed: _confirmClearAll,
+                icon: const Icon(Icons.delete_sweep_outlined),
+              ),
+          ],
         ),
-        if (state.items.isNotEmpty)
-          IconButton(
-            key: const Key('history-clear-all-button'),
-            tooltip: l10n.historyClearAll,
-            onPressed: _confirmClearAll,
-            icon: const Icon(Icons.delete_sweep_outlined),
-          ),
       ],
     );
   }

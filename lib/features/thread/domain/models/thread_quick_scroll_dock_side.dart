@@ -1,1 +1,0 @@
-enum ThreadQuickScrollDockSide { left, right }

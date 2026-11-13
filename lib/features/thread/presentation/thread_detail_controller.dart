@@ -72,6 +72,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
   var _commentsContentGeneration = 0;
   var _ratingsContentGeneration = 0;
   var _pageLoadGeneration = 0;
+  int? _floorPageLoadGeneration;
   bool _initialTargetValidated = false;
 
   @override
@@ -287,6 +288,61 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
         remove: const <String>{'page'},
       ),
     );
+  }
+
+  Future<bool> loadAdjacentForFloor({
+    required bool forward,
+    required bool Function() isCurrent,
+  }) async {
+    final current = state.value;
+    if (current == null || current.isLoadingMore || !isCurrent()) return false;
+    if (forward ? !current.hasMore : current.currentPage <= 1) return false;
+    final page = forward
+        ? _pageFromUrl(current.nextPageUrl) ?? current.currentPage + 1
+        : _pageFromUrl(current.previousPageUrl) ?? current.currentPage - 1;
+    final operation = _replaceWithPage(
+      page: page,
+      shouldApply: isCurrent,
+      preserveOnFailure: true,
+    );
+    final generation = _pageLoadGeneration;
+    _floorPageLoadGeneration = generation;
+    try {
+      await operation;
+    } on Object {
+      if (ref.mounted && generation == _pageLoadGeneration) {
+        state = AsyncData(
+          current.copyWith(
+            isLoadingMore: false,
+            loadFailure: const ThreadActionFailure(
+              code: ThreadUiErrorCode.pageLoadFailed,
+            ),
+          ),
+        );
+      }
+      return false;
+    } finally {
+      if (_floorPageLoadGeneration == generation) {
+        _floorPageLoadGeneration = null;
+      }
+    }
+    return ref.mounted &&
+        isCurrent() &&
+        state.value?.currentPage == page &&
+        state.value?.loadFailure == null;
+  }
+
+  void cancelFloorPageLoad() {
+    if (_floorPageLoadGeneration == null ||
+        _floorPageLoadGeneration != _pageLoadGeneration) {
+      return;
+    }
+    _floorPageLoadGeneration = null;
+    _pageLoadGeneration++;
+    final current = state.value;
+    if (current != null && current.isLoadingMore) {
+      state = AsyncData(current.copyWith(isLoadingMore: false));
+    }
   }
 
   Future<void> openAllPosts() async {
@@ -1218,6 +1274,8 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
   Future<void> _replaceWithPage({
     required int page,
     Map<String, String>? queryParameters,
+    bool Function()? shouldApply,
+    bool preserveOnFailure = false,
   }) async {
     final current = state.value;
     if (current == null || current.isLoadingMore) {
@@ -1234,6 +1292,20 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
     );
     if (!ref.mounted || generation != _pageLoadGeneration) return;
     final afterLoading = state.value ?? current;
+    if (shouldApply != null && !shouldApply()) {
+      state = AsyncData(afterLoading.copyWith(isLoadingMore: false));
+      return;
+    }
+    if (preserveOnFailure && next.posts.isEmpty && next.loadFailure != null) {
+      state = AsyncData(
+        afterLoading.copyWith(
+          isLoadingMore: false,
+          loadFailure: next.loadFailure,
+          errorMessage: next.errorMessage,
+        ),
+      );
+      return;
+    }
     state = AsyncData(
       next.copyWith(
         isThreadFavorited: afterLoading.isThreadFavorited,

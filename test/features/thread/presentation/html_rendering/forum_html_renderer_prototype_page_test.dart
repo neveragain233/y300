@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,6 +263,12 @@ void main() {
     expect(find.textContaining('楼层：2 个'), findsOneWidget);
     expect(find.byKey(const Key('thread-detail-list')), findsOneWidget);
     expect(find.textContaining('第一层正文', findRichText: true), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.textContaining('第二层正文', findRichText: true),
+      find.byKey(const Key('thread-detail-list')),
+      const Offset(0, -180),
+    );
+    await tester.pumpAndSettle();
     expect(find.textContaining('第二层正文', findRichText: true), findsOneWidget);
   });
 

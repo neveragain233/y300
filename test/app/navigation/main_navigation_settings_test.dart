@@ -154,6 +154,24 @@ void main() {
     });
   });
 
+  test('startup page uses stable values and defaults for old or unknown values', () {
+    for (final raw in [null, '', 'future']) {
+      final decoded = MainNavigationSettingsSnapshotCodec.decode(
+        '{"schemaVersion":1,"order":[],"hidden":[],"startupPage":${raw == null ? 'null' : '"$raw"'}}',
+      );
+      expect(decoded.startupPage, MainStartupPage.forum);
+    }
+    final settings = MainNavigationSettings.defaults().copyWith(
+      startupPage: MainStartupPage.bookshelf,
+    );
+    expect(
+      MainNavigationSettingsSnapshotCodec.decode(
+        MainNavigationSettingsSnapshotCodec.encode(settings),
+      ),
+      settings,
+    );
+  });
+
   test('shared preferences repository persists one snapshot', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final repository = SharedPrefsMainNavigationSettingsRepository();
@@ -176,6 +194,52 @@ void main() {
   });
 
   group('MainNavigationSettingsController', () {
+    test(
+      'startup page rejects overlapping writes and rolls back a failed save',
+      () async {
+        final save = Completer<void>();
+        final repository = _FakeMainNavigationSettingsRepository(
+          saveCompleter: save,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            mainNavigationSettingsRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container.read(mainNavigationSettingsControllerProvider.future);
+        final controller = container.read(
+          mainNavigationSettingsControllerProvider.notifier,
+        );
+        final pending = controller.setStartupPage(MainStartupPage.bookshelf);
+        expect(
+          container
+              .read(mainNavigationSettingsControllerProvider)
+              .requireValue
+              .settings
+              .startupPage,
+          MainStartupPage.bookshelf,
+        );
+        expect(
+          () => controller.setStartupPage(MainStartupPage.forum),
+          throwsA(isA<MainNavigationMutationInProgressException>()),
+        );
+        final failure = expectLater(pending, throwsStateError);
+        save.completeError(StateError('save failed'));
+        await failure;
+        expect(
+          container
+              .read(mainNavigationSettingsControllerProvider)
+              .requireValue
+              .settings
+              .startupPage,
+          MainStartupPage.forum,
+        );
+      },
+    );
+
     test('falls back to defaults when repository loading fails', () async {
       final container = ProviderContainer(
         overrides: [

@@ -239,6 +239,66 @@ void main() {
     expect(find.byKey(const Key('unified-shelf-list-view')), findsOneWidget);
   });
 
+  for (final size in [const Size(400, 800), const Size(600, 360)]) {
+    testWidgets('shelf panel actions stay usable with large text at $size', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      tester.view.padding = const FakeViewPadding(bottom: 24);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 24);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: UnifiedShelfPage(
+            adapter: _FakeShelfAdapter(
+              initialDisplayMode: LibraryDisplayMode.grid,
+            ),
+            onOpenWork: (context, workId) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.filter_list).first);
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizationsZh();
+      for (final label in [
+        l10n.libraryShelfFilter,
+        l10n.libraryShelfSort,
+        l10n.libraryShelfDisplayMode,
+      ]) {
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.commonApply).hitTestable(), findsOneWidget);
+        expect(find.text(l10n.commonCancel).hitTestable(), findsOneWidget);
+        expect(
+          tester.getBottomLeft(find.text(l10n.commonApply)).dy,
+          lessThanOrEqualTo(size.height - 24),
+        );
+        expect(tester.takeException(), isNull);
+      }
+      final scroll = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(SingleChildScrollView),
+      );
+      await tester.drag(scroll, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(find.byType(Slider).hitTestable(), findsOneWidget);
+      await tester.tap(find.text(l10n.commonApply));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('grid mode uses compact shared cover spacing', (tester) async {
     await tester.pumpWidget(
       LocalizedTestApp(
