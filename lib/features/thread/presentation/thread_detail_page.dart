@@ -15,6 +15,7 @@ import 'package:y300/features/thread/presentation/widgets/thread_floating_contro
 import 'package:y300/features/thread/presentation/widgets/thread_page_picker_sheet.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -154,6 +155,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         _bodyReadingCoordinator?.beginExplicitNavigation();
       },
       onConfirmed: () => _bodyReadingCoordinator?.markUserNavigation(),
+      onBoundaryReached: () => unawaited(HapticFeedback.lightImpact()),
     );
     _bindReadingObserver();
   }

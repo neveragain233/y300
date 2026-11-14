@@ -6,6 +6,7 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
   GlobalKey get _viewportKey;
   Object? get _renderLayoutIdentity;
   double get _repliesHeaderHeight;
+  bool get _repliesHeaderPinned;
   bool _targetBelowRepliesHeader(String pid);
   set _targetCenterKey(GlobalKey value);
   GlobalKey get _targetCenterKey;
@@ -102,7 +103,14 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     final controller = widget.scrollController;
     // 居中列表换绑的一帧内，新旧滚动位置可能同时附着。
     if (controller == null || controller.positions.length != 1) return null;
-    return _projectionAnchorCoordinator.capture(_sourcePidsFor(widget))?.pid;
+    return _projectionAnchorCoordinator
+        .capture(
+          _sourcePidsFor(widget),
+          // 吸顶栏遮住的上一楼尾部不属于当前阅读位置。
+          topInset: _repliesHeaderPinned ? _repliesHeaderHeight : 0,
+          preferVisibleStarts: true,
+        )
+        ?.pid;
   }
 
   @override

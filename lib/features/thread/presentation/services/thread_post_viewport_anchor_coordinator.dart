@@ -95,7 +95,14 @@ final class ThreadPostViewportAnchorCoordinator {
     _chunkEnds.removeWhere((pid, _) => !active.contains(pid));
   }
 
-  ThreadPostViewportAnchorSnapshot? capture(Iterable<String> orderedPids) {
+  /// [topInset] 把被置顶控件遮挡的区域从可见范围中排除；[preferVisibleStarts]
+  /// 让在阅读区内开始的楼层优先于跨过该边界的上一楼，避免吸顶栏换行后
+  /// 当前楼层一直停留在上一楼。
+  ThreadPostViewportAnchorSnapshot? capture(
+    Iterable<String> orderedPids, {
+    double topInset = 0,
+    bool preferVisibleStarts = false,
+  }) {
     final controller = _scrollController;
     if (_disposed ||
         controller == null ||
@@ -109,7 +116,7 @@ final class ThreadPostViewportAnchorCoordinator {
     }
 
     // 只在正文视口内比较坐标；重挂载期间外层过渡可能尚未布局。
-    const viewportTop = 0.0;
+    final viewportTop = topInset.clamp(0.0, viewport.size.height);
     final viewportBottom = viewport.size.height;
     String? firstVisiblePid;
     var firstVisibleTop = double.infinity;
@@ -151,10 +158,25 @@ final class ThreadPostViewportAnchorCoordinator {
           pidBoundaryVisible = boundaryVisible;
         }
       }
-      if (pidVisibleTop != null && pidVisibleTop < firstVisibleTop) {
-        firstVisibleTop = pidVisibleTop;
-        firstVisiblePid = pid;
-        firstVisibleChunk = pidVisibleChunk;
+      if (pidVisibleTop != null) {
+        if (firstVisiblePid == null) {
+          firstVisibleTop = pidVisibleTop;
+          firstVisiblePid = pid;
+          firstVisibleChunk = pidVisibleChunk;
+        } else if (preferVisibleStarts) {
+          final starts = pidVisibleTop >= viewportTop;
+          final previousStarts = firstVisibleTop >= viewportTop;
+          if ((starts && !previousStarts) ||
+              starts == previousStarts && pidVisibleTop < firstVisibleTop) {
+            firstVisibleTop = pidVisibleTop;
+            firstVisiblePid = pid;
+            firstVisibleChunk = pidVisibleChunk;
+          }
+        } else if (pidVisibleTop < firstVisibleTop) {
+          firstVisibleTop = pidVisibleTop;
+          firstVisiblePid = pid;
+          firstVisibleChunk = pidVisibleChunk;
+        }
       }
     }
 

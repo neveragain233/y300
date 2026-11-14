@@ -1263,8 +1263,10 @@ void main() {
           lessThan(120 + _repliesHeaderHeight(tester)),
         );
         expect(pages, [1]);
+        // 末楼楼头可见不算页尾：先读到底，再用下一次操作翻页。
         await tester.tap(forward);
-        await tester.pump();
+        await tester.pumpAndSettle();
+        expect(pages, [1]);
         await tester.tap(forward);
         await tester.pump();
         expect(pages, [1, 2]);

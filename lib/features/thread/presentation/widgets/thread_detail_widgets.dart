@@ -207,6 +207,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   @override
   double _repliesHeaderHeight = 0;
   double? _repliesHeaderContentOffset;
+  @override
   bool _repliesHeaderPinned = false;
   bool _stickyHeaderSyncScheduled = false;
 

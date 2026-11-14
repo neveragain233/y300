@@ -20,11 +20,15 @@ final class ThreadFloorPage {
 
 abstract interface class ThreadFloorViewport {
   String? get visiblePostId;
+
+  /// 真实滚动位置到达当前页底部；末楼楼头可见不算到达。
   bool get atBottom;
+
   Future<bool> revealPageEnd({
     required bool animate,
     required bool Function() isCurrent,
   });
+
   Future<bool> revealPost(
     String pid, {
     required bool animate,
@@ -33,22 +37,30 @@ abstract interface class ThreadFloorViewport {
 }
 
 /// 翻楼意图独立于正文几何；页末需要下一次显式操作才发起跨页。
+///
+/// 状态分别由实际可见楼层、在途目标、当前页末楼和真实滚动底部决定，
+/// 已确认目标不会覆盖用户之后实际停留的位置。
 final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
   ThreadFloorNavigationCoordinator({
     required this.readPage,
     required this.loadAdjacent,
     this.onStarted,
     this.onConfirmed,
+    this.onBoundaryReached,
   });
   final ThreadFloorPage? Function() readPage;
   final Future<bool> Function(bool forward, bool Function() isCurrent)
   loadAdjacent;
   final VoidCallback? onStarted;
   final VoidCallback? onConfirmed;
+
+  /// 到达页尾或首末边界时回调一次；加载、失败和取消不触发。
+  final VoidCallback? onBoundaryReached;
   ThreadFloorViewport? _viewport;
   Object? _owner;
   int? _page;
-  String? _confirmedPid;
+  String? _lastVisiblePid;
+  String? _boundaryKey;
   Future<void>? _pending;
   bool? _pendingForward;
   String? _pendingPid;
@@ -79,12 +91,7 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
         (!page.loading || isNavigating);
   }
 
-  String? get currentPostId {
-    final page = readPage();
-    if (page == null || page.pids.isEmpty) return null;
-    final current = _confirmedPid ?? _viewport?.visiblePostId;
-    return page.pids.contains(current) ? current : page.pids.first;
-  }
+  String? get currentPostId => _resolveCurrentPid();
 
   bool canMove(bool forward) {
     final page = readPage();
@@ -93,7 +100,9 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
     }
     final index = page.pids.indexOf(currentPostId ?? '');
     return forward
-        ? index < page.pids.length - 1 || page.hasNext
+        ? index < page.pids.length - 1 ||
+              page.hasNext ||
+              !(_viewport?.atBottom ?? false)
         : index > 0 || page.hasPrevious;
   }
 
@@ -112,6 +121,10 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
   void refresh() {
     final page = readPage();
     if (page?.owner != _owner) forward = true;
+    if (page?.owner != _owner || page?.page != _page) {
+      _lastVisiblePid = null;
+      _boundaryKey = null;
+    }
     if (page?.owner != _owner || page?.page != _page && !_loadingAdjacent) {
       cancel();
     }
@@ -125,19 +138,18 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
     _notify();
   }
 
-  void cancel({bool clearPosition = true}) {
+  void cancel() {
     _generation++;
     _pending = null;
     _pendingForward = null;
     _pendingPid = null;
     _pendingSingle = false;
     _loadingAdjacent = false;
-    if (clearPosition) _confirmedPid = null;
     _notify();
   }
 
   void reverseDirection() {
-    cancel(clearPosition: false);
+    cancel();
     forward = !forward;
     onStarted?.call();
     _notify();
@@ -161,6 +173,17 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
   Future<void> advance({required bool animate}) =>
       _navigate(forward, null, animate, single: true);
 
+  String? _resolveCurrentPid() {
+    final page = readPage();
+    if (page == null || page.pids.isEmpty) return null;
+    final visible = _viewport?.visiblePostId;
+    if (visible != null && page.pids.contains(visible)) {
+      _lastVisiblePid = visible;
+    }
+    final current = _pendingPid ?? _lastVisiblePid;
+    return page.pids.contains(current) ? current : page.pids.first;
+  }
+
   Future<void> _navigate(
     bool? forward,
     String? pid,
@@ -175,7 +198,7 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
       return _pending!;
     }
     final wasNavigating = isNavigating;
-    cancel(clearPosition: false);
+    cancel();
     final generation = _generation;
     final page = readPage();
     final viewport = _viewport;
@@ -220,38 +243,98 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
     bool Function() current, {
     required bool single,
   }) async {
-    final index = page.pids.indexOf(currentPostId ?? '');
+    final index = page.pids.indexOf(_resolveCurrentPid() ?? '');
     final targetIndex = index + (forward ? 1 : -1);
-    String target;
     if (targetIndex >= 0 && targetIndex < page.pids.length) {
-      target = page.pids[targetIndex];
-    } else {
-      if (!(forward ? page.hasNext : page.hasPrevious)) {
-        if (single && forward) {
-          // 末楼楼头不等于整帖底部；先展示剩余正文，再呈现回顶动作。
-          final reached = await viewport.revealPageEnd(
+      await _reveal(viewport, page.pids[targetIndex], animate, current);
+      return;
+    }
+    if (forward) {
+      if (page.hasNext) {
+        if (!viewport.atBottom) {
+          await _revealPageEnd(
+            viewport,
+            page,
             animate: animate,
-            isCurrent: current,
+            current: current,
+            boundary: 'page-end',
           );
-          if (current() && reached) {
-            _confirmedPid = page.pids.last;
-            onConfirmed?.call();
-          }
-        } else if (single && current()) {
-          this.forward = true;
+          return;
         }
+        await _loadAdjacentPage(
+          page,
+          viewport,
+          forward: true,
+          animate: animate,
+          current: current,
+        );
         return;
       }
-      _loadingAdjacent = true;
-      final loaded = await loadAdjacent(forward, current);
-      if (!current() || !loaded) return;
-      await WidgetsBinding.instance.endOfFrame;
-      if (!current()) return;
-      final next = readPage();
-      if (next == null || next.page == page.page || next.pids.isEmpty) return;
-      target = forward ? next.pids.first : next.pids.last;
+      // 最后一页：先让末楼正文读到底，无下一页时单键随后切为回首楼。
+      if (!viewport.atBottom) {
+        await _revealPageEnd(
+          viewport,
+          page,
+          animate: animate,
+          current: current,
+          boundary: 'thread-end',
+        );
+        return;
+      }
+      if (single && current()) {
+        this.forward = true;
+        _notify();
+      }
+      return;
     }
+    if (!page.hasPrevious) {
+      // 首页首楼已是真实首端；单键在此把方向复位为向下。
+      if (single && current()) {
+        this.forward = true;
+        _notify();
+      }
+      return;
+    }
+    await _loadAdjacentPage(
+      page,
+      viewport,
+      forward: false,
+      animate: animate,
+      current: current,
+    );
+  }
+
+  Future<void> _revealPageEnd(
+    ThreadFloorViewport viewport,
+    ThreadFloorPage page, {
+    required bool animate,
+    required bool Function() current,
+    required String boundary,
+  }) async {
+    final reached = await viewport.revealPageEnd(
+      animate: animate,
+      isCurrent: current,
+    );
+    if (!current() || !reached) return;
+    _signalBoundary(page, boundary);
+    onConfirmed?.call();
+  }
+
+  Future<void> _loadAdjacentPage(
+    ThreadFloorPage page,
+    ThreadFloorViewport viewport, {
+    required bool forward,
+    required bool animate,
+    required bool Function() current,
+  }) async {
+    _loadingAdjacent = true;
+    final loaded = await loadAdjacent(forward, current);
+    if (!current() || !loaded) return;
+    await WidgetsBinding.instance.endOfFrame;
     if (!current()) return;
+    final next = readPage();
+    if (next == null || next.page == page.page || next.pids.isEmpty) return;
+    final target = forward ? next.pids.first : next.pids.last;
     await _reveal(viewport, target, animate, current);
   }
 
@@ -267,8 +350,24 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
       isCurrent: current,
     );
     if (!current() || !reached) return;
-    _confirmedPid = target;
+    _lastVisiblePid = target;
+    final page = readPage();
+    if (page != null && page.pids.isNotEmpty) {
+      if (!page.hasPrevious && page.page == 1 && target == page.pids.first) {
+        _signalBoundary(page, 'thread-start');
+      } else if (!page.hasNext && target == page.pids.last) {
+        _signalBoundary(page, 'thread-end');
+      }
+    }
     onConfirmed?.call();
+  }
+
+  /// 同一页的同类边界只反馈一次；换页、换查询或进入新的到达代次时重新计。
+  void _signalBoundary(ThreadFloorPage page, String boundary) {
+    final key = '${page.owner}|${page.page}|$boundary';
+    if (_boundaryKey == key) return;
+    _boundaryKey = key;
+    onBoundaryReached?.call();
   }
 
   void _notify() {

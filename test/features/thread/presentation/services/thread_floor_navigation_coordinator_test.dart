@@ -94,7 +94,7 @@ void main() {
     },
   );
   testWidgets(
-    'last post is reached before a separate tap loads the next page',
+    'last post body reaches the page end before a separate tap loads the page',
     (tester) async {
       var page = _page();
       var loads = 0;
@@ -113,15 +113,22 @@ void main() {
       nav.bind(viewport);
       await nav.move(true, animate: false);
       expect(viewport.targets, ['p2']);
-      expect(loads, 0);
       await nav.move(true, animate: false);
       expect(viewport.targets, ['p2', 'p3']);
       expect(loads, 0);
+
+      // 末楼楼头可见不等于页尾：本次操作只把正文读到底。
+      await nav.move(true, animate: false);
+      expect(viewport.targets, ['p2', 'p3']);
+      expect(viewport.pageEnds, 1);
+      expect(loads, 0);
+      expect(confirmed, 3);
+
       final pending = nav.move(true, animate: false);
       await _settle(tester, pending);
       expect(loads, 1);
       expect(viewport.targets.last, 'p4');
-      expect(confirmed, 3);
+      expect(confirmed, 4);
     },
   );
   testWidgets('reverse and missing floor numbers follow display order', (
@@ -149,7 +156,9 @@ void main() {
     (tester) async {
       final gate = Completer<bool>();
       var loads = 0;
-      final viewport = _Viewport()..visiblePostId = 'p3';
+      final viewport = _Viewport()
+        ..visiblePostId = 'p3'
+        ..atBottom = true;
       final nav = ThreadFloorNavigationCoordinator(
         readPage: () => _page(),
         loadAdjacent: (_, _) {
@@ -208,12 +217,64 @@ void main() {
     expect(viewport.targets, isEmpty);
     expect(nav.isNavigating, isFalse);
   });
+  testWidgets('boundary feedback is deduplicated per page and direction', (
+    tester,
+  ) async {
+    var boundaries = 0;
+    final viewport = _Viewport()
+      ..visiblePostId = 'p3'
+      ..registerPageEnd = false;
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => const ThreadFloorPage(
+        owner: 'thread',
+        page: 1,
+        pids: ['p1', 'p2', 'p3'],
+        hasPrevious: false,
+        hasNext: false,
+      ),
+      loadAdjacent: (_, _) async => false,
+      onBoundaryReached: () => boundaries++,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.advance(animate: false);
+    await nav.advance(animate: false);
+    expect(viewport.pageEnds, 2);
+    expect(boundaries, 1);
+  });
+
+  testWidgets('current floor follows the actual viewport after arrival', (
+    tester,
+  ) async {
+    final viewport = _Viewport();
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => const ThreadFloorPage(
+        owner: 'thread',
+        page: 1,
+        pids: ['p1', 'p2', 'p3', 'p4'],
+        hasPrevious: false,
+        hasNext: false,
+      ),
+      loadAdjacent: (_, _) async => false,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.move(true, animate: false);
+    expect(viewport.targets, ['p2']);
+    // 已确认目标不再覆盖用户之后实际停留的位置。
+    viewport.visiblePostId = 'p1';
+    await nav.move(true, animate: false);
+    expect(viewport.targets, ['p2', 'p2']);
+  });
+
   testWidgets(
     'failed adjacent page can be retried from the current last post',
     (tester) async {
       var page = _page();
       var loads = 0;
-      final viewport = _Viewport()..visiblePostId = 'p3';
+      final viewport = _Viewport()
+        ..visiblePostId = 'p3'
+        ..atBottom = true;
       final nav = ThreadFloorNavigationCoordinator(
         readPage: () => page,
         loadAdjacent: (_, _) async {
@@ -250,6 +311,7 @@ ThreadFloorPage _page({
 class _Viewport implements ThreadFloorViewport {
   @override
   bool atBottom = false;
+  bool registerPageEnd = true;
   var pageEnds = 0;
   Completer<void>? endGate;
   @override
@@ -260,7 +322,7 @@ class _Viewport implements ThreadFloorViewport {
     pageEnds++;
     await endGate?.future;
     if (!isCurrent()) return false;
-    atBottom = true;
+    if (registerPageEnd) atBottom = true;
     return true;
   }
 
@@ -276,6 +338,7 @@ class _Viewport implements ThreadFloorViewport {
     if (!isCurrent()) return false;
     targets.add(pid);
     visiblePostId = pid;
+    atBottom = false;
     return true;
   }
 }
