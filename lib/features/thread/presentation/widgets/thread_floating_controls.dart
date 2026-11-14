@@ -20,6 +20,7 @@ class ThreadFloatingControls extends StatefulWidget {
     required this.onFirstPost,
     required this.onHeightChanged,
     this.hasContent = true,
+    this.horizontalSafeInsets = EdgeInsets.zero,
   });
   final ThreadControlsPreferences preferences;
   final ThreadFloorNavigationCoordinator navigation;
@@ -31,6 +32,9 @@ class ThreadFloatingControls extends StatefulWidget {
   final VoidCallback onFirstPost;
   final ValueChanged<double> onHeightChanged;
   final bool hasContent;
+
+  /// FAB 子树移除了系统安全区内边距，横向避让由页面传入后在这里补齐。
+  final EdgeInsets horizontalSafeInsets;
   @override
   State<ThreadFloatingControls> createState() => _ThreadFloatingControlsState();
 }
@@ -170,53 +174,74 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
         if (!constraints.maxWidth.isFinite || constraints.maxWidth <= 24) {
           return const SizedBox.shrink();
         }
-        final width = math.min(720.0, constraints.maxWidth - 24);
+        const margin = 16.0;
+        final leftInset =
+            math.max(0.0, widget.horizontalSafeInsets.left) + margin;
+        final rightInset =
+            math.max(0.0, widget.horizontalSafeInsets.right) + margin;
+        final usableWidth = math.max(
+          0.0,
+          constraints.maxWidth - leftInset - rightInset,
+        );
         final navigationEnabled =
             preferences.navigationEnabled && widget.hasContent;
-        final inline = !navigationEnabled || mainWidth + navWidth + 12 <= width;
+        // 非紧凑主栏居中，只有整条栏本身放得下、且不与右侧导航重叠时才并排。
+        final inline =
+            !navigationEnabled ||
+            (compact
+                ? mainWidth + navWidth + 12 <= usableWidth
+                : mainWidth + 2 * (navWidth + 12) <= usableWidth);
+        final mainAlignment = !compact
+            ? Alignment.center
+            : preferences.side == ThreadControlsSide.right
+            ? Alignment.centerRight
+            : Alignment.centerLeft;
         final mainControl = SizedBox(width: mainWidth, child: main);
         final controls = SizedBox(
           key: _measureKey,
-          width: width,
-          child: IconButtonTheme(
-            data: IconButtonThemeData(
-              style: IconButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                fixedSize: const Size(48, 48),
-                foregroundColor: foreground,
+          width: constraints.maxWidth,
+          child: Padding(
+            padding: EdgeInsets.only(left: leftInset, right: rightInset),
+            child: IconButtonTheme(
+              data: IconButtonThemeData(
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  fixedSize: const Size(48, 48),
+                  foregroundColor: foreground,
+                ),
               ),
+              child: !navigationEnabled
+                  ? Align(
+                      alignment: mainAlignment,
+                      heightFactor: 1,
+                      child: mainControl,
+                    )
+                  : inline
+                  ? _inlineControls(
+                      compact: compact,
+                      side: preferences.side,
+                      mainAlignment: mainAlignment,
+                      mainControl: mainControl,
+                      nav: nav,
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          heightFactor: 1,
+                          child: nav,
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: mainAlignment,
+                          heightFactor: 1,
+                          child: mainControl,
+                        ),
+                      ],
+                    ),
             ),
-            child: inline
-                ? Row(
-                    mainAxisAlignment: !compact
-                        ? MainAxisAlignment.spaceBetween
-                        : preferences.side == ThreadControlsSide.right
-                        ? MainAxisAlignment.end
-                        : MainAxisAlignment.start,
-                    children: [
-                      if (navigationEnabled &&
-                          compact &&
-                          preferences.side == ThreadControlsSide.right) ...[
-                        nav,
-                        const SizedBox(width: 12),
-                      ],
-                      mainControl,
-                      if (navigationEnabled &&
-                          (!compact ||
-                              preferences.side == ThreadControlsSide.left)) ...[
-                        const SizedBox(width: 12),
-                        nav,
-                      ],
-                    ],
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment:
-                        preferences.side == ThreadControlsSide.left
-                        ? CrossAxisAlignment.start
-                        : CrossAxisAlignment.end,
-                    children: [nav, const SizedBox(height: 12), mainControl],
-                  ),
           ),
         );
         return ValueListenableBuilder<bool>(
@@ -252,6 +277,31 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
         );
       },
     );
+  }
+
+  Widget _inlineControls({
+    required bool compact,
+    required ThreadControlsSide side,
+    required AlignmentGeometry mainAlignment,
+    required Widget mainControl,
+    required Widget nav,
+  }) {
+    // 单键导航始终贴视口右缘；紧凑主栏按停靠侧靠在它左边。
+    if (!compact) {
+      return Stack(
+        children: [
+          Align(alignment: mainAlignment, heightFactor: 1, child: mainControl),
+          Align(alignment: Alignment.centerRight, heightFactor: 1, child: nav),
+        ],
+      );
+    }
+    if (side == ThreadControlsSide.right) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [mainControl, const SizedBox(width: 12), nav],
+      );
+    }
+    return Row(children: [mainControl, const Spacer(), nav]);
   }
 
   Widget _surface(Color color, Widget child) => Material(

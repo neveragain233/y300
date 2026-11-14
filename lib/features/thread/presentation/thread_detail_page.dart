@@ -674,6 +674,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       ),
       floatingActionButton: ThreadFloatingControls(
         preferences: controlsPreferences,
+        horizontalSafeInsets: EdgeInsets.only(
+          left: MediaQuery.paddingOf(context).left,
+          right: MediaQuery.paddingOf(context).right,
+        ),
         navigation: _floorNavigation,
         visibility: _controlsVisibility,
         hasContent: state.posts.isNotEmpty,

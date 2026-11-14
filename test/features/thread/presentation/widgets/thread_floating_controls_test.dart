@@ -123,6 +123,121 @@ void main() {
       }
     },
   );
+  testWidgets(
+    'double navigation stays at the viewport right edge on tablet widths',
+    (tester) async {
+      final visibility = ValueNotifier(true);
+      addTearDown(visibility.dispose);
+      final nav = _navigation(_Viewport());
+      addTearDown(nav.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.binding.setSurfaceSize(const Size(1000, 900));
+      await tester.pumpWidget(
+        _app(nav, visibility, const ThreadControlsPreferences()),
+      );
+      await tester.pumpAndSettle();
+
+      // 非紧凑主栏以视口为中心（224 宽），导航键贴右缘 16dp 边距。
+      expect(
+        tester.getTopLeft(find.byKey(const Key('test-favorite-button'))).dx,
+        closeTo((1000 - 224) / 2 + 4, .5),
+      );
+      expect(
+        tester.getTopRight(find.byKey(const Key('thread-next-post-button'))).dx,
+        closeTo(980, .5),
+      );
+
+      // 紧凑栏的停靠侧只决定主栏位置，导航键保持右缘。
+      for (final side in [ThreadControlsSide.left, ThreadControlsSide.right]) {
+        await tester.pumpWidget(
+          _app(
+            nav,
+            visibility,
+            ThreadControlsPreferences(compact: true, side: side),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getTopRight(find.byKey(const Key('thread-next-post-button')))
+              .dx,
+          closeTo(980, .5),
+          reason: 'side=$side',
+        );
+        final favorite = tester.getRect(
+          find.byKey(const Key('test-favorite-button')),
+        );
+        if (side == ThreadControlsSide.left) {
+          expect(favorite.left, closeTo(20, .5));
+        } else {
+          // 导航键占 112 宽并贴右缘，主栏紧挨其左侧（间距 12）。
+          expect(favorite.left, closeTo(984 - 112 - 12 - 224 + 4, .5));
+        }
+      }
+    },
+  );
+
+  testWidgets(
+    'narrow layout lifts the navigation keys above the main bar on the right',
+    (tester) async {
+      final visibility = ValueNotifier(true);
+      addTearDown(visibility.dispose);
+      final nav = _navigation(_Viewport());
+      addTearDown(nav.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      await tester.pumpWidget(
+        _app(nav, visibility, const ThreadControlsPreferences(compact: true)),
+      );
+      await tester.pumpAndSettle();
+
+      final next = tester.getRect(
+        find.byKey(const Key('thread-next-post-button')),
+      );
+      final favorite = tester.getRect(
+        find.byKey(const Key('test-favorite-button')),
+      );
+      expect(next.right, closeTo(300, .5));
+      expect(next.bottom, lessThanOrEqualTo(favorite.top - 12 + .5));
+      expect(favorite.left, greaterThanOrEqualTo(16));
+    },
+  );
+
+  testWidgets('system horizontal safe insets keep both groups clear', (
+    tester,
+  ) async {
+    final visibility = ValueNotifier(true);
+    addTearDown(visibility.dispose);
+    final nav = _navigation(_Viewport());
+    addTearDown(nav.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.binding.setSurfaceSize(const Size(1000, 900));
+    await tester.pumpWidget(
+      _app(
+        nav,
+        visibility,
+        const ThreadControlsPreferences(
+          compact: true,
+          side: ThreadControlsSide.left,
+        ),
+        horizontalSafeInsets: const EdgeInsets.only(left: 20, right: 30),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopRight(find.byKey(const Key('thread-next-post-button'))).dx,
+      closeTo(950, .5),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('test-favorite-button'))).dx,
+      closeTo(40, .5),
+    );
+  });
+
   testWidgets('scroll hiding is opt-in and preserves the control height', (
     tester,
   ) async {
@@ -271,6 +386,7 @@ Widget _app(
   ThreadControlsPreferences preferences, {
   double scale = 1,
   VoidCallback? onFirst,
+  EdgeInsets horizontalSafeInsets = EdgeInsets.zero,
 }) => LocalizedTestApp(
   home: Builder(
     builder: (context) => MediaQuery(
@@ -300,6 +416,7 @@ Widget _app(
           ),
           onFirstPost: onFirst ?? () {},
           onHeightChanged: (_) {},
+          horizontalSafeInsets: horizontalSafeInsets,
         ),
       ),
     ),
