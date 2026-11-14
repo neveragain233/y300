@@ -5,6 +5,8 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
   ThreadPostViewportAnchorCoordinator get _projectionAnchorCoordinator;
   GlobalKey get _viewportKey;
   Object? get _renderLayoutIdentity;
+  double get _repliesHeaderHeight;
+  bool _targetBelowRepliesHeader(String pid);
   set _targetCenterKey(GlobalKey value);
   GlobalKey get _targetCenterKey;
   set _endpointTarget(ThreadDetailQuickScrollTarget? value);
@@ -210,11 +212,23 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
       return false;
     }
     if (!targetContext.mounted) return false;
+    // 目标在回复栏之下时，楼头对齐到吸顶栏下沿而不是视口顶边。
+    final occlusion = _targetBelowRepliesHeader(pid)
+        ? _repliesHeaderHeight
+        : 0.0;
+    final alignmentBox = _viewportKey.currentContext?.findRenderObject();
+    final alignment =
+        occlusion > 0 &&
+            alignmentBox is RenderBox &&
+            alignmentBox.hasSize &&
+            alignmentBox.size.height > 0
+        ? (occlusion / alignmentBox.size.height).clamp(0.0, 1.0)
+        : 0.0;
     await Scrollable.ensureVisible(
       targetContext,
       duration: animate ? const Duration(milliseconds: 180) : Duration.zero,
       curve: Curves.easeOutCubic,
-      alignment: 0,
+      alignment: alignment,
     );
     await WidgetsBinding.instance.endOfFrame;
     if (!current()) return false;
@@ -227,6 +241,8 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
       return false;
     }
     final top = marker.localToGlobal(Offset.zero, ancestor: viewport).dy;
-    return top < viewport.size.height && top + marker.size.height > -1;
+    return top < viewport.size.height &&
+        top >= occlusion - 1 &&
+        top + marker.size.height > -1;
   }
 }

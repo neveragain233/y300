@@ -1260,7 +1260,7 @@ void main() {
           tester
               .getTopLeft(find.byKey(const Key('thread-post-card-floor-3')))
               .dy,
-          lessThan(120),
+          lessThan(120 + _repliesHeaderHeight(tester)),
         );
         expect(pages, [1]);
         await tester.tap(forward);
@@ -1274,7 +1274,7 @@ void main() {
           tester
               .getTopLeft(find.byKey(const Key('thread-post-card-floor-4')))
               .dy,
-          lessThan(120),
+          lessThan(120 + _repliesHeaderHeight(tester)),
         );
         await tester.tap(find.byKey(const Key('thread-previous-post-button')));
         await tester.pumpAndSettle();
@@ -2155,7 +2155,7 @@ void main() {
       expect(_richTextContaining('第二条回复'), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('thread-post-card-p2'))).dy,
-        lessThan(120),
+        lessThan(120 + _repliesHeaderHeight(tester)),
       );
       expect(
         find.byKey(const Key('thread-detail-bottom-favorite-button')),
@@ -3763,7 +3763,7 @@ void main() {
       expect(_richTextContaining('第3页正文'), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('thread-post-card-p3'))).dy,
-        lessThan(120),
+        lessThan(120 + _repliesHeaderHeight(tester)),
       );
 
       await tester.dragUntilVisible(
@@ -3791,7 +3791,7 @@ void main() {
       expect(_richTextContaining('第8页正文'), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('thread-post-card-p8'))).dy,
-        lessThan(120),
+        lessThan(120 + _repliesHeaderHeight(tester)),
       );
 
       await tester.dragUntilVisible(
@@ -3810,7 +3810,7 @@ void main() {
       expect(_richTextContaining('第7页正文'), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('thread-post-card-p7'))).dy,
-        lessThan(120),
+        lessThan(120 + _repliesHeaderHeight(tester)),
       );
     });
 
@@ -3888,7 +3888,13 @@ void main() {
           tester.element(find.byType(ThreadDetailPage)),
         );
         final header = find.byKey(const Key('thread-detail-replies-header'));
-        expect(find.text(l10n.threadDetailReplyCount(2)), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('thread-detail-replies-header')),
+            matching: find.text(l10n.threadDetailReplyCount(2)),
+          ),
+          findsOneWidget,
+        );
         expect(
           tester.getTopLeft(header).dy,
           greaterThan(
@@ -3927,7 +3933,7 @@ void main() {
             tester.getTopLeft(find.byKey(const Key('thread-post-card-p3'))).dy,
           ),
         );
-        await tester.tap(find.byKey(const Key('thread-replies-normal-order')));
+        await tester.tap(find.byKey(const Key('thread-replies-order-toggle')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
 
@@ -3941,7 +3947,7 @@ void main() {
         expect(repository.queryHistory.last['ordertype'], '2');
         expect(historyRecorder.drafts, hasLength(1));
 
-        await tester.tap(find.byKey(const Key('thread-replies-reverse-order')));
+        await tester.tap(find.byKey(const Key('thread-replies-order-toggle')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 120));
         await tester.tap(find.byKey(const Key('thread-replies-author-filter')));
@@ -4263,8 +4269,13 @@ void main() {
       );
       expect(
         targetTop.dy,
-        closeTo(listTop.dy + ForumContentSpacing.listTop, 28),
-        reason: '目标楼层应贴近 AppBar 下方的列表顶部，而不是落在屏幕中部',
+        closeTo(
+          listTop.dy +
+              ForumContentSpacing.listTop +
+              _repliesHeaderHeight(tester),
+          28,
+        ),
+        reason: '目标楼层应贴在 AppBar 下方吸顶回复栏的下沿，而不是落在屏幕中部',
       );
       final scrollable = tester.state<ScrollableState>(
         find.descendant(
@@ -4357,7 +4368,12 @@ void main() {
         );
         expect(
           targetTop.dy,
-          closeTo(listTop.dy + ForumContentSpacing.listTop, 28),
+          closeTo(
+            listTop.dy +
+                ForumContentSpacing.listTop +
+                _repliesHeaderHeight(tester),
+            28,
+          ),
         );
         expect(_richTextContaining('第一话 姐姐的日记'), findsOneWidget);
         expect(historyRecorder.drafts, hasLength(1));
@@ -4453,9 +4469,13 @@ void main() {
       final viewportTop = tester.getTopLeft(viewport).dy;
       final footerTop = tester.getTopLeft(footer).dy;
       final viewportHeight = tester.getSize(viewport).height;
+      final headerHeight = _repliesHeaderHeight(tester);
       expect(
         footerTop - viewportTop,
-        inInclusiveRange(25, viewportHeight * 0.18 + 2),
+        inInclusiveRange(
+          25 + headerHeight,
+          viewportHeight * 0.18 + 2 + headerHeight,
+        ),
       );
       expect(tester.getBottomLeft(body).dy, closeTo(footerTop, 1));
       final initialAnchor = tester.widget<CustomScrollView>(viewport).anchor;
@@ -7136,6 +7156,309 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'floor menu opens only that floor author and bars empty identities',
+      (tester) async {
+        final repository = _FakeThreadRepository((tid, page, query) async {
+          final authorId = query['authorid'];
+          final posts = authorId == '2'
+              ? [
+                  _post(
+                    pid: 'author-menu-p2',
+                    author: 'bob',
+                    authorId: '2',
+                    number: 2,
+                    message: '<p>bob 的回复</p>',
+                  ),
+                ]
+              : [
+                  _post(
+                    pid: 'author-menu-p1',
+                    author: 'alice',
+                    authorId: '1',
+                    number: 1,
+                    isFirst: true,
+                    message: '<p>主楼正文</p>',
+                  ),
+                  _post(
+                    pid: 'author-menu-p2',
+                    author: 'bob',
+                    authorId: '2',
+                    number: 2,
+                    message: '<p>bob 的回复</p>',
+                  ),
+                  ThreadPost(
+                    pid: 'author-menu-p3',
+                    author: 'carol',
+                    authorId: '',
+                    message: '<p>身份缺失的回复</p>',
+                    number: 3,
+                    isFirst: false,
+                    dateline: 'today',
+                  ),
+                ];
+          return ApiSuccess(_threadDetailData(tid: tid, posts: posts));
+        });
+
+        await tester.pumpWidget(_buildTestApp(repository));
+        await tester.pumpAndSettle();
+
+        // 作者编号缺失的楼层不显示该操作。
+        await _longPressVisibleTop(
+          tester,
+          find.byKey(const Key('thread-post-body-author-menu-p3')),
+        );
+        await _pumpThreadUiTransition(tester);
+        final sheet = find.byKey(const Key('thread-post-action-sheet'));
+        expect(sheet, findsOneWidget);
+        expect(
+          find.byKey(const Key('thread-post-only-author-action')),
+          findsNothing,
+        );
+        Navigator.of(tester.element(sheet)).pop();
+        await tester.pumpAndSettle();
+
+        await _longPressVisibleTop(
+          tester,
+          find.byKey(const Key('thread-post-body-author-menu-p2')),
+        );
+        await _pumpThreadUiTransition(tester);
+        await _tapPostActionSheetItem(
+          tester,
+          const Key('thread-post-only-author-action'),
+        );
+        await _pumpThreadUiTransition(tester);
+
+        expect(repository.queryHistory.last['authorid'], '2');
+        expect(repository.queryHistory.last.containsKey('page'), isFalse);
+      },
+    );
+
+    testWidgets(
+      'app bar action returns to the first post and resets direction',
+      (tester) async {
+        final repository = _FakeThreadRepository(
+          (tid, page, query) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                for (var index = 1; index <= 3; index++)
+                  _post(
+                    pid: 'first-action-p$index',
+                    author: 'alice',
+                    authorId: '1',
+                    number: index,
+                    isFirst: index == 1,
+                    message: List.generate(
+                      8,
+                      (line) => '<p>第$index楼段落 $line</p>',
+                    ).join(),
+                  ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp(repository));
+        await tester.pumpAndSettle();
+
+        final firstPost = find.byKey(
+          const Key('thread-post-card-first-action-p1'),
+        );
+        final next = find.byKey(const Key('thread-next-post-button'));
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(ThreadDetailPage)),
+        );
+        final backToFirst = find.byKey(
+          const Key('thread-detail-first-post-button'),
+        );
+        expect(backToFirst, findsOneWidget);
+        expect(
+          tester.getSemantics(backToFirst).tooltip,
+          l10n.threadControlsFirstPost,
+        );
+
+        await tester.tap(next);
+        await tester.pumpAndSettle();
+        await tester.tap(next);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('thread-post-card-first-action-p3')),
+          findsOneWidget,
+        );
+        expect(firstPost, findsNothing);
+
+        await tester.tap(backToFirst);
+        await tester.pumpAndSettle();
+        final listTop = tester.getTopLeft(
+          find.byKey(const Key('thread-detail-list')),
+        );
+        expect(tester.getTopLeft(firstPost).dy, closeTo(listTop.dy, 20));
+
+        await tester.tap(next);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getTopLeft(
+                find.byKey(const Key('thread-post-card-first-action-p2')),
+              )
+              .dy,
+          lessThan(
+            tester.getSize(find.byKey(const Key('thread-detail-list'))).height,
+          ),
+        );
+      },
+    );
+
+    testWidgets(
+      'replies header pins below the viewport top and returns to its place',
+      (tester) async {
+        tester.view.physicalSize = const Size(411, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        final repository = _FakeThreadRepository(
+          (tid, page) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _post(
+                  pid: 'sticky-p1',
+                  author: 'alice',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: List.generate(
+                    60,
+                    (index) => '<p>首楼段落 $index</p>',
+                  ).join(),
+                ),
+                for (var index = 2; index <= 3; index++)
+                  _post(
+                    pid: 'sticky-p$index',
+                    author: 'bob',
+                    authorId: '2',
+                    number: index,
+                    message: List.generate(
+                      30,
+                      (line) => '<p>回复 $index 段落 $line</p>',
+                    ).join(),
+                  ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(_buildTestApp(repository));
+        await tester.pumpAndSettle();
+
+        final list = find.byKey(const Key('thread-detail-list'));
+        final inline = find.byKey(const Key('thread-detail-replies-header'));
+        final sticky = find.byKey(
+          const Key('thread-detail-sticky-replies-header'),
+        );
+        expect(sticky, findsNothing);
+        // 首楼很长时回复栏尚未进入惰性列表可见区，先滚动到自然位置。
+        await tester.dragUntilVisible(inline, list, const Offset(0, -300));
+        await tester.pumpAndSettle();
+        expect(inline, findsOneWidget);
+
+        final listTop = tester.getTopLeft(list).dy;
+        final scrollable = tester.state<ScrollableState>(
+          find.descendant(of: list, matching: find.byType(Scrollable)),
+        );
+        final headerOffset =
+            scrollable.position.pixels +
+            (tester.getTopLeft(inline).dy - listTop);
+        scrollable.position.jumpTo(headerOffset + 80);
+        await tester.pumpAndSettle();
+
+        expect(sticky, findsOneWidget);
+        expect(tester.getTopLeft(sticky).dy, closeTo(listTop, .5));
+        expect(
+          find.descendant(
+            of: sticky,
+            matching: find.byKey(const Key('thread-replies-author-filter')),
+          ),
+          findsNothing,
+          reason: '吸顶层只显示同一份操作，不复制列表里的交互键',
+        );
+
+        // 回到首楼区域时恢复自然位置并退出吸顶。
+        scrollable.position.jumpTo(headerOffset - 120);
+        await tester.pumpAndSettle();
+        expect(sticky, findsNothing);
+        expect(inline, findsOneWidget);
+        expect(tester.getTopLeft(inline).dy, closeTo(listTop + 120, 1));
+      },
+    );
+
+    testWidgets('reply-only pages start with a sticky-capable replies header', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(411, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = _FakeThreadRepository(
+        (tid, page) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            currentPage: page,
+            lastPage: 2,
+            posts: [
+              for (var index = 21; index <= 22; index++)
+                _post(
+                  pid: 'reply-only-$index',
+                  author: 'bob',
+                  authorId: '2',
+                  number: index,
+                  message: List.generate(
+                    40,
+                    (line) => '<p>第$index楼段落 $line</p>',
+                  ).join(),
+                ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      final list = find.byKey(const Key('thread-detail-list'));
+      final inline = find.byKey(const Key('thread-detail-replies-header'));
+      final sticky = find.byKey(
+        const Key('thread-detail-sticky-replies-header'),
+      );
+      expect(inline, findsOneWidget);
+      expect(
+        tester.getTopLeft(inline).dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const Key('thread-post-card-reply-only-21')),
+              )
+              .dy,
+        ),
+      );
+
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(of: list, matching: find.byType(Scrollable)),
+      );
+      scrollable.position.jumpTo(120);
+      await tester.pumpAndSettle();
+      expect(sticky, findsOneWidget);
+      expect(
+        tester.getTopLeft(sticky).dy,
+        closeTo(tester.getTopLeft(list).dy, .5),
+      );
+    });
   });
 }
 
@@ -7650,6 +7973,16 @@ Finder _appBarTitleText(String text) {
 
 double _centerDxOf(WidgetTester tester, Finder finder) {
   return tester.getCenter(finder).dx;
+}
+
+/// 回复栏吸顶后目标楼对齐到栏下沿；测试按实际栏高核对落点。
+double _repliesHeaderHeight(WidgetTester tester) {
+  final header = find.byKey(const Key('thread-detail-sticky-replies-header'));
+  if (header.evaluate().isNotEmpty) {
+    return tester.getSize(header).height;
+  }
+  final inline = find.byKey(const Key('thread-detail-replies-header'));
+  return inline.evaluate().isEmpty ? 0 : tester.getSize(inline).height;
 }
 
 double _contrastRatio(Color foreground, Color background) {

@@ -50,6 +50,7 @@ class ThreadPostActions {
     required this.target,
     required this.isCurrent,
     required this.imageReferer,
+    this.onViewOnlyAuthor,
     this.selectionRenderPreparer = const DefaultForumHtmlRenderPreparer(),
   });
   final BuildContext context;
@@ -57,6 +58,9 @@ class ThreadPostActions {
   final ThreadPostActionContext target;
   final bool Function() isCurrent;
   final String? imageReferer;
+
+  /// 楼层菜单“只看该作者”：以该楼作者身份重新查询当前主题。
+  final Future<void> Function(String authorId)? onViewOnlyAuthor;
   final ForumHtmlRenderPreparer selectionRenderPreparer;
   bool get active => context.mounted && isCurrent();
   late final ThreadPostNavigation navigation = ThreadPostNavigation(
@@ -93,6 +97,11 @@ class ThreadPostActions {
     final optionText = pollOption?.label;
     final canCopyOption = optionText?.trim().isNotEmpty == true;
     final editTarget = _editTarget(sourcePost);
+    final authorId = sourcePost.authorId.trim();
+    final canViewOnlyAuthor =
+        onViewOnlyAuthor != null &&
+        authorId.isNotEmpty &&
+        target.supports(ThreadDetailCapability.alternateViews);
     final action = await showModalBottomSheet<ThreadPostAction>(
       context: context,
       builder: (_) => ThreadPostActionSheet(
@@ -100,6 +109,7 @@ class ThreadPostActions {
         editUri: editTarget?.editUri,
         capabilities: target.capabilities,
         canCopyPollOption: canCopyOption,
+        canViewOnlyAuthor: canViewOnlyAuthor,
       ),
     );
     if (!context.mounted || !isCurrent() || action == null) return null;
@@ -168,6 +178,9 @@ class ThreadPostActions {
         await navigation.copyPlainText(sourcePost, displayPost.message);
       case ThreadPostAction.copyFloorLink:
         await navigation.copyFloorLink(sourcePost);
+      case ThreadPostAction.onlyAuthor:
+        if (!canViewOnlyAuthor) return null;
+        await onViewOnlyAuthor!(authorId);
     }
     return null;
   }

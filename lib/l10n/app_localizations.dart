@@ -5673,11 +5673,11 @@ abstract class AppLocalizations {
   /// **'回复 {count}'**
   String threadDetailReplyCount(int count);
 
-  /// No description provided for @threadDetailOnlyOriginalPoster.
+  /// No description provided for @threadDetailReplyOrder.
   ///
   /// In zh, this message translates to:
-  /// **'只看楼主'**
-  String get threadDetailOnlyOriginalPoster;
+  /// **'回复顺序'**
+  String get threadDetailReplyOrder;
 
   /// No description provided for @threadDetailAscendingOrder.
   ///

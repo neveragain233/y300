@@ -9,17 +9,17 @@ import 'package:y300/l10n/app_localizations.dart';
 import '../../../../test_support/localized_test_app.dart';
 
 void main() {
-  testWidgets('shows selected filters and invokes only an order change', (
+  testWidgets('exposes one order toggle with the current order as its value', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
+    var orderToggles = 0;
     var authorToggles = 0;
-    final orders = <bool>[];
 
     await tester.pumpWidget(
       _app(
         onToggleAuthorFilter: () => authorToggles++,
-        onOrderChanged: orders.add,
+        onToggleOrder: () => orderToggles++,
       ),
     );
 
@@ -27,13 +27,11 @@ void main() {
       tester.element(find.byType(ThreadRepliesHeader)),
     );
     expect(find.text(l10n.threadDetailReplyCount(38)), findsOneWidget);
-    expect(
-      tester
-          .getSemantics(find.byKey(const Key('thread-replies-normal-order')))
-          .flagsCollection
-          .isSelected,
-      Tristate.isTrue,
-    );
+    final order = find.byKey(const Key('thread-replies-order-toggle'));
+    final orderSemantics = tester.getSemantics(order);
+    expect(orderSemantics.label, l10n.threadDetailReplyOrder);
+    expect(orderSemantics.value, l10n.threadDetailAscendingOrder);
+    expect(orderSemantics.flagsCollection.isButton, isTrue);
     expect(
       tester
           .getSemantics(find.byKey(const Key('thread-replies-author-filter')))
@@ -42,11 +40,11 @@ void main() {
       Tristate.isFalse,
     );
 
-    await tester.tap(find.byKey(const Key('thread-replies-normal-order')));
-    expect(orders, isEmpty);
-    await tester.tap(find.byKey(const Key('thread-replies-reverse-order')));
+    // 两个视觉标签同属一个操作：点任一侧只切换一次。
+    await tester.tap(find.text(l10n.threadDetailDescendingOrder));
+    await tester.tap(find.text(l10n.threadDetailAscendingOrder));
+    expect(orderToggles, 2);
     await tester.tap(find.byKey(const Key('thread-replies-author-filter')));
-    expect(orders, [true]);
     expect(authorToggles, 1);
 
     await tester.pumpWidget(
@@ -54,7 +52,7 @@ void main() {
         isOnlyAuthor: true,
         isReverseOrder: true,
         onToggleAuthorFilter: () => authorToggles++,
-        onOrderChanged: orders.add,
+        onToggleOrder: () => orderToggles++,
       ),
     );
     expect(
@@ -64,17 +62,7 @@ void main() {
           .isSelected,
       Tristate.isTrue,
     );
-    expect(
-      tester
-          .getSemantics(find.byKey(const Key('thread-replies-reverse-order')))
-          .flagsCollection
-          .isSelected,
-      Tristate.isTrue,
-    );
-    await tester.tap(find.byKey(const Key('thread-replies-reverse-order')));
-    expect(orders, [true]);
-    await tester.tap(find.byKey(const Key('thread-replies-normal-order')));
-    expect(orders, [true, false]);
+    expect(tester.getSemantics(order).value, l10n.threadDetailDescendingOrder);
     semantics.dispose();
   });
 
@@ -86,14 +74,28 @@ void main() {
         _app(
           enabled: false,
           onToggleAuthorFilter: () => changes++,
-          onOrderChanged: (_) => changes++,
+          onToggleOrder: () => changes++,
         ),
       );
-      for (final button in tester.widgetList<TextButton>(
-        find.byType(TextButton),
-      )) {
-        expect(button.onPressed, isNull);
-      }
+      expect(
+        tester
+            .widget<TextButton>(
+              find.byKey(const Key('thread-replies-author-filter')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<InkWell>(
+              find.descendant(
+                of: find.byKey(const Key('thread-replies-order-toggle')),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
       await tester.tap(find.byKey(const Key('thread-replies-author-filter')));
       expect(changes, 0);
 
@@ -103,6 +105,10 @@ void main() {
       );
       expect(find.text(l10n.threadDetailReplyCount(0)), findsOneWidget);
       expect(find.byType(TextButton), findsNothing);
+      expect(
+        find.byKey(const Key('thread-replies-order-toggle')),
+        findsNothing,
+      );
     },
   );
 
@@ -121,16 +127,13 @@ void main() {
               brightness: brightness,
               scale: scale,
               onToggleAuthorFilter: () {},
-              onOrderChanged: (_) {},
+              onToggleOrder: () {},
             ),
           );
           final l10n = AppLocalizations.of(
             tester.element(find.byType(ThreadRepliesHeader)),
           );
-          expect(
-            find.text(l10n.threadDetailOnlyOriginalPoster),
-            findsOneWidget,
-          );
+          expect(find.text(l10n.threadDetailOnlyAuthor), findsOneWidget);
           expect(find.text(l10n.threadDetailAscendingOrder), findsOneWidget);
           expect(find.text(l10n.threadDetailDescendingOrder), findsOneWidget);
           expect(tester.takeException(), isNull);
@@ -139,6 +142,10 @@ void main() {
             expect(size.width, greaterThanOrEqualTo(48));
             expect(size.height, greaterThanOrEqualTo(48));
           }
+          final toggle = tester.getSize(
+            find.byKey(const Key('thread-replies-order-toggle')),
+          );
+          expect(toggle.height, greaterThanOrEqualTo(48));
         }
       });
     }
@@ -154,7 +161,7 @@ Widget _app({
   Locale locale = const Locale('zh'),
   Brightness brightness = Brightness.light,
   VoidCallback? onToggleAuthorFilter,
-  ValueChanged<bool>? onOrderChanged,
+  VoidCallback? onToggleOrder,
 }) {
   final theme = ThemeData(brightness: brightness);
   return LocalizedTestApp(
@@ -172,7 +179,9 @@ Widget _app({
             enabled: enabled,
             palette: ThreadDetailNativePalette.resolve(theme, continuous: true),
             onToggleAuthorFilter: onToggleAuthorFilter,
-            onOrderChanged: onOrderChanged,
+            onToggleOrder: onToggleOrder,
+            authorFilterKey: const Key('thread-replies-author-filter'),
+            orderToggleKey: const Key('thread-replies-order-toggle'),
           ),
         ),
       ),

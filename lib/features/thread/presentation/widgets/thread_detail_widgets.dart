@@ -198,6 +198,17 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   );
   ValueListenable<TickerModeData>? _tickerModeNotifier;
   final _imageAspectRatioTracker = _ThreadDetailImageAspectRatioTracker();
+  final GlobalKey _repliesHeaderKey = GlobalKey(
+    debugLabel: 'thread-replies-header',
+  );
+  final GlobalKey _stickyRepliesHeaderKey = GlobalKey(
+    debugLabel: 'thread-replies-header-sticky',
+  );
+  @override
+  double _repliesHeaderHeight = 0;
+  double? _repliesHeaderContentOffset;
+  bool _repliesHeaderPinned = false;
+  bool _stickyHeaderSyncScheduled = false;
 
   @override
   void initState() {
@@ -233,6 +244,16 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     super.didUpdateWidget(oldWidget);
     _updateEndpointNavigation(oldWidget);
     _updateFloorNavigation(oldWidget);
+    if (oldWidget.state.tid != widget.state.tid ||
+        oldWidget.state.currentPage != widget.state.currentPage ||
+        oldWidget.state.queryParameters['authorid'] !=
+            widget.state.queryParameters['authorid'] ||
+        oldWidget.state.queryParameters['ordertype'] !=
+            widget.state.queryParameters['ordertype'] ||
+        !identical(oldWidget.scrollController, widget.scrollController)) {
+      _repliesHeaderContentOffset = null;
+      _repliesHeaderPinned = false;
+    }
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage ||
         oldWidget.state.queryParameters['authorid'] !=
@@ -425,6 +446,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     _projectionAnchorCoordinator.prune(
       _postProjections.map((post) => post.sourcePost.pid),
     );
+    final hasRepliesHeader = entries.any(
+      (entry) => entry.kind == ThreadDetailRenderEntryKind.repliesHeader,
+    );
     _imageAspectRatioTracker.resetFor(_imageAspectRatioSignature());
     if (_endpointTarget != null && entries.isNotEmpty) {
       return _buildTargetAnchoredList(
@@ -459,63 +483,71 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       );
     }
     if (_canChunkBodies) {
-      return SizedBox.expand(
-        key: _viewportKey,
-        child: CustomScrollView(
-          key: const Key('thread-detail-list'),
-          controller: widget.scrollController,
-          physics: ForumPullToRefresh.scrollPhysics,
-          scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
-          semanticChildCount: entries.length,
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                ForumContentSpacing.pageHorizontal,
-                ForumContentSpacing.listTop,
-                ForumContentSpacing.pageHorizontal,
-                ForumContentSpacing.listBottom + widget.bottomInset,
-              ),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => KeyedSubtree(
-                    key: ValueKey(entries[index].key),
-                    child: _buildEntry(context, entries[index], palette),
+      return _withStickyRepliesHeader(
+        SizedBox.expand(
+          key: _viewportKey,
+          child: CustomScrollView(
+            key: const Key('thread-detail-list'),
+            controller: widget.scrollController,
+            physics: ForumPullToRefresh.scrollPhysics,
+            scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
+            semanticChildCount: entries.length,
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  ForumContentSpacing.pageHorizontal,
+                  ForumContentSpacing.listTop,
+                  ForumContentSpacing.pageHorizontal,
+                  ForumContentSpacing.listBottom + widget.bottomInset,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => KeyedSubtree(
+                      key: ValueKey(entries[index].key),
+                      child: _buildEntry(context, entries[index], palette),
+                    ),
+                    childCount: entries.length,
+                    addAutomaticKeepAlives: true,
+                    findChildIndexCallback: (key) =>
+                        _entryIndexForKey(entries, key),
                   ),
-                  childCount: entries.length,
-                  addAutomaticKeepAlives: true,
-                  findChildIndexCallback: (key) =>
-                      _entryIndexForKey(entries, key),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        present: hasRepliesHeader,
+        palette: palette,
       );
     }
-    return SizedBox.expand(
-      key: _viewportKey,
-      child: ListView.builder(
-        key: const Key('thread-detail-list'),
-        controller: widget.scrollController,
-        // 只有一楼的短帖也要能下拉刷新，见 ForumPullToRefresh.scrollPhysics。
-        physics: ForumPullToRefresh.scrollPhysics,
-        padding: EdgeInsets.fromLTRB(
-          ForumContentSpacing.pageHorizontal,
-          ForumContentSpacing.listTop,
-          ForumContentSpacing.pageHorizontal,
-          ForumContentSpacing.listBottom + widget.bottomInset,
+    return _withStickyRepliesHeader(
+      SizedBox.expand(
+        key: _viewportKey,
+        child: ListView.builder(
+          key: const Key('thread-detail-list'),
+          controller: widget.scrollController,
+          // 只有一楼的短帖也要能下拉刷新，见 ForumPullToRefresh.scrollPhysics。
+          physics: ForumPullToRefresh.scrollPhysics,
+          padding: EdgeInsets.fromLTRB(
+            ForumContentSpacing.pageHorizontal,
+            ForumContentSpacing.listTop,
+            ForumContentSpacing.pageHorizontal,
+            ForumContentSpacing.listBottom + widget.bottomInset,
+          ),
+          scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
+          itemCount: entries.length,
+          findChildIndexCallback: (key) => _entryIndexForKey(entries, key),
+          itemBuilder: (context, index) {
+            final entry = entries[index];
+            return KeyedSubtree(
+              key: ValueKey(entry.key),
+              child: _buildEntry(context, entry, palette),
+            );
+          },
         ),
-        scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
-        itemCount: entries.length,
-        findChildIndexCallback: (key) => _entryIndexForKey(entries, key),
-        itemBuilder: (context, index) {
-          final entry = entries[index];
-          return KeyedSubtree(
-            key: ValueKey(entry.key),
-            child: _buildEntry(context, entry, palette),
-          );
-        },
       ),
+      present: hasRepliesHeader,
+      palette: palette,
     );
   }
 
@@ -703,80 +735,96 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final atBodyEnd =
         endpoint == null && _activeLanding == ThreadPostLanding.bodyEnd;
     if (endpoint == null) _scheduleTargetVisibilityCheck();
-    return SizedBox.expand(
-      key: _viewportKey,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final height = constraints.maxHeight.isFinite
-              ? constraints.maxHeight
-              : MediaQuery.sizeOf(context).height;
-          final textStyle = Theme.of(context).textTheme.bodyMedium;
-          final lineHeight =
-              MediaQuery.textScalerOf(context)
-                  .scale(textStyle?.fontSize ?? 14) *
-              (textStyle?.height ?? 1.5);
-          // The footer starts below a small, viewport-relative glimpse of
-          // the rendered body; the center remains stable as that body grows.
-          final reveal = atBodyEnd
-              ? (lineHeight * 2.5).clamp(height * 0.06, height * 0.18)
-              : 0.0;
-          return NotificationListener<ScrollNotification>(
-            onNotification: (_) {
-              _scheduleTargetVisibilityCheck();
-              return false;
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ForumContentSpacing.pageHorizontal,
-              ),
-              child: KeyedSubtree(
-                key: ValueKey(_endpointViewRevision),
-                child: CustomScrollView(
-                  key: const Key('thread-detail-list'),
-                  controller: widget.scrollController,
-                  physics: ForumPullToRefresh.scrollPhysics,
-                  center: _targetCenterKey,
-                  anchor: endpoint == ThreadDetailQuickScrollTarget.bottom
-                      ? 1
-                      : height <= 0
-                      ? 0
-                      : reveal / height,
-                  scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
-                  semanticChildCount: entries.length,
-                  slivers: [
-                    _buildTargetEntrySliver(
-                      entries: entries,
-                      start: 0,
-                      count: targetEntryIndex,
-                      reverse: true,
-                      stabilizeImageLayout: false,
-                      addPageTopPadding: true,
-                      palette: palette,
-                    ),
-                    SliverPadding(
-                      key: _targetCenterKey,
-                      padding: EdgeInsets.only(
-                        top: atBodyEnd ? 0 : ForumContentSpacing.listTop,
-                        bottom:
-                            ForumContentSpacing.listBottom + widget.bottomInset,
-                      ),
-                      sliver: _buildTargetEntrySliver(
+    final targetPid = _activeTargetPid?.trim();
+    // 落点位于回复栏之下时，为吸顶栏留出与正文一致的顶部遮挡量。
+    final headerOcclusion =
+        endpoint == null &&
+            targetPid != null &&
+            _targetBelowRepliesHeader(targetPid)
+        ? _repliesHeaderHeight
+        : 0.0;
+    return _withStickyRepliesHeader(
+      SizedBox.expand(
+        key: _viewportKey,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final height = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : MediaQuery.sizeOf(context).height;
+            final textStyle = Theme.of(context).textTheme.bodyMedium;
+            final lineHeight =
+                MediaQuery.textScalerOf(context)
+                    .scale(textStyle?.fontSize ?? 14) *
+                (textStyle?.height ?? 1.5);
+            // The footer starts below a small, viewport-relative glimpse of
+            // the rendered body; the center remains stable as that body grows.
+            final reveal = atBodyEnd
+                ? (lineHeight * 2.5).clamp(height * 0.06, height * 0.18)
+                : 0.0;
+            final topOffset = headerOcclusion + reveal;
+            return NotificationListener<ScrollNotification>(
+              onNotification: (_) {
+                _scheduleTargetVisibilityCheck();
+                return false;
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ForumContentSpacing.pageHorizontal,
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey(_endpointViewRevision),
+                  child: CustomScrollView(
+                    key: const Key('thread-detail-list'),
+                    controller: widget.scrollController,
+                    physics: ForumPullToRefresh.scrollPhysics,
+                    center: _targetCenterKey,
+                    anchor: endpoint == ThreadDetailQuickScrollTarget.bottom
+                        ? 1
+                        : height <= 0
+                        ? 0
+                        : (topOffset / height).clamp(0.0, 1.0),
+                    scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
+                    semanticChildCount: entries.length,
+                    slivers: [
+                      _buildTargetEntrySliver(
                         entries: entries,
-                        start: targetEntryIndex,
-                        count: entries.length - targetEntryIndex,
-                        reverse: false,
-                        stabilizeImageLayout: true,
-                        addPageTopPadding: false,
+                        start: 0,
+                        count: targetEntryIndex,
+                        reverse: true,
+                        stabilizeImageLayout: false,
+                        addPageTopPadding: true,
                         palette: palette,
                       ),
-                    ),
-                  ],
+                      SliverPadding(
+                        key: _targetCenterKey,
+                        padding: EdgeInsets.only(
+                          top: atBodyEnd ? 0 : ForumContentSpacing.listTop,
+                          bottom:
+                              ForumContentSpacing.listBottom +
+                              widget.bottomInset,
+                        ),
+                        sliver: _buildTargetEntrySliver(
+                          entries: entries,
+                          start: targetEntryIndex,
+                          count: entries.length - targetEntryIndex,
+                          reverse: false,
+                          stabilizeImageLayout: true,
+                          addPageTopPadding: false,
+                          palette: palette,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
+      present: entries.any(
+        (entry) => entry.kind == ThreadDetailRenderEntryKind.repliesHeader,
+      ),
+      palette: palette,
     );
   }
 
@@ -887,6 +935,158 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     widget.onPostBuilt?.call(index);
   }
 
+  Widget _buildRepliesHeader(
+    ThreadDetailNativePalette palette, {
+    Key? key,
+    Key? debugKey,
+    bool interactionKeys = true,
+  }) {
+    final canSwitchViews = widget.state.supports(
+      ThreadDetailCapability.alternateViews,
+    );
+    final header = ThreadRepliesHeader(
+      key: key,
+      replyCount: widget.state.replies,
+      isOnlyAuthor: widget.state.isOnlyAuthorView,
+      isReverseOrder: widget.state.isReverseOrderView,
+      palette: palette,
+      enabled: !widget.state.isLoadingInitial && !widget.state.isLoadingMore,
+      onToggleAuthorFilter: canSwitchViews ? widget.onToggleAuthorFilter : null,
+      onToggleOrder: canSwitchViews
+          ? () => widget.onOrderChanged?.call(!widget.state.isReverseOrderView)
+          : null,
+      authorFilterKey: interactionKeys
+          ? const Key('thread-replies-author-filter')
+          : null,
+      orderToggleKey: interactionKeys
+          ? const Key('thread-replies-order-toggle')
+          : null,
+    );
+    return debugKey == null
+        ? header
+        : KeyedSubtree(key: debugKey, child: header);
+  }
+
+  /// 目标楼在回复栏之下时才需要让出吸顶栏高度；首楼与倒序末栏不避让。
+  @override
+  bool _targetBelowRepliesHeader(String pid) {
+    final posts = widget.state.posts;
+    if (posts.isEmpty) return false;
+    final firstIndex = posts.indexWhere((post) => post.isFirst);
+    if (firstIndex < 0) return true;
+    final index = posts.indexWhere((post) => post.pid == pid);
+    return index > firstIndex;
+  }
+
+  Widget _withStickyRepliesHeader(
+    Widget child, {
+    required bool present,
+    required ThreadDetailNativePalette palette,
+  }) {
+    if (!present) return child;
+    _scheduleStickyHeaderSync();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        NotificationListener<ScrollMetricsNotification>(
+          onNotification: (_) {
+            _scheduleStickyHeaderSync();
+            return false;
+          },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (_) {
+              _scheduleStickyHeaderSync();
+              return false;
+            },
+            child: child,
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Visibility(
+            visible: _repliesHeaderPinned,
+            maintainSize: true,
+            maintainState: true,
+            maintainAnimation: true,
+            child: ColoredBox(
+              color: palette.background,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ForumContentSpacing.pageHorizontal,
+                ),
+                child: _repliesHeaderPinned || _repliesHeaderHeight <= 0
+                    ? _buildRepliesHeader(
+                        palette,
+                        key: _stickyRepliesHeaderKey,
+                        debugKey: const Key(
+                          'thread-detail-sticky-replies-header',
+                        ),
+                        interactionKeys: false,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _scheduleStickyHeaderSync() {
+    if (_stickyHeaderSyncScheduled) return;
+    _stickyHeaderSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _stickyHeaderSyncScheduled = false;
+      if (mounted) _syncStickyHeader();
+    });
+  }
+
+  void _syncStickyHeader() {
+    final headerContext = _repliesHeaderKey.currentContext;
+    final viewportContext = _viewportKey.currentContext;
+    final height = _stickyRepliesHeaderKey.currentContext?.size?.height;
+    final controller = widget.scrollController;
+    if (headerContext != null && viewportContext != null) {
+      final header = headerContext.findRenderObject();
+      final viewport = viewportContext.findRenderObject();
+      if (header is RenderBox &&
+          viewport is RenderBox &&
+          header.attached &&
+          header.hasSize &&
+          viewport.attached &&
+          viewport.hasSize) {
+        final top = header.localToGlobal(Offset.zero, ancestor: viewport).dy;
+        if (controller != null && controller.hasClients) {
+          _repliesHeaderContentOffset = controller.position.pixels + top;
+        }
+        _updateStickyHeader(pinned: top <= 0, height: height);
+        return;
+      }
+    }
+    final offset = _repliesHeaderContentOffset;
+    final pinned =
+        offset != null &&
+        controller != null &&
+        controller.hasClients &&
+        controller.position.pixels >= offset;
+    _updateStickyHeader(pinned: pinned, height: height);
+  }
+
+  void _updateStickyHeader({required bool pinned, double? height}) {
+    final measured = height == null || !height.isFinite || height < 0
+        ? null
+        : height;
+    final heightChanged =
+        measured != null && (measured - _repliesHeaderHeight).abs() > .5;
+    if (pinned == _repliesHeaderPinned && !heightChanged) return;
+    setState(() {
+      _repliesHeaderPinned = pinned;
+      if (measured != null) _repliesHeaderHeight = measured;
+    });
+  }
+
   void _syncImageViewportCoordinator() {
     if (widget.htmlImagePrecacheService == null) {
       _imageViewportCoordinator?.dispose();
@@ -914,21 +1114,16 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   }) {
     switch (entry.kind) {
       case ThreadDetailRenderEntryKind.repliesHeader:
-        final canSwitchViews = widget.state.supports(
-          ThreadDetailCapability.alternateViews,
-        );
-        return ThreadRepliesHeader(
-          key: const Key('thread-detail-replies-header'),
-          replyCount: widget.state.replies,
-          isOnlyAuthor: widget.state.isOnlyAuthorView,
-          isReverseOrder: widget.state.isReverseOrderView,
-          palette: palette,
-          enabled:
-              !widget.state.isLoadingInitial && !widget.state.isLoadingMore,
-          onToggleAuthorFilter: canSwitchViews
-              ? widget.onToggleAuthorFilter
-              : null,
-          onOrderChanged: canSwitchViews ? widget.onOrderChanged : null,
+        return Visibility(
+          visible: !_repliesHeaderPinned,
+          maintainSize: true,
+          maintainState: true,
+          maintainAnimation: true,
+          child: _buildRepliesHeader(
+            palette,
+            key: _repliesHeaderKey,
+            debugKey: const Key('thread-detail-replies-header'),
+          ),
         );
       case ThreadDetailRenderEntryKind.postCard:
         return KeyedSubtree(

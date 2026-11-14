@@ -1490,7 +1490,7 @@
   "@threadDetailReplyCount": {
     "placeholders": {"count": {"type": "int"}}
   },
-  "threadDetailOnlyOriginalPoster": "只看楼主",
+  "threadDetailReplyOrder": "回复顺序",
   "threadDetailAscendingOrder": "正序",
   "threadDetailDescendingOrder": "倒序",
   "threadDetailPreviousPage": "上一页",

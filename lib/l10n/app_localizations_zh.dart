@@ -3394,7 +3394,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get threadDetailOnlyOriginalPoster => '只看楼主';
+  String get threadDetailReplyOrder => '回复顺序';
 
   @override
   String get threadDetailAscendingOrder => '正序';
@@ -9363,7 +9363,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get threadDetailOnlyOriginalPoster => '只看樓主';
+  String get threadDetailReplyOrder => '回覆順序';
 
   @override
   String get threadDetailAscendingOrder => '正序';

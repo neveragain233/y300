@@ -157,17 +157,18 @@ void main() {
       }
     });
 
-    test('reply-only pages keep their existing top edge and post indices', () {
+    test('reply-only pages expose the replies header at the top edge', () {
       final entries = planner.buildEntries(
         posts: [_post('p21', 21), _post('p22', 22)],
       );
 
       expect(entries.map((entry) => entry.kind), [
+        ThreadDetailRenderEntryKind.repliesHeader,
         ThreadDetailRenderEntryKind.postCard,
         ThreadDetailRenderEntryKind.postCard,
         ThreadDetailRenderEntryKind.pagination,
       ]);
-      expect(entries.map((entry) => entry.postIndex), [0, 1, -1]);
+      expect(entries.map((entry) => entry.postIndex), [-1, 0, 1, -1]);
     });
 
     test('keeps the replies header after a collapsed first post', () {

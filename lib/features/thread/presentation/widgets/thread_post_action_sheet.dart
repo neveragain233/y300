@@ -12,6 +12,7 @@ enum ThreadPostAction {
   selectCopy,
   copyAll,
   copyFloorLink,
+  onlyAuthor,
 }
 
 class ThreadPostActionSheet extends StatelessWidget {
@@ -21,12 +22,14 @@ class ThreadPostActionSheet extends StatelessWidget {
     required this.editUri,
     required this.capabilities,
     this.canCopyPollOption = false,
+    this.canViewOnlyAuthor = false,
   });
 
   final ThreadPost post;
   final Uri? editUri;
   final ThreadDetailReadCapabilities? capabilities;
   final bool canCopyPollOption;
+  final bool canViewOnlyAuthor;
 
   bool _supports(ThreadDetailCapability capability) {
     return capabilities?.supports(capability) ?? false;
@@ -38,6 +41,13 @@ class ThreadPostActionSheet extends StatelessWidget {
     return ForumContentActionSheet<ThreadPostAction>(
       key: const Key('thread-post-action-sheet'),
       actions: [
+        if (canViewOnlyAuthor)
+          ForumContentAction(
+            key: const Key('thread-post-only-author-action'),
+            value: ThreadPostAction.onlyAuthor,
+            icon: Icons.person_outline,
+            label: l10n.threadDetailOnlyAuthor,
+          ),
         if (canCopyPollOption)
           ForumContentAction(
             key: const Key('thread-post-copy-poll-option-action'),

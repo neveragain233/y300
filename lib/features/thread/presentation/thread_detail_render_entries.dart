@@ -101,6 +101,10 @@ class ThreadDetailRenderEntryPlanner {
         ),
       );
     }
+    // 首楼不在本页时（分页或过滤），回复区从顶部开始，切换入口随之置顶。
+    if (posts.isNotEmpty && !posts.any((post) => post.sourcePost.isFirst)) {
+      entries.insert(0, const ThreadDetailRenderEntry.repliesHeader());
+    }
     // 无回复或筛选后只有首楼时，仍在首楼末尾保留切换入口。
     if (posts.isNotEmpty && posts.last.sourcePost.isFirst) {
       entries.add(const ThreadDetailRenderEntry.repliesHeader());

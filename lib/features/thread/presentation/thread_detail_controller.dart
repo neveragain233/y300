@@ -266,25 +266,28 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
     await _replaceWithPage(page: nextPage ?? current.currentPage + 1);
   }
 
-  Future<void> openOnlyAuthor() async {
+  Future<void> openOnlyAuthor({String? authorId}) async {
     final current = state.value;
     if (current == null ||
         !current.supports(ThreadDetailCapability.alternateViews)) {
       return;
     }
-    // 倒序页面的“只看”链接可能属于最新回复，以首楼的作者身份为准。
-    final authorId =
-        _firstPostAuthorId(current.posts) ??
-        _queryFromUrl(current.onlyAuthorUrl)['authorid'] ??
-        _firstAvailableAuthorId(current.posts);
-    if (authorId == null || authorId.trim().isEmpty) {
+    // 楼层菜单传入该楼作者；回复栏沿用首楼作者，倒序页面的“只看”链接可能
+    // 属于最新回复，因此仍以首楼身份优先。
+    final requested = authorId?.trim();
+    final resolved = requested != null && requested.isNotEmpty
+        ? requested
+        : _firstPostAuthorId(current.posts) ??
+              _queryFromUrl(current.onlyAuthorUrl)['authorid'] ??
+              _firstAvailableAuthorId(current.posts);
+    if (resolved == null || resolved.trim().isEmpty) {
       return;
     }
     await _replaceWithPage(
       page: 1,
       queryParameters: _withQueryUpdates(
         current.queryParameters,
-        set: <String, String>{'authorid': authorId.trim()},
+        set: <String, String>{'authorid': resolved.trim()},
         remove: const <String>{'page'},
       ),
     );

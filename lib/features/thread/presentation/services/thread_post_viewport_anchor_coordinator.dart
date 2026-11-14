@@ -80,6 +80,14 @@ final class ThreadPostViewportAnchorCoordinator {
     _restoreGeneration += 1;
   }
 
+  /// 全局键在重建窗口内可能指向已失活元素，此时不能调用
+  /// [BuildContext.findRenderObject]；失活元素的 RenderObject 已脱离树，
+  /// 由调用方按 attached/hasSize 跳过。
+  RenderObject? _renderObjectFor(GlobalKey? key) {
+    final context = key?.currentContext;
+    return context is Element ? context.renderObject : null;
+  }
+
   void prune(Iterable<String> activePids) {
     final active = activePids.map((pid) => pid.trim()).toSet();
     _postKeys.removeWhere((pid, _) => !active.contains(pid));
@@ -119,7 +127,7 @@ final class ThreadPostViewportAnchorCoordinator {
       int? pidVisibleChunk;
       var pidBoundaryVisible = false;
       for (final candidate in candidates) {
-        final renderObject = candidate.$1?.currentContext?.findRenderObject();
+        final renderObject = _renderObjectFor(candidate.$1);
         if (renderObject is! RenderBox ||
             !renderObject.attached ||
             !renderObject.hasSize) {
@@ -201,11 +209,11 @@ final class ThreadPostViewportAnchorCoordinator {
       final pid = snapshot.pid;
       final post = pid == null
           ? null
-          : (snapshot.chunkStartUnit == null
-                    ? _postKeys[pid]
-                    : _chunkKeys[pid]?[snapshot.chunkStartUnit])
-                ?.currentContext
-                ?.findRenderObject();
+          : _renderObjectFor(
+              snapshot.chunkStartUnit == null
+                  ? _postKeys[pid]
+                  : _chunkKeys[pid]?[snapshot.chunkStartUnit],
+            );
       if (viewport is RenderBox &&
           viewport.attached &&
           viewport.hasSize &&
@@ -227,8 +235,7 @@ final class ThreadPostViewportAnchorCoordinator {
         for (final entry
             in _chunkEnds[pid]?.entries ?? <MapEntry<int, int>>[]) {
           if (entry.value != snapshot.chunkStartUnit) continue;
-          final previous = _chunkKeys[pid]?[entry.key]?.currentContext
-              ?.findRenderObject();
+          final previous = _renderObjectFor(_chunkKeys[pid]?[entry.key]);
           if (previous is! RenderBox ||
               !previous.attached ||
               !previous.hasSize) {

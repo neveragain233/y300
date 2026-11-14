@@ -491,7 +491,17 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             ),
           ),
         ),
-        actions: const [AdaptiveDetailExpandAction()],
+        actions: [
+          IconButton(
+            key: const Key('thread-detail-first-post-button'),
+            tooltip: l10n.threadControlsFirstPost,
+            onPressed: asyncState.value == null || state.posts.isEmpty
+                ? null
+                : () => _goToFirstPost(controller),
+            icon: const Icon(Icons.vertical_align_top),
+          ),
+          const AdaptiveDetailExpandAction(),
+        ],
       ),
       body: NotificationListener<ScrollMetricsNotification>(
         onNotification: _handleThreadMetricsNotification,
@@ -733,15 +743,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           onControlsSettings: _openControlsSettings,
           onBlockThread: () => unawaited(_blockCurrentThread(state)),
         ),
-        onFirstPost: () {
-          if (_readFloorPage()?.page == 1) {
-            _floorNavigation.firstPost(
-              animate: !MediaQuery.disableAnimationsOf(context),
-            );
-          } else {
-            _runPageActionAndScrollTop(() => controller.loadPage(1));
-          }
-        },
+        onFirstPost: () => _goToFirstPost(controller),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButtonAnimator: FloatingActionButtonAnimator.noAnimation,
@@ -966,6 +968,18 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       hasNext: value.hasMore,
       loading: value.isLoadingMore,
     );
+  }
+
+  void _goToFirstPost(ThreadDetailController controller) {
+    // 单键与顶栏共用回首楼动作；操作后单键回到向下。
+    _floorNavigation.resetDirection();
+    if (_readFloorPage()?.page == 1) {
+      _floorNavigation.firstPost(
+        animate: !MediaQuery.disableAnimationsOf(context),
+      );
+    } else {
+      unawaited(_runPageActionAndScrollTop(() => controller.loadPage(1)));
+    }
   }
 
   Future<bool> _loadAdjacentFloor(bool forward, bool Function() current) async {
@@ -1207,6 +1221,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             ),
             imageReferer: _imageRefererFor(state),
             isCurrent: () => mounted && widget.tid == args.tid,
+            onViewOnlyAuthor: (authorId) => _runReadingViewAction(
+              () => controller.openOnlyAuthor(authorId: authorId),
+              userNavigation: true,
+            ),
           ).show(
             sourcePost: sourcePost,
             displayPost: displayPost,
