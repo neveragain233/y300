@@ -28,6 +28,7 @@ import '../contracts/private_message_command.dart';
 import '../contracts/private_message_batch_command.dart';
 import '../contracts/friend_directory.dart';
 import '../contracts/forum_blacklist.dart';
+import '../contracts/forum_blacklist_command.dart';
 import '../contracts/friend_feed.dart';
 import '../contracts/notification_ignore_command.dart';
 import '../contracts/sticker_catalog.dart';
@@ -375,6 +376,17 @@ final class YamiboForumClient {
   /// Configured fresh-form friend-removal command.
   ForumFriendRemovalCommand? get friendRemovalCommand =>
       sourcePlan.friendRemovalCommand;
+
+  /// Configured web-blacklist add command, if installed.
+  ForumBlacklistCommand? get friendBlacklistCommand =>
+      sourcePlan.friendBlacklistCommand;
+
+  /// Adds one user to the current account's web blacklist.
+  Future<DataCommandResult<ForumBlacklistAddReceipt>> addToBlacklist(
+    ForumBlacklistAddSubmission submission,
+  ) =>
+      sourcePlan.friendBlacklistCommand?.execute(submission) ??
+      Future.value(const DataCommandUnsupported<ForumBlacklistAddReceipt>());
 
   /// Loads the current account's complete web blacklist.
   Future<DataReadResult<ForumBlacklistData, ForumBlacklistReadCapabilities>>

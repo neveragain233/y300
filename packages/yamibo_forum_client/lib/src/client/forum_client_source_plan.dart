@@ -23,6 +23,7 @@ import '../contracts/private_message_command.dart';
 import '../contracts/private_message_batch_command.dart';
 import '../contracts/friend_directory.dart';
 import '../contracts/forum_blacklist.dart';
+import '../contracts/forum_blacklist_command.dart';
 import '../contracts/friend_feed.dart';
 import '../contracts/notification_ignore_command.dart';
 import '../contracts/sticker_catalog.dart';
@@ -60,6 +61,7 @@ final class ForumClientSourcePlan {
     this.privateMessageCommand,
     this.friendDirectory,
     this.friendBlacklist,
+    this.friendBlacklistCommand,
     this.friendFeed,
     this.friendRemovalCommand,
     this.privateMessageBatchPreparation,
@@ -173,6 +175,8 @@ final class ForumClientSourcePlan {
         overrides.privateMessageCommand ?? privateMessageCommand,
     friendDirectory: overrides.friendDirectory ?? friendDirectory,
     friendBlacklist: overrides.friendBlacklist ?? friendBlacklist,
+    friendBlacklistCommand:
+        overrides.friendBlacklistCommand ?? friendBlacklistCommand,
     friendFeed: overrides.friendFeed ?? friendFeed,
     friendRemovalCommand:
         overrides.friendRemovalCommand ?? friendRemovalCommand,
@@ -302,6 +306,9 @@ final class ForumClientSourcePlan {
 
   /// Source for the current account's read-only web blacklist.
   final ForumBlacklistRepository? friendBlacklist;
+
+  /// Adds one user to the web blacklist, or `null` when not installed.
+  final ForumBlacklistCommand? friendBlacklistCommand;
 
   /// Source for the current account's native friend-page member lists.
   final ForumFriendFeedRepository? friendFeed;

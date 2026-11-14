@@ -24,9 +24,11 @@ import '../contracts/private_message_command.dart';
 import '../contracts/private_message_batch_command.dart';
 import '../contracts/friend_directory.dart';
 import '../contracts/forum_blacklist.dart';
+import '../contracts/forum_blacklist_command.dart';
 import '../contracts/friend_feed.dart';
 import 'discuz_private_message_batch_command.dart';
 import 'discuz_friend_directory_repository.dart';
+import 'discuz_forum_blacklist_command.dart';
 import 'discuz_forum_blacklist_repository.dart';
 import 'discuz_friend_feed_repository.dart';
 import 'discuz_friend_removal_command.dart';
@@ -226,6 +228,17 @@ final class ForumClientAdapterFactory {
         network: network,
         profiles: requestProfiles,
       );
+
+  /// Creates the web-blacklist add command on the shared formhash boundary.
+  ForumBlacklistCommand createForumBlacklistCommand(
+    ForumFormhashProvider formhash,
+  ) => DiscuzForumBlacklistCommand(
+    config: config,
+    network: network,
+    profiles: requestProfiles,
+    formhash: formhash,
+    blacklist: createForumBlacklist(),
+  );
 
   /// Creates the account-bound touch friend-page source without disk caching.
   ForumFriendFeedRepository createFriendFeed() => DiscuzFriendFeedRepository(
