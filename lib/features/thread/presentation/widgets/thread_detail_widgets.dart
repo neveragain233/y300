@@ -1013,6 +1013,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             maintainState: true,
             maintainAnimation: true,
             child: ColoredBox(
+              key: const Key('thread-detail-sticky-replies-header-surface'),
               color: palette.background,
               child: Padding(
                 padding: const EdgeInsets.symmetric(

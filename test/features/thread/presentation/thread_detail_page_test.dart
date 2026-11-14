@@ -7622,6 +7622,94 @@ void main() {
       },
     );
 
+    testWidgets(
+      'sticky replies header uses measured height at large text and wide width',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        final repository = _FakeThreadRepository(
+          (tid, page) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _post(
+                  pid: 'wide-p1',
+                  author: 'alice',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: List.generate(
+                    10,
+                    (line) => '<p>首楼段落 $line</p>',
+                  ).join(),
+                ),
+                _post(
+                  pid: 'wide-p2',
+                  author: 'bob',
+                  authorId: '2',
+                  number: 2,
+                  message: List.generate(
+                    40,
+                    (line) => '<p>回复段落 $line</p>',
+                  ).join(),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            home: Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: const TextScaler.linear(1.8)),
+                child: const ThreadDetailPage(tid: '100', subject: '测试主题'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final list = find.byKey(const Key('thread-detail-list'));
+        final sticky = find.byKey(
+          const Key('thread-detail-sticky-replies-header'),
+        );
+        final listTop = tester.getTopLeft(list).dy;
+        final headerHeight = _repliesHeaderHeight(tester);
+        expect(headerHeight, greaterThanOrEqualTo(60));
+
+        await tester.tap(find.byKey(const Key('thread-next-post-button')));
+        for (var frame = 0; frame < 8; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(
+          tester
+              .getTopLeft(find.byKey(const Key('thread-post-card-wide-p2')))
+              .dy,
+          closeTo(listTop + headerHeight, 2),
+        );
+        expect(sticky, findsOneWidget);
+        expect(tester.getTopLeft(sticky).dy, closeTo(listTop, .5));
+        expect(tester.getSize(sticky).height, closeTo(headerHeight, .5));
+        expect(
+          tester
+              .getSize(
+                find.byKey(
+                  const Key('thread-detail-sticky-replies-header-surface'),
+                ),
+              )
+              .width,
+          tester.getSize(list).width,
+        );
+      },
+    );
+
     testWidgets('reply-only pages start with a sticky-capable replies header', (
       tester,
     ) async {
