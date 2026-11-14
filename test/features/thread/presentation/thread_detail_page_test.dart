@@ -4662,6 +4662,15 @@ void main() {
       await expectBelowHeader(p2);
       await tester.tap(next);
       await expectBelowHeader(imageA);
+
+      // 手动滚入长图中部后，前进与后退都从实测位置取相邻落点。
+      await tester.drag(list, const Offset(0, -120));
+      await settleNavigation();
+      await tester.tap(next);
+      await expectBelowHeader(imageB);
+      await tester.tap(previous);
+      await expectBelowHeader(imageA);
+
       await tester.tap(next);
       await expectBelowHeader(imageB);
       await tester.tap(next);
@@ -4675,6 +4684,106 @@ void main() {
       await tester.tap(previous);
       await expectBelowHeader(p2);
     });
+
+    testWidgets(
+      'a tall single image is one stop between its floor header and next floor',
+      (tester) async {
+        tester.view.physicalSize = const Size(411, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        final repository = _FakeThreadRepository(
+          (tid, page, query) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _post(
+                  pid: 'tall-image-p1',
+                  author: 'alice',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: '<p>主楼正文</p>',
+                ),
+                _post(
+                  pid: 'tall-image-p2',
+                  author: 'bob',
+                  authorId: '2',
+                  number: 2,
+                  message:
+                      '<img src="https://example.com/tall.jpg" width="300" height="1800">'
+                      '<p>长图之后的文字</p>',
+                ),
+                _post(
+                  pid: 'tall-image-p3',
+                  author: 'carol',
+                  authorId: '3',
+                  number: 3,
+                  message: List.generate(
+                    30,
+                    (line) => '<p>第三楼段落 $line</p>',
+                  ).join(),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            imageCacheService: _RecordingImageCacheService(),
+          ),
+        );
+        final tallImage = find.byKey(
+          const Key('thread-post-html-first-readable-image-tall-image-p2-0'),
+        );
+        await _pumpThreadBodyUntil(
+          tester,
+          () => tallImage.evaluate().isNotEmpty,
+        );
+        await tester.pumpAndSettle();
+
+        final list = find.byKey(const Key('thread-detail-list'));
+        final listTop = tester.getTopLeft(list).dy;
+        final headerHeight = _repliesHeaderHeight(tester);
+        final next = find.byKey(const Key('thread-next-post-button'));
+        final previous = find.byKey(const Key('thread-previous-post-button'));
+        final p1 = find.byKey(const Key('thread-post-card-tall-image-p1'));
+        final p2 = find.byKey(const Key('thread-post-card-tall-image-p2'));
+        final p3 = find.byKey(const Key('thread-post-card-tall-image-p3'));
+
+        Future<void> settleNavigation() async {
+          for (var frame = 0; frame < 8; frame++) {
+            await tester.pump(const Duration(milliseconds: 100));
+          }
+        }
+
+        Future<void> expectBelowHeader(Finder finder) async {
+          await settleNavigation();
+          expect(finder, findsOneWidget);
+          expect(
+            tester.getTopLeft(finder).dy,
+            closeTo(listTop + headerHeight, 2),
+          );
+        }
+
+        await tester.tap(next);
+        await expectBelowHeader(p2);
+        await tester.tap(next);
+        await expectBelowHeader(tallImage);
+        await tester.tap(next);
+        await expectBelowHeader(p3);
+        await tester.tap(previous);
+        await expectBelowHeader(tallImage);
+        await tester.tap(previous);
+        await expectBelowHeader(p2);
+        await tester.tap(previous);
+        await settleNavigation();
+        expect(tester.getTopLeft(p1).dy, closeTo(listTop, 2));
+      },
+    );
 
     testWidgets('late body image dimensions keep the footer landing stable', (
       tester,
