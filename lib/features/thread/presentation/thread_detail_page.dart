@@ -115,6 +115,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   late final ThreadFloorNavigationCoordinator _floorNavigation;
   final _controlsVisibility = ThreadControlsVisibilityController();
   double _controlsHeight = 56;
+  double _repliesHeaderHeight = 0;
   Timer? _highlightClearTimer;
   String? _highlightPostPid;
   bool _targetHighlightStarted = false;
@@ -142,7 +143,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     _scrollController = ScrollController();
     _imageReaderReturnCoordinator = ThreadImageReaderReturnCoordinator(
       scrollController: _scrollController,
-    );
+    )..topInsetForPost = _imageReturnTopInset;
 
     _floorNavigation = ThreadFloorNavigationCoordinator(
       readPage: _readFloorPage,
@@ -565,6 +566,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                 ),
                                 child: ThreadDetailContent(
                                   floorNavigation: _floorNavigation,
+                                  onRepliesHeaderHeightChanged: (height) {
+                                    if (mounted &&
+                                        (_repliesHeaderHeight - height).abs() >
+                                            .5) {
+                                      _repliesHeaderHeight = height;
+                                    }
+                                  },
                                   bottomInset:
                                       MediaQuery.viewInsetsOf(context).bottom >
                                           0
@@ -974,6 +982,20 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       hasNext: value.hasMore,
       loading: value.isLoadingMore,
     );
+  }
+
+  /// 返回图片阅读器时，若该楼位于回复栏下方，图片顶边让出吸顶栏高度。
+  double _imageReturnTopInset(String pid) {
+    if (_repliesHeaderHeight <= 0) return 0;
+    final posts = ref
+        .read(threadDetailControllerProvider(_currentThreadArgs))
+        .value
+        ?.posts;
+    if (posts == null || posts.isEmpty) return 0;
+    final firstIndex = posts.indexWhere((post) => post.isFirst);
+    if (firstIndex < 0) return _repliesHeaderHeight;
+    final index = posts.indexWhere((post) => post.pid == pid);
+    return index > firstIndex ? _repliesHeaderHeight : 0;
   }
 
   void _goToFirstPost(ThreadDetailController controller) {

@@ -104,6 +104,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.onOrderChanged,
     this.floorNavigation,
     this.bottomInset = 0,
+    this.onRepliesHeaderHeightChanged,
   });
 
   final ThreadDetailPageState state;
@@ -112,6 +113,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
   final ValueChanged<bool>? onOrderChanged;
   final ThreadFloorNavigationCoordinator? floorNavigation;
   final double bottomInset;
+  final ValueChanged<double>? onRepliesHeaderHeightChanged;
   final bool enableBodyChunking;
 
   /// Topic author allowed for this route when the whole-thread prompt was
@@ -1084,9 +1086,12 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final heightChanged =
         measured != null && (measured - _repliesHeaderHeight).abs() > .5;
     if (pinned == _repliesHeaderPinned && !heightChanged) return;
+    if (heightChanged) {
+      _repliesHeaderHeight = measured;
+      widget.onRepliesHeaderHeightChanged?.call(measured);
+    }
     setState(() {
       _repliesHeaderPinned = pinned;
-      if (measured != null) _repliesHeaderHeight = measured;
     });
   }
 

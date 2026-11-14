@@ -9,6 +9,9 @@ final class ThreadImageReaderReturnCoordinator {
   ThreadImageReaderReturnCoordinator({required this.scrollController});
 
   final ScrollController scrollController;
+
+  /// 返回正文时该楼图片顶边需要让出的置顶遮挡量。
+  double Function(String pid)? topInsetForPost;
   final _bodies = <String, _ImageReturnBody>{};
   String? _tid;
   int? _page;
@@ -76,6 +79,7 @@ final class ThreadImageReaderReturnCoordinator {
         url: result.url,
         scrollController: scrollController,
         isCurrent: isCurrent,
+        topInset: topInsetForPost?.call(request.pid) ?? 0,
       );
     };
   }

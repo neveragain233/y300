@@ -2847,6 +2847,93 @@ void main() {
       );
     });
 
+    testWidgets(
+      'image reader return clears the sticky replies header below the first floor',
+      (tester) async {
+        final repository = _FakeThreadRepository(
+          (tid, page, query) async => ApiSuccess(
+            _threadDetailData(
+              tid: tid,
+              posts: [
+                _post(
+                  pid: 'sticky-p1',
+                  author: 'alice',
+                  authorId: '1',
+                  number: 1,
+                  isFirst: true,
+                  message: '<p>主楼正文</p>',
+                ),
+                _post(
+                  pid: 'sticky-p2',
+                  author: 'bob',
+                  authorId: '2',
+                  number: 2,
+                  message: _imageReturnMessage(),
+                ),
+              ],
+            ),
+          ),
+        );
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'reader_pref_mode': 'ltr',
+        });
+        tester.view.physicalSize = const Size(450, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            imageCacheService: _FailedThreadInlineImageCacheService(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.pumpAndSettle();
+
+        await _tapVisibleTop(
+          tester,
+          find.byKey(
+            const Key('thread-post-html-first-readable-image-sticky-p2-0'),
+          ),
+        );
+        await _pumpThreadUiTransition(tester);
+        expect(find.byType(ThreadImageReaderPage), findsOneWidget);
+
+        await _readImageReturnPages(tester, 9);
+        await tester.tapAt(
+          tester.getCenter(
+            find.byKey(const Key('shared-reader-center-tap-zone')),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 330));
+        await tester.pump(const Duration(milliseconds: 260));
+        await tester.tap(
+          find.byKey(const Key('shared-reader-top-back-button')),
+        );
+        await _pumpImageReturnTransition(tester);
+
+        expect(find.byType(ThreadImageReaderPage), findsNothing);
+        final listTop = tester
+            .getTopLeft(find.byKey(const Key('thread-detail-list')))
+            .dy;
+        final headerHeight = tester
+            .getSize(
+              find.byKey(const Key('thread-detail-sticky-replies-header')),
+            )
+            .height;
+        expect(headerHeight, greaterThan(0));
+        final target = find.byKey(
+          const Key('thread-post-html-first-readable-image-sticky-p2-9'),
+        );
+        expect(target, findsOneWidget);
+        expect(
+          tester.getTopLeft(target).dy,
+          closeTo(listTop + headerHeight, 1),
+        );
+      },
+    );
+
     testWidgets('image reader system return distinguishes duplicate URLs', (
       tester,
     ) async {
