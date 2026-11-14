@@ -427,6 +427,21 @@ class _Viewport implements ThreadFloorViewport {
   @override
   bool atBottom = false;
   @override
+  double? get scrollPixels => 0;
+
+  @override
+  List<ThreadFloorImageStop> imageStops(String pid) => const [];
+
+  @override
+  bool isPostHeaderAbove(String pid) => false;
+
+  @override
+  Future<bool> revealImageStop(
+    ThreadFloorImageStop stop, {
+    required bool animate,
+    required bool Function() isCurrent,
+  }) async => isCurrent();
+  @override
   Future<bool> revealPageEnd({
     required bool animate,
     required bool Function() isCurrent,

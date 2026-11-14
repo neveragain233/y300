@@ -95,13 +95,11 @@ final class ThreadPostViewportAnchorCoordinator {
     _chunkEnds.removeWhere((pid, _) => !active.contains(pid));
   }
 
-  /// [topInset] 把被置顶控件遮挡的区域从可见范围中排除；[preferVisibleStarts]
-  /// 让在阅读区内开始的楼层优先于跨过该边界的上一楼，避免吸顶栏换行后
-  /// 当前楼层一直停留在上一楼。
+  /// [topInset] 把被置顶控件遮挡的区域从可见范围中排除，避免吸顶栏下方
+  /// 仍把上一楼尾部算作当前楼层。
   ThreadPostViewportAnchorSnapshot? capture(
     Iterable<String> orderedPids, {
     double topInset = 0,
-    bool preferVisibleStarts = false,
   }) {
     final controller = _scrollController;
     if (_disposed ||
@@ -158,25 +156,10 @@ final class ThreadPostViewportAnchorCoordinator {
           pidBoundaryVisible = boundaryVisible;
         }
       }
-      if (pidVisibleTop != null) {
-        if (firstVisiblePid == null) {
-          firstVisibleTop = pidVisibleTop;
-          firstVisiblePid = pid;
-          firstVisibleChunk = pidVisibleChunk;
-        } else if (preferVisibleStarts) {
-          final starts = pidVisibleTop >= viewportTop;
-          final previousStarts = firstVisibleTop >= viewportTop;
-          if ((starts && !previousStarts) ||
-              starts == previousStarts && pidVisibleTop < firstVisibleTop) {
-            firstVisibleTop = pidVisibleTop;
-            firstVisiblePid = pid;
-            firstVisibleChunk = pidVisibleChunk;
-          }
-        } else if (pidVisibleTop < firstVisibleTop) {
-          firstVisibleTop = pidVisibleTop;
-          firstVisiblePid = pid;
-          firstVisibleChunk = pidVisibleChunk;
-        }
+      if (pidVisibleTop != null && pidVisibleTop < firstVisibleTop) {
+        firstVisibleTop = pidVisibleTop;
+        firstVisiblePid = pid;
+        firstVisibleChunk = pidVisibleChunk;
       }
     }
 

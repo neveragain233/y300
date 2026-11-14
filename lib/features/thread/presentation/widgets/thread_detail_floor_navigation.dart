@@ -108,9 +108,126 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
           _sourcePidsFor(widget),
           // 吸顶栏遮住的上一楼尾部不属于当前阅读位置。
           topInset: _repliesHeaderPinned ? _repliesHeaderHeight : 0,
-          preferVisibleStarts: true,
         )
         ?.pid;
+  }
+
+  @override
+  double? get scrollPixels {
+    final controller = widget.scrollController;
+    if (controller == null || controller.positions.length != 1) return null;
+    final position = controller.position;
+    return position.hasContentDimensions ? position.pixels : null;
+  }
+
+  @override
+  List<ThreadFloorImageStop> imageStops(String pid) {
+    if (!mounted) return const [];
+    final controller = widget.imageReaderReturnCoordinator?.anchorsFor(pid);
+    final scrollController = widget.scrollController;
+    final viewportBox = _viewportKey.currentContext?.findRenderObject();
+    if (controller == null ||
+        scrollController == null ||
+        scrollController.positions.length != 1 ||
+        viewportBox is! RenderBox ||
+        !viewportBox.hasSize) {
+      return const [];
+    }
+    final topInset = _imageTopInset(pid);
+    final stops = <ThreadFloorImageStop>[];
+    for (final stop in controller.layoutStops(
+      scrollController.position,
+      topInset: topInset,
+    )) {
+      // 相邻重复落点按逻辑像素容差合并，保留正文顺序。
+      if (stops.isNotEmpty &&
+          (stops.last.offset - stop.offset).abs() <= _imageStopTolerance) {
+        continue;
+      }
+      stops.add(
+        ThreadFloorImageStop(
+          postId: pid,
+          index: stop.index,
+          cacheKey: stop.cacheKey,
+          url: stop.url,
+          offset: stop.offset,
+        ),
+      );
+    }
+    return List<ThreadFloorImageStop>.unmodifiable(stops);
+  }
+
+  @override
+  bool isPostHeaderAbove(String pid) {
+    if (!mounted) return false;
+    final header = _floorTopContext(pid);
+    final viewport = _viewportKey.currentContext?.findRenderObject();
+    if (header == null || viewport is! RenderBox || !viewport.hasSize) {
+      return false;
+    }
+    final box = header.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return false;
+    final top = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+    return top < _imageTopInset(pid);
+  }
+
+  static const double _imageStopTolerance = 1;
+
+  double _imageTopInset(String pid) =>
+      _targetBelowRepliesHeader(pid) ? _repliesHeaderHeight : 0;
+
+  @override
+  Future<bool> revealImageStop(
+    ThreadFloorImageStop stop, {
+    required bool animate,
+    required bool Function() isCurrent,
+  }) async {
+    if (!mounted) return false;
+    final controller = widget.imageReaderReturnCoordinator?.anchorsFor(
+      stop.postId,
+    );
+    final scrollController = widget.scrollController;
+    final viewportBox = _viewportKey.currentContext?.findRenderObject();
+    if (controller == null ||
+        scrollController == null ||
+        !scrollController.hasClients ||
+        scrollController.positions.length != 1 ||
+        viewportBox is! RenderBox ||
+        !viewportBox.hasSize) {
+      return false;
+    }
+    final generation = ++_floorGeneration;
+    final layoutIdentity = _renderLayoutIdentity;
+    bool current() =>
+        mounted &&
+        generation == _floorGeneration &&
+        layoutIdentity == _renderLayoutIdentity &&
+        isCurrent() &&
+        identical(scrollController, widget.scrollController) &&
+        identical(
+          controller,
+          widget.imageReaderReturnCoordinator?.anchorsFor(stop.postId),
+        );
+    _projectionAnchorCoordinator.beginExplicitNavigation();
+    _pendingChunkAnchor = null;
+    if (animate) {
+      final position = scrollController.position;
+      await scrollController.animateTo(
+        stop.offset.clamp(position.minScrollExtent, position.maxScrollExtent),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+      if (!current()) return false;
+    }
+    final reached = await controller.revealImage(
+      index: stop.index,
+      cacheKey: stop.cacheKey,
+      url: stop.url,
+      scrollController: scrollController,
+      isCurrent: current,
+      topInset: _imageTopInset(stop.postId),
+    );
+    return current() && reached;
   }
 
   @override
@@ -182,14 +299,14 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
       return false;
     }
     final generation = ++_floorGeneration;
-    final layoutIdentity = _renderLayoutIdentity;
+    var layoutIdentity = _renderLayoutIdentity;
     final controller = widget.scrollController;
-    bool current() =>
+    bool currentOwner() =>
         mounted &&
         generation == _floorGeneration &&
-        layoutIdentity == _renderLayoutIdentity &&
         isCurrent() &&
         identical(controller, widget.scrollController);
+    bool current() => currentOwner() && layoutIdentity == _renderLayoutIdentity;
     _projectionAnchorCoordinator.beginExplicitNavigation();
     _pendingChunkAnchor = null;
     final target = _floorTopContext(pid);
@@ -209,7 +326,11 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
         _targetCenterKey = GlobalKey(debugLabel: 'thread-floor-center-$pid');
       });
       await WidgetsBinding.instance.endOfFrame;
-      if (!current()) return false;
+      if (!currentOwner()) {
+        return false;
+      }
+      // 居中重排本身就是预期的布局变化，按新布局继续定位。
+      layoutIdentity = _renderLayoutIdentity;
     }
     final targetContext = _floorTopContext(pid);
     if (!current() ||
@@ -224,33 +345,64 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     final occlusion = _targetBelowRepliesHeader(pid)
         ? _repliesHeaderHeight
         : 0.0;
-    final alignmentBox = _viewportKey.currentContext?.findRenderObject();
-    final alignment =
-        occlusion > 0 &&
-            alignmentBox is RenderBox &&
-            alignmentBox.hasSize &&
-            alignmentBox.size.height > 0
-        ? (occlusion / alignmentBox.size.height).clamp(0.0, 1.0)
-        : 0.0;
-    await Scrollable.ensureVisible(
-      targetContext,
-      duration: animate ? const Duration(milliseconds: 180) : Duration.zero,
-      curve: Curves.easeOutCubic,
-      alignment: alignment,
-    );
-    await WidgetsBinding.instance.endOfFrame;
-    if (!current()) return false;
-    final marker = _floorTopContext(pid)?.findRenderObject();
-    final viewport = _viewportKey.currentContext?.findRenderObject();
+    final marker = targetContext.findRenderObject();
+    final scrollPosition = controller.position;
     if (marker is! RenderBox ||
-        viewport is! RenderBox ||
         !marker.attached ||
-        !marker.hasSize) {
+        !marker.hasSize ||
+        !scrollPosition.hasContentDimensions) {
       return false;
     }
-    final top = marker.localToGlobal(Offset.zero, ancestor: viewport).dy;
-    return top < viewport.size.height &&
-        top >= occlusion - 1 &&
-        top + marker.size.height > -1;
+    final scrollViewport = RenderAbstractViewport.maybeOf(marker);
+    if (scrollViewport == null) {
+      return false;
+    }
+    final reveal = scrollViewport.getOffsetToReveal(marker, 0);
+    final destination = (reveal.offset - occlusion).clamp(
+      scrollPosition.minScrollExtent,
+      scrollPosition.maxScrollExtent,
+    );
+    if ((scrollPosition.pixels - destination).abs() > .5) {
+      if (animate) {
+        await controller.animateTo(
+          destination,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+        );
+      } else {
+        controller.jumpTo(destination);
+      }
+    }
+    // 居中布局、锚点偏移和迟到尺寸都可能让第一次落点偏离，按实测几何收敛。
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!current()) return false;
+      final landed = _floorTopContext(pid)?.findRenderObject();
+      final viewport = _viewportKey.currentContext?.findRenderObject();
+      if (landed is! RenderBox ||
+          viewport is! RenderBox ||
+          !landed.attached ||
+          !landed.hasSize ||
+          !viewport.attached ||
+          !viewport.hasSize) {
+        return false;
+      }
+      final top = landed.localToGlobal(Offset.zero, ancestor: viewport).dy;
+      final delta = top - occlusion;
+      if (delta.abs() <= 1) return true;
+      final position = controller.position;
+      final next = (position.pixels + delta).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if ((next - position.pixels).abs() < .5) {
+        // 已到滚动边界：目标仍应可见，只是无法再让出置顶遮挡。
+        return top < viewport.size.height &&
+            top >= -1 &&
+            top + landed.size.height > 0;
+      }
+      controller.jumpTo(next);
+    }
+    return false;
   }
 }

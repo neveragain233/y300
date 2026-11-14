@@ -6,6 +6,25 @@ import 'forum_html_image_viewport_geometry.dart';
 
 typedef _ImageIdentity = ({int index, String cacheKey, String url});
 
+/// 一张已挂载可读图片在当前滚动视口内的对齐落点。
+///
+/// [offset] 是让图片顶边落在视口顶部 [topInset] 逻辑像素以下所需的内容滚动
+/// 偏移，只用于当前布局；图片挂载、尺寸、宽度或字号变化后重新查询即可。
+@immutable
+final class ForumHtmlImageLayoutStop {
+  const ForumHtmlImageLayoutStop({
+    required this.index,
+    required this.cacheKey,
+    required this.url,
+    required this.offset,
+  });
+
+  final int index;
+  final String cacheKey;
+  final String url;
+  final double offset;
+}
+
 /// Reveals an already mounted readable image without preparing other images.
 ///
 /// One controller belongs to one root HTML body. Nested folds share its root
@@ -38,6 +57,31 @@ final class ForumHtmlImageAnchorController {
     _anchors.clear();
   }
 
+  /// Enumerates mounted readable images in body order with their alignment
+  /// offsets in [position]; unmounted folds and unresolved images are absent.
+  List<ForumHtmlImageLayoutStop> layoutStops(
+    ScrollPosition position, {
+    double topInset = 0,
+  }) {
+    if (_disposed || position.axis != Axis.vertical) {
+      return const <ForumHtmlImageLayoutStop>[];
+    }
+    final stops = <ForumHtmlImageLayoutStop>[];
+    for (final entry in _entries) {
+      final offset = _targetPixels(entry, position, topInset);
+      if (offset == null) continue;
+      stops.add(
+        ForumHtmlImageLayoutStop(
+          index: entry.index,
+          cacheKey: entry.cacheKey,
+          url: entry.url,
+          offset: offset,
+        ),
+      );
+    }
+    return List<ForumHtmlImageLayoutStop>.unmodifiable(stops);
+  }
+
   /// Aligns the image's leading edge within the supplied scroll viewport.
   ///
   /// The caller should keep its covering reader route visible until this
@@ -49,6 +93,7 @@ final class ForumHtmlImageAnchorController {
     required String url,
     required ScrollController scrollController,
     required bool Function() isCurrent,
+    double topInset = 0,
   }) async {
     final generation = ++_revealGeneration;
     final binding = _bindingIdentity;
@@ -79,7 +124,7 @@ final class ForumHtmlImageAnchorController {
 
     for (var frame = 0; frame < 3; frame++) {
       if (!available()) return false;
-      final target = _targetPixels(key, position);
+      final target = _targetPixels(key, position, topInset);
       if (target == null) {
         rollback();
         return false;
@@ -92,7 +137,7 @@ final class ForumHtmlImageAnchorController {
       // after the first jump. Recheck the real anchor before uncovering it.
       await WidgetsBinding.instance.endOfFrame;
       if (!available()) return false;
-      final corrected = _targetPixels(key, position);
+      final corrected = _targetPixels(key, position, topInset);
       if (corrected == null) {
         rollback();
         return false;
@@ -103,7 +148,11 @@ final class ForumHtmlImageAnchorController {
     return false;
   }
 
-  double? _targetPixels(_ImageIdentity key, ScrollPosition position) {
+  double? _targetPixels(
+    _ImageIdentity key,
+    ScrollPosition position, [
+    double topInset = 0,
+  ]) {
     final anchor = _anchors[key];
     if (anchor == null ||
         !anchor.mounted ||
@@ -118,7 +167,7 @@ final class ForumHtmlImageAnchorController {
     if (box is! RenderBox || !box.attached || !box.hasSize) return null;
     final viewport = forumHtmlImageViewportFor(box, position);
     if (viewport == null) return null;
-    final target = viewport.getOffsetToReveal(box, 0).offset;
+    final target = viewport.getOffsetToReveal(box, 0).offset - topInset;
     if (!target.isFinite) return null;
     return target
         .clamp(position.minScrollExtent, position.maxScrollExtent)

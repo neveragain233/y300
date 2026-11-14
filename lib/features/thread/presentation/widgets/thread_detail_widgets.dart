@@ -4,6 +4,7 @@ import 'package:y300/app/content_rendering/native_forum_html_render_theme_factor
 import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';

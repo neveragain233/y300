@@ -18,8 +18,28 @@ final class ThreadFloorPage {
   final bool loading;
 }
 
+/// 楼内图片停靠点：图片顶边对齐到阅读区顶部所需的内容滚动位置。
+final class ThreadFloorImageStop {
+  const ThreadFloorImageStop({
+    required this.postId,
+    required this.index,
+    required this.cacheKey,
+    required this.url,
+    required this.offset,
+  });
+
+  final String postId;
+  final int index;
+  final String cacheKey;
+  final String url;
+  final double offset;
+}
+
 abstract interface class ThreadFloorViewport {
   String? get visiblePostId;
+
+  /// 当前滚动位置；居中列表换绑等无法确认时为 null。
+  double? get scrollPixels;
 
   /// 真实滚动位置到达当前页底部；末楼楼头可见不算到达。
   bool get atBottom;
@@ -31,6 +51,18 @@ abstract interface class ThreadFloorViewport {
 
   Future<bool> revealPost(
     String pid, {
+    required bool animate,
+    required bool Function() isCurrent,
+  });
+
+  /// 该楼当前已参与正文布局的图片落点，按正文顺序、扣除置顶遮挡并合并重复点。
+  List<ThreadFloorImageStop> imageStops(String pid);
+
+  /// 楼头是否已经完全滚出阅读区上方，可作为一个向上停靠点。
+  bool isPostHeaderAbove(String pid);
+
+  Future<bool> revealImageStop(
+    ThreadFloorImageStop stop, {
     required bool animate,
     required bool Function() isCurrent,
   });
@@ -243,10 +275,35 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
     bool Function() current, {
     required bool single,
   }) async {
-    final index = page.pids.indexOf(_resolveCurrentPid() ?? '');
+    final currentPid = _resolveCurrentPid();
+    final index = page.pids.indexOf(currentPid ?? '');
+    // 楼内先走完按正文顺序排列的图片停靠点，再换楼。
+    final currentStops = viewport.imageStops(currentPid ?? '');
+    final imageStop = _nextImageStop(viewport, currentPid, forward);
+    if (imageStop != null) {
+      await _revealImage(viewport, imageStop, animate, current);
+      return;
+    }
+    // 有图片停靠点的楼层向上退完图片后，再回到本楼楼头。
+    if (!forward &&
+        currentStops.isNotEmpty &&
+        currentPid != null &&
+        viewport.isPostHeaderAbove(currentPid)) {
+      await _reveal(viewport, currentPid, animate, current);
+      return;
+    }
     final targetIndex = index + (forward ? 1 : -1);
     if (targetIndex >= 0 && targetIndex < page.pids.length) {
-      await _reveal(viewport, page.pids[targetIndex], animate, current);
+      final targetPid = page.pids[targetIndex];
+      if (!forward) {
+        // 向上退入图片楼时先落在最后一个有效图片点。
+        final stops = viewport.imageStops(targetPid);
+        if (stops.isNotEmpty) {
+          await _revealImage(viewport, stops.last, animate, current);
+          return;
+        }
+      }
+      await _reveal(viewport, targetPid, animate, current);
       return;
     }
     if (forward) {
@@ -302,6 +359,46 @@ final class ThreadFloorNavigationCoordinator extends ChangeNotifier {
       animate: animate,
       current: current,
     );
+  }
+
+  ThreadFloorImageStop? _nextImageStop(
+    ThreadFloorViewport viewport,
+    String? pid,
+    bool forward,
+  ) {
+    if (pid == null) return null;
+    final stops = viewport.imageStops(pid);
+    if (stops.isEmpty) return null;
+    final pixels = viewport.scrollPixels;
+    if (pixels == null) return null;
+    const tolerance = 1.0;
+    ThreadFloorImageStop? best;
+    for (final stop in stops) {
+      if (forward) {
+        if (stop.offset <= pixels + tolerance) continue;
+        if (best == null || stop.offset < best.offset) best = stop;
+      } else {
+        if (stop.offset >= pixels - tolerance) continue;
+        if (best == null || stop.offset > best.offset) best = stop;
+      }
+    }
+    return best;
+  }
+
+  Future<void> _revealImage(
+    ThreadFloorViewport viewport,
+    ThreadFloorImageStop stop,
+    bool animate,
+    bool Function() current,
+  ) async {
+    final reached = await viewport.revealImageStop(
+      stop,
+      animate: animate,
+      isCurrent: current,
+    );
+    if (!current() || !reached) return;
+    _lastVisiblePid = stop.postId;
+    onConfirmed?.call();
   }
 
   Future<void> _revealPageEnd(

@@ -124,6 +124,68 @@ void main() {
     );
   }
 
+  testWidgets(
+    'layout stops enumerate mounted images in body order with alignment',
+    (tester) async {
+      final anchors = ForumHtmlImageAnchorController();
+      final scroll = ScrollController();
+      addTearDown(anchors.dispose);
+      addTearDown(scroll.dispose);
+      final document = prepareRenderTestDocument(
+        _images(['first', 'second', 'third']),
+        sourceId: 'post',
+      );
+      await tester.pumpWidget(_host(anchors, scroll, document));
+      await _frames(tester);
+
+      final stops = anchors.layoutStops(scroll.position);
+      expect(stops.map((stop) => stop.index), [0, 1, 2]);
+      for (final stop in stops) {
+        scroll.jumpTo(stop.offset);
+        await _frames(tester);
+        expect(
+          _top(tester, 'post', stop.index),
+          closeTo(_viewportTop(tester), 0.5),
+        );
+      }
+
+      final half = anchors.layoutStops(scroll.position, topInset: 60);
+      scroll.jumpTo(half.first.offset);
+      await _frames(tester);
+      expect(_top(tester, 'post', 0), closeTo(_viewportTop(tester) + 60, 1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('layout stops omit unmounted fold images', (tester) async {
+    final anchors = ForumHtmlImageAnchorController();
+    final scroll = ScrollController();
+    addTearDown(anchors.dispose);
+    addTearDown(scroll.dispose);
+    final document = prepareRenderTestDocument(
+      '${_images(['first'])}'
+      '<div id="fold" class="showcollapse_box">'
+      '<div class="showcollapse_title">Details</div>'
+      '<div class="showcollapse_content">${_images(['nested'])}</div>'
+      '</div>',
+      sourceId: 'post',
+    );
+    for (final expanded in [false, true]) {
+      await tester.pumpWidget(
+        _host(
+          anchors,
+          scroll,
+          document,
+          collapseExpansion: {'post-fold': expanded},
+        ),
+      );
+      await _frames(tester);
+      final stops = anchors.layoutStops(scroll.position);
+      expect(stops.map((stop) => stop.index), expanded ? [0, 1] : [0]);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('missing, mismatched and detached anchors preserve position', (
     tester,
   ) async {

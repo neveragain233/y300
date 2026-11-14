@@ -267,6 +267,127 @@ void main() {
     expect(viewport.targets, ['p2', 'p2']);
   });
 
+  testWidgets('image stops run before the next floor in body order', (
+    tester,
+  ) async {
+    final viewport = _Viewport()
+      ..visiblePostId = 'p1'
+      ..imageStopsByPid['p1'] = const [
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 0,
+          cacheKey: 'a',
+          url: 'a',
+          offset: 120,
+        ),
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 1,
+          cacheKey: 'b',
+          url: 'b',
+          offset: 400,
+        ),
+      ];
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => _page(),
+      loadAdjacent: (_, _) async => false,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.move(true, animate: false);
+    expect(viewport.revealedImages.map((stop) => stop.index), [0]);
+    await nav.move(true, animate: false);
+    expect(viewport.revealedImages.map((stop) => stop.index), [0, 1]);
+    await nav.move(true, animate: false);
+    expect(viewport.revealedImages.map((stop) => stop.index), [0, 1]);
+    expect(viewport.targets, ['p2']);
+  });
+
+  testWidgets('reversing into an image floor lands on its last stop', (
+    tester,
+  ) async {
+    final viewport = _Viewport()
+      ..visiblePostId = 'p2'
+      ..scrollOffset = 10000
+      ..imageStopsByPid['p1'] = const [
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 0,
+          cacheKey: 'a',
+          url: 'a',
+          offset: 120,
+        ),
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 1,
+          cacheKey: 'b',
+          url: 'b',
+          offset: 400,
+        ),
+      ];
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => _page(),
+      loadAdjacent: (_, _) async => false,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.move(false, animate: false);
+    expect(viewport.revealedImages.single.index, 1);
+    expect(viewport.targets, isEmpty);
+    await nav.move(false, animate: false);
+    expect(viewport.revealedImages.map((stop) => stop.index), [1, 0]);
+    await nav.move(false, animate: false);
+    expect(viewport.targets, ['p1']);
+    expect(viewport.revealedImages.map((stop) => stop.index), [1, 0]);
+  });
+
+  testWidgets('image stops are looked up from the measured position', (
+    tester,
+  ) async {
+    final viewport = _Viewport()
+      ..visiblePostId = 'p1'
+      ..scrollOffset = 200
+      ..imageStopsByPid['p1'] = const [
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 0,
+          cacheKey: 'a',
+          url: 'a',
+          offset: 120,
+        ),
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 1,
+          cacheKey: 'b',
+          url: 'b',
+          offset: 600,
+        ),
+        ThreadFloorImageStop(
+          postId: 'p1',
+          index: 2,
+          cacheKey: 'c',
+          url: 'c',
+          offset: 650,
+        ),
+      ];
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => _page(),
+      loadAdjacent: (_, _) async => false,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.move(true, animate: false);
+    expect(viewport.revealedImages.single.offset, 600);
+    await nav.move(true, animate: false);
+    expect(viewport.revealedImages.map((stop) => stop.index), [1, 2]);
+    // 当前楼图片走完后才换楼。
+    await nav.move(true, animate: false);
+    expect(viewport.targets, ['p2']);
+    await nav.move(false, animate: false);
+    expect(viewport.revealedImages.map((stop) => stop.index), [1, 2, 2]);
+    expect(viewport.targets, ['p2']);
+  });
+
   testWidgets(
     'failed adjacent page can be retried from the current last post',
     (tester) async {
@@ -311,6 +432,35 @@ ThreadFloorPage _page({
 class _Viewport implements ThreadFloorViewport {
   @override
   bool atBottom = false;
+  double scrollOffset = 0;
+  bool postHeaderAbove = false;
+  final imageStopsByPid = <String, List<ThreadFloorImageStop>>{};
+  final revealedImages = <ThreadFloorImageStop>[];
+
+  @override
+  bool isPostHeaderAbove(String pid) => postHeaderAbove;
+
+  @override
+  double? get scrollPixels => scrollOffset;
+
+  @override
+  List<ThreadFloorImageStop> imageStops(String pid) =>
+      imageStopsByPid[pid] ?? const [];
+
+  @override
+  Future<bool> revealImageStop(
+    ThreadFloorImageStop stop, {
+    required bool animate,
+    required bool Function() isCurrent,
+  }) async {
+    if (!isCurrent()) return false;
+    revealedImages.add(stop);
+    scrollOffset = stop.offset;
+    visiblePostId = stop.postId;
+    postHeaderAbove = true;
+    return true;
+  }
+
   bool registerPageEnd = true;
   var pageEnds = 0;
   Completer<void>? endGate;
@@ -339,6 +489,8 @@ class _Viewport implements ThreadFloorViewport {
     targets.add(pid);
     visiblePostId = pid;
     atBottom = false;
+    scrollOffset = 10000;
+    postHeaderAbove = false;
     return true;
   }
 }
