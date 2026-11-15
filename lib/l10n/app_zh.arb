@@ -1547,7 +1547,7 @@
   "threadBlacklistCollapsedFloor": "#{number} 楼层",
   "threadBlacklistExpandOnce": "本次展开",
   "blacklistAuthorGateTitle": "主题作者已屏蔽",
-  "blacklistAuthorGateMessage": "该主题的作者在你的网页版黑名单中。名单修改仍在网页版完成。",
+  "blacklistAuthorGateMessage": "该主题的作者在你的网页版黑名单中。可在内容屏蔽中核对，解除仍在网页版名单完成。",
   "blacklistAuthorGateViewOnce": "本次查看",
   "@threadBlacklistCollapsed": {
     "placeholders": {

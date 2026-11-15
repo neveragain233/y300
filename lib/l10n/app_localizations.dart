@@ -5922,7 +5922,7 @@ abstract class AppLocalizations {
   /// No description provided for @blacklistAuthorGateMessage.
   ///
   /// In zh, this message translates to:
-  /// **'该主题的作者在你的网页版黑名单中。名单修改仍在网页版完成。'**
+  /// **'该主题的作者在你的网页版黑名单中。可在内容屏蔽中核对，解除仍在网页版名单完成。'**
   String get blacklistAuthorGateMessage;
 
   /// No description provided for @blacklistAuthorGateViewOnce.

@@ -3,8 +3,9 @@ import 'package:y300/l10n/app_localizations.dart';
 
 /// Whole-thread prompt for a topic whose author is on the web blacklist.
 ///
-/// The list itself is changed in the managed web page; this view only offers a
-/// one-route exception so direct links and saved positions can still be read.
+/// Members are now added from native menus; this view only offers a one-route
+/// exception so direct links and saved positions can still be read. Removal
+/// stays in the managed web page.
 class BlacklistAuthorGateView extends StatelessWidget {
   const BlacklistAuthorGateView({
     super.key,

@@ -3529,7 +3529,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get blacklistAuthorGateTitle => '主题作者已屏蔽';
 
   @override
-  String get blacklistAuthorGateMessage => '该主题的作者在你的网页版黑名单中。名单修改仍在网页版完成。';
+  String get blacklistAuthorGateMessage =>
+      '该主题的作者在你的网页版黑名单中。可在内容屏蔽中核对，解除仍在网页版名单完成。';
 
   @override
   String get blacklistAuthorGateViewOnce => '本次查看';
@@ -9535,7 +9536,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get blacklistAuthorGateTitle => '主題作者已屏蔽';
 
   @override
-  String get blacklistAuthorGateMessage => '該主題的作者在你的網頁版黑名單中。名單修改仍在網頁版完成。';
+  String get blacklistAuthorGateMessage =>
+      '該主題的作者在你的網頁版黑名單中。可在內容屏蔽中核對，解除仍在網頁版名單完成。';
 
   @override
   String get blacklistAuthorGateViewOnce => '本次查看';

@@ -1146,7 +1146,7 @@
   "threadBlacklistCollapsedFloor": "#{number} 樓層",
   "threadBlacklistExpandOnce": "本次展開",
   "blacklistAuthorGateTitle": "主題作者已屏蔽",
-  "blacklistAuthorGateMessage": "該主題的作者在你的網頁版黑名單中。名單修改仍在網頁版完成。",
+  "blacklistAuthorGateMessage": "該主題的作者在你的網頁版黑名單中。可在內容屏蔽中核對，解除仍在網頁版名單完成。",
   "blacklistAuthorGateViewOnce": "本次查看",
   "@threadBlacklistCollapsed": {
     "placeholders": {
