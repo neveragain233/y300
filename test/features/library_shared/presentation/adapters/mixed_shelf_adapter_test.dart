@@ -79,7 +79,7 @@ void main() {
 
       expect(
         snapshot.categories.map((category) => category.categoryId),
-        <String>['all', 'default', 'c1', 'n1'],
+        <String>['all', 'comic-default', 'novel-default', 'c1', 'n1'],
       );
       final allItems = snapshot.itemsByCategory['all']!;
       expect(allItems, hasLength(4));
@@ -117,6 +117,31 @@ void main() {
     expect(snapshot.itemsByCategory['all'], isEmpty);
     expect(comic.lastSnapshotKeyword, '');
     expect(novel.lastSnapshotKeyword, '');
+  });
+
+  test('unclassified comics and novels get separate default views', () async {
+    final snapshot = await adapter.querySnapshot(
+      filters: LibraryFilterSet.defaults,
+      sortOption: LibraryShelfSortOption.defaults,
+      keyword: '',
+    );
+
+    expect(
+      snapshot.categories
+          .firstWhere((category) => category.categoryId == 'comic-default')
+          .isSynthetic,
+      isTrue,
+    );
+    expect(
+      snapshot.categories
+          .firstWhere((category) => category.categoryId == 'novel-default')
+          .source,
+      LibraryModuleKey.novel,
+    );
+    expect(
+      snapshot.categories.map((category) => category.categoryId),
+      isNot(contains('default')),
+    );
   });
 
   test('a shared target category is sent to both source adapters', () async {

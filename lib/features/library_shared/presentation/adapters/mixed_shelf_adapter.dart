@@ -28,6 +28,8 @@ class MixedShelfAdapter
        _novelAdapter = novelAdapter;
 
   static const String allCategoryId = 'all';
+  static const String comicDefaultViewId = 'comic-default';
+  static const String novelDefaultViewId = 'novel-default';
 
   final ShelfModuleAdapter _comicAdapter;
   final ShelfModuleAdapter _novelAdapter;
@@ -128,6 +130,9 @@ class MixedShelfAdapter
     final novel = await _novelAdapter.loadCategories();
     final merged = <String, LibraryCategory>{};
     for (final category in <LibraryCategory>[...comic, ...novel]) {
+      if (category.categoryId == 'default') {
+        continue;
+      }
       merged.putIfAbsent(category.categoryId, () => category);
     }
     final categories = merged.values.toList(growable: false)
@@ -140,6 +145,23 @@ class MixedShelfAdapter
         createdAt: _epoch,
         source: LibraryModuleKey.bookshelf,
         sourceCategoryId: allCategoryId,
+        isSynthetic: true,
+      ),
+      LibraryCategory(
+        categoryId: comicDefaultViewId,
+        name: '',
+        sortOrder: 0,
+        createdAt: _epoch,
+        source: LibraryModuleKey.comic,
+        isSynthetic: true,
+      ),
+      LibraryCategory(
+        categoryId: novelDefaultViewId,
+        name: '',
+        sortOrder: 1,
+        createdAt: _epoch,
+        source: LibraryModuleKey.novel,
+        isSynthetic: true,
       ),
       ...categories,
     ]);
@@ -155,6 +177,18 @@ class MixedShelfAdapter
         _childSnapshot(_novelAdapter, keyword: ''),
       ]);
       return _allItems(snapshots);
+    }
+    if (categoryId == comicDefaultViewId) {
+      final items = await _comicAdapter.loadCategoryItems(
+        categoryId: 'default',
+      );
+      return _decorateAll(items, LibraryModuleKey.comic, 'default');
+    }
+    if (categoryId == novelDefaultViewId) {
+      final items = await _novelAdapter.loadCategoryItems(
+        categoryId: 'default',
+      );
+      return _decorateAll(items, LibraryModuleKey.novel, 'default');
     }
     final results = await Future.wait(<Future<List<LibraryWorkItem>>>[
       _comicAdapter.loadCategoryItems(categoryId: categoryId),

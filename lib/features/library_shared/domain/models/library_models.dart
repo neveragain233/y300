@@ -72,6 +72,7 @@ class LibraryCategory {
     this.visibleMatchCount = 0,
     this.source,
     this.sourceCategoryId,
+    this.isSynthetic = false,
   });
 
   /// 页面与状态使用的分类键。混合书架中使用带来源的身份键。
@@ -89,6 +90,9 @@ class LibraryCategory {
   /// 来源模块内的原始分类编号；单模块分类为 null。
   final String? sourceCategoryId;
 
+  /// 由混合书架生成的展示分类（全部、漫画默认、小说默认），不是仓储分类。
+  final bool isSynthetic;
+
   bool get isDefault => (sourceCategoryId ?? categoryId) == 'default';
 
   LibraryCategory copyWith({
@@ -99,6 +103,7 @@ class LibraryCategory {
     int? visibleMatchCount,
     LibraryModuleKey? source,
     String? sourceCategoryId,
+    bool? isSynthetic,
   }) {
     return LibraryCategory(
       categoryId: categoryId ?? this.categoryId,
@@ -108,6 +113,7 @@ class LibraryCategory {
       visibleMatchCount: visibleMatchCount ?? this.visibleMatchCount,
       source: source ?? this.source,
       sourceCategoryId: sourceCategoryId ?? this.sourceCategoryId,
+      isSynthetic: isSynthetic ?? this.isSynthetic,
     );
   }
 }

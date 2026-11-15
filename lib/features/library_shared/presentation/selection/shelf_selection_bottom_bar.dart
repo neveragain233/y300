@@ -152,7 +152,11 @@ class _ShelfSelectionBottomBarState
     }
     final l10n = AppLocalizations.of(context);
     final available = categories
-        .where((category) => category.categoryId != state.activeCategoryId)
+        .where(
+          (category) =>
+              category.categoryId != state.activeCategoryId &&
+              !category.isSynthetic,
+        )
         .toList(growable: false);
     final selected = await showModalBottomSheet<String>(
       context: context,

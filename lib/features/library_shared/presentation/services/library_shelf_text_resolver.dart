@@ -14,6 +14,11 @@ abstract final class LibraryShelfTextResolver {
     if (category.source == LibraryModuleKey.bookshelf) {
       return l10n.libraryShelfAllWorks;
     }
+    if (category.isSynthetic) {
+      return category.source == LibraryModuleKey.novel
+          ? l10n.libraryShelfTitle('novel')
+          : l10n.libraryShelfTitle('comic');
+    }
     final baseName = category.isDefault
         ? l10n.libraryShelfDefaultCategory
         : category.name;
