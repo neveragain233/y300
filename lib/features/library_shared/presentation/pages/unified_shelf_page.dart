@@ -36,7 +36,7 @@ import 'package:y300/features/recent_search/domain/models/recent_search_scope.da
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
-import 'package:y300/shared/widgets/shelf/fixed_slot_pager_header.dart';
+import 'package:y300/shared/widgets/shelf/shelf_category_capsule_bar.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
 import 'package:y300/shared/widgets/shelf/shelf_grid_geometry.dart';
@@ -177,7 +177,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     final categories = state.categories;
     final tabs = categories
         .map(
-          (category) => FixedSlotHeaderTab(
+          (category) => ShelfCategoryCapsuleTab(
             id: category.categoryId,
             label: _buildCategoryLabel(category),
           ),
@@ -259,8 +259,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                           if (categories.isNotEmpty)
                             IgnorePointer(
                               ignoring: selecting,
-                              child: FixedSlotPagerHeader(
-                                pageController: _pageController,
+                              child: ShelfCategoryCapsuleBar(
                                 tabs: tabs,
                                 selectedIndex: selectedIndex,
                                 onTap: (index) async {
