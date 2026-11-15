@@ -103,11 +103,44 @@ class DefaultComicRefreshOutcomeApplier implements ComicRefreshOutcomeApplier {
       episodeLinks: request.links,
       fallbackSourceTid: request.sourceTid,
     );
+    // 目录合并落库后立即书架生效。封面提升可能等待网络或抛错，不能拖住
+    // 未读角标；封面变化作为后续独立通知。
+    _notifyShelf(
+      request,
+      insertedCount: mergeResult.insertedCount,
+      updatedCount: mergeResult.updatedCount,
+      totalCount: mergeResult.totalCount,
+    );
     final coverPromoted = await _firstEpisodeCoverPromoter.promoteIfPossible(
       comicId: request.comicId,
       threadCache: request.threadCache,
       governor: request.governor,
     );
+    if (coverPromoted) {
+      _notifyShelf(
+        request,
+        insertedCount: mergeResult.insertedCount,
+        updatedCount: mergeResult.updatedCount,
+        totalCount: mergeResult.totalCount,
+        coverPromoted: true,
+      );
+    }
+    return ComicRefreshApplyResult(
+      status: ComicRefreshApplyStatus.applied,
+      insertedCount: mergeResult.insertedCount,
+      updatedCount: mergeResult.updatedCount,
+      totalCount: mergeResult.totalCount,
+      coverPromoted: coverPromoted,
+    );
+  }
+
+  void _notifyShelf(
+    ComicRefreshApplyRequest request, {
+    required int insertedCount,
+    required int updatedCount,
+    required int totalCount,
+    bool coverPromoted = false,
+  }) {
     _shelfRefreshBus.notify(
       modules: const <LibraryModuleKey>{
         LibraryModuleKey.comic,
@@ -119,18 +152,11 @@ class DefaultComicRefreshOutcomeApplier implements ComicRefreshOutcomeApplier {
       tid: request.sourceTid,
       payload: <String, Object?>{
         'episodeSource': request.source.name,
-        'insertedCount': mergeResult.insertedCount,
-        'updatedCount': mergeResult.updatedCount,
-        'totalCount': mergeResult.totalCount,
-        'coverPromoted': coverPromoted,
+        'insertedCount': insertedCount,
+        'updatedCount': updatedCount,
+        'totalCount': totalCount,
+        if (coverPromoted) 'coverPromoted': true,
       },
-    );
-    return ComicRefreshApplyResult(
-      status: ComicRefreshApplyStatus.applied,
-      insertedCount: mergeResult.insertedCount,
-      updatedCount: mergeResult.updatedCount,
-      totalCount: mergeResult.totalCount,
-      coverPromoted: coverPromoted,
     );
   }
 }

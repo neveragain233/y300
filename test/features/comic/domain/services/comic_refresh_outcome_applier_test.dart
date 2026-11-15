@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/comic/domain/repositories/comic_repository.dart';
 import 'package:y300/features/comic/domain/models/comic_detail_models.dart';
@@ -117,36 +119,83 @@ void main() {
       expect(bus.signal.value, isNull);
     });
 
-    test('promote failure is rethrown and does not notify', () async {
-      final repository = _RecordingComicRepository();
-      final promoter = _ThrowingCoverPromoter();
-      final bus = LibraryShelfRefreshBus();
-      addTearDown(bus.dispose);
-      final applier = DefaultComicRefreshOutcomeApplier(
-        repository: repository,
-        firstEpisodeCoverPromoter: promoter,
-        shelfRefreshBus: bus,
-      );
+    test(
+      'promote failure still publishes chapter change before rethrowing',
+      () async {
+        final repository = _RecordingComicRepository();
+        final promoter = _ThrowingCoverPromoter();
+        final bus = LibraryShelfRefreshBus();
+        addTearDown(bus.dispose);
+        final applier = DefaultComicRefreshOutcomeApplier(
+          repository: repository,
+          firstEpisodeCoverPromoter: promoter,
+          shelfRefreshBus: bus,
+        );
 
-      await expectLater(
-        applier.apply(
+        await expectLater(
+          applier.apply(
+            const ComicRefreshApplyRequest(
+              comicId: 'comic:1',
+              sourceTid: '100',
+              links: <ComicEpisodeLink>[
+                ComicEpisodeLink(url: 'thread-101-1-1.html', rawText: '第1话'),
+              ],
+              source: ComicEpisodeRefreshSource.currentOnly,
+              mutationSource: LibraryMutationSource.comicRefresh,
+              reason: 'comic_detail_search_refresh_completed',
+            ),
+          ),
+          throwsStateError,
+        );
+
+        expect(repository.mergeCallCount, 1);
+        expect(
+          bus.signal.value?.reason,
+          'comic_detail_search_refresh_completed',
+        );
+        expect(bus.signal.value?.payload['insertedCount'], 1);
+        expect(bus.signal.value?.payload['coverPromoted'], isNull);
+      },
+    );
+
+    test(
+      'publishes chapter change while cover promotion is still pending',
+      () async {
+        final repository = _RecordingComicRepository();
+        final promoter = _BlockingCoverPromoter();
+        final bus = LibraryShelfRefreshBus();
+        addTearDown(bus.dispose);
+        final applier = DefaultComicRefreshOutcomeApplier(
+          repository: repository,
+          firstEpisodeCoverPromoter: promoter,
+          shelfRefreshBus: bus,
+        );
+
+        final applyFuture = applier.apply(
           const ComicRefreshApplyRequest(
             comicId: 'comic:1',
             sourceTid: '100',
             links: <ComicEpisodeLink>[
               ComicEpisodeLink(url: 'thread-101-1-1.html', rawText: '第1话'),
             ],
-            source: ComicEpisodeRefreshSource.currentOnly,
+            source: ComicEpisodeRefreshSource.catalog,
             mutationSource: LibraryMutationSource.comicRefresh,
-            reason: 'comic_detail_search_refresh_completed',
+            reason: 'comic_detail_catalog_refresh_completed',
           ),
-        ),
-        throwsStateError,
-      );
+        );
+        await pumpEventQueue();
 
-      expect(repository.mergeCallCount, 1);
-      expect(bus.signal.value, isNull);
-    });
+        expect(promoter.started, isTrue);
+        expect(bus.signal.value?.payload['insertedCount'], 1);
+        expect(bus.signal.value?.payload['coverPromoted'], isNull);
+
+        promoter.complete(true);
+        final result = await applyFuture;
+
+        expect(result.coverPromoted, isTrue);
+        expect(bus.signal.value?.payload['coverPromoted'], true);
+      },
+    );
     test('persists catalogUrl when provided', () async {
       final repository = _RecordingComicRepository();
       final promoter = _RecordingCoverPromoter(promoteResult: true);
@@ -293,5 +342,24 @@ class _ThrowingCoverPromoter implements ComicFirstEpisodeCoverPromoter {
     FavoriteSyncRequestGovernor? governor,
   }) {
     throw StateError('promote failed');
+  }
+}
+
+class _BlockingCoverPromoter implements ComicFirstEpisodeCoverPromoter {
+  final Completer<bool> _completer = Completer<bool>();
+  bool started = false;
+
+  void complete(bool value) {
+    _completer.complete(value);
+  }
+
+  @override
+  Future<bool> promoteIfPossible({
+    required String comicId,
+    ComicThreadDiscoveryCache? threadCache,
+    FavoriteSyncRequestGovernor? governor,
+  }) {
+    started = true;
+    return _completer.future;
   }
 }
