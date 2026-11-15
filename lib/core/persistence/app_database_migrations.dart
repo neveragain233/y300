@@ -46,4 +46,7 @@ Future<void> upgradeAppDatabaseSchema(
   if (oldVersion < 44 && newVersion >= 44) {
     await createFavoriteParseJobsTable(db);
   }
+  if (oldVersion < 45 && newVersion >= 45) {
+    await upgradeLibraryFrom44To45(db);
+  }
 }

@@ -7,8 +7,6 @@ import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/presentation/adapters/mixed_shelf_adapter.dart';
 
-final _epoch = DateTime.fromMillisecondsSinceEpoch(0);
-
 void main() {
   late _FakeChildAdapter comic;
   late _FakeChildAdapter novel;
@@ -71,7 +69,7 @@ void main() {
   });
 
   test(
-    'snapshot keeps same raw work ids apart and labels categories by source',
+    'snapshot merges shared categories and keeps work identities apart',
     () async {
       final snapshot = await adapter.querySnapshot(
         filters: LibraryFilterSet.defaults,
@@ -79,18 +77,11 @@ void main() {
         keyword: '',
       );
 
-      final categoryIds = snapshot.categories
-          .map((category) => category.categoryId)
-          .toList(growable: false);
-      expect(categoryIds, <String>[
-        'default',
-        'comic:default',
-        'comic:c1',
-        'novel:default',
-        'novel:n1',
-      ]);
-
-      final allItems = snapshot.itemsByCategory['default']!;
+      expect(
+        snapshot.categories.map((category) => category.categoryId),
+        <String>['all', 'default', 'c1', 'n1'],
+      );
+      final allItems = snapshot.itemsByCategory['all']!;
       expect(allItems, hasLength(4));
       expect(allItems.map((item) => item.identityKey).toSet(), <String>{
         'comic:yamibo:1',
@@ -99,32 +90,16 @@ void main() {
         'novel:novel:49:9',
       });
       expect(
-        snapshot.itemsByCategory['comic:default']!.single.identityKey,
-        'comic:yamibo:1',
+        snapshot.itemsByCategory['default']!.map((item) => item.identityKey),
+        unorderedEquals(<String>['comic:yamibo:1', 'novel:yamibo:1']),
       );
       expect(
-        snapshot.itemsByCategory['novel:default']!.single.identityKey,
-        'novel:yamibo:1',
-      );
-      expect(
-        snapshot.itemsByCategory['comic:c1']!.single.identityKey,
+        snapshot.itemsByCategory['c1']!.single.identityKey,
         'comic:yamibo:2',
       );
       expect(
-        snapshot.itemsByCategory['novel:n1']!.single.identityKey,
+        snapshot.itemsByCategory['n1']!.single.identityKey,
         'novel:novel:49:9',
-      );
-      expect(
-        snapshot.categories
-            .firstWhere((category) => category.categoryId == 'default')
-            .source,
-        LibraryModuleKey.bookshelf,
-      );
-      expect(
-        snapshot.categories
-            .firstWhere((category) => category.categoryId == 'comic:default')
-            .isDefault,
-        isTrue,
       );
     },
   );
@@ -139,12 +114,12 @@ void main() {
       keyword: '追更',
     );
 
-    expect(snapshot.itemsByCategory['default'], isEmpty);
+    expect(snapshot.itemsByCategory['all'], isEmpty);
     expect(comic.lastSnapshotKeyword, '');
     expect(novel.lastSnapshotKeyword, '');
   });
 
-  test('selection actions dispatch to the source adapters', () async {
+  test('a shared target category is sent to both source adapters', () async {
     await adapter.querySnapshot(
       filters: LibraryFilterSet.defaults,
       sortOption: LibraryShelfSortOption.defaults,
@@ -155,94 +130,29 @@ void main() {
       const SelectionActionExecutionRequest(
         actionId: SelectionActionIds.assignCategory,
         workIds: <String>{'comic:yamibo:1', 'novel:yamibo:1'},
-        activeCategoryId: 'default',
-        targetCategoryId: 'comic:c1',
-      ),
-    );
-
-    expect(comic.requests, hasLength(1));
-    expect(comic.requests.single.workIds, <String>{'yamibo:1'});
-    expect(comic.requests.single.activeCategoryId, 'default');
-    expect(comic.requests.single.targetCategoryId, 'c1');
-    expect(novel.requests, isEmpty);
-    expect(outcome.code, SelectionActionOutcomeCode.partialFailure);
-    expect(outcome.failedCount, 1);
-  });
-
-  test('per-source targets move each source to its own category', () async {
-    await adapter.querySnapshot(
-      filters: LibraryFilterSet.defaults,
-      sortOption: LibraryShelfSortOption.defaults,
-      keyword: '',
-    );
-
-    final outcome = await adapter.runSelectionAction(
-      const SelectionActionExecutionRequest(
-        actionId: SelectionActionIds.assignCategory,
-        workIds: <String>{'comic:yamibo:1', 'novel:yamibo:1'},
-        activeCategoryId: 'default',
-        targetCategoryIdsBySource: <LibraryModuleKey, String>{
-          LibraryModuleKey.comic: 'comic:c1',
-          LibraryModuleKey.novel: 'novel:n1',
-        },
+        activeCategoryId: 'all',
+        targetCategoryId: 'c1',
       ),
     );
 
     expect(comic.requests.single.targetCategoryId, 'c1');
-    expect(novel.requests.single.targetCategoryId, 'n1');
+    expect(novel.requests.single.targetCategoryId, 'c1');
     expect(outcome.code, SelectionActionOutcomeCode.success);
     expect(outcome.succeededCount, 2);
     expect(outcome.failedCount, 0);
   });
 
-  test('omitted source keeps its category when moving per-source', () async {
-    await adapter.querySnapshot(
-      filters: LibraryFilterSet.defaults,
-      sortOption: LibraryShelfSortOption.defaults,
-      keyword: '',
-    );
+  test('category creation delegates to the shared module path', () async {
+    final categoryId = await adapter.createCategory(name: '新分类');
 
-    final outcome = await adapter.runSelectionAction(
-      const SelectionActionExecutionRequest(
-        actionId: SelectionActionIds.assignCategory,
-        workIds: <String>{'comic:yamibo:1', 'novel:yamibo:1'},
-        activeCategoryId: 'default',
-        targetCategoryIdsBySource: <LibraryModuleKey, String>{
-          LibraryModuleKey.comic: 'comic:c1',
-        },
-      ),
-    );
+    expect(comic.createdCategoryName, '新分类');
+    expect(novel.createdCategoryName, isNull);
+    expect(categoryId, 'new-新分类');
 
-    expect(comic.requests, hasLength(1));
-    expect(novel.requests, isEmpty);
-    expect(outcome.code, SelectionActionOutcomeCode.success);
-    expect(outcome.succeededCount, 1);
-    expect(outcome.failedCount, 0);
-  });
-
-  test('category creation follows the selected source category', () async {
-    await adapter.querySnapshot(
-      filters: LibraryFilterSet.defaults,
-      sortOption: LibraryShelfSortOption.defaults,
-      keyword: '',
-    );
-
-    final categoryId = await adapter.createCategoryForSource(
-      source: LibraryModuleKey.novel,
-      name: '新分类',
-    );
-
-    expect(novel.createdCategoryName, '新分类');
-    expect(comic.createdCategoryName, isNull);
-    expect(categoryId, 'novel:new-新分类');
-
-    await expectLater(
-      adapter.createCategoryForSource(
-        source: LibraryModuleKey.bookshelf,
-        name: '没有来源',
-      ),
-      throwsUnsupportedError,
-    );
+    await adapter.renameCategory(categoryId: categoryId, newName: '改名');
+    expect(comic.renamedCategory, ('new-新分类', '改名'));
+    await adapter.deleteCategory(categoryId: categoryId);
+    expect(comic.deletedCategoryId, 'new-新分类');
   });
 
   test('refresh fans out to both module adapters', () async {
@@ -255,6 +165,8 @@ void main() {
     expect(novel.refreshCount, 1);
   });
 }
+
+final _epoch = DateTime.fromMillisecondsSinceEpoch(0);
 
 LibraryWorkItem _item({
   required String workId,
@@ -277,8 +189,7 @@ class _FakeChildAdapter
         ShelfModuleAdapter,
         ShelfModuleCapabilitiesAdapter,
         ShelfSnapshotAdapter,
-        ShelfSelectionActionAdapter,
-        ShelfCategorySourceAdapter {
+        ShelfSelectionActionAdapter {
   _FakeChildAdapter({
     required this.moduleKey,
     required this.categories,
@@ -295,8 +206,13 @@ class _FakeChildAdapter
   int refreshCount = 0;
   String? lastSnapshotKeyword;
   String? createdCategoryName;
+  (String, String)? renamedCategory;
+  String? deletedCategoryId;
   final List<SelectionActionExecutionRequest> requests =
       <SelectionActionExecutionRequest>[];
+
+  @override
+  String? get initialCategoryId => null;
 
   @override
   LibraryDisplayMode get defaultDisplayMode => displayMode;
@@ -304,6 +220,9 @@ class _FakeChildAdapter
   @override
   ShelfModuleCapabilities get capabilities =>
       const ShelfModuleCapabilities.defaults();
+
+  @override
+  Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
 
   @override
   List<SelectionAction> get selectionActions => const <SelectionAction>[
@@ -360,12 +279,16 @@ class _FakeChildAdapter
   }
 
   @override
-  Future<String> createCategoryForSource({
-    required LibraryModuleKey source,
-    required String name,
+  Future<void> renameCategory({
+    required String categoryId,
+    required String newName,
   }) async {
-    createdCategoryName = name;
-    return 'new-$name';
+    renamedCategory = (categoryId, newName);
+  }
+
+  @override
+  Future<void> deleteCategory({required String categoryId}) async {
+    deletedCategoryId = categoryId;
   }
 
   @override

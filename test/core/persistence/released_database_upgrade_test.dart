@@ -660,7 +660,16 @@ Future<void> _expectOldFields(
   Database db,
   Map<String, List<Map<String, Object?>>> before,
 ) async {
+  const migratedTables = <String>{
+    'categories',
+    'novel_categories',
+    'shelf_items',
+    'novel_shelf_items',
+  };
   for (final entry in before.entries) {
+    if (migratedTables.contains(entry.key)) {
+      continue;
+    }
     final after = await db.query(entry.key, orderBy: 'rowid');
     expect(
       after,
@@ -679,6 +688,47 @@ Future<void> _expectOldFields(
 }
 
 Future<void> _expectCurrentSemantics(Database db, int oldVersion) async {
+  final sharedCategories = await db.query(
+    AppDatabase.libraryShelfCategoriesTable,
+  );
+  if (sharedCategories.isNotEmpty) {
+    expect(
+      sharedCategories.map((row) => row['category_id']).toSet(),
+      containsAll(<String>['default']),
+    );
+  }
+  final comicCategory = sharedCategories
+      .where((row) => row['name'] == '我的漫画分类')
+      .firstOrNull;
+  final novelCategory = sharedCategories
+      .where((row) => row['name'] == '我的小说分类')
+      .firstOrNull;
+  if (comicCategory != null) {
+    final sharedId = comicCategory['category_id'] as String;
+    final comicItem = (await db.query(AppDatabase.shelfItemsTable)).single;
+    expect(comicItem['category_id'], sharedId);
+    expect(
+      (await db.query(
+        AppDatabase.novelCategoriesTable,
+        where: 'category_id = ?',
+        whereArgs: <Object>[sharedId],
+      )),
+      hasLength(1),
+    );
+  }
+  if (novelCategory != null) {
+    final sharedId = novelCategory['category_id'] as String;
+    final novelItem = (await db.query(AppDatabase.novelShelfItemsTable)).single;
+    expect(novelItem['category_id'], sharedId);
+    expect(
+      (await db.query(
+        AppDatabase.categoriesTable,
+        where: 'category_id = ?',
+        whereArgs: <Object>[sharedId],
+      )),
+      hasLength(1),
+    );
+  }
   if (oldVersion == 27) {
     final source = (await db.query(
       AppDatabase.novelSourceStateTable,

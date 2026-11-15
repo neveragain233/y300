@@ -876,6 +876,9 @@ class _FakeShelfAdapter implements ShelfModuleAdapter {
   LibraryModuleKey get moduleKey => LibraryModuleKey.comic;
 
   @override
+  String? get initialCategoryId => null;
+
+  @override
   final Set<LibraryModuleKey> refreshModuleKeys;
 
   @override

@@ -67,6 +67,9 @@ class NovelShelfAdapter
   Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
 
   @override
+  String? get initialCategoryId => null;
+
+  @override
   LibraryDisplayMode get defaultDisplayMode => LibraryDisplayMode.list;
 
   @override

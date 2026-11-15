@@ -21,6 +21,7 @@ import 'package:y300/features/library_shared/domain/models/library_filter_models
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/data/services/library_cover_store.dart';
+import 'package:y300/features/library_shared/data/services/shared_shelf_category_store.dart';
 
 /// SQLite-backed comic repository facade.
 class LocalComicRepository
@@ -81,6 +82,8 @@ class LocalComicRepository
   final ComicSubjectParser _subjectParser;
   final ComicSingleThreadEpisodeNamer _singleThreadEpisodeNamer;
 
+  late final SharedShelfCategoryStore _sharedCategoryStore =
+      SharedShelfCategoryStore(_dbFuture);
   late final ComicShelfStore _shelfStore;
   late final ComicDetailStore _detailStore;
   late final ComicCoverStore _coverStore;
@@ -92,13 +95,23 @@ class LocalComicRepository
   late final ComicEpisodeManagementStore _episodeManagementStore;
 
   @override
-  Future<List<ComicShelfCategory>> getCategories() {
-    return _shelfStore.getCategories();
+  Future<List<ComicShelfCategory>> getCategories() async {
+    final categories = await _sharedCategoryStore.loadCategories();
+    return categories
+        .map(
+          (category) => ComicShelfCategory(
+            categoryId: category.categoryId,
+            name: category.name,
+            sortOrder: category.sortOrder,
+            createdAt: category.createdAt,
+          ),
+        )
+        .toList(growable: false);
   }
 
   @override
   Future<String> createCategory({required String name}) {
-    return _shelfStore.createCategory(name: name);
+    return _sharedCategoryStore.createCategory(name: name);
   }
 
   @override
@@ -106,12 +119,15 @@ class LocalComicRepository
     required String categoryId,
     required String newName,
   }) {
-    return _shelfStore.renameCategory(categoryId: categoryId, newName: newName);
+    return _sharedCategoryStore.renameCategory(
+      categoryId: categoryId,
+      newName: newName,
+    );
   }
 
   @override
   Future<void> deleteCategory({required String categoryId}) {
-    return _shelfStore.deleteCategory(categoryId: categoryId);
+    return _sharedCategoryStore.deleteCategory(categoryId: categoryId);
   }
 
   @override

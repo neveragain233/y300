@@ -14,6 +14,9 @@ abstract class ShelfModuleAdapter {
   /// 当前适配器对应模块。
   LibraryModuleKey get moduleKey;
 
+  /// 没有保存过分类偏好时首屏选中的分类；混合书架使用合成“全部”。
+  String? get initialCategoryId => null;
+
   /// 默认显示模式：漫画通常网格，小说通常列表。
   LibraryDisplayMode get defaultDisplayMode;
 
@@ -170,17 +173,6 @@ abstract class ShelfModuleActionAdapter {
   List<LibraryShelfMenuAction> get menuActions;
 
   Future<ShelfModuleActionOutcome> runMenuAction(LibraryShelfMenuAction action);
-}
-
-/// 可选能力：在指定来源分类下新建分类。
-///
-/// 混合书架无法只凭分类名判断应该写入漫画还是小说仓储；页面把当前分类键
-/// 一并传入，由组合适配器解码后分派。
-abstract interface class ShelfCategorySourceAdapter {
-  Future<String> createCategoryForSource({
-    required LibraryModuleKey source,
-    required String name,
-  });
 }
 
 enum LibraryShelfTaskProgressCode {

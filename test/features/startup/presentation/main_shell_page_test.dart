@@ -1997,188 +1997,135 @@ void main() {
     },
   );
 
-  testWidgets(
-    'mixed selection assigns category per source and creates in the chosen source',
-    (tester) async {
-      final queueSnapshot = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
-        ComicSearchRefreshQueueSnapshot.empty,
-      );
-      final selectionHost = ShelfSelectionHostController();
-      final requests = <SelectionActionExecutionRequest>[];
-      final created = <(String, LibraryModuleKey?)>[];
-      addTearDown(queueSnapshot.dispose);
-      addTearDown(selectionHost.dispose);
-      await _pumpSelectionShell(
-        tester,
-        queueSnapshot: queueSnapshot,
-        selectionHost: selectionHost,
-        webViewDriver: _FakeForumWebViewDriver(),
-      );
+  testWidgets('mixed selection uses one shared category target', (
+    tester,
+  ) async {
+    final queueSnapshot = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selectionHost = ShelfSelectionHostController();
+    final requests = <SelectionActionExecutionRequest>[];
+    final created = <String>[];
+    addTearDown(queueSnapshot.dispose);
+    addTearDown(selectionHost.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queueSnapshot,
+      selectionHost: selectionHost,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
 
-      final categories = <LibraryCategory>[
-        LibraryCategory(
-          categoryId: 'default',
-          sourceCategoryId: 'default',
-          source: LibraryModuleKey.bookshelf,
-          name: '',
-          sortOrder: -1,
-          createdAt: DateTime(2026, 1, 1),
-        ),
-        LibraryCategory(
-          categoryId: 'comic:c1',
-          sourceCategoryId: 'c1',
-          source: LibraryModuleKey.comic,
-          name: '漫画追更',
-          sortOrder: 0,
-          createdAt: DateTime(2026, 1, 1),
-        ),
-        LibraryCategory(
-          categoryId: 'novel:n1',
-          sourceCategoryId: 'n1',
-          source: LibraryModuleKey.novel,
-          name: '小说追更',
-          sortOrder: 1,
-          createdAt: DateTime(2026, 1, 1),
-        ),
-      ];
+    final categories = <LibraryCategory>[
+      LibraryCategory(
+        categoryId: 'default',
+        name: '默认',
+        sortOrder: 0,
+        createdAt: DateTime(2026, 1, 1),
+      ),
+      LibraryCategory(
+        categoryId: 'shared:1',
+        name: '共享分类',
+        sortOrder: 1,
+        createdAt: DateTime(2026, 1, 1),
+      ),
+    ];
 
-      selectionHost.activate(
-        ownerToken: Object(),
-        moduleKey: LibraryModuleKey.bookshelf,
-        activeCategoryId: 'default',
-        selectedCount: 2,
-        selectedWorkIds: const <String>{'comic:yamibo:1', 'novel:novel:1'},
-        selectedSources: const <LibraryModuleKey>{
-          LibraryModuleKey.comic,
-          LibraryModuleKey.novel,
+    selectionHost.activate(
+      ownerToken: Object(),
+      moduleKey: LibraryModuleKey.bookshelf,
+      activeCategoryId: 'all',
+      selectedCount: 2,
+      selectedWorkIds: const <String>{'comic:yamibo:1', 'novel:novel:1'},
+      selectionActions: const <SelectionAction>[
+        SelectionAction(
+          id: SelectionActionIds.assignCategory,
+          icon: Icons.label_outline,
+        ),
+      ],
+      delegate: ShelfSelectionHostDelegate(
+        exitSelection: () async {},
+        selectAllVisible: () async {},
+        invertVisible: () async {},
+        loadAvailableCategories: () async => categories,
+        createCategory: (name) async {
+          created.add(name);
+          return 'shared:new';
         },
-        selectionActions: const <SelectionAction>[
-          SelectionAction(
-            id: SelectionActionIds.assignCategory,
-            icon: Icons.label_outline,
-          ),
-        ],
-        delegate: ShelfSelectionHostDelegate(
-          exitSelection: () async {},
-          selectAllVisible: () async {},
-          invertVisible: () async {},
-          loadAvailableCategories: () async => categories,
-          createCategory: (name, {source}) async {
-            created.add((name, source));
-            return source == LibraryModuleKey.novel ? 'novel:new' : 'comic:new';
-          },
-          runSelectionAction: (request) async {
-            requests.add(request);
-            return const SelectionActionOutcome(
-              code: SelectionActionOutcomeCode.success,
-              changed: true,
-              succeededCount: 2,
-            );
-          },
-          refreshAfterAction: () async {},
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.byKey(const ValueKey<String>('selection-action-assign-category')),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('漫画作品（1 项）'), findsOneWidget);
-      expect(find.text('小说作品（1 项）'), findsOneWidget);
-      expect(find.text('保持不变'), findsNWidgets(2));
-
-      final comicTarget = find.byKey(
-        const ValueKey<String>('selection-target-comic-comic:c1'),
-      );
-      await tester.ensureVisible(comicTarget);
-      await tester.pumpAndSettle();
-      await tester.tap(comicTarget);
-      await tester.pumpAndSettle();
-      final novelTarget = find.byKey(
-        const ValueKey<String>('selection-target-novel-novel:n1'),
-      );
-      await tester.ensureVisible(novelTarget);
-      await tester.pumpAndSettle();
-      await tester.tap(novelTarget);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('selection-target-confirm')));
-      await tester.pumpAndSettle();
-
-      expect(requests, hasLength(1));
-      expect(
-        requests.single.targetCategoryIdsBySource,
-        <LibraryModuleKey, String>{
-          LibraryModuleKey.comic: 'comic:c1',
-          LibraryModuleKey.novel: 'novel:n1',
+        runSelectionAction: (request) async {
+          requests.add(request);
+          return const SelectionActionOutcome(
+            code: SelectionActionOutcomeCode.success,
+            changed: true,
+            succeededCount: 2,
+          );
         },
-      );
+        refreshAfterAction: () async {},
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      selectionHost.activate(
-        ownerToken: Object(),
-        moduleKey: LibraryModuleKey.bookshelf,
-        activeCategoryId: 'default',
-        selectedCount: 1,
-        selectedWorkIds: const <String>{'comic:yamibo:1'},
-        selectedSources: const <LibraryModuleKey>{LibraryModuleKey.comic},
-        selectionActions: const <SelectionAction>[
-          SelectionAction(
-            id: SelectionActionIds.assignCategory,
-            icon: Icons.label_outline,
-          ),
-        ],
-        delegate: ShelfSelectionHostDelegate(
-          exitSelection: () async {},
-          selectAllVisible: () async {},
-          invertVisible: () async {},
-          loadAvailableCategories: () async => categories,
-          createCategory: (name, {source}) async {
-            created.add((name, source));
-            return 'comic:new';
-          },
-          runSelectionAction: (request) async {
-            requests.add(request);
-            return const SelectionActionOutcome(
-              code: SelectionActionOutcomeCode.success,
-              changed: true,
-              succeededCount: 1,
-            );
-          },
-          refreshAfterAction: () async {},
+    await tester.tap(
+      find.byKey(const ValueKey<String>('selection-action-assign-category')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('共享分类'), findsOneWidget);
+    expect(find.text('漫画作品（1 项）'), findsNothing);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('selection-target-category-shared:1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requests.single.targetCategoryId, 'shared:1');
+
+    selectionHost.activate(
+      ownerToken: Object(),
+      moduleKey: LibraryModuleKey.bookshelf,
+      activeCategoryId: 'all',
+      selectedCount: 2,
+      selectedWorkIds: const <String>{'comic:yamibo:1', 'novel:novel:1'},
+      selectionActions: const <SelectionAction>[
+        SelectionAction(
+          id: SelectionActionIds.assignCategory,
+          icon: Icons.label_outline,
         ),
-      );
-      await tester.pumpAndSettle();
+      ],
+      delegate: ShelfSelectionHostDelegate(
+        exitSelection: () async {},
+        selectAllVisible: () async {},
+        invertVisible: () async {},
+        loadAvailableCategories: () async => categories,
+        createCategory: (name) async {
+          created.add(name);
+          return 'shared:new';
+        },
+        runSelectionAction: (request) async {
+          requests.add(request);
+          return const SelectionActionOutcome(
+            code: SelectionActionOutcomeCode.success,
+            changed: true,
+            succeededCount: 2,
+          );
+        },
+        refreshAfterAction: () async {},
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('selection-action-assign-category')),
-      );
-      await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('selection-action-assign-category')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新建分类'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '新共享分类');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('小说追更'), findsNothing);
-      expect(
-        find.byKey(
-          const ValueKey<String>('selection-target-category-comic:c1'),
-        ),
-        findsOneWidget,
-      );
-      await tester.tap(find.text('新建分类'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '新漫画分类');
-      await tester.tap(find.text('确定'));
-      await tester.pumpAndSettle();
-
-      expect(created, <(String, LibraryModuleKey?)>[
-        ('新漫画分类', LibraryModuleKey.comic),
-      ]);
-      expect(
-        requests.last.targetCategoryIdsBySource,
-        const <LibraryModuleKey, String>{},
-      );
-      expect(requests.last.targetCategoryId, 'comic:new');
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(created, <String>['新共享分类']);
+    expect(requests.last.targetCategoryId, 'shared:new');
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('MainShellPage unfavorite action requires confirmation', (
     tester,

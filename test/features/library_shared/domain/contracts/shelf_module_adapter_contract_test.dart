@@ -27,6 +27,9 @@ class _FakeShelfModuleAdapter implements ShelfModuleAdapter {
       <LibraryModuleKey>{moduleKey};
 
   @override
+  String? get initialCategoryId => null;
+
+  @override
   ValueListenable<LibraryShelfTaskProgress?>? get taskProgress => null;
 
   @override

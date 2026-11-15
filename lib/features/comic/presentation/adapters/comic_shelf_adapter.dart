@@ -102,6 +102,9 @@ class ComicShelfAdapter
   Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
 
   @override
+  String? get initialCategoryId => null;
+
+  @override
   ShelfModuleCapabilities get capabilities =>
       const ShelfModuleCapabilities.defaults();
 

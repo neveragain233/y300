@@ -19,6 +19,7 @@ const String libraryEpisodeStateTable = 'library_episode_state';
 const String libraryTagsTable = 'library_tags';
 const String libraryWorkTagsTable = 'library_work_tags';
 const String libraryDisplaySettingsTable = 'library_display_settings';
+const String libraryShelfCategoriesTable = 'library_shelf_categories';
 const String favoriteSyncStateTable = 'favorite_sync_state';
 const String favoriteThreadsTable = 'favorite_threads';
 const String favoriteParseJobsTable = 'favorite_parse_jobs';

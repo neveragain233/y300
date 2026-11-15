@@ -19,6 +19,7 @@ Future<void> createAppDatabaseSchema(Database db) async {
   await createNovelReaderBookmarksTable(db);
   await createNovelShelfTables(db);
   await createLibraryStateTables(db);
+  await createSharedShelfCategoryTable(db);
   await createLibraryPerformanceIndexes(db);
   await createFavoriteTables(db);
   await createFavoriteParseJobsTable(db);
@@ -62,6 +63,7 @@ const List<String> _managedTablesInDropOrder = <String>[
   libraryEpisodeStateTable,
   libraryWorkStateTable,
   libraryDisplaySettingsTable,
+  libraryShelfCategoriesTable,
   readerBookmarksTable,
   novelEpisodeContentTable,
   workEpisodesTable,

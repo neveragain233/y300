@@ -1,13 +1,12 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
 import 'package:y300/features/library_shared/data/repositories/local_library_state_repository.dart';
+import 'package:y300/features/library_shared/data/services/shared_shelf_category_store.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
-import 'package:y300/features/library_shared/domain/models/library_operation_failure.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_query_utils.dart';
 import 'package:y300/features/library_shared/domain/services/library_cover_asset_factory.dart';
@@ -37,6 +36,8 @@ class LocalNovelRepository
            stateRepository ?? LocalLibraryStateRepository(_dbFuture);
 
   final Future<Database> _dbFuture;
+  late final SharedShelfCategoryStore _sharedCategoryStore =
+      SharedShelfCategoryStore(_dbFuture);
   late final SqfliteNovelReadingStateRepository _readingState =
       SqfliteNovelReadingStateRepository(_dbFuture);
   final LibraryStateRepository _stateRepository;
@@ -46,130 +47,38 @@ class LocalNovelRepository
 
   @override
   Future<List<NovelShelfCategory>> getCategories() async {
-    final db = await _dbFuture;
-    final rows = await db.query(
-      AppDatabase.novelCategoriesTable,
-      orderBy: 'sort_order ASC, created_at ASC',
-    );
-
-    return rows
+    final categories = await _sharedCategoryStore.loadCategories();
+    return categories
         .map(
-          (row) => NovelShelfCategory(
-            categoryId: row['category_id'] as String,
-            name: row['name'] as String,
-            sortOrder: row['sort_order'] as int,
-            createdAt: DateTime.fromMillisecondsSinceEpoch(
-              row['created_at'] as int,
-            ),
+          (category) => NovelShelfCategory(
+            categoryId: category.categoryId,
+            name: category.name,
+            sortOrder: category.sortOrder,
+            createdAt: category.createdAt,
           ),
         )
         .toList(growable: false);
   }
 
   @override
-  Future<String> createCategory({required String name}) async {
-    final sanitized = name.trim();
-    if (sanitized.isEmpty) {
-      throw ArgumentError('分类名称不能为空');
-    }
-
-    final db = await _dbFuture;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final categoryId = 'n$now${Random().nextInt(1000)}';
-
-    await db.transaction((txn) async {
-      final countResult = await txn.rawQuery(
-        'SELECT COUNT(*) AS count FROM ${AppDatabase.novelCategoriesTable}',
-      );
-      final sortOrder = (countResult.first['count'] as int?) ?? 0;
-      await txn.insert(AppDatabase.novelCategoriesTable, <String, Object?>{
-        'category_id': categoryId,
-        'name': sanitized,
-        'sort_order': sortOrder,
-        'created_at': now,
-      });
-    });
-
-    return categoryId;
+  Future<String> createCategory({required String name}) {
+    return _sharedCategoryStore.createCategory(name: name);
   }
 
   @override
   Future<void> renameCategory({
     required String categoryId,
     required String newName,
-  }) async {
-    final sanitized = newName.trim();
-    if (sanitized.isEmpty) {
-      throw ArgumentError('分类名称不能为空');
-    }
-    if (categoryId == _defaultCategoryId) {
-      throw const LibraryOperationException(
-        LibraryOperationFailureCode.defaultCategoryImmutable,
-      );
-    }
-
-    final db = await _dbFuture;
-    await db.update(
-      AppDatabase.novelCategoriesTable,
-      <String, Object?>{'name': sanitized},
-      where: 'category_id = ?',
-      whereArgs: <Object>[categoryId],
+  }) {
+    return _sharedCategoryStore.renameCategory(
+      categoryId: categoryId,
+      newName: newName,
     );
   }
 
   @override
-  Future<void> deleteCategory({required String categoryId}) async {
-    if (categoryId == _defaultCategoryId) {
-      throw const LibraryOperationException(
-        LibraryOperationFailureCode.defaultCategoryImmutable,
-      );
-    }
-
-    final db = await _dbFuture;
-    final now = DateTime.now().millisecondsSinceEpoch;
-
-    await db.transaction((txn) async {
-      final rows = await txn.query(
-        AppDatabase.novelShelfItemsTable,
-        columns: <String>['novel_id'],
-        where: 'category_id = ?',
-        whereArgs: <Object>[categoryId],
-      );
-
-      for (final row in rows) {
-        final novelId = row['novel_id'] as String;
-        final existsInDefault = await txn.query(
-          AppDatabase.novelShelfItemsTable,
-          columns: <String>['id'],
-          where: 'category_id = ? AND novel_id = ?',
-          whereArgs: <Object>[_defaultCategoryId, novelId],
-          limit: 1,
-        );
-        if (existsInDefault.isEmpty) {
-          final sortOrder = await _nextShelfSortOrder(
-            txn,
-            categoryId: _defaultCategoryId,
-          );
-          await txn.insert(AppDatabase.novelShelfItemsTable, <String, Object?>{
-            'category_id': _defaultCategoryId,
-            'novel_id': novelId,
-            'added_at': now,
-            'sort_order': sortOrder,
-          });
-        }
-      }
-
-      await txn.delete(
-        AppDatabase.novelShelfItemsTable,
-        where: 'category_id = ?',
-        whereArgs: <Object>[categoryId],
-      );
-      await txn.delete(
-        AppDatabase.novelCategoriesTable,
-        where: 'category_id = ?',
-        whereArgs: <Object>[categoryId],
-      );
-    });
+  Future<void> deleteCategory({required String categoryId}) {
+    return _sharedCategoryStore.deleteCategory(categoryId: categoryId);
   }
 
   @override

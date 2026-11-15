@@ -11,9 +11,8 @@ import 'package:y300/features/library_shared/domain/services/library_shelf_refre
 
 /// 只做汇总与分派的混合书架适配器。
 ///
-/// 分类和作品都带来源身份：分类键在混合页是 `来源:原始分类键`，作品键是
-/// `来源:原始作品编号`。打开、刷新、分类管理和批量动作都回到原模块适配器，
-/// 不复制漫画／小说的仓储、下载或阅读状态逻辑。
+/// 分类由两个模块共享的同一张应用级分类表提供；作品仍带来源身份。打开、
+/// 刷新、分类管理和批量动作都回到原模块适配器，不复制任何仓储逻辑。
 class MixedShelfAdapter
     implements
         ShelfModuleAdapter,
@@ -21,28 +20,26 @@ class MixedShelfAdapter
         ShelfSnapshotAdapter,
         ShelfSelectionActionAdapter,
         ShelfModuleActionAdapter,
-        ShelfDownloadStatusAdapter,
-        ShelfCategorySourceAdapter {
+        ShelfDownloadStatusAdapter {
   MixedShelfAdapter({
     required ShelfModuleAdapter comicAdapter,
     required ShelfModuleAdapter novelAdapter,
   }) : _comicAdapter = comicAdapter,
        _novelAdapter = novelAdapter;
 
-  static const String allCategoryId = 'default';
+  static const String allCategoryId = 'all';
 
   final ShelfModuleAdapter _comicAdapter;
   final ShelfModuleAdapter _novelAdapter;
 
-  final Map<String, LibraryCategory> _categoriesByKey =
-      <String, LibraryCategory>{};
-  final Map<String, String> _rawCategoryByKey = <String, String>{};
-  final Map<String, LibraryModuleKey> _sourceByCategoryKey =
-      <String, LibraryModuleKey>{};
-  final Map<String, String> _sourceCategoryKeyByWorkKey = <String, String>{};
+  final Map<String, LibraryWorkItem> _itemsByIdentity =
+      <String, LibraryWorkItem>{};
 
   @override
   LibraryModuleKey get moduleKey => LibraryModuleKey.bookshelf;
+
+  @override
+  String? get initialCategoryId => allCategoryId;
 
   @override
   Set<LibraryModuleKey> get refreshModuleKeys => const <LibraryModuleKey>{
@@ -59,11 +56,6 @@ class MixedShelfAdapter
     supportsBookmarkFilter: false,
     showsUnreadBadge: true,
   );
-
-  @override
-  ValueListenable<LibraryShelfTaskProgress?>? get taskProgress {
-    return _comicAdapter.taskProgress ?? _novelAdapter.taskProgress;
-  }
 
   late final ValueListenable<LibraryShelfRefreshSignal?>? _refreshSignals =
       _buildRefreshSignals();
@@ -85,6 +77,11 @@ class MixedShelfAdapter
   }
 
   @override
+  ValueListenable<LibraryShelfTaskProgress?>? get taskProgress {
+    return _comicAdapter.taskProgress ?? _novelAdapter.taskProgress;
+  }
+
+  @override
   List<LibraryShelfMenuAction> get menuActions {
     final adapter = _comicAdapter;
     return adapter is ShelfModuleActionAdapter
@@ -97,14 +94,14 @@ class MixedShelfAdapter
     LibraryShelfMenuAction action,
   ) {
     final adapter = _comicAdapter;
-    if (adapter is! ShelfModuleActionAdapter) {
-      return Future<ShelfModuleActionOutcome>.value(
-        const ShelfModuleActionOutcome(
-          code: ShelfModuleActionOutcomeCode.unsupported,
-        ),
-      );
+    if (adapter is ShelfModuleActionAdapter) {
+      return (adapter as ShelfModuleActionAdapter).runMenuAction(action);
     }
-    return (adapter as ShelfModuleActionAdapter).runMenuAction(action);
+    return Future<ShelfModuleActionOutcome>.value(
+      const ShelfModuleActionOutcome(
+        code: ShelfModuleActionOutcomeCode.unsupported,
+      ),
+    );
   }
 
   @override
@@ -129,10 +126,23 @@ class MixedShelfAdapter
   Future<List<LibraryCategory>> loadCategories() async {
     final comic = await _comicAdapter.loadCategories();
     final novel = await _novelAdapter.loadCategories();
-    return _buildCategories(
-      _ShelfChild(moduleKey: LibraryModuleKey.comic, categories: comic),
-      _ShelfChild(moduleKey: LibraryModuleKey.novel, categories: novel),
-    );
+    final merged = <String, LibraryCategory>{};
+    for (final category in <LibraryCategory>[...comic, ...novel]) {
+      merged.putIfAbsent(category.categoryId, () => category);
+    }
+    final categories = merged.values.toList(growable: false)
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return List<LibraryCategory>.unmodifiable(<LibraryCategory>[
+      LibraryCategory(
+        categoryId: allCategoryId,
+        name: '',
+        sortOrder: -1,
+        createdAt: _epoch,
+        source: LibraryModuleKey.bookshelf,
+        sourceCategoryId: allCategoryId,
+      ),
+      ...categories,
+    ]);
   }
 
   @override
@@ -141,51 +151,29 @@ class MixedShelfAdapter
   }) async {
     if (categoryId == allCategoryId) {
       final snapshots = await Future.wait(<Future<LibraryShelfSnapshot>>[
-        _childSnapshot(_comicAdapter),
-        _childSnapshot(_novelAdapter),
+        _childSnapshot(_comicAdapter, keyword: ''),
+        _childSnapshot(_novelAdapter, keyword: ''),
       ]);
       return _allItems(snapshots);
     }
-    final resolved = _resolveCategory(categoryId);
-    if (resolved == null) {
-      return const <LibraryWorkItem>[];
-    }
-    final adapter = _adapterFor(resolved.source);
-    final items = await adapter.loadCategoryItems(
-      categoryId: resolved.rawCategoryId,
-    );
-    return List<LibraryWorkItem>.unmodifiable(
-      items.map(
-        (item) => _decorate(
-          item,
-          source: resolved.source,
-          rawCategoryId: resolved.rawCategoryId,
-        ),
-      ),
-    );
+    final results = await Future.wait(<Future<List<LibraryWorkItem>>>[
+      _comicAdapter.loadCategoryItems(categoryId: categoryId),
+      _novelAdapter.loadCategoryItems(categoryId: categoryId),
+    ]);
+    return _decorateAll(results[0], LibraryModuleKey.comic, categoryId) +
+        _decorateAll(results[1], LibraryModuleKey.novel, categoryId);
   }
 
   @override
   Future<Map<String, List<LibraryWorkItem>>> searchItemsByKeyword({
     required String keyword,
   }) async {
-    final snapshots = await Future.wait(<Future<LibraryShelfSnapshot>>[
-      _childSnapshot(_comicAdapter, keyword: keyword),
-      _childSnapshot(_novelAdapter, keyword: keyword),
-    ]);
-    final result = <String, List<LibraryWorkItem>>{};
-    _collectChildItems(
-      snapshot: snapshots[0],
-      source: LibraryModuleKey.comic,
-      target: result,
+    final snapshot = await querySnapshot(
+      filters: LibraryFilterSet.defaults,
+      sortOption: LibraryShelfSortOption.defaults,
+      keyword: keyword,
     );
-    _collectChildItems(
-      snapshot: snapshots[1],
-      source: LibraryModuleKey.novel,
-      target: result,
-    );
-    result[allCategoryId] = _allItems(snapshots);
-    return result;
+    return snapshot.itemsByCategory;
   }
 
   @override
@@ -210,38 +198,34 @@ class MixedShelfAdapter
     required String keyword,
   }) async {
     final snapshots = await Future.wait(<Future<LibraryShelfSnapshot>>[
-      _childSnapshot(_comicAdapter),
-      _childSnapshot(_novelAdapter),
+      _childSnapshot(_comicAdapter, keyword: ''),
+      _childSnapshot(_novelAdapter, keyword: ''),
     ]);
-    _categoriesByKey.clear();
-    _rawCategoryByKey.clear();
-    _sourceByCategoryKey.clear();
-    _sourceCategoryKeyByWorkKey.clear();
-
-    final comic = _ShelfChild(
-      moduleKey: LibraryModuleKey.comic,
-      categories: snapshots[0].categories,
-    );
-    final novel = _ShelfChild(
-      moduleKey: LibraryModuleKey.novel,
-      categories: snapshots[1].categories,
-    );
-    final categories = _buildCategories(comic, novel);
+    _itemsByIdentity.clear();
+    final categories = await loadCategories();
     final source = <String, List<LibraryWorkItem>>{
       for (final category in categories)
         category.categoryId: <LibraryWorkItem>[],
     };
-    _collectChildItems(
-      snapshot: snapshots[0],
-      source: LibraryModuleKey.comic,
-      target: source,
-    );
-    _collectChildItems(
-      snapshot: snapshots[1],
-      source: LibraryModuleKey.novel,
-      target: source,
-    );
-    source[allCategoryId] = _allItems(snapshots);
+    final all = <String, LibraryWorkItem>{};
+    for (final (index, snapshot) in snapshots.indexed) {
+      final sourceKey = index == 0
+          ? LibraryModuleKey.comic
+          : LibraryModuleKey.novel;
+      for (final category in snapshot.categories) {
+        final rawItems =
+            snapshot.itemsByCategory[category.categoryId] ??
+            const <LibraryWorkItem>[];
+        for (final item in rawItems) {
+          final decorated = _decorate(item, sourceKey);
+          source
+              .putIfAbsent(category.categoryId, () => <LibraryWorkItem>[])
+              .add(decorated);
+          all.putIfAbsent(decorated.identityKey, () => decorated);
+        }
+      }
+    }
+    source[allCategoryId] = all.values.toList(growable: false);
 
     final queried = LibraryShelfQueryUtils.filterAndSortByCategory(
       source: source,
@@ -273,45 +257,23 @@ class MixedShelfAdapter
 
   @override
   Future<String> createCategory({required String name}) {
-    throw UnsupportedError('mixedShelfCreateCategory');
-  }
-
-  @override
-  Future<String> createCategoryForSource({
-    required LibraryModuleKey source,
-    required String name,
-  }) async {
-    if (source != LibraryModuleKey.comic && source != LibraryModuleKey.novel) {
-      throw UnsupportedError('mixedShelfCreateCategory');
-    }
-    final categoryId = await _adapterFor(source).createCategory(name: name);
-    final key = _categoryKey(source, categoryId);
-    _rawCategoryByKey[key] = categoryId;
-    _sourceByCategoryKey[key] = source;
-    return key;
+    return _comicAdapter.createCategory(name: name);
   }
 
   @override
   Future<void> renameCategory({
     required String categoryId,
     required String newName,
-  }) async {
-    final resolved = _resolveCategory(categoryId);
-    if (resolved == null || resolved.rawCategoryId == allCategoryId) {
-      throw UnsupportedError('mixedShelfRenameCategory');
-    }
-    await _adapterFor(resolved.source)
-        .renameCategory(categoryId: resolved.rawCategoryId, newName: newName);
+  }) {
+    return _comicAdapter.renameCategory(
+      categoryId: categoryId,
+      newName: newName,
+    );
   }
 
   @override
-  Future<void> deleteCategory({required String categoryId}) async {
-    final resolved = _resolveCategory(categoryId);
-    if (resolved == null || resolved.rawCategoryId == allCategoryId) {
-      throw UnsupportedError('mixedShelfDeleteCategory');
-    }
-    await _adapterFor(resolved.source)
-        .deleteCategory(categoryId: resolved.rawCategoryId);
+  Future<void> deleteCategory({required String categoryId}) {
+    return _comicAdapter.deleteCategory(categoryId: categoryId);
   }
 
   @override
@@ -321,39 +283,20 @@ class MixedShelfAdapter
     required String toCategoryId,
   }) async {
     final work = LibraryWorkId.tryParse(workId);
-    final target = _resolveTargetForSource(toCategoryId, work?.source);
-    if (work == null || target == null) {
+    if (work == null) {
       throw UnsupportedError('mixedShelfMoveWork');
     }
-    final fromCategory =
-        _sourceCategoryKeyByWorkKey[work.encoded] ??
-        _categoryKey(work.source, allCategoryId);
-    final from = _resolveCategory(fromCategory);
-    if (from == null) {
-      throw UnsupportedError('mixedShelfMoveWork');
-    }
+    final current = _itemsByIdentity[work.encoded]?.categoryId;
     await _adapterFor(work.source).moveWorkToCategory(
       workId: work.workId,
-      fromCategoryId: from.rawCategoryId,
-      toCategoryId: target.rawCategoryId,
+      fromCategoryId: current ?? fromCategoryId,
+      toCategoryId: toCategoryId,
     );
   }
 
   @override
   Future<String?> pickRandomWorkId({required String categoryId}) async {
-    if (categoryId != allCategoryId) {
-      final resolved = _resolveCategory(categoryId);
-      if (resolved == null) {
-        return null;
-      }
-      final workId = await _adapterFor(resolved.source)
-          .pickRandomWorkId(categoryId: resolved.rawCategoryId);
-      if (workId == null) {
-        return null;
-      }
-      return LibraryWorkId(source: resolved.source, workId: workId).encoded;
-    }
-    final items = await loadCategoryItems(categoryId: allCategoryId);
+    final items = await loadCategoryItems(categoryId: categoryId);
     if (items.isEmpty) {
       return null;
     }
@@ -382,43 +325,47 @@ class MixedShelfAdapter
         failedCount: invalidCount,
       );
     }
+    if (request.actionId == SelectionActionIds.assignCategory &&
+        (request.targetCategoryId?.trim().isEmpty ?? true)) {
+      return const SelectionActionOutcome(
+        code: SelectionActionOutcomeCode.missingTargetCategory,
+      );
+    }
     var succeeded = 0;
     var failed = invalidCount;
     var enqueued = 0;
     var deduplicated = 0;
     var changed = false;
     var supported = false;
-    final targetsBySource = request.targetCategoryIdsBySource;
     for (final entry in groups.entries) {
-      if (request.actionId == SelectionActionIds.assignCategory &&
-          targetsBySource.isNotEmpty &&
-          !targetsBySource.containsKey(entry.key)) {
-        // 分段提交时未列出的来源保持原分类，不计失败。
-        continue;
-      }
       final adapter = _adapterFor(entry.key);
       if (adapter is! ShelfSelectionActionAdapter) {
         failed += entry.value.length;
         continue;
       }
-      final requests = _requestsFor(
-        actionId: request.actionId,
-        workIds: entry.value,
-        source: entry.key,
-        targetCategoryId:
-            targetsBySource[entry.key] ?? request.targetCategoryId,
-      );
-      if (requests.isEmpty) {
-        failed += entry.value.length;
-        continue;
-      }
-      supported = true;
       final selectionAdapter = adapter as ShelfSelectionActionAdapter;
-      for (final childRequest in requests) {
-        final outcome = await selectionAdapter.runSelectionAction(childRequest);
+      supported = true;
+      final byCurrentCategory = <String, List<String>>{};
+      for (final workId in entry.value) {
+        final workKey = LibraryWorkId(
+          source: entry.key,
+          workId: workId,
+        ).encoded;
+        final current = _itemsByIdentity[workKey]?.categoryId ?? 'default';
+        byCurrentCategory.putIfAbsent(current, () => <String>[]).add(workId);
+      }
+      for (final category in byCurrentCategory.entries) {
+        final outcome = await selectionAdapter.runSelectionAction(
+          SelectionActionExecutionRequest(
+            actionId: request.actionId,
+            workIds: category.value.toSet(),
+            activeCategoryId: category.key,
+            targetCategoryId: request.targetCategoryId,
+          ),
+        );
         if (outcome.code == SelectionActionOutcomeCode.unsupported ||
             outcome.code == SelectionActionOutcomeCode.noValidItems) {
-          failed += childRequest.workIds.length;
+          failed += category.value.length;
           continue;
         }
         succeeded += outcome.succeededCount;
@@ -446,161 +393,21 @@ class MixedShelfAdapter
     );
   }
 
-  List<SelectionActionExecutionRequest> _requestsFor({
-    required String actionId,
-    required List<String> workIds,
-    required LibraryModuleKey source,
-    required String? targetCategoryId,
-  }) {
-    final target = _resolveTargetForSource(targetCategoryId, source);
-    if (actionId == SelectionActionIds.assignCategory && target == null) {
-      return const <SelectionActionExecutionRequest>[];
-    }
-    final byCategory = <String, List<String>>{};
-    for (final workId in workIds) {
-      final workKey = LibraryWorkId(source: source, workId: workId).encoded;
-      final categoryKey =
-          _sourceCategoryKeyByWorkKey[workKey] ??
-          _categoryKey(source, allCategoryId);
-      final resolved = _resolveCategory(categoryKey);
-      final rawCategoryId = resolved?.rawCategoryId ?? allCategoryId;
-      byCategory.putIfAbsent(rawCategoryId, () => <String>[]).add(workId);
-    }
-    return <SelectionActionExecutionRequest>[
-      for (final entry in byCategory.entries)
-        SelectionActionExecutionRequest(
-          actionId: actionId,
-          workIds: entry.value.toSet(),
-          activeCategoryId: entry.key,
-          targetCategoryId: target?.rawCategoryId,
-        ),
-    ];
-  }
-
-  _ResolvedCategory? _resolveCategory(String categoryKey) {
-    if (categoryKey == allCategoryId) {
-      return null;
-    }
-    final source = _sourceByCategoryKey[categoryKey];
-    final rawCategoryId = _rawCategoryByKey[categoryKey];
-    if (source == null || rawCategoryId == null) {
-      return null;
-    }
-    return _ResolvedCategory(
-      source: source,
-      rawCategoryId: rawCategoryId,
-      key: categoryKey,
-    );
-  }
-
-  _ResolvedCategory? _resolveTargetForSource(
-    String? categoryKey,
-    LibraryModuleKey? source,
-  ) {
-    if (source == null) {
-      return null;
-    }
-    if (categoryKey == null ||
-        categoryKey.isEmpty ||
-        categoryKey == allCategoryId) {
-      return _ResolvedCategory(
-        source: source,
-        rawCategoryId: allCategoryId,
-        key: _categoryKey(source, allCategoryId),
-      );
-    }
-    final resolved = _resolveCategory(categoryKey);
-    if (resolved == null || resolved.source != source) {
-      return null;
-    }
-    return resolved;
-  }
-
   ShelfModuleAdapter _adapterFor(LibraryModuleKey source) {
     return source == LibraryModuleKey.novel ? _novelAdapter : _comicAdapter;
-  }
-
-  LibraryCategory? _categoryFor(
-    LibraryModuleKey source,
-    LibraryCategory category,
-  ) {
-    final key = _categoryKey(source, category.categoryId);
-    _rawCategoryByKey[key] = category.categoryId;
-    _sourceByCategoryKey[key] = source;
-    final mapped = LibraryCategory(
-      categoryId: key,
-      name: category.name,
-      sortOrder:
-          (source == LibraryModuleKey.novel ? 1000 : 0) + category.sortOrder,
-      createdAt: category.createdAt,
-      visibleMatchCount: category.visibleMatchCount,
-      source: source,
-      sourceCategoryId: category.categoryId,
-    );
-    _categoriesByKey[key] = mapped;
-    return mapped;
-  }
-
-  List<LibraryCategory> _buildCategories(_ShelfChild comic, _ShelfChild novel) {
-    final categories = <LibraryCategory>[
-      LibraryCategory(
-        categoryId: allCategoryId,
-        name: '',
-        sortOrder: -1000,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-        source: LibraryModuleKey.bookshelf,
-        sourceCategoryId: allCategoryId,
-      ),
-    ];
-    for (final child in <_ShelfChild>[comic, novel]) {
-      for (final category in child.categories) {
-        final mapped = _categoryFor(child.moduleKey, category);
-        if (mapped != null) {
-          categories.add(mapped);
-        }
-      }
-    }
-    return List<LibraryCategory>.unmodifiable(categories);
-  }
-
-  void _collectChildItems({
-    required LibraryShelfSnapshot snapshot,
-    required LibraryModuleKey source,
-    required Map<String, List<LibraryWorkItem>> target,
-  }) {
-    for (final category in snapshot.categories) {
-      final key = _categoryKey(source, category.categoryId);
-      target
-          .putIfAbsent(key, () => <LibraryWorkItem>[])
-          .addAll(
-            (snapshot.itemsByCategory[category.categoryId] ??
-                    const <LibraryWorkItem>[])
-                .map(
-                  (item) => _decorate(
-                    item,
-                    source: source,
-                    rawCategoryId: category.categoryId,
-                  ),
-                ),
-          );
-    }
   }
 
   List<LibraryWorkItem> _allItems(List<LibraryShelfSnapshot> snapshots) {
     final items = <String, LibraryWorkItem>{};
     for (final (index, snapshot) in snapshots.indexed) {
-      final source = index == 0
+      final sourceKey = index == 0
           ? LibraryModuleKey.comic
           : LibraryModuleKey.novel;
       for (final category in snapshot.categories) {
         for (final item
             in snapshot.itemsByCategory[category.categoryId] ??
                 const <LibraryWorkItem>[]) {
-          final decorated = _decorate(
-            item,
-            source: source,
-            rawCategoryId: category.categoryId,
-          );
+          final decorated = _decorate(item, sourceKey);
           items[decorated.identityKey] = decorated;
         }
       }
@@ -608,23 +415,26 @@ class MixedShelfAdapter
     return List<LibraryWorkItem>.unmodifiable(items.values);
   }
 
-  LibraryWorkItem _decorate(
-    LibraryWorkItem item, {
-    required LibraryModuleKey source,
-    required String rawCategoryId,
-  }) {
-    final categoryKey = _categoryKey(source, rawCategoryId);
-    _sourceCategoryKeyByWorkKey[LibraryWorkId(
-          source: source,
-          workId: item.workId,
-        ).encoded] =
-        categoryKey;
-    return item.copyWith(categoryId: categoryKey, source: source);
+  List<LibraryWorkItem> _decorateAll(
+    List<LibraryWorkItem> items,
+    LibraryModuleKey source,
+    String categoryId,
+  ) {
+    return <LibraryWorkItem>[
+      for (final item in items)
+        _decorate(item.copyWith(categoryId: categoryId), source),
+    ];
+  }
+
+  LibraryWorkItem _decorate(LibraryWorkItem item, LibraryModuleKey source) {
+    final decorated = item.copyWith(source: source);
+    _itemsByIdentity[decorated.identityKey] = decorated;
+    return decorated;
   }
 
   Future<LibraryShelfSnapshot> _childSnapshot(
     ShelfModuleAdapter adapter, {
-    String keyword = '',
+    required String keyword,
   }) async {
     if (adapter is ShelfSnapshotAdapter) {
       final capabilities = resolveShelfModuleCapabilities(adapter);
@@ -653,28 +463,7 @@ class MixedShelfAdapter
     );
   }
 
-  String _categoryKey(LibraryModuleKey source, String rawCategoryId) {
-    return '${source.name}:$rawCategoryId';
-  }
-}
-
-class _ShelfChild {
-  const _ShelfChild({required this.moduleKey, required this.categories});
-
-  final LibraryModuleKey moduleKey;
-  final List<LibraryCategory> categories;
-}
-
-class _ResolvedCategory {
-  const _ResolvedCategory({
-    required this.source,
-    required this.rawCategoryId,
-    required this.key,
-  });
-
-  final LibraryModuleKey source;
-  final String rawCategoryId;
-  final String key;
+  static final DateTime _epoch = DateTime.fromMillisecondsSinceEpoch(0);
 }
 
 /// 把一个子适配器的单个刷新流合并成混合书架可监听的值。
@@ -690,10 +479,6 @@ class _MergedRefreshSignals extends ValueNotifier<LibraryShelfRefreshSignal?>
   final ValueListenable<LibraryShelfRefreshSignal?>? novel;
 
   void _handleChanged() {
-    _notifyLatest();
-  }
-
-  void _notifyLatest() {
     final next = _latest(comic?.value, novel?.value);
     if (identical(next, value) || next?.sequence == value?.sequence) {
       return;

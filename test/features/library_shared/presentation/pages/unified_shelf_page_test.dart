@@ -1698,9 +1698,7 @@ void main() {
     }
   });
 
-  testWidgets('mixed shelf asks for a source before creating a category', (
-    tester,
-  ) async {
+  testWidgets('mixed shelf creates one shared category', (tester) async {
     final adapter = _FakeMixedCategoryShelfAdapter();
     await tester.pumpWidget(
       LocalizedTestApp(
@@ -1716,22 +1714,13 @@ void main() {
 
     expect(
       find.byKey(const Key('unified-shelf-category-source-comic')),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(
-      find.byKey(const Key('unified-shelf-category-source-novel')),
-      findsOneWidget,
-    );
-    await tester.tap(
-      find.byKey(const Key('unified-shelf-category-source-novel')),
-    );
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '新小说分类');
+    await tester.enterText(find.byType(TextField), '共享分类');
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
 
-    expect(adapter.createdSource, LibraryModuleKey.novel);
-    expect(adapter.createdName, '新小说分类');
+    expect(adapter.createdName, '共享分类');
     expect(tester.takeException(), isNull);
   });
 
@@ -1802,8 +1791,7 @@ LibraryWorkItem _item({
   );
 }
 
-class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter
-    implements ShelfCategorySourceAdapter {
+class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter {
   _FakeMixedCategoryShelfAdapter()
     : super(
         initialDisplayMode: LibraryDisplayMode.grid,
@@ -1847,7 +1835,6 @@ class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter
         },
       );
 
-  LibraryModuleKey? createdSource;
   String? createdName;
 
   @override
@@ -1860,13 +1847,12 @@ class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter
   };
 
   @override
-  Future<String> createCategoryForSource({
-    required LibraryModuleKey source,
-    required String name,
-  }) async {
-    createdSource = source;
+  String? get initialCategoryId => 'all';
+
+  @override
+  Future<String> createCategory({required String name}) async {
     createdName = name;
-    return '${source.name}:created';
+    return 'shared:created';
   }
 }
 
@@ -1936,6 +1922,9 @@ class _FakeShelfAdapter
 
   @override
   Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
+
+  @override
+  String? get initialCategoryId => null;
 
   @override
   LibraryDisplayMode get defaultDisplayMode => initialDisplayMode;
