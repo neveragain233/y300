@@ -187,9 +187,8 @@ void main() {
     expect(find.text('2026-10-07'), findsOneWidget);
     expect(
       tester.widget<Text>(find.text('2026-10-07')).style?.color,
-      Theme.of(
-        tester.element(_tile),
-      ).colorScheme.onSurfaceVariant.withAlpha(170),
+      Theme.of(tester.element(_tile)).colorScheme.onSurfaceVariant
+          .withAlpha(170),
     );
   });
 
@@ -256,6 +255,63 @@ void main() {
       expect(text, isNot(contains(l10n.libraryChapterProgressPercent(25))));
     },
   );
+
+  testWidgets('two-stage swipe keeps only the action of the release stage', (
+    tester,
+  ) async {
+    var singleCount = 0;
+    var throughCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 320,
+              child: LibraryChapterReadStateSwipe(
+                foregroundKey: const ValueKey<String>('swipe-foreground'),
+                locked: false,
+                onTriggered: () async {
+                  singleCount++;
+                },
+                onTriggeredThrough: () async {
+                  throughCount++;
+                },
+                background: const ColoredBox(color: Colors.green),
+                backgroundThrough: const ColoredBox(color: Colors.orange),
+                child: const SizedBox(
+                  key: ValueKey<String>('swipe-child'),
+                  height: 64,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final center = tester.getCenter(
+      find.byKey(const ValueKey<String>('swipe-child')),
+    );
+    final gesture = await tester.startGesture(center);
+    await gesture.moveBy(const Offset(170, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-70, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(singleCount, 1);
+    expect(throughCount, 0);
+
+    final secondGesture = await tester.startGesture(center);
+    await secondGesture.moveBy(const Offset(170, 0));
+    await tester.pump();
+    await secondGesture.up();
+    await tester.pumpAndSettle();
+
+    expect(singleCount, 1);
+    expect(throughCount, 1);
+  });
 }
 
 const _title = '章节标题';
@@ -287,9 +343,8 @@ Future<void> _pumpTile(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
       ),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(scale)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
       home: Scaffold(

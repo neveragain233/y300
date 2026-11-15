@@ -21,6 +21,7 @@ class NovelDetailAdapter
         DetailModuleAdapter,
         DetailFullRefreshAdapter,
         DetailChapterReadStateAdapter,
+        DetailChapterReadThroughAdapter,
         DetailWorkReadingResetAdapter,
         DetailMetadataEditor,
         DetailCoverEditor {
@@ -267,6 +268,87 @@ class NovelDetailAdapter
     if (barrier == null) return () => true;
     final revision = barrier.capture(workId, episodeId);
     return () => barrier.isCurrent(workId, episodeId, revision);
+  }
+
+  @override
+  Future<ChapterReadThroughOutcome?> markChaptersReadThrough({
+    required String workId,
+    required String targetEpisodeId,
+  }) async {
+    final repository = _readingRepository;
+    if (repository == null) {
+      throw const LibraryOperationException(
+        LibraryOperationFailureCode.unsupported,
+      );
+    }
+    final episodes = await _repository.getEpisodes(
+      novelId: workId,
+      descending: false,
+    );
+    final targetIndex = episodes.indexWhere(
+      (episode) => episode.episodeId == targetEpisodeId,
+    );
+    if (targetIndex < 0) {
+      return null;
+    }
+    final episodeIds = episodes
+        .take(targetIndex + 1)
+        .map((episode) => episode.episodeId)
+        .toList(growable: false);
+    for (final episodeId in episodeIds) {
+      _mutationBarrier?.invalidate(workId, episodeId);
+    }
+    final readAt = DateTime.now();
+    final changed = await repository.setChaptersRead(
+      novelId: workId,
+      episodeIds: episodeIds.toSet(),
+      readAt: readAt,
+      canCommit: _rangeMutationGuard(workId, episodeIds),
+    );
+    return ChapterReadThroughOutcome(
+      changedEpisodeIds: List<String>.unmodifiable(
+        episodeIds.where(changed.contains),
+      ),
+      readAt: readAt,
+    );
+  }
+
+  @override
+  Future<void> restoreChaptersRead({
+    required String workId,
+    required List<String> episodeIds,
+    required DateTime readAt,
+  }) async {
+    final repository = _readingRepository;
+    if (repository == null) {
+      throw const LibraryOperationException(
+        LibraryOperationFailureCode.unsupported,
+      );
+    }
+    for (final episodeId in episodeIds) {
+      _mutationBarrier?.invalidate(workId, episodeId);
+    }
+    await repository.restoreChaptersRead(
+      novelId: workId,
+      episodeIds: episodeIds.toSet(),
+      readAt: readAt,
+      canCommit: _rangeMutationGuard(workId, episodeIds),
+    );
+  }
+
+  bool Function() _rangeMutationGuard(
+    String workId,
+    List<String> episodeIds,
+  ) {
+    final barrier = _mutationBarrier;
+    if (barrier == null) return () => true;
+    final revisions = <String, int>{
+      for (final episodeId in episodeIds)
+        episodeId: barrier.capture(workId, episodeId),
+    };
+    return () => revisions.entries.every(
+      (entry) => barrier.isCurrent(workId, entry.key, entry.value),
+    );
   }
 
   @override

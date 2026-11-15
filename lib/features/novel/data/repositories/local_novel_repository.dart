@@ -749,6 +749,32 @@ class LocalNovelRepository
   );
 
   @override
+  Future<Set<String>> setChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) => _readingState.setChaptersRead(
+    novelId: novelId,
+    episodeIds: episodeIds,
+    readAt: readAt,
+    canCommit: canCommit,
+  );
+
+  @override
+  Future<void> restoreChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) => _readingState.restoreChaptersRead(
+    novelId: novelId,
+    episodeIds: episodeIds,
+    readAt: readAt,
+    canCommit: canCommit,
+  );
+
+  @override
   Future<bool> resetWorkReadingState({
     required String novelId,
     bool Function()? canCommit,

@@ -2709,6 +2709,30 @@ abstract class AppLocalizations {
   /// **'标记已读'**
   String get libraryChapterMarkRead;
 
+  /// No description provided for @libraryChapterMarkReadThrough.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记已读到此'**
+  String get libraryChapterMarkReadThrough;
+
+  /// No description provided for @libraryChapterMarkReadThroughScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'本章及阅读顺序中更早的章节'**
+  String get libraryChapterMarkReadThroughScope;
+
+  /// No description provided for @libraryChapterMarkReadThroughDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将本章及之前的章节标为已读'**
+  String get libraryChapterMarkReadThroughDone;
+
+  /// No description provided for @libraryChapterMarkReadThroughUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get libraryChapterMarkReadThroughUndo;
+
   /// No description provided for @libraryChapterCurrentPage.
   ///
   /// In zh, this message translates to:

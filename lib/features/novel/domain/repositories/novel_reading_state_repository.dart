@@ -42,6 +42,24 @@ abstract interface class NovelReadingStateRepository {
     required String episodeId,
     bool Function()? canCommit,
   });
+
+  /// 标记一组章节为已读。只改已读标记与标记时间，保留章内位置、书签、
+  /// 下载和最近阅读引用。返回本次真正从未读变为已读的章节；事务被屏障
+  /// 退役时返回空集合。
+  Future<Set<String>> setChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  });
+
+  /// 撤销范围标记，只清除仍保留 [readAt] 标记时间的已读状态。
+  Future<void> restoreChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  });
 }
 
 /// Optional whole-work mutation. Clears public positions, the recent chapter

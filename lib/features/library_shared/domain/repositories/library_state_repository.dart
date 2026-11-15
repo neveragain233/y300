@@ -116,6 +116,31 @@ abstract class LibraryStateRepository {
   });
 }
 
+/// 可选能力：按章节集合写入一个作品的已读状态。
+///
+/// 具体模块仓储实现该合同；共享详情页据此提供“已读到此”。
+abstract interface class LibraryEpisodeRangeReadStateRepository {
+  /// 批量写入一个作品内指定章节的已读状态。
+  ///
+  /// 以集合式 upsert 在一次事务内覆盖原本没有状态行的章节，只改已读标记
+  /// 与标记时间。返回本次真正改变已读状态的章节编号，供撤销使用。
+  Future<List<String>> setEpisodesReadState({
+    required LibraryModuleKey moduleKey,
+    required String workId,
+    required Set<String> episodeIds,
+    required bool isRead,
+    DateTime? readAt,
+  });
+
+  /// 撤销一次范围标记：只清除仍保留 [readAt] 标记时间的已读章节。
+  Future<void> restoreEpisodesReadState({
+    required LibraryModuleKey moduleKey,
+    required String workId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+  });
+}
+
 /// Optional aggregate query used by shelf adapters that expose work-level
 /// chapter bookmark filtering.
 abstract interface class LibraryBookmarkStateQuery {

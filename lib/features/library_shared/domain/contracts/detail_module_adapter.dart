@@ -144,6 +144,39 @@ abstract interface class DetailChapterReadStateAdapter {
   });
 }
 
+/// 结果与撤销令牌：只包含本次真正从未读变为已读的章节。
+class ChapterReadThroughOutcome {
+  const ChapterReadThroughOutcome({
+    required this.changedEpisodeIds,
+    required this.readAt,
+  });
+
+  final List<String> changedEpisodeIds;
+
+  /// 本次批量写入的统一标记时间，撤销时据此识别仍然属于本次操作的状态。
+  final DateTime readAt;
+
+  bool get hasChanges => changedEpisodeIds.isNotEmpty;
+}
+
+/// 可选能力：按作品阅读顺序把目标章及更早章节标为已读。
+///
+/// 目标章由稳定章节身份定位，适配器在提交时重新读取完整章节目录；
+/// 返回 null 表示目标章已不在当前目录中。写入只改已读标记，不动阅读位置。
+abstract interface class DetailChapterReadThroughAdapter {
+  Future<ChapterReadThroughOutcome?> markChaptersReadThrough({
+    required String workId,
+    required String targetEpisodeId,
+  });
+
+  /// 撤销一次“已读到此”，只恢复仍保留本次标记时间的章节。
+  Future<void> restoreChaptersRead({
+    required String workId,
+    required List<String> episodeIds,
+    required DateTime readAt,
+  });
+}
+
 /// Optional work-level reset capability. It is intentionally separate from
 /// chapter read-state mutation because resetting a work also owns progress and
 /// last-read pointers.

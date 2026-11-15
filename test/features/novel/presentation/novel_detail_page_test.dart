@@ -726,13 +726,13 @@ void main() {
       final chapter = find.byKey(
         const ValueKey<String>('unified-detail-chapter-novel:1:e1'),
       );
-      await tester.drag(chapter, const Offset(500, 0));
+      await tester.drag(chapter, const Offset(240, 0));
       await tester.pumpAndSettle();
       expect(reading.isRead, isTrue);
       expect(reading.readMutationCount, 1);
       expect(reading.hasPosition, isTrue);
       expect(reading.isBookmarked, isTrue);
-      await tester.drag(chapter, const Offset(500, 0));
+      await tester.drag(chapter, const Offset(240, 0));
       await tester.pumpAndSettle();
       expect(reading.isRead, isFalse);
       expect(reading.readMutationCount, 2);
@@ -857,7 +857,7 @@ void main() {
       final chapter = find.byKey(
         const ValueKey<String>('unified-detail-chapter-novel:1:e1'),
       );
-      await tester.drag(chapter, const Offset(500, 0));
+      await tester.drag(chapter, const Offset(240, 0));
       await tester.pumpAndSettle();
       final l10n = AppLocalizations.of(tester.element(chapter));
       expect(
@@ -867,7 +867,7 @@ void main() {
       expect(reading.isRead, isFalse);
       expect(reading.hasPosition, isTrue);
       reading.appliesMutation = true;
-      await tester.drag(chapter, const Offset(500, 0));
+      await tester.drag(chapter, const Offset(240, 0));
       await tester.pumpAndSettle();
       expect(reading.isRead, isTrue);
       expect(reading.readMutationCount, 2);

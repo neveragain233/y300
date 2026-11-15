@@ -42,6 +42,7 @@ class ComicDetailAdapter
     implements
         DetailModuleAdapter,
         DetailChapterReadStateAdapter,
+        DetailChapterReadThroughAdapter,
         DetailWorkReadingResetAdapter,
         DetailChapterDownloadAdapter,
         DetailChapterDownloadActivityAdapter,
@@ -660,6 +661,67 @@ class ComicDetailAdapter
       isRead: isRead,
       readAt: isRead ? DateTime.now() : null,
     );
+  }
+
+  @override
+  Future<ChapterReadThroughOutcome?> markChaptersReadThrough({
+    required String workId,
+    required String targetEpisodeId,
+  }) async {
+    final episodes = await _repository.getComicEpisodes(
+      comicId: workId,
+      descending: false,
+    );
+    final ordered = _episodeSequence.order(episodes);
+    final targetIndex = ordered.indexWhere(
+      (episode) => episode.episodeId == targetEpisodeId,
+    );
+    if (targetIndex < 0) {
+      return null;
+    }
+    final episodeIds = ordered
+        .take(targetIndex + 1)
+        .map((episode) => episode.episodeId)
+        .toList(growable: false);
+    final rangeStateRepository = _rangeStateRepository;
+    final readAt = DateTime.now();
+    final changed = await rangeStateRepository.setEpisodesReadState(
+      moduleKey: LibraryModuleKey.comic,
+      workId: workId,
+      episodeIds: episodeIds.toSet(),
+      isRead: true,
+      readAt: readAt,
+    );
+    return ChapterReadThroughOutcome(
+      changedEpisodeIds: List<String>.unmodifiable(
+        episodeIds.where(changed.contains),
+      ),
+      readAt: readAt,
+    );
+  }
+
+  @override
+  Future<void> restoreChaptersRead({
+    required String workId,
+    required List<String> episodeIds,
+    required DateTime readAt,
+  }) async {
+    await _rangeStateRepository.restoreEpisodesReadState(
+      moduleKey: LibraryModuleKey.comic,
+      workId: workId,
+      episodeIds: episodeIds.toSet(),
+      readAt: readAt,
+    );
+  }
+
+  LibraryEpisodeRangeReadStateRepository get _rangeStateRepository {
+    final repository = _stateRepository;
+    if (repository is! LibraryEpisodeRangeReadStateRepository) {
+      throw const LibraryOperationException(
+        LibraryOperationFailureCode.unsupported,
+      );
+    }
+    return repository as LibraryEpisodeRangeReadStateRepository;
   }
 
   @override

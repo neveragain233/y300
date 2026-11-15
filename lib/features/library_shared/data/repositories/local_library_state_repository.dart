@@ -8,7 +8,10 @@ import 'package:y300/features/library_shared/domain/models/library_state_models.
 
 /// 基于 SQLite 的统一状态仓储实现。
 class LocalLibraryStateRepository
-    implements LibraryStateRepository, LibraryBookmarkStateQuery {
+    implements
+        LibraryStateRepository,
+        LibraryBookmarkStateQuery,
+        LibraryEpisodeRangeReadStateRepository {
   LocalLibraryStateRepository(this._dbFuture);
 
   final Future<Database> _dbFuture;
@@ -313,6 +316,183 @@ class LocalLibraryStateRepository
   }
 
   @override
+  Future<List<String>> setEpisodesReadState({
+    required LibraryModuleKey moduleKey,
+    required String workId,
+    required Set<String> episodeIds,
+    required bool isRead,
+    DateTime? readAt,
+  }) async {
+    final normalizedWorkId = workId.trim();
+    final normalizedEpisodeIds = episodeIds
+        .map((episodeId) => episodeId.trim())
+        .where((episodeId) => episodeId.isNotEmpty)
+        .toSet();
+    if (normalizedWorkId.isEmpty || normalizedEpisodeIds.isEmpty) {
+      return const <String>[];
+    }
+    final sourceTable = switch (moduleKey) {
+      LibraryModuleKey.comic => AppDatabase.episodesTable,
+      LibraryModuleKey.novel => AppDatabase.workEpisodesTable,
+      LibraryModuleKey.favorite => null,
+    };
+    if (sourceTable == null) {
+      throw UnsupportedError('收藏模块不支持章节阅读状态写入');
+    }
+    final db = await _dbFuture;
+    final contentType = _moduleKeyToContentType(moduleKey);
+    final sourceWorkColumn = moduleKey == LibraryModuleKey.comic
+        ? 'comic_id'
+        : 'work_id';
+    final sourceFilters = moduleKey == LibraryModuleKey.novel
+        ? 'AND src.content_type = ?'
+        : '';
+    final readAtMillis = isRead
+        ? (readAt ?? DateTime.now()).millisecondsSinceEpoch
+        : null;
+    final episodeIdsInOrder = normalizedEpisodeIds.toList(growable: false);
+    final placeholders = List<String>.filled(
+      episodeIdsInOrder.length,
+      '?',
+    ).join(', ');
+    final stateFilters =
+        'content_type = ? AND work_id = ? AND episode_id IN ($placeholders)';
+    final stateArgs = <Object?>[
+      contentType,
+      normalizedWorkId,
+      ...episodeIdsInOrder,
+    ];
+    final changed = <String>[];
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        AppDatabase.libraryEpisodeStateTable,
+        columns: const <String>['episode_id', 'is_read'],
+        where: stateFilters,
+        whereArgs: stateArgs,
+      );
+      final previouslyRead = <String>{
+        for (final row in existing)
+          if (row['is_read'] == 1) row['episode_id'] as String,
+      };
+      for (final episodeId in episodeIdsInOrder) {
+        if (previouslyRead.contains(episodeId) != isRead) {
+          changed.add(episodeId);
+        }
+      }
+      // 先从章节源表补齐没有状态行的章节，再统一写入已读标记。两次操作
+      // 都限定在本作品与本次传入的章节集合内。
+      await txn.rawInsert(
+        '''
+        INSERT OR IGNORE INTO ${AppDatabase.libraryEpisodeStateTable} (
+          content_type,
+          episode_id,
+          work_id,
+          is_read,
+          read_state_version,
+          is_downloaded,
+          is_bookmarked,
+          read_at,
+          downloaded_at
+        )
+        SELECT
+          ?,
+          src.episode_id,
+          src.$sourceWorkColumn,
+          ?,
+          ?,
+          0,
+          0,
+          ?,
+          NULL
+        FROM $sourceTable src
+        WHERE src.$sourceWorkColumn = ?
+          AND src.episode_id IN ($placeholders)
+          $sourceFilters
+        ''',
+        <Object?>[
+          contentType,
+          isRead ? 1 : 0,
+          moduleKey == LibraryModuleKey.novel ? 1 : 0,
+          readAtMillis,
+          normalizedWorkId,
+          ...episodeIdsInOrder,
+          if (moduleKey == LibraryModuleKey.novel) contentType,
+        ],
+      );
+      if (isRead) {
+        // 本次新标为已读的章节写入统一标记时间；原本已读的章节保留原时间，
+        // 撤销只依据 changed 列表，不会误清更早的阅读标记。
+        await txn.update(
+          AppDatabase.libraryEpisodeStateTable,
+          <String, Object?>{
+            'is_read': 1,
+            'read_at': readAtMillis,
+            if (moduleKey == LibraryModuleKey.novel) 'read_state_version': 1,
+          },
+          where: '$stateFilters AND is_read = 0',
+          whereArgs: stateArgs,
+        );
+        await txn.update(
+          AppDatabase.libraryEpisodeStateTable,
+          <String, Object?>{
+            'is_read': 1,
+            if (moduleKey == LibraryModuleKey.novel) 'read_state_version': 1,
+          },
+          where: '$stateFilters AND is_read = 1',
+          whereArgs: stateArgs,
+        );
+      } else {
+        await txn.update(
+          AppDatabase.libraryEpisodeStateTable,
+          <String, Object?>{
+            'is_read': 0,
+            'read_at': null,
+            if (moduleKey == LibraryModuleKey.novel) 'read_state_version': 1,
+          },
+          where: stateFilters,
+          whereArgs: stateArgs,
+        );
+      }
+    });
+    return List<String>.unmodifiable(changed);
+  }
+
+  @override
+  Future<void> restoreEpisodesReadState({
+    required LibraryModuleKey moduleKey,
+    required String workId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+  }) async {
+    final normalizedWorkId = workId.trim();
+    final normalizedEpisodeIds = episodeIds
+        .map((episodeId) => episodeId.trim())
+        .where((episodeId) => episodeId.isNotEmpty)
+        .toSet();
+    if (normalizedWorkId.isEmpty || normalizedEpisodeIds.isEmpty) {
+      return;
+    }
+    final db = await _dbFuture;
+    final placeholders = List<String>.filled(
+      normalizedEpisodeIds.length,
+      '?',
+    ).join(', ');
+    await db.update(
+      AppDatabase.libraryEpisodeStateTable,
+      <String, Object?>{'is_read': 0, 'read_at': null},
+      where:
+          'content_type = ? AND work_id = ? AND episode_id IN ($placeholders) '
+          'AND is_read = 1 AND read_at = ?',
+      whereArgs: <Object?>[
+        _moduleKeyToContentType(moduleKey),
+        normalizedWorkId,
+        ...normalizedEpisodeIds,
+        readAt.millisecondsSinceEpoch,
+      ],
+    );
+  }
+
+  @override
   Future<void> purgeWorkState({
     required LibraryModuleKey moduleKey,
     required String workId,
@@ -345,16 +525,12 @@ class LocalLibraryStateRepository
     required int gridColumns,
   }) async {
     final db = await _dbFuture;
-    await db.insert(
-      AppDatabase.libraryDisplaySettingsTable,
-      <String, Object?>{
-        'module_key': _moduleKeyToContentType(moduleKey),
-        'display_mode': _displayModeToDbValue(displayMode),
-        'grid_columns': _normalizeGridColumns(gridColumns),
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(AppDatabase.libraryDisplaySettingsTable, <String, Object?>{
+      'module_key': _moduleKeyToContentType(moduleKey),
+      'display_mode': _displayModeToDbValue(displayMode),
+      'grid_columns': _normalizeGridColumns(gridColumns),
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override
@@ -467,15 +643,11 @@ class LocalLibraryStateRepository
     required String tagId,
   }) async {
     final db = await _dbFuture;
-    await db.insert(
-      AppDatabase.libraryWorkTagsTable,
-      <String, Object?>{
-        'content_type': _moduleKeyToContentType(moduleKey),
-        'work_id': workId,
-        'tag_id': tagId,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await db.insert(AppDatabase.libraryWorkTagsTable, <String, Object?>{
+      'content_type': _moduleKeyToContentType(moduleKey),
+      'work_id': workId,
+      'tag_id': tagId,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   @override

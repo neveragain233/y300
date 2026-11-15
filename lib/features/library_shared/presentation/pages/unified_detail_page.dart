@@ -35,6 +35,7 @@ import 'package:y300/features/library_shared/presentation/widgets/library_sort_o
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 统一详情页骨架（Phase 4）
 ///
@@ -108,6 +109,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
   final Set<String> _downloadingEpisodeIds = <String>{};
   final Set<String> _readingStateMutationEpisodeIds = <String>{};
   bool _isResettingWorkReading = false;
+  bool _isMarkingReadThrough = false;
   Future<void>? _refreshInFlight;
   Listenable? _chapterDownloadActivityListenable;
   final RouteContentPresentationGuard _contentPresentationGuard =
@@ -142,6 +144,9 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
   }
 
   bool get _supportsChapterReadState => _readStateAdapter != null;
+
+  bool get _supportsChapterReadThrough =>
+      widget.adapter is DetailChapterReadThroughAdapter;
 
   bool get _supportsFullRefresh => widget.adapter is DetailFullRefreshAdapter;
 
@@ -434,8 +439,12 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
         onToggleReadState: _supportsChapterReadState
             ? () => _toggleChapterReadingState(chapter)
             : null,
+        onMarkReadThrough: _supportsChapterReadThrough
+            ? () => _markReadThroughChapter(chapter)
+            : null,
         readStateMutationLocked:
             _isResettingWorkReading ||
+            _isMarkingReadThrough ||
             _readingStateMutationEpisodeIds.contains(chapter.episodeId),
         onToggleDownload: _supportsChapterDownloads
             ? () => _toggleChapterDownload(chapter)
@@ -695,6 +704,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
 
   Future<void> _toggleChapterReadingState(LibraryChapterItem chapter) async {
     if (_isResettingWorkReading ||
+        _isMarkingReadThrough ||
         _readingStateMutationEpisodeIds.contains(chapter.episodeId)) {
       return;
     }
@@ -719,6 +729,104 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
         });
       }
     }
+  }
+
+  Future<void> _markReadThroughChapter(LibraryChapterItem chapter) async {
+    if (!_supportsChapterReadThrough ||
+        _isMarkingReadThrough ||
+        _isResettingWorkReading ||
+        _readingStateMutationEpisodeIds.isNotEmpty) {
+      return;
+    }
+    setState(() {
+      _isMarkingReadThrough = true;
+    });
+    try {
+      final outcome = await _controller.markReadThroughChapter(
+        targetEpisodeId: chapter.episodeId,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+      if (outcome == null) {
+        _showDetailSnackBar(
+          AppLocalizations.of(context).libraryDetailReadStateUpdateFailed,
+        );
+        return;
+      }
+      _notifyReadingStateChanged('chapter_read_through_completed');
+      if (outcome.hasChanges) {
+        _showReadThroughFeedback(outcome);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showDetailSnackBar(
+          AppLocalizations.of(context).libraryDetailReadStateUpdateFailed,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isMarkingReadThrough = false;
+        });
+      }
+    }
+  }
+
+  void _showReadThroughFeedback(ChapterReadThroughOutcome outcome) {
+    final l10n = AppLocalizations.of(context);
+    showTransientSnackBar(
+      context,
+      l10n.libraryChapterMarkReadThroughDone,
+      action: SnackBarAction(
+        label: l10n.libraryChapterMarkReadThroughUndo,
+        onPressed: () => _undoMarkReadThrough(outcome),
+      ),
+    );
+  }
+
+  Future<void> _undoMarkReadThrough(ChapterReadThroughOutcome outcome) async {
+    if (_isMarkingReadThrough ||
+        _isResettingWorkReading ||
+        _readingStateMutationEpisodeIds.isNotEmpty) {
+      return;
+    }
+    setState(() {
+      _isMarkingReadThrough = true;
+    });
+    try {
+      await _controller.restoreChaptersRead(
+        episodeIds: outcome.changedEpisodeIds,
+        readAt: outcome.readAt,
+      );
+      if (!mounted) {
+        return;
+      }
+      _notifyReadingStateChanged('chapter_read_through_undone');
+      setState(() {});
+    } catch (_) {
+      if (mounted) {
+        _showDetailSnackBar(
+          AppLocalizations.of(context).libraryDetailReadStateUpdateFailed,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isMarkingReadThrough = false;
+        });
+      }
+    }
+  }
+
+  void _notifyReadingStateChanged(String reason) {
+    widget.shelfRefreshBus?.notify(
+      modules: <LibraryModuleKey>{widget.adapter.moduleKey},
+      reason: reason,
+      source: LibraryMutationSource.readingStateBatch,
+      workId: widget.workId,
+    );
   }
 
   String _chapterSubtitle(LibraryChapterItem chapter) {
@@ -998,6 +1106,19 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                     setState(() {});
                   },
                 ),
+                if (_supportsChapterReadThrough)
+                  ListTile(
+                    key: ValueKey<String>(
+                      'unified-detail-chapter-mark-read-through-action-${chapter.episodeId}',
+                    ),
+                    leading: const Icon(Icons.done_all),
+                    title: Text(l10n.libraryChapterMarkReadThrough),
+                    subtitle: Text(l10n.libraryChapterMarkReadThroughScope),
+                    onTap: () async {
+                      Navigator.of(sheetContext).pop();
+                      await _markReadThroughChapter(chapter);
+                    },
+                  ),
                 if (_workReadingResetAdapter != null)
                   ListTile(
                     key: const Key('unified-detail-work-reset-reading-action'),

@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_state_models.dart';
+
 import '../../domain/models/novel_reader_anchor_format.dart';
 import '../../domain/models/novel_reader_preferences.dart';
 import '../../domain/models/novel_reading_progress.dart';
@@ -175,6 +176,129 @@ class SqfliteNovelReadingStateRepository
   }
 
   @override
+  Future<Set<String>> setChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) async {
+    final ids = episodeIds
+        .map((episodeId) => episodeId.trim())
+        .where((episodeId) => episodeId.isNotEmpty)
+        .toSet();
+    if (ids.isEmpty) {
+      return const <String>{};
+    }
+    final idList = ids.toList(growable: false);
+    final placeholders = List<String>.filled(idList.length, '?').join(', ');
+    final readAtMillis = readAt.millisecondsSinceEpoch;
+    final result = await _mutateValue(canCommit, (txn) async {
+      final rows = await txn.query(
+        AppDatabase.libraryEpisodeStateTable,
+        columns: const <String>['episode_id', 'is_read', 'read_state_version'],
+        where:
+            'content_type = ? AND work_id = ? AND episode_id IN ($placeholders)',
+        whereArgs: <Object>['novel', novelId, ...idList],
+      );
+      final previouslyRead = <String>{
+        for (final row in rows)
+          if (row['is_read'] == 1 && row['read_state_version'] == 1)
+            row['episode_id'] as String,
+      };
+      final changed = <String>{
+        for (final episodeId in idList)
+          if (!previouslyRead.contains(episodeId)) episodeId,
+      };
+      // 先补齐没有状态行的章节，避免只更新已有行而漏掉从未标记过的章节。
+      await txn.rawInsert(
+        '''
+        INSERT OR IGNORE INTO ${AppDatabase.libraryEpisodeStateTable} (
+          content_type,
+          episode_id,
+          work_id,
+          is_read,
+          read_state_version,
+          is_downloaded,
+          is_bookmarked,
+          read_at,
+          downloaded_at
+        )
+        SELECT
+          ?,
+          src.episode_id,
+          src.work_id,
+          1,
+          1,
+          0,
+          0,
+          ?,
+          NULL
+        FROM ${AppDatabase.workEpisodesTable} src
+        WHERE src.work_id = ?
+          AND src.content_type = ?
+          AND src.episode_id IN ($placeholders)
+        ''',
+        <Object?>['novel', readAtMillis, novelId, 'novel', ...idList],
+      );
+      await txn.update(
+        AppDatabase.libraryEpisodeStateTable,
+        <String, Object?>{
+          'is_read': 1,
+          'read_state_version': 1,
+          'read_at': readAtMillis,
+        },
+        where:
+            'content_type = ? AND work_id = ? AND episode_id IN ($placeholders) '
+            'AND is_read = 0',
+        whereArgs: <Object?>['novel', novelId, ...idList],
+      );
+      await txn.update(
+        AppDatabase.libraryEpisodeStateTable,
+        <String, Object?>{'is_read': 1, 'read_state_version': 1},
+        where:
+            'content_type = ? AND work_id = ? AND episode_id IN ($placeholders) '
+            'AND is_read = 1',
+        whereArgs: <Object?>['novel', novelId, ...idList],
+      );
+      return changed;
+    });
+    return result ?? const <String>{};
+  }
+
+  @override
+  Future<void> restoreChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) async {
+    final ids = episodeIds
+        .map((episodeId) => episodeId.trim())
+        .where((episodeId) => episodeId.isNotEmpty)
+        .toSet();
+    if (ids.isEmpty) {
+      return;
+    }
+    final placeholders = List<String>.filled(ids.length, '?').join(', ');
+    await _mutateValue(canCommit, (txn) async {
+      await txn.update(
+        AppDatabase.libraryEpisodeStateTable,
+        <String, Object?>{'is_read': 0, 'read_at': null},
+        where:
+            'content_type = ? AND work_id = ? AND episode_id IN ($placeholders) '
+            'AND is_read = 1 AND read_at = ?',
+        whereArgs: <Object?>[
+          'novel',
+          novelId,
+          ...ids,
+          readAt.millisecondsSinceEpoch,
+        ],
+      );
+      return true;
+    });
+  }
+
+  @override
   Future<bool> resetWorkReadingState({
     required String novelId,
     bool Function()? canCommit,
@@ -201,18 +325,29 @@ class SqfliteNovelReadingStateRepository
     bool Function()? guard,
     Future<void> Function(Transaction) action,
   ) async {
+    final result = await _mutateValue<bool>(guard, (txn) async {
+      await action(txn);
+      return true;
+    });
+    return result ?? false;
+  }
+
+  Future<T?> _mutateValue<T>(
+    bool Function()? guard,
+    Future<T> Function(Transaction) action,
+  ) async {
     final db = await _dbFuture;
     try {
       return await db.transaction((txn) async {
         if (guard?.call() == false) throw const _RetiredMutation();
-        await action(txn);
+        final result = await action(txn);
         // The transaction can wait on I/O while a route/reset retires its owner.
         // Roll back the entire position/recent/completion mutation in that case.
         if (guard?.call() == false) throw const _RetiredMutation();
-        return true;
+        return result;
       });
     } on _RetiredMutation {
-      return false;
+      return null;
     }
   }
 

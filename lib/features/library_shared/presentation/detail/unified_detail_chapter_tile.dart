@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
@@ -16,6 +17,7 @@ class UnifiedDetailChapterTile extends StatelessWidget {
     required this.onLongPress,
     this.onToggleDownload,
     this.onToggleReadState,
+    this.onMarkReadThrough,
     this.readStateMutationLocked = false,
   });
 
@@ -28,6 +30,9 @@ class UnifiedDetailChapterTile extends StatelessWidget {
   final VoidCallback onLongPress;
   final VoidCallback? onToggleDownload;
   final Future<void> Function()? onToggleReadState;
+
+  /// 第二阶段右划：把本章及之前章节标为已读。为空时只保留单章动作。
+  final Future<void> Function()? onMarkReadThrough;
   final bool readStateMutationLocked;
 
   @override
@@ -156,6 +161,7 @@ class UnifiedDetailChapterTile extends StatelessWidget {
     final foregroundColor = chapter.isRead
         ? scheme.onSecondaryContainer
         : scheme.onPrimaryContainer;
+    final markReadThrough = onMarkReadThrough;
 
     return LibraryChapterReadStateSwipe(
       key: ValueKey<String>(
@@ -166,40 +172,77 @@ class UnifiedDetailChapterTile extends StatelessWidget {
       ),
       locked: readStateMutationLocked,
       onTriggered: toggleReadState,
-      background: ColoredBox(
-        color: backgroundColor,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Icon(actionIcon, size: 20, color: foregroundColor),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      actionLabel,
-                      maxLines: 1,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: foregroundColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      onTriggeredThrough: markReadThrough,
+      background: _ChapterSwipeActionBackground(
+        icon: actionIcon,
+        label: actionLabel,
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
       ),
+      backgroundThrough: markReadThrough == null
+          ? null
+          : _ChapterSwipeActionBackground(
+              icon: Icons.done_all,
+              label: l10n.libraryChapterMarkReadThrough,
+              backgroundColor: scheme.tertiaryContainer,
+              foregroundColor: scheme.onTertiaryContainer,
+            ),
       child: tile,
     );
   }
 }
 
+class _ChapterSwipeActionBackground extends StatelessWidget {
+  const _ChapterSwipeActionBackground({
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ColoredBox(
+      color: backgroundColor,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: foregroundColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: foregroundColor,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Shared bounded physical-right swipe for chapter completion actions.
+///
+/// 单章动作位于第一阶段；实现“已读到此”的页面再提供第二阶段回调。手动位移
+/// 只做预览，松手时按当前所在阶段执行一次，退回第一阶段不改变单章动作。
 class LibraryChapterReadStateSwipe extends StatefulWidget {
   const LibraryChapterReadStateSwipe({
     super.key,
@@ -208,12 +251,21 @@ class LibraryChapterReadStateSwipe extends StatefulWidget {
     required this.onTriggered,
     required this.background,
     required this.child,
+    this.onTriggeredThrough,
+    this.backgroundThrough,
   });
 
   final Key foregroundKey;
   final bool locked;
+
+  /// 第一阶段动作：单章标已读或清除阅读状态。
   final Future<void> Function() onTriggered;
+
+  /// 第二阶段动作：把目标章及之前章节标为已读。为空时保留单阶段行为。
+  final Future<void> Function()? onTriggeredThrough;
+
   final Widget background;
+  final Widget? backgroundThrough;
   final Widget child;
 
   @override
@@ -224,13 +276,28 @@ class LibraryChapterReadStateSwipe extends StatefulWidget {
 class _LibraryChapterReadStateSwipeState
     extends State<LibraryChapterReadStateSwipe>
     with SingleTickerProviderStateMixin {
-  static const double _maxDragFraction = 1 / 3;
-  static const double _activationFraction = _maxDragFraction * 0.8;
+  static const double _singleStageMaxFraction = 1 / 3;
+  static const double _singleStageActivationFraction =
+      _singleStageMaxFraction * 0.8;
+  static const double _twoStageMaxFraction = 0.55;
+  static const double _stageOneFraction = 0.27;
+  static const double _stageTwoFraction = 0.45;
 
   late final AnimationController _returnController;
   Animation<double>? _returnAnimation;
   double _dragFraction = 0;
   bool _isExecuting = false;
+  bool _stageOneHapticSent = false;
+  bool _stageTwoHapticSent = false;
+
+  bool get _supportsThroughStage => widget.onTriggeredThrough != null;
+
+  double get _maxDragFraction =>
+      _supportsThroughStage ? _twoStageMaxFraction : _singleStageMaxFraction;
+
+  double get _activationFraction => _supportsThroughStage
+      ? _stageOneFraction
+      : _singleStageActivationFraction;
 
   double get _visibleFraction => _returnAnimation?.value ?? _dragFraction;
 
@@ -261,37 +328,78 @@ class _LibraryChapterReadStateSwipeState
     super.dispose();
   }
 
+  void _startDrag(DragStartDetails details) {
+    _stageOneHapticSent = false;
+    _stageTwoHapticSent = false;
+  }
+
   void _updateDrag(DragUpdateDetails details, double width) {
     if (_interactionLocked || width <= 0) {
       return;
     }
+    final previous = _dragFraction;
+    final next = (previous + details.delta.dx / width)
+        .clamp(0, _maxDragFraction)
+        .toDouble();
+    if (next == previous) {
+      return;
+    }
     setState(() {
-      _dragFraction = (_dragFraction + details.delta.dx / width)
-          .clamp(0, _maxDragFraction)
-          .toDouble();
+      _dragFraction = next;
     });
+    if (!_supportsThroughStage) {
+      return;
+    }
+    if (previous < _stageOneFraction &&
+        next >= _stageOneFraction &&
+        !_stageOneHapticSent) {
+      _stageOneHapticSent = true;
+      HapticFeedback.lightImpact();
+    }
+    if (previous < _stageTwoFraction &&
+        next >= _stageTwoFraction &&
+        !_stageTwoHapticSent) {
+      _stageTwoHapticSent = true;
+      HapticFeedback.mediumImpact();
+    }
   }
 
   void _finishDrag({required bool allowTrigger}) {
     if (_interactionLocked) {
       return;
     }
-    final shouldTrigger = allowTrigger && _dragFraction >= _activationFraction;
+    final fraction = _dragFraction;
+    _startReturnAnimation();
+    if (!allowTrigger) {
+      return;
+    }
+    if (_supportsThroughStage && fraction >= _stageTwoFraction) {
+      _executeAction(widget.onTriggeredThrough!);
+    } else if (fraction >= _activationFraction) {
+      _executeAction(widget.onTriggered);
+    }
+  }
+
+  void _startReturnAnimation() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      setState(() {
+        _dragFraction = 0;
+        _returnAnimation = null;
+      });
+      return;
+    }
     _returnAnimation = Tween<double>(begin: _dragFraction, end: 0).animate(
       CurvedAnimation(parent: _returnController, curve: Curves.easeOutCubic),
     );
     _returnController.forward(from: 0);
-    if (shouldTrigger) {
-      _executeAction();
-    }
   }
 
-  Future<void> _executeAction() async {
+  Future<void> _executeAction(Future<void> Function() action) async {
     setState(() {
       _isExecuting = true;
     });
     try {
-      await widget.onTriggered();
+      await action();
     } finally {
       if (mounted) {
         setState(() {
@@ -309,9 +417,17 @@ class _LibraryChapterReadStateSwipeState
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final revealWidth = width.isFinite ? width * _visibleFraction : 0.0;
+            final revealWidth = width.isFinite
+                ? width * _visibleFraction
+                : 0.0;
+            final throughStage =
+                _supportsThroughStage && _visibleFraction >= _stageTwoFraction;
+            final background = throughStage
+                ? (widget.backgroundThrough ?? widget.background)
+                : widget.background;
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: _startDrag,
               onHorizontalDragUpdate: (details) => _updateDrag(details, width),
               onHorizontalDragEnd: (_) => _finishDrag(allowTrigger: true),
               onHorizontalDragCancel: () => _finishDrag(allowTrigger: false),
@@ -332,7 +448,7 @@ class _LibraryChapterReadStateSwipeState
                             maxWidth: width * _maxDragFraction,
                             child: SizedBox(
                               width: width * _maxDragFraction,
-                              child: widget.background,
+                              child: background,
                             ),
                           ),
                         ),

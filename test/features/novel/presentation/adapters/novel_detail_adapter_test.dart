@@ -30,6 +30,7 @@ void main() {
       );
 
       expect(adapter, isA<DetailChapterReadStateAdapter>());
+      expect(adapter, isA<DetailChapterReadThroughAdapter>());
       expect(adapter, isA<DetailWorkReadingResetAdapter>());
     },
   );
@@ -88,38 +89,35 @@ void main() {
     },
   );
 
-  test(
-    'continue advances a completed recent chapter and retains the final chapter',
-    () async {
-      for (final sample in [
-        ('novel:1:1', 'novel:1:2'),
-        ('novel:1:2', 'novel:1:2'),
-      ]) {
-        final adapter = NovelDetailAdapter(
-          _FakeNovelRepository(),
-          stateRepository: _RecordingLibraryStateRepository(),
-          readingStateRepository: _FakeNovelReadingStateRepository(
-            recentEpisodeId: sample.$1,
-            episodeStates: {
-              sample.$1: LibraryEpisodeState(
-                moduleKey: LibraryModuleKey.novel,
-                episodeId: sample.$1,
-                workId: 'novel:1',
-                isRead: true,
-              ),
-            },
-          ),
-        );
-        expect(
-          (await adapter.getReaderRouteTarget(
-            workId: 'novel:1',
-            preferContinue: true,
-          ))?.episodeId,
-          sample.$2,
-        );
-      }
-    },
-  );
+  test('continue advances a completed recent chapter and retains the final chapter', () async {
+    for (final sample in [
+      ('novel:1:1', 'novel:1:2'),
+      ('novel:1:2', 'novel:1:2'),
+    ]) {
+      final adapter = NovelDetailAdapter(
+        _FakeNovelRepository(),
+        stateRepository: _RecordingLibraryStateRepository(),
+        readingStateRepository: _FakeNovelReadingStateRepository(
+          recentEpisodeId: sample.$1,
+          episodeStates: {
+            sample.$1: LibraryEpisodeState(
+              moduleKey: LibraryModuleKey.novel,
+              episodeId: sample.$1,
+              workId: 'novel:1',
+              isRead: true,
+            ),
+          },
+        ),
+      );
+      expect(
+        (await adapter.getReaderRouteTarget(
+          workId: 'novel:1',
+          preferContinue: true,
+        ))?.episodeId,
+        sample.$2,
+      );
+    }
+  });
 
   test(
     'read mutations invalidate pending producers and delegate atomic reset',
@@ -715,6 +713,35 @@ void main() {
       expect(repository.coverRemoved, isTrue);
     },
   );
+  test(
+    'read through marks the novel catalogue prefix beside the target',
+    () async {
+      final reading = _FakeNovelReadingStateRepository();
+      final adapter = NovelDetailAdapter(
+        _FakeNovelRepository(),
+        stateRepository: _RecordingLibraryStateRepository(),
+        readingStateRepository: reading,
+      );
+
+      final outcome = await adapter.markChaptersReadThrough(
+        workId: 'novel:1',
+        targetEpisodeId: 'novel:1:2',
+      );
+
+      expect(outcome?.changedEpisodeIds, <String>['novel:1:1', 'novel:1:2']);
+      expect(reading.rangeReadCalls.single.$2, <String>{
+        'novel:1:1',
+        'novel:1:2',
+      });
+
+      final missing = await adapter.markChaptersReadThrough(
+        workId: 'novel:1',
+        targetEpisodeId: 'novel:1:removed',
+      );
+      expect(missing, isNull);
+      expect(reading.rangeReadCalls, hasLength(1));
+    },
+  );
 }
 
 class _FakeNovelSourceStateRepository implements NovelSourceStateRepository {
@@ -1216,6 +1243,8 @@ class _FakeNovelReadingStateRepository
   bool appliesMutation = true;
   Future<void>? beforeMutation;
   int committedMutations = 0;
+  final rangeReadCalls = <(String, Set<String>, DateTime)>[];
+  final restoreReadCalls = <(String, Set<String>, DateTime)>[];
   final readMutations = <(String, String, bool)>[];
   final resetEpisodeIds = <String>[];
   final resetWorkIds = <String>[];
@@ -1245,6 +1274,30 @@ class _FakeNovelReadingStateRepository
     if (canCommit?.call() == false) return false;
     if (appliesMutation) committedMutations++;
     return appliesMutation;
+  }
+
+  @override
+  Future<Set<String>> setChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) async {
+    rangeReadCalls.add((novelId, Set<String>.from(episodeIds), readAt));
+    await beforeMutation;
+    if (canCommit?.call() == false) return const <String>{};
+    if (appliesMutation) committedMutations++;
+    return episodeIds;
+  }
+
+  @override
+  Future<void> restoreChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) async {
+    restoreReadCalls.add((novelId, Set<String>.from(episodeIds), readAt));
   }
 
   @override

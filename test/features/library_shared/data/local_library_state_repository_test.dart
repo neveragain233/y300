@@ -277,6 +277,98 @@ void main() {
       },
     );
 
+    test(
+      'setEpisodesReadState fills missing rows, reports changes, and restores only its own marks',
+      () async {
+        await _insertComic(db, comicId: 'comic:range', title: 'Range');
+        for (var index = 0; index < 3; index++) {
+          await _insertComicEpisode(
+            db,
+            episodeId: 'comic:range:$index',
+            comicId: 'comic:range',
+            orderIndex: index,
+          );
+        }
+        final previousReadAt = DateTime(2026, 4, 1);
+        await repository.upsertEpisodeState(
+          moduleKey: LibraryModuleKey.comic,
+          episodeId: 'comic:range:1',
+          workId: 'comic:range',
+          isRead: true,
+          isBookmarked: true,
+          readAt: previousReadAt,
+        );
+
+        final readAt = DateTime(2026, 5, 2);
+        final changed = await repository.setEpisodesReadState(
+          moduleKey: LibraryModuleKey.comic,
+          workId: 'comic:range',
+          episodeIds: <String>{
+            'comic:range:0',
+            'comic:range:1',
+            'comic:range:2',
+          },
+          isRead: true,
+          readAt: readAt,
+        );
+
+        expect(
+          changed,
+          unorderedEquals(<String>['comic:range:0', 'comic:range:2']),
+        );
+        expect(
+          await repository.countReadEpisodes(
+            moduleKey: LibraryModuleKey.comic,
+            workId: 'comic:range',
+          ),
+          3,
+        );
+        final untouched = await repository.getEpisodeState(
+          moduleKey: LibraryModuleKey.comic,
+          episodeId: 'comic:range:1',
+        );
+        expect(untouched?.readAt, previousReadAt);
+        expect(untouched?.isBookmarked, isTrue);
+        expect(
+          (await repository.getEpisodeState(
+            moduleKey: LibraryModuleKey.comic,
+            episodeId: 'comic:range:2',
+          ))?.readAt,
+          readAt,
+        );
+
+        await repository.restoreEpisodesReadState(
+          moduleKey: LibraryModuleKey.comic,
+          workId: 'comic:range',
+          episodeIds: <String>{
+            'comic:range:0',
+            'comic:range:1',
+            'comic:range:2',
+          },
+          readAt: readAt,
+        );
+
+        for (final (index, expectedRead) in <(int, bool)>[
+          (0, false),
+          (1, true),
+          (2, false),
+        ]) {
+          final state = await repository.getEpisodeState(
+            moduleKey: LibraryModuleKey.comic,
+            episodeId: 'comic:range:$index',
+          );
+          expect(state?.isRead, expectedRead);
+        }
+        expect(
+          (await repository.getEpisodeState(
+            moduleKey: LibraryModuleKey.comic,
+            episodeId: 'comic:range:1',
+          ))?.readAt,
+          previousReadAt,
+        );
+      },
+    );
+
     test('clear all read also resets orphaned episode state rows', () async {
       await repository.upsertEpisodeState(
         moduleKey: LibraryModuleKey.comic,

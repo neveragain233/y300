@@ -1643,6 +1643,155 @@ void main() {
     expect(adapter.lastResetEpisodeId, isNull);
   });
 
+  testWidgets(
+    'UnifiedDetailPage marks chapters through target by second-stage swipe and undoes it',
+    (tester) async {
+      final adapter = _ReadThroughDetailAdapter();
+      await tester.pumpWidget(
+        _scopedApp(
+          home: UnifiedDetailPage(
+            adapter: adapter,
+            workId: 'work-1',
+            onOpenReader: (context, target) async {},
+            onOpenThread: (context, target) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final chapter = find.byKey(
+        const ValueKey<String>('unified-detail-chapter-e3'),
+      );
+      await tester.scrollUntilVisible(
+        chapter,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.drag(chapter, const Offset(500, 0));
+      await tester.pumpAndSettle();
+
+      expect(adapter.markedThroughTargets, <String>['e3']);
+      expect(adapter.readEpisodeIds, containsAll(<String>['e1', 'e2', 'e3']));
+      expect(find.text('已将本章及之前的章节标为已读'), findsOneWidget);
+      expect(find.text('撤销'), findsOneWidget);
+
+      await tester.tap(find.text('撤销'));
+      await tester.pumpAndSettle();
+
+      expect(adapter.restoredEpisodeIds, <String>['e1', 'e2', 'e3']);
+      expect(adapter.readEpisodeIds, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'UnifiedDetailPage keeps first-stage distance as the single chapter action',
+    (tester) async {
+      final adapter = _ReadThroughDetailAdapter();
+      await tester.pumpWidget(
+        _scopedApp(
+          home: UnifiedDetailPage(
+            adapter: adapter,
+            workId: 'work-1',
+            onOpenReader: (context, target) async {},
+            onOpenThread: (context, target) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final chapter = find.byKey(
+        const ValueKey<String>('unified-detail-chapter-e3'),
+      );
+      await tester.scrollUntilVisible(
+        chapter,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.drag(chapter, const Offset(240, 0));
+      await tester.pumpAndSettle();
+
+      expect(adapter.markedThroughTargets, isEmpty);
+      expect(adapter.markReadCallCount, 1);
+      expect(adapter.readEpisodeIds, <String>{'e3'});
+    },
+  );
+
+  testWidgets(
+    'UnifiedDetailPage offers mark through in the chapter long-press menu',
+    (tester) async {
+      final adapter = _ReadThroughDetailAdapter();
+      await tester.pumpWidget(
+        _scopedApp(
+          home: UnifiedDetailPage(
+            adapter: adapter,
+            workId: 'work-1',
+            onOpenReader: (context, target) async {},
+            onOpenThread: (context, target) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final chapter = find.byKey(
+        const ValueKey<String>('unified-detail-chapter-e2'),
+      );
+      await tester.scrollUntilVisible(
+        chapter,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.longPress(chapter);
+      await tester.pumpAndSettle();
+      expect(find.text('标记已读到此'), findsOneWidget);
+      expect(find.text('本章及阅读顺序中更早的章节'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>(
+            'unified-detail-chapter-mark-read-through-action-e2',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(adapter.markedThroughTargets, <String>['e2']);
+      expect(adapter.readEpisodeIds, unorderedEquals(<String>['e1', 'e2']));
+      expect(adapter.readEpisodeIds, isNot(contains('e3')));
+    },
+  );
+
+  testWidgets(
+    'UnifiedDetailPage reports a removed target for mark through',
+    (tester) async {
+      final adapter = _ReadThroughDetailAdapter()..removeTargetAtCommit = true;
+      await tester.pumpWidget(
+        _scopedApp(
+          home: UnifiedDetailPage(
+            adapter: adapter,
+            workId: 'work-1',
+            onOpenReader: (context, target) async {},
+            onOpenThread: (context, target) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final chapter = find.byKey(
+        const ValueKey<String>('unified-detail-chapter-e3'),
+      );
+      await tester.scrollUntilVisible(
+        chapter,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.drag(chapter, const Offset(500, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('阅读状态更新失败'), findsOneWidget);
+      expect(find.text('已将本章及之前的章节标为已读'), findsNothing);
+    },
+  );
+
   testWidgets('UnifiedDetailPage reports chapter read mutation failure', (
     tester,
   ) async {
@@ -2592,6 +2741,100 @@ class _FakeDetailAdapter
   @override
   Future<List<LibraryCategory>> loadCategories() async {
     return const [];
+  }
+}
+
+class _ReadThroughDetailAdapter extends _FakeDetailAdapter
+    implements DetailChapterReadThroughAdapter {
+  _ReadThroughDetailAdapter() : super(module: LibraryModuleKey.comic);
+
+  final Set<String> readEpisodeIds = <String>{};
+  final List<String> markedThroughTargets = <String>[];
+  final List<String> restoredEpisodeIds = <String>[];
+  bool removeTargetAtCommit = false;
+
+  @override
+  Future<List<LibraryChapterItem>> loadChapters({
+    required String workId,
+    required LibraryFilterSet filters,
+    required LibraryChapterSortOption sortOption,
+  }) async {
+    loadChaptersCallCount++;
+    return <LibraryChapterItem>[
+      for (final (index, episodeId) in <(int, String)>[
+        (0, 'e1'),
+        (1, 'e2'),
+        (2, 'e3'),
+      ])
+        LibraryChapterItem(
+          episodeId: episodeId,
+          workId: 'work-1',
+          title: '第${index + 1}章',
+          orderIndex: index,
+          sourceTid: '${100 + index}',
+          sourcePid: '${5001 + index}',
+          isRead: readEpisodeIds.contains(episodeId),
+        ),
+    ];
+  }
+
+  @override
+  Future<void> markChapterRead({
+    required String workId,
+    required String episodeId,
+    required bool isRead,
+  }) async {
+    markReadCallCount++;
+    if (isRead) {
+      readEpisodeIds.add(episodeId);
+    } else {
+      readEpisodeIds.remove(episodeId);
+    }
+  }
+
+  @override
+  Future<void> resetChapterReadingState({
+    required String workId,
+    required String episodeId,
+  }) async {
+    lastResetEpisodeId = episodeId;
+    readEpisodeIds.remove(episodeId);
+  }
+
+  @override
+  Future<ChapterReadThroughOutcome?> markChaptersReadThrough({
+    required String workId,
+    required String targetEpisodeId,
+  }) async {
+    markedThroughTargets.add(targetEpisodeId);
+    if (removeTargetAtCommit) {
+      return null;
+    }
+    final ordered = <String>['e1', 'e2', 'e3'];
+    final targetIndex = ordered.indexOf(targetEpisodeId);
+    if (targetIndex < 0) {
+      return null;
+    }
+    final prefix = ordered.take(targetIndex + 1).toList(growable: false);
+    final changed = <String>[
+      for (final episodeId in prefix)
+        if (!readEpisodeIds.contains(episodeId)) episodeId,
+    ];
+    readEpisodeIds.addAll(prefix);
+    return ChapterReadThroughOutcome(
+      changedEpisodeIds: changed,
+      readAt: DateTime(2026, 7, 1),
+    );
+  }
+
+  @override
+  Future<void> restoreChaptersRead({
+    required String workId,
+    required List<String> episodeIds,
+    required DateTime readAt,
+  }) async {
+    restoredEpisodeIds.addAll(episodeIds);
+    readEpisodeIds.removeAll(episodeIds);
   }
 }
 

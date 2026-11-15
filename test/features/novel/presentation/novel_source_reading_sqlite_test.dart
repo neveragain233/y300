@@ -437,4 +437,28 @@ final class _GatedRepository implements NovelReadingStateRepository {
     isRead: isRead,
     canCommit: canCommit,
   );
+  @override
+  Future<Set<String>> setChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) => delegate.setChaptersRead(
+    novelId: novelId,
+    episodeIds: episodeIds,
+    readAt: readAt,
+    canCommit: canCommit,
+  );
+  @override
+  Future<void> restoreChaptersRead({
+    required String novelId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+    bool Function()? canCommit,
+  }) => delegate.restoreChaptersRead(
+    novelId: novelId,
+    episodeIds: episodeIds,
+    readAt: readAt,
+    canCommit: canCommit,
+  );
 }

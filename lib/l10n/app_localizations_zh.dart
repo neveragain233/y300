@@ -1630,6 +1630,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryChapterMarkRead => '标记已读';
 
   @override
+  String get libraryChapterMarkReadThrough => '标记已读到此';
+
+  @override
+  String get libraryChapterMarkReadThroughScope => '本章及阅读顺序中更早的章节';
+
+  @override
+  String get libraryChapterMarkReadThroughDone => '已将本章及之前的章节标为已读';
+
+  @override
+  String get libraryChapterMarkReadThroughUndo => '撤销';
+
+  @override
   String libraryChapterCurrentPage(int page) {
     return '第 $page 页';
   }
@@ -7642,6 +7654,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get libraryChapterMarkRead => '標記為已讀';
+
+  @override
+  String get libraryChapterMarkReadThrough => '標記為已讀到此';
+
+  @override
+  String get libraryChapterMarkReadThroughScope => '本章及閱讀順序中更早的章節';
+
+  @override
+  String get libraryChapterMarkReadThroughDone => '已將本章及之前的章節標記為已讀';
+
+  @override
+  String get libraryChapterMarkReadThroughUndo => '復原';
 
   @override
   String libraryChapterCurrentPage(int page) {

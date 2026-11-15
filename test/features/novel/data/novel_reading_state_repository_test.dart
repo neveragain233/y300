@@ -209,6 +209,89 @@ void main() {
   );
 
   test(
+    'range completion fills missing chapters and undo keeps later manual marks',
+    () async {
+      await db.insert(AppDatabase.worksTable, {
+        'work_id': 'novel',
+        'content_type': 'novel',
+        'source_tid': '1',
+        'source_fid': '2',
+        'title': 'novel',
+        'updated_at': 123,
+      });
+      for (final (index, episodeId) in <(int, String)>[
+        (0, 'a'),
+        (1, 'b'),
+        (2, 'c'),
+      ]) {
+        await db.insert(AppDatabase.workEpisodesTable, {
+          'episode_id': episodeId,
+          'work_id': 'novel',
+          'content_type': 'novel',
+          'source_tid': '1',
+          'order_index': index,
+        });
+      }
+      await repository.commitProgress(progress: position('b', 4));
+      await repository.toggleEpisodeBookmark(
+        novelId: 'novel',
+        episodeId: 'b',
+        isBookmarked: true,
+      );
+      await db.insert(AppDatabase.libraryEpisodeStateTable, {
+        'content_type': 'novel',
+        'episode_id': 'c',
+        'work_id': 'novel',
+        'is_downloaded': 1,
+        'downloaded_at': 456,
+      });
+
+      final readAt = DateTime(2026, 6, 1);
+      final changed = await repository.setChaptersRead(
+        novelId: 'novel',
+        episodeIds: <String>{'a', 'b', 'c'},
+        readAt: readAt,
+      );
+
+      expect(changed, unorderedEquals(<String>['a', 'b', 'c']));
+      var state = await repository.loadWorkState(novelId: 'novel');
+      for (final episodeId in <String>['a', 'b', 'c']) {
+        expect(state.episodeStates[episodeId]?.isRead, isTrue);
+      }
+      expect(state.progressByEpisode['b']?.scrollOffset, 400);
+      expect(state.recentEpisodeId, 'b');
+      expect(state.episodeStates['b']?.isBookmarked, isTrue);
+      expect(state.episodeStates['c']?.isDownloaded, isTrue);
+      expect(
+        (await repository.getChapterProgress(
+          novelId: 'novel',
+          episodeId: 'b',
+        ))?.scrollOffset,
+        400,
+      );
+
+      // 之后的手动标记使用新的标记时间，撤销旧范围操作时不能被覆盖。
+      await repository.setChapterRead(
+        novelId: 'novel',
+        episodeId: 'a',
+        isRead: true,
+      );
+      await repository.restoreChaptersRead(
+        novelId: 'novel',
+        episodeIds: <String>{'a', 'b', 'c'},
+        readAt: readAt,
+      );
+
+      state = await repository.loadWorkState(novelId: 'novel');
+      expect(state.episodeStates['a']?.isRead, isTrue);
+      expect(state.episodeStates['b']?.isRead, isFalse);
+      expect(state.episodeStates['c']?.isRead, isFalse);
+      expect(state.progressByEpisode['b']?.scrollOffset, 400);
+      expect(state.recentEpisodeId, 'b');
+    },
+  );
+
+  test(
     'work reset clears positions and completion but preserves owned data',
     () async {
       await repository.commitProgress(

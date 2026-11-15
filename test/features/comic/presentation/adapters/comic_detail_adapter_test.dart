@@ -267,38 +267,33 @@ void main() {
     },
   );
 
-  test(
-    'refreshWork enqueues cleaned display title when no custom search title is set',
-    () async {
-      final repository = _FakeComicRepository(
-        title: '[Scan] Noisy Title Vol.2',
-      );
-      final refreshService = _FakeComicEpisodeRefreshService(
-        catalogOutcome: const ComicEpisodeRefreshOutcome(
-          source: ComicEpisodeRefreshSource.empty,
-          links: <ComicEpisodeLink>[],
-        ),
-      );
-      final queue = _RecordingSearchQueue();
-      final adapter = ComicDetailAdapter(
-        repository,
-        refreshService: refreshService,
-        searchQueue: queue,
-        refreshOutcomeApplier: _RecordingRefreshOutcomeApplier(),
-        featureFlags: ComicReaderFeatureFlags.defaults.copyWith(
-          readerCustomMetadataEnabled: false,
-        ),
-        stateRepository: _FakeLibraryStateRepository(),
-      );
+  test('refreshWork enqueues cleaned display title when no custom search title is set', () async {
+    final repository = _FakeComicRepository(title: '[Scan] Noisy Title Vol.2');
+    final refreshService = _FakeComicEpisodeRefreshService(
+      catalogOutcome: const ComicEpisodeRefreshOutcome(
+        source: ComicEpisodeRefreshSource.empty,
+        links: <ComicEpisodeLink>[],
+      ),
+    );
+    final queue = _RecordingSearchQueue();
+    final adapter = ComicDetailAdapter(
+      repository,
+      refreshService: refreshService,
+      searchQueue: queue,
+      refreshOutcomeApplier: _RecordingRefreshOutcomeApplier(),
+      featureFlags: ComicReaderFeatureFlags.defaults.copyWith(
+        readerCustomMetadataEnabled: false,
+      ),
+      stateRepository: _FakeLibraryStateRepository(),
+    );
 
-      final result = await adapter.refreshWork(workId: 'comic:1');
+    final result = await adapter.refreshWork(workId: 'comic:1');
 
-      expect(result.status, DetailRefreshStatus.queued);
-      // Custom search title is suppressed, so the queue title is the analyzer's
-      // clean book name rather than the raw "[Scan] Noisy Title Vol.2" thread.
-      expect(queue.enqueuedTitles, <String>['Noisy Title']);
-    },
-  );
+    expect(result.status, DetailRefreshStatus.queued);
+    // Custom search title is suppressed, so the queue title is the analyzer's
+    // clean book name rather than the raw "[Scan] Noisy Title Vol.2" thread.
+    expect(queue.enqueuedTitles, <String>['Noisy Title']);
+  });
 
   test('custom metadata feature flag can fall back to source fields', () async {
     final repository = _FakeComicRepositoryWithCoverWriter(
@@ -489,6 +484,55 @@ void main() {
       expect(repository.clearedProgress, const <String>['comic:1:120']);
     },
   );
+
+  test(
+    'markChaptersReadThrough follows comic tid order and includes the target',
+    () async {
+      final stateRepository = _RecordingRangeStateRepository();
+      final adapter = ComicDetailAdapter(
+        _FakeComicRepository(),
+        stateRepository: stateRepository,
+      );
+
+      final outcome = await adapter.markChaptersReadThrough(
+        workId: 'comic:1',
+        targetEpisodeId: 'comic:1:120',
+      );
+
+      expect(stateRepository.lastEpisodeIds, <String>{
+        'comic:1:90',
+        'comic:1:120',
+      });
+      expect(stateRepository.lastWorkId, 'comic:1');
+      expect(outcome?.changedEpisodeIds, <String>['comic:1:90', 'comic:1:120']);
+
+      await adapter.restoreChaptersRead(
+        workId: 'comic:1',
+        episodeIds: outcome!.changedEpisodeIds,
+        readAt: outcome.readAt,
+      );
+      expect(stateRepository.restoreCalls.single, <String>{
+        'comic:1:90',
+        'comic:1:120',
+      });
+    },
+  );
+
+  test('markChaptersReadThrough returns null for a removed target', () async {
+    final stateRepository = _RecordingRangeStateRepository();
+    final adapter = ComicDetailAdapter(
+      _FakeComicRepository(),
+      stateRepository: stateRepository,
+    );
+
+    final outcome = await adapter.markChaptersReadThrough(
+      workId: 'comic:1',
+      targetEpisodeId: 'comic:1:removed',
+    );
+
+    expect(outcome, isNull);
+    expect(stateRepository.lastEpisodeIds, isEmpty);
+  });
 
   test(
     'resetWorkReadingState delegates to the comic reset capability',
@@ -1502,6 +1546,38 @@ class _RecordingChapterResetStateRepository
   }
 }
 
+class _RecordingRangeStateRepository extends _FakeLibraryStateRepository
+    implements LibraryEpisodeRangeReadStateRepository {
+  String? lastWorkId;
+  Set<String> lastEpisodeIds = <String>{};
+  DateTime? lastReadAt;
+  final List<Set<String>> restoreCalls = <Set<String>>[];
+
+  @override
+  Future<List<String>> setEpisodesReadState({
+    required LibraryModuleKey moduleKey,
+    required String workId,
+    required Set<String> episodeIds,
+    required bool isRead,
+    DateTime? readAt,
+  }) async {
+    lastWorkId = workId;
+    lastEpisodeIds = Set<String>.from(episodeIds);
+    lastReadAt = readAt;
+    return episodeIds.toList(growable: false);
+  }
+
+  @override
+  Future<void> restoreEpisodesReadState({
+    required LibraryModuleKey moduleKey,
+    required String workId,
+    required Set<String> episodeIds,
+    required DateTime readAt,
+  }) async {
+    restoreCalls.add(Set<String>.from(episodeIds));
+  }
+}
+
 class _RecordingBulkDownloadUseCase implements BulkDownloadUseCase {
   final List<Set<String>> requestedComicIds = <Set<String>>[];
 
@@ -1667,7 +1743,6 @@ final class _UnusedComicThreadDiscoveryRepository
     throw UnimplementedError();
   }
 }
-
 
 ThreadDetailData _threadDetailWithTags(List<ThreadPostTagLink> tags) {
   return ThreadDetailData(

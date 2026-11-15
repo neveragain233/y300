@@ -158,6 +158,39 @@ class UnifiedDetailController {
     await _loadChaptersOnly();
   }
 
+  Future<ChapterReadThroughOutcome?> markReadThroughChapter({
+    required String targetEpisodeId,
+  }) async {
+    final readThroughAdapter = _readThroughAdapter;
+    if (readThroughAdapter == null) {
+      throw UnsupportedError('chapterReadThrough');
+    }
+    final outcome = await readThroughAdapter.markChaptersReadThrough(
+      workId: _workId,
+      targetEpisodeId: targetEpisodeId,
+    );
+    await _loadChaptersOnly();
+    return outcome;
+  }
+
+  bool get supportsChapterReadThrough => _readThroughAdapter != null;
+
+  Future<void> restoreChaptersRead({
+    required List<String> episodeIds,
+    required DateTime readAt,
+  }) async {
+    final readThroughAdapter = _readThroughAdapter;
+    if (readThroughAdapter == null) {
+      throw UnsupportedError('chapterReadThrough');
+    }
+    await readThroughAdapter.restoreChaptersRead(
+      workId: _workId,
+      episodeIds: episodeIds,
+      readAt: readAt,
+    );
+    await _loadChaptersOnly();
+  }
+
   Future<void> markChapterBookmarked({
     required String episodeId,
     required bool isBookmarked,
@@ -218,6 +251,13 @@ class UnifiedDetailController {
     final adapter = _adapter;
     return adapter is DetailChapterReadStateAdapter
         ? adapter as DetailChapterReadStateAdapter
+        : null;
+  }
+
+  DetailChapterReadThroughAdapter? get _readThroughAdapter {
+    final adapter = _adapter;
+    return adapter is DetailChapterReadThroughAdapter
+        ? adapter as DetailChapterReadThroughAdapter
         : null;
   }
 
