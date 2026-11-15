@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head><title>FixtureUser 的好友 - 示例论坛 - Powered by Discuz!</title></head>
+<body>
+<div id="pt" class="bm cl">
+  <div class="z">
+    <a href="home.php?mod=space&amp;do=friend">好友</a> <em>›</em> 好友列表
+  </div>
+</div>
+<div class="wp">
+  <ul class="tb cl">
+    <li><a href="home.php?mod=space&amp;do=friend">全部好友列表</a></li>
+    <li class="a"><a href="home.php?mod=space&amp;do=friend&amp;view=blacklist">我的黑名单</a></li>
+  </ul>
+</div>
+<h2 class="mtw xs2">添加黑名单用户</h2>
+<div class="bm bmn mtm cl">
+  <form method="post" autocomplete="off" name="blackform" action="home.php?mod=spacecp&amp;ac=friend&amp;op=blacklist&amp;start=">
+    <table cellpadding="0" cellspacing="0" class="tfm">
+      <tbody><tr>
+        <th>用户名</th>
+        <td>
+          <input type="text" name="username" value="FixtureTarget" size="15" class="px vm">
+          <button type="submit" name="blacklistsubmit_btn" id="moodsubmit_btn" value="true" class="pn vm"><em>添加</em></button>
+        </td>
+      </tr></tbody>
+    </table>
+    <input type="hidden" name="blacklistsubmit" value="true">
+    <input type="hidden" name="formhash" value="fixture-formhash">
+  </form>
+</div>
+<div id="friend_ul">
+  <ul class="buddy cl">
+    <li id="friend_4242_li">
+      <div class="avt">
+        <a href="https://forum.example.test/space-uid-4242.html"><img src="https://forum.example.test/avatar/4242.jpg" class="user_avatar"></a>
+      </div>
+      <h4>
+        <a href="https://forum.example.test/space-uid-4242.html">FixtureUser</a>
+      </h4>
+    </li>
+  </ul>
+</div>
+</body>
+</html>

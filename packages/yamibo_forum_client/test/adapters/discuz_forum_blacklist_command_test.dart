@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:html/parser.dart' as html;
 import 'package:test/test.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_adapters.dart';
@@ -63,6 +65,61 @@ void main() {
     expect(network.requests.last.method, ForumRequestMethod.get);
     expect(network.requests.last.uri.queryParameters['view'], 'blacklist');
     expect(formhash.calls, 1);
+  });
+
+  test('submitted request mirrors the observed desktop blacklist form', () async {
+    final document = html.parse(
+      File('test/fixtures/blacklist/desktop.html').readAsStringSync(),
+    );
+    final form = document.querySelector('form[name="blackform"]')!;
+    final action = Uri.parse(
+      'https://forum.example.test/',
+    ).resolve(form.attributes['action']!);
+    expect(action.path, '/home.php');
+    expect(action.queryParameters, {
+      'mod': 'spacecp',
+      'ac': 'friend',
+      'op': 'blacklist',
+      'start': '',
+    });
+    final names = <String>{
+      ...form
+          .querySelectorAll('input')
+          .map((input) => input.attributes['name'])
+          .whereType<String>(),
+      ...form
+          .querySelectorAll('button')
+          .map((button) => button.attributes['name'])
+          .whereType<String>(),
+    };
+    expect(
+      names,
+      containsAll(<String>[
+        'username',
+        'blacklistsubmit',
+        'blacklistsubmit_btn',
+        'formhash',
+      ]),
+    );
+
+    network.queue = [
+      _response(
+        301,
+        headers: {
+          'Location': [
+            'https://forum.example.test/home.php?mod=space&uid=701749&do=friend&view=blacklist&quickforward=1&start=',
+          ],
+        },
+      ),
+      _response(200, body: _blacklistPage()),
+    ];
+    expect(
+      await command.execute(_submission()),
+      isA<DataCommandApplied<ForumBlacklistAddReceipt>>(),
+    );
+    final post = network.requests.first;
+    expect(post.uri.queryParameters, action.queryParameters);
+    expect((post.body! as Map<String, String>).keys.toSet(), names);
   });
 
   test('200 success alert is confirmed by the complete blacklist', () async {
