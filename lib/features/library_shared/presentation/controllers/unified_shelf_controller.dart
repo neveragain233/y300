@@ -309,26 +309,39 @@ class UnifiedShelfController {
     await _reload();
   }
 
-  /// 在混合书架当前来源分类下新建分类；单模块仍走 [createCategory]。
-  Future<String?> createCategoryInCurrentSource(String name) async {
+  /// 在混合书架的指定来源下新建分类；单模块仍走 [createCategory]。
+  Future<String?> createCategoryForSource(
+    LibraryModuleKey source,
+    String name,
+  ) async {
     final trimmed = name.trim();
-    final category = selectedCategory;
     final sourceAdapter = _adapter is ShelfCategorySourceAdapter
         ? _adapter as ShelfCategorySourceAdapter
         : null;
     if (trimmed.isEmpty) {
       return null;
     }
-    if (sourceAdapter != null && category?.source != null) {
-      final categoryId = await sourceAdapter.createCategoryInSource(
-        sourceCategoryId: category!.categoryId,
-        name: trimmed,
-      );
-      await _reload();
-      return categoryId;
+    if (sourceAdapter == null) {
+      await createCategory(trimmed);
+      return null;
     }
-    await createCategory(trimmed);
-    return null;
+    final categoryId = await sourceAdapter.createCategoryForSource(
+      source: source,
+      name: trimmed,
+    );
+    await _reload();
+    return categoryId;
+  }
+
+  /// 在当前来源分类下新建分类（页面来源胶囊已有明确来源时）。
+  Future<String?> createCategoryInCurrentSource(String name) async {
+    final category = selectedCategory;
+    final source = category?.source;
+    if (source == null || source == LibraryModuleKey.bookshelf) {
+      await createCategory(name.trim());
+      return null;
+    }
+    return createCategoryForSource(source, name);
   }
 
   Future<void> renameCategory({

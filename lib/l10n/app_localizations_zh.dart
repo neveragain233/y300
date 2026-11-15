@@ -905,6 +905,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get librarySelectionCategoryNameHint => '请输入分类名称';
 
   @override
+  String get librarySelectionKeepCurrentCategory => '保持不变';
+
+  @override
+  String get librarySelectionMixedSourceHint =>
+      '所选作品包含漫画和小说，请分别为每个来源选择目标分类；未选择来源的作品保持原分类。';
+
+  @override
+  String librarySelectionSourceSection(String source, int count) {
+    return '$source作品（$count 项）';
+  }
+
+  @override
   String librarySelectionCategoryAssigned(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6968,6 +6980,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get librarySelectionCategoryNameHint => '請輸入分類名稱';
+
+  @override
+  String get librarySelectionKeepCurrentCategory => '保持不變';
+
+  @override
+  String get librarySelectionMixedSourceHint =>
+      '所選作品包含漫畫和小說，請分別為每個來源選擇目標分類；未選擇來源的作品保持原分類。';
+
+  @override
+  String librarySelectionSourceSection(String source, int count) {
+    return '$source作品（$count 項）';
+  }
 
   @override
   String librarySelectionCategoryAssigned(int count) {

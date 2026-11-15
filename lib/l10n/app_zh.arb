@@ -454,6 +454,11 @@
   "librarySelectionSelectCategory": "选择分类",
   "librarySelectionCreateCategory": "新建分类",
   "librarySelectionCategoryNameHint": "请输入分类名称",
+  "librarySelectionKeepCurrentCategory": "保持不变",
+  "librarySelectionMixedSourceHint": "所选作品包含漫画和小说，请分别为每个来源选择目标分类；未选择来源的作品保持原分类。",
+  "librarySelectionSourceSection": "{source}作品（{count} 项）",
+  "@librarySelectionSourceSection": {"placeholders": {"source": {"type": "String"}, "count": {"type": "int"}}},
+
   "librarySelectionCategoryAssigned": "{count, plural, =0 {没有项目设置分类} other {已为 {count} 项设置分类}}",
   "@librarySelectionCategoryAssigned": {
     "description": "批量设置分类成功提示；count 是成功处理的项目数量",

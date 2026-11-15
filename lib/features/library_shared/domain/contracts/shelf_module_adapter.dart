@@ -177,8 +177,8 @@ abstract class ShelfModuleActionAdapter {
 /// 混合书架无法只凭分类名判断应该写入漫画还是小说仓储；页面把当前分类键
 /// 一并传入，由组合适配器解码后分派。
 abstract interface class ShelfCategorySourceAdapter {
-  Future<String> createCategoryInSource({
-    required String sourceCategoryId,
+  Future<String> createCategoryForSource({
+    required LibraryModuleKey source,
     required String name,
   });
 }

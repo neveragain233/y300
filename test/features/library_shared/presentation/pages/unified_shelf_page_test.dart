@@ -1690,14 +1690,49 @@ void main() {
       expect(find.text(l10n.libraryShelfComicBadge), findsOneWidget);
       expect(find.text(l10n.libraryShelfNovelBadge), findsOneWidget);
       expect(
-        find.bySemanticsLabel(
-          RegExp(l10n.libraryShelfUnreadBadgeSemantics(1)),
-        ),
+        find.bySemanticsLabel(RegExp(l10n.libraryShelfUnreadBadgeSemantics(1))),
         findsOneWidget,
       );
     } finally {
       semantics.dispose();
     }
+  });
+
+  testWidgets('mixed shelf asks for a source before creating a category', (
+    tester,
+  ) async {
+    final adapter = _FakeMixedCategoryShelfAdapter();
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: UnifiedShelfPage(adapter: adapter, onOpenWork: (_, _) async {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('unified-shelf-more-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新建分类'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('unified-shelf-category-source-comic')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('unified-shelf-category-source-novel')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const Key('unified-shelf-category-source-novel')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '新小说分类');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    expect(adapter.createdSource, LibraryModuleKey.novel);
+    expect(adapter.createdName, '新小说分类');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('recent reading button hides in search mode', (tester) async {
@@ -1765,6 +1800,74 @@ LibraryWorkItem _item({
     addedAt: DateTime(2026, 1, 1),
     hasBookmarks: hasBookmarks,
   );
+}
+
+class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter
+    implements ShelfCategorySourceAdapter {
+  _FakeMixedCategoryShelfAdapter()
+    : super(
+        initialDisplayMode: LibraryDisplayMode.grid,
+        categories: <LibraryCategory>[
+          LibraryCategory(
+            categoryId: 'default',
+            sourceCategoryId: 'default',
+            source: LibraryModuleKey.bookshelf,
+            name: '',
+            sortOrder: -1,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+          LibraryCategory(
+            categoryId: 'comic:default',
+            sourceCategoryId: 'default',
+            source: LibraryModuleKey.comic,
+            name: '默认',
+            sortOrder: 0,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+          LibraryCategory(
+            categoryId: 'novel:default',
+            sourceCategoryId: 'default',
+            source: LibraryModuleKey.novel,
+            name: '默认',
+            sortOrder: 1,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        ],
+        itemsByCategory: <String, List<LibraryWorkItem>>{
+          'default': <LibraryWorkItem>[
+            _item(
+              workId: 'yamibo:1',
+              title: '漫画',
+            ).copyWith(source: LibraryModuleKey.comic),
+            _item(
+              workId: 'novel:1',
+              title: '小说',
+            ).copyWith(source: LibraryModuleKey.novel),
+          ],
+        },
+      );
+
+  LibraryModuleKey? createdSource;
+  String? createdName;
+
+  @override
+  LibraryModuleKey get moduleKey => LibraryModuleKey.bookshelf;
+
+  @override
+  Set<LibraryModuleKey> get refreshModuleKeys => const <LibraryModuleKey>{
+    LibraryModuleKey.comic,
+    LibraryModuleKey.novel,
+  };
+
+  @override
+  Future<String> createCategoryForSource({
+    required LibraryModuleKey source,
+    required String name,
+  }) async {
+    createdSource = source;
+    createdName = name;
+    return '${source.name}:created';
+  }
 }
 
 class _PendingPreferences implements LibraryViewPreferencesRepository {

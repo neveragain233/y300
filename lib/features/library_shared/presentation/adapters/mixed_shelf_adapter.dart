@@ -277,19 +277,17 @@ class MixedShelfAdapter
   }
 
   @override
-  Future<String> createCategoryInSource({
-    required String sourceCategoryId,
+  Future<String> createCategoryForSource({
+    required LibraryModuleKey source,
     required String name,
   }) async {
-    final resolved = _resolveCategory(sourceCategoryId);
-    if (resolved == null) {
+    if (source != LibraryModuleKey.comic && source != LibraryModuleKey.novel) {
       throw UnsupportedError('mixedShelfCreateCategory');
     }
-    final categoryId = await _adapterFor(resolved.source)
-        .createCategory(name: name);
-    final key = _categoryKey(resolved.source, categoryId);
+    final categoryId = await _adapterFor(source).createCategory(name: name);
+    final key = _categoryKey(source, categoryId);
     _rawCategoryByKey[key] = categoryId;
-    _sourceByCategoryKey[key] = resolved.source;
+    _sourceByCategoryKey[key] = source;
     return key;
   }
 
@@ -390,7 +388,14 @@ class MixedShelfAdapter
     var deduplicated = 0;
     var changed = false;
     var supported = false;
+    final targetsBySource = request.targetCategoryIdsBySource;
     for (final entry in groups.entries) {
+      if (request.actionId == SelectionActionIds.assignCategory &&
+          targetsBySource.isNotEmpty &&
+          !targetsBySource.containsKey(entry.key)) {
+        // 分段提交时未列出的来源保持原分类，不计失败。
+        continue;
+      }
       final adapter = _adapterFor(entry.key);
       if (adapter is! ShelfSelectionActionAdapter) {
         failed += entry.value.length;
@@ -400,7 +405,8 @@ class MixedShelfAdapter
         actionId: request.actionId,
         workIds: entry.value,
         source: entry.key,
-        targetCategoryId: request.targetCategoryId,
+        targetCategoryId:
+            targetsBySource[entry.key] ?? request.targetCategoryId,
       );
       if (requests.isEmpty) {
         failed += entry.value.length;

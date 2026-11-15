@@ -169,6 +169,57 @@ void main() {
     expect(outcome.failedCount, 1);
   });
 
+  test('per-source targets move each source to its own category', () async {
+    await adapter.querySnapshot(
+      filters: LibraryFilterSet.defaults,
+      sortOption: LibraryShelfSortOption.defaults,
+      keyword: '',
+    );
+
+    final outcome = await adapter.runSelectionAction(
+      const SelectionActionExecutionRequest(
+        actionId: SelectionActionIds.assignCategory,
+        workIds: <String>{'comic:yamibo:1', 'novel:yamibo:1'},
+        activeCategoryId: 'default',
+        targetCategoryIdsBySource: <LibraryModuleKey, String>{
+          LibraryModuleKey.comic: 'comic:c1',
+          LibraryModuleKey.novel: 'novel:n1',
+        },
+      ),
+    );
+
+    expect(comic.requests.single.targetCategoryId, 'c1');
+    expect(novel.requests.single.targetCategoryId, 'n1');
+    expect(outcome.code, SelectionActionOutcomeCode.success);
+    expect(outcome.succeededCount, 2);
+    expect(outcome.failedCount, 0);
+  });
+
+  test('omitted source keeps its category when moving per-source', () async {
+    await adapter.querySnapshot(
+      filters: LibraryFilterSet.defaults,
+      sortOption: LibraryShelfSortOption.defaults,
+      keyword: '',
+    );
+
+    final outcome = await adapter.runSelectionAction(
+      const SelectionActionExecutionRequest(
+        actionId: SelectionActionIds.assignCategory,
+        workIds: <String>{'comic:yamibo:1', 'novel:yamibo:1'},
+        activeCategoryId: 'default',
+        targetCategoryIdsBySource: <LibraryModuleKey, String>{
+          LibraryModuleKey.comic: 'comic:c1',
+        },
+      ),
+    );
+
+    expect(comic.requests, hasLength(1));
+    expect(novel.requests, isEmpty);
+    expect(outcome.code, SelectionActionOutcomeCode.success);
+    expect(outcome.succeededCount, 1);
+    expect(outcome.failedCount, 0);
+  });
+
   test('category creation follows the selected source category', () async {
     await adapter.querySnapshot(
       filters: LibraryFilterSet.defaults,
@@ -176,8 +227,8 @@ void main() {
       keyword: '',
     );
 
-    final categoryId = await adapter.createCategoryInSource(
-      sourceCategoryId: 'novel:default',
+    final categoryId = await adapter.createCategoryForSource(
+      source: LibraryModuleKey.novel,
       name: '新分类',
     );
 
@@ -186,7 +237,10 @@ void main() {
     expect(categoryId, 'novel:new-新分类');
 
     await expectLater(
-      adapter.createCategoryInSource(sourceCategoryId: 'default', name: '没有来源'),
+      adapter.createCategoryForSource(
+        source: LibraryModuleKey.bookshelf,
+        name: '没有来源',
+      ),
       throwsUnsupportedError,
     );
   });
@@ -306,8 +360,8 @@ class _FakeChildAdapter
   }
 
   @override
-  Future<String> createCategoryInSource({
-    required String sourceCategoryId,
+  Future<String> createCategoryForSource({
+    required LibraryModuleKey source,
     required String name,
   }) async {
     createdCategoryName = name;

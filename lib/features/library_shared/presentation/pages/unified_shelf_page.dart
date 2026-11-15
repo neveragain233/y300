@@ -582,6 +582,20 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     return _currentCategoryItems.map((item) => item.identityKey).toSet();
   }
 
+  Set<LibraryModuleKey> get _selectedSources {
+    final selected = _selectionController.selectedWorkIds;
+    if (selected.isEmpty) {
+      return const <LibraryModuleKey>{};
+    }
+    final sources = <LibraryModuleKey>{};
+    for (final item in _currentCategoryItems) {
+      if (selected.contains(item.identityKey)) {
+        sources.add(item.source ?? widget.adapter.moduleKey);
+      }
+    }
+    return sources;
+  }
+
   Future<void> _handleItemTap(String workId) async {
     if (_selectionEnabled && _selectionController.isSelecting) {
       _selectionController.toggle(workId);
@@ -651,10 +665,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         _selectionController.invert(_currentVisibleWorkIds);
       },
       loadAvailableCategories: () => widget.adapter.loadCategories(),
-      createCategory: (name) async {
+      createCategory: (name, {source}) async {
+        final effectiveSource = source ?? _controller.selectedCategory?.source;
         if (widget.adapter is ShelfCategorySourceAdapter &&
-            _controller.selectedCategory?.source != null) {
-          final categoryId = await _controller.createCategoryInCurrentSource(
+            effectiveSource != null) {
+          final categoryId = await _controller.createCategoryForSource(
+            effectiveSource,
             name,
           );
           if (categoryId != null) {
@@ -684,6 +700,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         selectedCount: _selectionController.selectedCount,
         selectedWorkIds: _selectionController.selectedWorkIds,
         selectionActions: _selectionActions,
+        selectedSources: _selectedSources,
       );
       return;
     }
@@ -694,6 +711,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       selectedCount: _selectionController.selectedCount,
       selectedWorkIds: _selectionController.selectedWorkIds,
       selectionActions: _selectionActions,
+      selectedSources: _selectedSources,
       delegate: delegate,
     );
   }
@@ -1117,12 +1135,18 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
     if (value == 'add-category') {
       final l10n = AppLocalizations.of(context);
-      if (widget.adapter.moduleKey == LibraryModuleKey.bookshelf &&
-          _controller.selectedCategory?.source == null) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.libraryShelfCreateCategoryNeedsSource)),
-        );
-        return;
+      LibraryModuleKey? mixedSource;
+      final selectedCategory = _controller.selectedCategory;
+      final needsSourceChoice =
+          widget.adapter.moduleKey == LibraryModuleKey.bookshelf &&
+          (selectedCategory == null ||
+              selectedCategory.source == null ||
+              selectedCategory.source == LibraryModuleKey.bookshelf);
+      if (needsSourceChoice) {
+        mixedSource = await _pickCategorySource();
+        if (mixedSource == null) {
+          return;
+        }
       }
       final name = await _showCategoryNameDialog(
         title: l10n.libraryShelfCreateCategory,
@@ -1131,7 +1155,11 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         return;
       }
       try {
-        await _controller.createCategoryInCurrentSource(name.trim());
+        if (mixedSource != null) {
+          await _controller.createCategoryForSource(mixedSource, name.trim());
+        } else {
+          await _controller.createCategoryInCurrentSource(name.trim());
+        }
       } catch (_) {
         if (mounted) {
           messenger.showSnackBar(
@@ -1246,6 +1274,40 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       }
       setState(() {});
     }
+  }
+
+  Future<LibraryModuleKey?> _pickCategorySource() {
+    final l10n = AppLocalizations.of(context);
+    return showModalBottomSheet<LibraryModuleKey>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                enabled: false,
+                title: Text(l10n.libraryShelfCreateCategory),
+              ),
+              ListTile(
+                key: const Key('unified-shelf-category-source-comic'),
+                leading: const Icon(Icons.auto_stories_outlined),
+                title: Text(l10n.libraryShelfTitle('comic')),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(LibraryModuleKey.comic),
+              ),
+              ListTile(
+                key: const Key('unified-shelf-category-source-novel'),
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(l10n.libraryShelfTitle('novel')),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(LibraryModuleKey.novel),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<String?> _showCategoryNameDialog({

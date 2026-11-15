@@ -1699,6 +1699,24 @@ abstract class AppLocalizations {
   /// **'请输入分类名称'**
   String get librarySelectionCategoryNameHint;
 
+  /// No description provided for @librarySelectionKeepCurrentCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持不变'**
+  String get librarySelectionKeepCurrentCategory;
+
+  /// No description provided for @librarySelectionMixedSourceHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'所选作品包含漫画和小说，请分别为每个来源选择目标分类；未选择来源的作品保持原分类。'**
+  String get librarySelectionMixedSourceHint;
+
+  /// No description provided for @librarySelectionSourceSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'{source}作品（{count} 项）'**
+  String librarySelectionSourceSection(String source, int count);
+
   /// 批量设置分类成功提示；count 是成功处理的项目数量
   ///
   /// In zh, this message translates to:

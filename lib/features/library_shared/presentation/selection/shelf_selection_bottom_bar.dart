@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
+import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_action_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_action_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
@@ -61,12 +62,12 @@ class _ShelfSelectionBottomBarState
     if (!selectionHost.isActive) {
       return;
     }
-    String? targetCategoryId;
+    _CategoryTargetChoice? categoryTargets;
 
     try {
       if (action.id == SelectionActionIds.assignCategory) {
-        targetCategoryId = await _pickTargetCategory(selectionHost);
-        if (targetCategoryId == null || targetCategoryId.trim().isEmpty) {
+        categoryTargets = await _pickCategoryTargets(selectionHost);
+        if (categoryTargets == null || categoryTargets.isEmpty) {
           return;
         }
       }
@@ -83,7 +84,10 @@ class _ShelfSelectionBottomBarState
 
       final result = await selectionHost.executeAction(
         actionId: action.id,
-        targetCategoryId: targetCategoryId,
+        targetCategoryId: categoryTargets?.singleTargetCategoryId,
+        targetCategoryIdsBySource:
+            categoryTargets?.targetsBySource ??
+            const <LibraryModuleKey, String>{},
       );
       if (!mounted) {
         return;
@@ -139,7 +143,7 @@ class _ShelfSelectionBottomBarState
     );
   }
 
-  Future<String?> _pickTargetCategory(
+  Future<_CategoryTargetChoice?> _pickCategoryTargets(
     ShelfSelectionHostController selectionHost,
   ) async {
     final state = selectionHost.state;
@@ -150,10 +154,37 @@ class _ShelfSelectionBottomBarState
     if (!mounted) {
       return null;
     }
+    final sources = state.selectedSources;
+    if (state.moduleKey != LibraryModuleKey.bookshelf) {
+      return _pickSingleCategory(
+        selectionHost,
+        categories,
+        state: state,
+        source: null,
+      );
+    }
+    if (sources.length <= 1) {
+      final source = sources.isEmpty ? null : sources.single;
+      return _pickSingleCategory(
+        selectionHost,
+        categories.where((category) => category.source == source).toList(),
+        state: state,
+        source: source,
+      );
+    }
+    return _pickGroupedCategories(selectionHost, categories, state);
+  }
+
+  Future<_CategoryTargetChoice?> _pickSingleCategory(
+    ShelfSelectionHostController selectionHost,
+    List<LibraryCategory> categories, {
+    required ShelfSelectionHostState state,
+    required LibraryModuleKey? source,
+  }) async {
+    final l10n = AppLocalizations.of(context);
     final available = categories
         .where((category) => category.categoryId != state.activeCategoryId)
         .toList(growable: false);
-    final l10n = AppLocalizations.of(context);
     final selected = await showModalBottomSheet<String>(
       context: context,
       builder: (sheetContext) {
@@ -167,6 +198,9 @@ class _ShelfSelectionBottomBarState
               ),
               for (final category in available)
                 ListTile(
+                  key: ValueKey<String>(
+                    'selection-target-category-${category.categoryId}',
+                  ),
                   title: Text(
                     LibraryShelfTextResolver.categoryName(l10n, category),
                   ),
@@ -193,13 +227,94 @@ class _ShelfSelectionBottomBarState
       return null;
     }
     if (selected != _createCategorySelectionSentinel) {
-      return selected;
+      return _CategoryTargetChoice(singleTargetCategoryId: selected);
     }
+    final categoryId = await _createCategory(selectionHost, source: source);
+    if (categoryId == null) {
+      return null;
+    }
+    return _CategoryTargetChoice(singleTargetCategoryId: categoryId);
+  }
+
+  Future<_CategoryTargetChoice?> _pickGroupedCategories(
+    ShelfSelectionHostController selectionHost,
+    List<LibraryCategory> categories,
+    ShelfSelectionHostState state,
+  ) async {
+    final sortedSources = state.selectedSources.toList(growable: false)
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final categoriesBySource = <LibraryModuleKey, List<LibraryCategory>>{
+      for (final source in sortedSources)
+        source: categories
+            .where(
+              (category) =>
+                  category.source == source &&
+                  category.categoryId != state.activeCategoryId,
+            )
+            .toList(growable: false),
+    };
+    final selectedCountBySource = <LibraryModuleKey, int>{
+      for (final source in sortedSources) source: 0,
+    };
+    for (final workKey in selectionHost.selectedWorkIds) {
+      final parsed = LibraryWorkId.tryParse(workKey);
+      if (parsed != null && selectedCountBySource.containsKey(parsed.source)) {
+        selectedCountBySource[parsed.source] =
+            selectedCountBySource[parsed.source]! + 1;
+      }
+    }
+    final targets = await showModalBottomSheet<Map<LibraryModuleKey, String>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return _GroupedCategoryTargetSheet(
+          sources: sortedSources,
+          categoriesBySource: categoriesBySource,
+          selectedCountBySource: selectedCountBySource,
+          onCreateCategory: (source) async {
+            final categoryId = await _showCreateCategoryDialog();
+            if (categoryId == null) {
+              return null;
+            }
+            final name = categoryId.trim();
+            if (name.isEmpty) {
+              return null;
+            }
+            final newCategoryId = await selectionHost.createCategory(
+              name,
+              source: source,
+            );
+            return LibraryCategory(
+              categoryId: newCategoryId,
+              sourceCategoryId: newCategoryId,
+              source: source,
+              name: name,
+              sortOrder: 0,
+              createdAt: DateTime.now(),
+            );
+          },
+        );
+      },
+    );
+    if (targets == null || targets.isEmpty) {
+      return null;
+    }
+    return _CategoryTargetChoice(targetsBySource: targets);
+  }
+
+  Future<String?> _createCategory(
+    ShelfSelectionHostController selectionHost, {
+    required LibraryModuleKey? source,
+  }) async {
     final categoryName = await _showCreateCategoryDialog();
     if (!mounted || categoryName == null || categoryName.trim().isEmpty) {
       return null;
     }
-    return selectionHost.createCategory(categoryName.trim());
+    return selectionHost.createCategory(
+      categoryName.trim(),
+      source: source,
+    );
   }
 
   Future<String?> _showCreateCategoryDialog() {
@@ -217,6 +332,208 @@ class _ShelfSelectionBottomBarState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(trimmed)));
+  }
+}
+
+class _CategoryTargetChoice {
+  const _CategoryTargetChoice({
+    this.singleTargetCategoryId,
+    this.targetsBySource = const <LibraryModuleKey, String>{},
+  });
+
+  final String? singleTargetCategoryId;
+  final Map<LibraryModuleKey, String> targetsBySource;
+
+  bool get isEmpty {
+    final single = singleTargetCategoryId?.trim() ?? '';
+    return single.isEmpty && targetsBySource.isEmpty;
+  }
+}
+
+class _GroupedCategoryTargetSheet extends StatefulWidget {
+  const _GroupedCategoryTargetSheet({
+    required this.sources,
+    required this.categoriesBySource,
+    required this.selectedCountBySource,
+    required this.onCreateCategory,
+  });
+
+  final List<LibraryModuleKey> sources;
+  final Map<LibraryModuleKey, List<LibraryCategory>> categoriesBySource;
+  final Map<LibraryModuleKey, int> selectedCountBySource;
+  final Future<LibraryCategory?> Function(LibraryModuleKey source)
+  onCreateCategory;
+
+  @override
+  State<_GroupedCategoryTargetSheet> createState() =>
+      _GroupedCategoryTargetSheetState();
+}
+
+class _GroupedCategoryTargetSheetState
+    extends State<_GroupedCategoryTargetSheet> {
+  late final Map<LibraryModuleKey, List<LibraryCategory>> _categories;
+  final Map<LibraryModuleKey, String?> _selectedTargets =
+      <LibraryModuleKey, String?>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _categories = <LibraryModuleKey, List<LibraryCategory>>{
+      for (final source in widget.sources)
+        source: List<LibraryCategory>.of(
+          widget.categoriesBySource[source] ?? const <LibraryCategory>[],
+        ),
+    };
+    for (final source in widget.sources) {
+      _selectedTargets[source] = null;
+    }
+  }
+
+  bool get _hasSelection =>
+      _selectedTargets.values.any((value) => value != null);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.librarySelectionSelectCategory,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.librarySelectionMixedSourceHint,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final source in widget.sources)
+                    _buildSourceSection(context, l10n, source),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  key: const Key('selection-target-confirm'),
+                  onPressed: _hasSelection
+                      ? () {
+                          final targets = <LibraryModuleKey, String>{
+                            for (final entry in _selectedTargets.entries)
+                              if (entry.value != null)
+                                entry.key: entry.value!,
+                          };
+                          Navigator.of(context).pop(targets);
+                        }
+                      : null,
+                  child: Text(l10n.commonConfirm),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    LibraryModuleKey source,
+  ) {
+    final categories = _categories[source] ?? const <LibraryCategory>[];
+    final selected = _selectedTargets[source];
+    final count = widget.selectedCountBySource[source] ?? 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            l10n.librarySelectionSourceSection(
+              l10n.libraryShelfTitle(source.name),
+              count,
+            ),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
+        ListTile(
+          key: ValueKey<String>('selection-target-keep-${source.name}'),
+          leading: Icon(
+            selected == null
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+          ),
+          title: Text(l10n.librarySelectionKeepCurrentCategory),
+          onTap: () {
+            setState(() {
+              _selectedTargets[source] = null;
+            });
+          },
+        ),
+        for (final category in categories)
+          ListTile(
+            key: ValueKey<String>(
+              'selection-target-${source.name}-${category.categoryId}',
+            ),
+            leading: Icon(
+              selected == category.categoryId
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+            ),
+            title: Text(_categoryLabel(l10n, category)),
+            onTap: () {
+              setState(() {
+                _selectedTargets[source] = category.categoryId;
+              });
+            },
+          ),
+        ListTile(
+          key: ValueKey<String>('selection-target-create-${source.name}'),
+          leading: const Icon(Icons.add),
+          title: Text(l10n.librarySelectionCreateCategory),
+          onTap: () async {
+            final category = await widget.onCreateCategory(source);
+            if (!mounted || category == null) {
+              return;
+            }
+            setState(() {
+              _categories[source] = <LibraryCategory>[
+                ...?_categories[source],
+                category,
+              ];
+              _selectedTargets[source] = category.categoryId;
+            });
+          },
+        ),
+        const Divider(height: 1),
+      ],
+    );
+  }
+
+  String _categoryLabel(AppLocalizations l10n, LibraryCategory category) {
+    return category.isDefault
+        ? l10n.libraryShelfDefaultCategory
+        : category.name;
   }
 }
 

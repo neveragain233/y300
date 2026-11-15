@@ -107,7 +107,7 @@ void main() {
           selectAllVisible: () async {},
           invertVisible: () async {},
           loadAvailableCategories: () async => const <LibraryCategory>[],
-          createCategory: (name) async => 'created',
+          createCategory: (name, {source}) async => 'created',
           runSelectionAction: (request) async {
             calls.add('run:${request.actionId}');
             return const SelectionActionOutcome(
@@ -144,7 +144,7 @@ void main() {
           selectAllVisible: () async {},
           invertVisible: () async {},
           loadAvailableCategories: () async => const <LibraryCategory>[],
-          createCategory: (name) async => 'created',
+          createCategory: (name, {source}) async => 'created',
           runSelectionAction: (request) async {
             return const SelectionActionOutcome(
               code: SelectionActionOutcomeCode.noChange,
@@ -177,7 +177,7 @@ void main() {
           selectAllVisible: () async {},
           invertVisible: () async {},
           loadAvailableCategories: () async => const <LibraryCategory>[],
-          createCategory: (name) async => 'created',
+          createCategory: (name, {source}) async => 'created',
           runSelectionAction: (request) async {
             throw StateError('boom');
           },
@@ -247,7 +247,7 @@ ShelfSelectionHostDelegate _idleDelegate() {
     selectAllVisible: () async {},
     invertVisible: () async {},
     loadAvailableCategories: () async => const <LibraryCategory>[],
-    createCategory: (name) async => 'created',
+    createCategory: (name, {source}) async => 'created',
     runSelectionAction: (request) async {
       return const SelectionActionOutcome(
         code: SelectionActionOutcomeCode.noChange,

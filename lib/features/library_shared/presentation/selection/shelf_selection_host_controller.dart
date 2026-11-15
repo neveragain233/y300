@@ -7,8 +7,10 @@ import 'package:y300/features/library_shared/domain/models/library_models.dart';
 typedef SelectionHostAsyncVoidCallback = Future<void> Function();
 typedef SelectionHostLoadCategoriesCallback =
     Future<List<LibraryCategory>> Function();
-typedef SelectionHostCreateCategoryCallback =
-    Future<String> Function(String name);
+typedef SelectionHostCreateCategoryCallback = Future<String> Function(
+  String name, {
+  LibraryModuleKey? source,
+});
 typedef SelectionHostRunActionCallback =
     Future<SelectionActionOutcome> Function(
       SelectionActionExecutionRequest request,
@@ -41,6 +43,7 @@ class ShelfSelectionHostState {
     required this.activeCategoryId,
     required this.selectedCount,
     required this.selectionActions,
+    this.selectedSources = const <LibraryModuleKey>{},
   });
 
   final Object ownerToken;
@@ -49,10 +52,14 @@ class ShelfSelectionHostState {
   final int selectedCount;
   final List<SelectionAction> selectionActions;
 
+  /// 当前选中作品覆盖的来源；单模块书架是模块自身，混合书架是作品来源。
+  final Set<LibraryModuleKey> selectedSources;
+
   ShelfSelectionHostState copyWith({
     String? activeCategoryId,
     int? selectedCount,
     List<SelectionAction>? selectionActions,
+    Set<LibraryModuleKey>? selectedSources,
   }) {
     return ShelfSelectionHostState(
       ownerToken: ownerToken,
@@ -60,6 +67,7 @@ class ShelfSelectionHostState {
       activeCategoryId: activeCategoryId ?? this.activeCategoryId,
       selectedCount: selectedCount ?? this.selectedCount,
       selectionActions: selectionActions ?? this.selectionActions,
+      selectedSources: selectedSources ?? this.selectedSources,
     );
   }
 }
@@ -85,6 +93,7 @@ class ShelfSelectionHostController extends ChangeNotifier {
     required Set<String> selectedWorkIds,
     required List<SelectionAction> selectionActions,
     required ShelfSelectionHostDelegate delegate,
+    Set<LibraryModuleKey> selectedSources = const <LibraryModuleKey>{},
   }) {
     if (_disposed) {
       return;
@@ -97,6 +106,7 @@ class ShelfSelectionHostController extends ChangeNotifier {
       activeCategoryId: activeCategoryId,
       selectedCount: selectedCount,
       selectionActions: List<SelectionAction>.unmodifiable(selectionActions),
+      selectedSources: Set<LibraryModuleKey>.unmodifiable(selectedSources),
     );
     notifyListeners();
   }
@@ -107,6 +117,7 @@ class ShelfSelectionHostController extends ChangeNotifier {
     required int selectedCount,
     required Set<String> selectedWorkIds,
     required List<SelectionAction> selectionActions,
+    Set<LibraryModuleKey> selectedSources = const <LibraryModuleKey>{},
   }) {
     if (_disposed) {
       return;
@@ -120,6 +131,7 @@ class ShelfSelectionHostController extends ChangeNotifier {
       activeCategoryId: activeCategoryId,
       selectedCount: selectedCount,
       selectionActions: List<SelectionAction>.unmodifiable(selectionActions),
+      selectedSources: Set<LibraryModuleKey>.unmodifiable(selectedSources),
     );
     notifyListeners();
   }
@@ -160,14 +172,16 @@ class ShelfSelectionHostController extends ChangeNotifier {
     return delegate.loadAvailableCategories();
   }
 
-  Future<String> createCategory(String name) async {
+  Future<String> createCategory(String name, {LibraryModuleKey? source}) async {
     final delegate = _requireDelegate();
-    return delegate.createCategory(name);
+    return delegate.createCategory(name, source: source);
   }
 
   Future<SelectionActionOutcome> executeAction({
     required String actionId,
     String? targetCategoryId,
+    Map<LibraryModuleKey, String> targetCategoryIdsBySource =
+        const <LibraryModuleKey, String>{},
   }) async {
     final delegate = _requireDelegate();
     final current = _requireState();
@@ -177,6 +191,7 @@ class ShelfSelectionHostController extends ChangeNotifier {
       workIds: Set<String>.of(_selectedWorkIds),
       activeCategoryId: current.activeCategoryId,
       targetCategoryId: targetCategoryId,
+      targetCategoryIdsBySource: targetCategoryIdsBySource,
     );
     final result = await delegate.runSelectionAction(request);
     if (!result.changed) {
