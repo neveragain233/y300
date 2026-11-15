@@ -1,5 +1,6 @@
 import 'package:y300/features/comic/domain/repositories/comic_catalog_url_writer.dart';
 import 'package:y300/features/comic/domain/models/comic_detail_models.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/comic/domain/models/comic_models.dart';
 import 'package:y300/features/comic/domain/models/comic_shelf_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
@@ -131,7 +132,9 @@ abstract class ComicRepository implements CatalogUrlUpdater {
     throw UnimplementedError('purgeWork($comicId)');
   }
 
-  Future<List<ComicShelfItem>> getShelfItems({String categoryId = 'default'});
+  Future<List<ComicShelfItem>> getShelfItems({
+    String categoryId = comicDefaultCategoryId,
+  });
 
   Future<ComicDetail?> getComicDetail({required String comicId});
 

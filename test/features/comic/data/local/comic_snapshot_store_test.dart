@@ -84,10 +84,10 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '',
         );
-        final item = snapshot.itemsByCategory['default']!.single;
+        final item = snapshot.itemsByCategory['comic-default']!.single;
 
-        expect(snapshot.categories.single.categoryId, 'default');
-        expect(snapshot.visibleMatchCountByCategory['default'], 1);
+        expect(snapshot.categories.single.categoryId, 'comic-default');
+        expect(snapshot.visibleMatchCountByCategory['comic-default'], 1);
         expect(item.title, 'Aggregate Comic');
         expect(item.unreadCount, 1);
         expect(item.readChapterCount, 1);
@@ -166,7 +166,7 @@ void main() {
         sortOption: LibraryShelfSortOption.defaults,
         keyword: '',
       );
-      final item = snapshot.itemsByCategory['default']!.single;
+      final item = snapshot.itemsByCategory['comic-default']!.single;
 
       expect(item.customCoverLocalPath, 'cache/custom-cover.jpg');
       expect(item.customCoverFocusX, 0.75);

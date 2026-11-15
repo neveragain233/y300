@@ -21,6 +21,7 @@ import 'package:y300/features/library_shared/domain/models/library_filter_models
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/data/services/library_cover_store.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/library_shared/data/services/shared_shelf_category_store.dart';
 
 /// SQLite-backed comic repository facade.
@@ -51,10 +52,7 @@ class LocalComicRepository
        _singleThreadEpisodeNamer =
            singleThreadEpisodeNamer ??
            const DefaultComicSingleThreadEpisodeNamer() {
-    _shelfStore = ComicShelfStore(
-      _dbFuture,
-      defaultCategoryId: _defaultCategoryId,
-    );
+    _shelfStore = ComicShelfStore(_dbFuture);
     _detailStore = ComicDetailStore(_dbFuture, subjectParser: _subjectParser);
     _coverStore = ComicCoverStore(_dbFuture);
     _episodeStore = ComicEpisodeStore(
@@ -76,7 +74,7 @@ class LocalComicRepository
     _episodeManagementStore = ComicEpisodeManagementStore(_dbFuture);
   }
 
-  static const String _defaultCategoryId = 'default';
+  static const String _defaultCategoryId = comicDefaultCategoryId;
 
   final Future<Database> _dbFuture;
   final ComicSubjectParser _subjectParser;
@@ -96,7 +94,9 @@ class LocalComicRepository
 
   @override
   Future<List<ComicShelfCategory>> getCategories() async {
-    final categories = await _sharedCategoryStore.loadCategories();
+    final categories = await _sharedCategoryStore.loadCategories(
+      module: LibraryModuleKey.comic,
+    );
     return categories
         .map(
           (category) => ComicShelfCategory(
@@ -136,10 +136,10 @@ class LocalComicRepository
     required String fromCategoryId,
     required String toCategoryId,
   }) {
-    return _shelfStore.moveComicToCategory(
+    // 收藏夹语义：按目标归属幂等写入，fromCategoryId 仅保留旧合同参数。
+    return _shelfStore.setComicCategory(
       comicId: comicId,
-      fromCategoryId: fromCategoryId,
-      toCategoryId: toCategoryId,
+      categoryId: toCategoryId,
     );
   }
 
@@ -404,7 +404,7 @@ class LocalComicRepository
 
   @override
   Future<List<ComicShelfItem>> getShelfItems({
-    String categoryId = _defaultCategoryId,
+    String categoryId = comicDefaultCategoryId,
   }) {
     return _shelfStore.getShelfItems(categoryId: categoryId);
   }

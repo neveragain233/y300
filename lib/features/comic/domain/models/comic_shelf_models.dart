@@ -1,3 +1,5 @@
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
+
 class ComicShelfItem {
   const ComicShelfItem({
     required this.comicId,
@@ -69,7 +71,7 @@ class ComicShelfCategory {
   final int sortOrder;
   final DateTime createdAt;
 
-  bool get isDefault => categoryId == 'default';
+  bool get isDefault => categoryId == comicDefaultCategoryId;
 }
 
 class ComicShelfDisplaySettings {

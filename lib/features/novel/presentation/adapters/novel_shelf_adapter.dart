@@ -7,6 +7,8 @@ import 'package:y300/features/library_shared/domain/repositories/library_state_r
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
@@ -120,8 +122,35 @@ class NovelShelfAdapter
   Future<List<LibraryWorkItem>> loadCategoryItems({
     required String categoryId,
   }) async {
+    if (categoryId == novelDefaultCategoryId) {
+      return _loadTypeViewItems();
+    }
     final items = await _repository.getShelfItems(categoryId: categoryId);
     return Future.wait(items.map(_mapWork));
+  }
+
+  /// 小说类型视图：聚合全部分类的小说，并按作品去重。
+  Future<List<LibraryWorkItem>> _loadTypeViewItems() async {
+    final items = await _loadTypeViewShelfItems();
+    return Future.wait(items.map(_mapWork));
+  }
+
+  Future<List<NovelItem>> _loadTypeViewShelfItems() async {
+    final categories = await _repository.getCategories();
+    final items = <String, NovelItem>{};
+    for (final category in categories) {
+      for (final item in await _repository.getShelfItems(
+        categoryId: category.categoryId,
+      )) {
+        final existing = items[item.novelId];
+        if (existing == null ||
+            (existing.categoryId == novelDefaultCategoryId &&
+                item.categoryId != novelDefaultCategoryId)) {
+          items[item.novelId] = item;
+        }
+      }
+    }
+    return items.values.toList(growable: false);
   }
 
   @override
@@ -132,10 +161,13 @@ class NovelShelfAdapter
     final categories = await _repository.getCategories();
     final result = <String, List<LibraryWorkItem>>{};
     for (final category in categories) {
-      final items = await _repository.getShelfItems(
-        categoryId: category.categoryId,
-      );
-      final mappedSource = await Future.wait(items.map(_mapWork));
+      final mappedSource = category.categoryId == novelDefaultCategoryId
+          ? await _loadTypeViewItems()
+          : await Future.wait(
+              (await _repository.getShelfItems(
+                categoryId: category.categoryId,
+              )).map(_mapWork),
+            );
       result[category.categoryId] = mappedSource
           .where((item) {
             if (normalized.isEmpty) {
@@ -244,10 +276,13 @@ class NovelShelfAdapter
     required String fromCategoryId,
     required String toCategoryId,
   }) {
+    final resolvedTarget = LibraryCategoryTargets.isHome(toCategoryId)
+        ? novelDefaultCategoryId
+        : toCategoryId;
     return _repository.moveNovelToCategory(
       novelId: workId,
       fromCategoryId: fromCategoryId,
-      toCategoryId: toCategoryId,
+      toCategoryId: resolvedTarget,
     );
   }
 

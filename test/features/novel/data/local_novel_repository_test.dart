@@ -56,7 +56,7 @@ void main() {
       expect(shelf.first.sourceTypeId, '293');
       expect(shelf.first.sourceTagName, '原创');
       expect(shelf.first.coverImageUrl, 'https://img.test/novel-cover.jpg');
-      expect(shelf.first.categoryId, 'default');
+      expect(shelf.first.categoryId, 'novel-default');
       expect(episodes.first.sourceTid, '200');
       expect(episodes.first.sourcePid, '5001');
       expect(content, isNotNull);
@@ -116,6 +116,39 @@ void main() {
       expect(detail?.coverHidden, isFalse);
       expect(detail?.customCoverLocalPath, 'cache/replacement-cover.jpg');
     });
+
+    test(
+      'novel type view includes works stored in a custom collection',
+      () async {
+        await seedNovelRepository(
+          await dbFuture,
+          seed: const NovelSourceSeed(fid: '49', tid: '200'),
+        );
+        const novelId = 'novel:49:200';
+        final categoryId = await repository.createCategory(name: '收藏夹');
+        await repository.moveNovelToCategory(
+          novelId: novelId,
+          fromCategoryId: 'novel-default',
+          toCategoryId: categoryId,
+        );
+
+        final snapshot = await repository.queryShelfSnapshot(
+          filters: LibraryFilterSet.defaults,
+          sortOption: LibraryShelfSortOption.defaults,
+          keyword: '',
+        );
+
+        expect(
+          snapshot.itemsByCategory['novel-default']!.single.workId,
+          novelId,
+        );
+        expect(snapshot.itemsByCategory[categoryId]!.single.workId, novelId);
+        expect(
+          snapshot.categories.map((category) => category.categoryId),
+          isNot(contains('comic-default')),
+        );
+      },
+    );
 
     test('reading progress can persist', () async {
       await seedNovelRepository(
@@ -643,9 +676,9 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '测试小说',
         );
-        final item = snapshot.itemsByCategory['default']!.single;
+        final item = snapshot.itemsByCategory['novel-default']!.single;
 
-        expect(snapshot.visibleMatchCountByCategory['default'], 1);
+        expect(snapshot.visibleMatchCountByCategory['novel-default'], 1);
         expect(item.title, '测试小说标题');
         expect(item.unreadCount, 0);
         expect(item.readChapterCount, 0);
@@ -669,8 +702,8 @@ void main() {
           keyword: '',
         );
 
-        expect(bookmarked.itemsByCategory['default'], hasLength(1));
-        expect(withoutBookmarks.itemsByCategory['default'], isEmpty);
+        expect(bookmarked.itemsByCategory['novel-default'], hasLength(1));
+        expect(withoutBookmarks.itemsByCategory['novel-default'], isEmpty);
       },
     );
   });

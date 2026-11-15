@@ -20,6 +20,7 @@ Future<void> createAppDatabaseSchema(Database db) async {
   await createNovelShelfTables(db);
   await createLibraryStateTables(db);
   await createSharedShelfCategoryTable(db);
+  await seedSystemShelfCategories(db);
   await createLibraryPerformanceIndexes(db);
   await createFavoriteTables(db);
   await createFavoriteParseJobsTable(db);

@@ -4,7 +4,7 @@ import 'package:y300/features/comic/data/use_cases/comic_shelf_category_assign_u
 
 void main() {
   test(
-    'DefaultComicShelfCategoryAssignUseCase forwards source and target category ids',
+    'DefaultComicShelfCategoryAssignUseCase sets the target category idempotently',
     () async {
       final repository = _RecordingComicRepository();
       final useCase = DefaultComicShelfCategoryAssignUseCase(
@@ -20,12 +20,12 @@ void main() {
       expect(repository.calls, <_MoveComicCall>[
         const _MoveComicCall(
           comicId: 'comic-a',
-          fromCategoryId: 'default',
+          fromCategoryId: '',
           toCategoryId: 'romance',
         ),
         const _MoveComicCall(
           comicId: 'comic-b',
-          fromCategoryId: 'default',
+          fromCategoryId: '',
           toCategoryId: 'romance',
         ),
       ]);
@@ -34,6 +34,21 @@ void main() {
       expect(result.targetCategoryId, 'romance');
     },
   );
+
+  test('DefaultComicShelfCategoryAssignUseCase maps home target to comic default', () async {
+    final repository = _RecordingComicRepository();
+    final useCase = DefaultComicShelfCategoryAssignUseCase(
+      repository: repository,
+    );
+
+    await useCase.assign(
+      workIds: <String>{'comic-a'},
+      sourceCategoryId: 'romance',
+      targetCategoryId: '__shelf_home__',
+    );
+
+    expect(repository.calls.single.toCategoryId, 'comic-default');
+  });
 
   test(
     'DefaultComicShelfCategoryAssignUseCase keeps going after per-item failure',

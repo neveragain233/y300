@@ -15,7 +15,9 @@ import 'package:y300/features/library_shared/presentation/widgets/library_chapte
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
 import 'package:y300/features/library_shared/presentation/controllers/unified_detail_controller.dart';
@@ -1732,37 +1734,59 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
 
   Future<void> _showMoveCategorySheet() async {
     final categories = await widget.adapter.loadCategories();
+    final currentCategoryId = await widget.adapter.currentCategoryId(
+      workId: widget.workId,
+    );
     if (!mounted) {
+      return;
+    }
+    final targets = categories
+        .where(
+          (item) =>
+              !item.isSynthetic &&
+              !item.isSystemCategory &&
+              item.categoryId != currentCategoryId,
+        )
+        .toList(growable: false);
+    final canRemoveFromCollection =
+        currentCategoryId != null &&
+        !LibrarySystemCategories.isSystem(currentCategoryId);
+    if (targets.isEmpty && !canRemoveFromCollection) {
       return;
     }
     await showAdaptivePanel<void>(
       context: context,
       builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext);
+        Future<void> moveTo(String categoryId) async {
+          await widget.adapter.moveWorkToCategory(
+            workId: widget.workId,
+            toCategoryId: categoryId,
+          );
+          if (!mounted || !sheetContext.mounted) {
+            return;
+          }
+          Navigator.of(sheetContext).pop();
+        }
+
         return SafeArea(
           child: ListView(
             shrinkWrap: true,
-            children: categories
-                .map(
-                  (item) => ListTile(
-                    title: Text(
-                      LibraryShelfTextResolver.categoryName(
-                        AppLocalizations.of(sheetContext),
-                        item,
-                      ),
-                    ),
-                    onTap: () async {
-                      await widget.adapter.moveWorkToCategory(
-                        workId: widget.workId,
-                        toCategoryId: item.categoryId,
-                      );
-                      if (!mounted || !sheetContext.mounted) {
-                        return;
-                      }
-                      Navigator.of(sheetContext).pop();
-                    },
+            children: <Widget>[
+              for (final item in targets)
+                ListTile(
+                  title: Text(
+                    LibraryShelfTextResolver.categoryName(l10n, item),
                   ),
-                )
-                .toList(growable: false),
+                  onTap: () => moveTo(item.categoryId),
+                ),
+              if (canRemoveFromCollection)
+                ListTile(
+                  leading: const Icon(Icons.playlist_remove),
+                  title: Text(l10n.libraryShelfRemoveFromCategory),
+                  onTap: () => moveTo(LibraryCategoryTargets.home),
+                ),
+            ],
           ),
         );
       },

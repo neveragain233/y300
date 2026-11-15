@@ -53,7 +53,9 @@ void main() {
       expect(after.work, expectedWork);
       expect(after.episode, before.episode);
       expect(after.content, before.content);
-      expect(after.shelfItem, before.shelfItem);
+      final expectedShelfItem = Map<String, Object?>.from(before.shelfItem)
+        ..['category_id'] = 'novel-default';
+      expect(after.shelfItem, expectedShelfItem);
       expect(after.workState, before.workState);
       expect(after.episodeState, before.episodeState);
       for (final entry in before.readingProgress.entries) {

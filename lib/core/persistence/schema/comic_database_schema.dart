@@ -102,12 +102,6 @@ Future<void> createComicTables(Database db) async {
       )
     ''');
 
-  await db.insert(categoriesTable, {
-    'category_id': 'default',
-    'name': '默认',
-    'sort_order': 0,
-    'created_at': DateTime.now().millisecondsSinceEpoch,
-  });
 
   await db.execute(
     'CREATE INDEX idx_episodes_comic_id ON $episodesTable(comic_id)',

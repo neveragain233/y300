@@ -2,188 +2,58 @@ import 'dart:math';
 
 import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/comic/data/local/comic_local_models.dart';
 import 'package:y300/features/comic/domain/models/comic_shelf_models.dart';
-import 'package:y300/features/library_shared/domain/models/library_operation_failure.dart';
 
 class ComicShelfStore {
-  ComicShelfStore(this._dbFuture, {this.defaultCategoryId = 'default'});
+  ComicShelfStore(this._dbFuture);
 
   final Future<Database> _dbFuture;
-  final String defaultCategoryId;
 
-  Future<List<ComicShelfCategory>> getCategories() async {
-    final db = await _dbFuture;
-    final rows = await db.query(
-      AppDatabase.categoriesTable,
-      orderBy: 'sort_order ASC, created_at ASC',
-    );
-
-    return rows
-        .map(
-          (row) => ComicShelfCategory(
-            categoryId: row['category_id'] as String,
-            name: row['name'] as String,
-            sortOrder: row['sort_order'] as int,
-            createdAt: DateTime.fromMillisecondsSinceEpoch(
-              row['created_at'] as int,
-            ),
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  Future<String> createCategory({required String name}) async {
-    final sanitized = name.trim();
-    if (sanitized.isEmpty) {
-      throw ArgumentError('分类名称不能为空');
-    }
-
-    final db = await _dbFuture;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final categoryId = 'c$now${Random().nextInt(1000)}';
-
-    await db.transaction((txn) async {
-      final countResult = await txn.rawQuery(
-        'SELECT COUNT(*) AS count FROM ${AppDatabase.categoriesTable}',
-      );
-      final sortOrder = (countResult.first['count'] as int?) ?? 0;
-
-      await txn.insert(AppDatabase.categoriesTable, <String, Object?>{
-        'category_id': categoryId,
-        'name': sanitized,
-        'sort_order': sortOrder,
-        'created_at': now,
-      });
-    });
-
-    return categoryId;
-  }
-
-  Future<void> renameCategory({
+  /// 设置作品归属的收藏夹；未归入收藏夹时使用 comic-default。
+  ///
+  /// 幂等：不依赖来源分类，已有重复行会合并为一条，保留最早加入时间。
+  Future<void> setComicCategory({
+    required String comicId,
     required String categoryId,
-    required String newName,
   }) async {
-    final sanitized = newName.trim();
-    if (sanitized.isEmpty) {
-      throw ArgumentError('分类名称不能为空');
-    }
-    if (categoryId == defaultCategoryId) {
-      throw const LibraryOperationException(
-        LibraryOperationFailureCode.defaultCategoryImmutable,
-      );
-    }
-
     final db = await _dbFuture;
-    await db.update(
-      AppDatabase.categoriesTable,
-      <String, Object?>{'name': sanitized},
-      where: 'category_id = ?',
-      whereArgs: <Object>[categoryId],
-    );
-  }
-
-  Future<void> deleteCategory({required String categoryId}) async {
-    if (categoryId == defaultCategoryId) {
-      throw const LibraryOperationException(
-        LibraryOperationFailureCode.defaultCategoryImmutable,
-      );
-    }
-
-    final db = await _dbFuture;
-    final now = DateTime.now().millisecondsSinceEpoch;
 
     await db.transaction((txn) async {
       final rows = await txn.query(
         AppDatabase.shelfItemsTable,
-        columns: <String>['comic_id'],
-        where: 'category_id = ?',
-        whereArgs: <Object>[categoryId],
+        columns: const <String>['category_id', 'added_at'],
+        where: 'comic_id = ?',
+        whereArgs: <Object>[comicId],
       );
-
-      for (final row in rows) {
-        final comicId = row['comic_id'] as String;
-        final existsInDefault = await txn.query(
-          AppDatabase.shelfItemsTable,
-          columns: <String>['id'],
-          where: 'category_id = ? AND comic_id = ?',
-          whereArgs: <Object>[defaultCategoryId, comicId],
-          limit: 1,
-        );
-
-        if (existsInDefault.isEmpty) {
-          final sortOrder = await nextSortOrderInTxn(
-            txn,
-            categoryId: defaultCategoryId,
-          );
-          await txn.insert(
-            AppDatabase.shelfItemsTable,
-            ShelfItemRecord(
-              categoryId: defaultCategoryId,
-              comicId: comicId,
-              addedAt: now,
-              sortOrder: sortOrder,
-            ).toMap(),
-          );
-        }
+      if (rows.isEmpty) {
+        return;
+      }
+      if (rows.length == 1 && rows.single['category_id'] == categoryId) {
+        return;
       }
 
+      final addedAt = rows
+          .map((row) => row['added_at'] as int)
+          .reduce((first, second) => min(first, second));
       await txn.delete(
         AppDatabase.shelfItemsTable,
-        where: 'category_id = ?',
-        whereArgs: <Object>[categoryId],
+        where: 'comic_id = ?',
+        whereArgs: <Object>[comicId],
       );
-
-      await txn.delete(
-        AppDatabase.categoriesTable,
-        where: 'category_id = ?',
-        whereArgs: <Object>[categoryId],
+      final sortOrder = await nextSortOrderInTxn(
+        txn,
+        categoryId: categoryId,
       );
-    });
-  }
-
-  Future<void> moveComicToCategory({
-    required String comicId,
-    required String fromCategoryId,
-    required String toCategoryId,
-  }) async {
-    if (fromCategoryId == toCategoryId) {
-      return;
-    }
-
-    final db = await _dbFuture;
-    final now = DateTime.now().millisecondsSinceEpoch;
-
-    await db.transaction((txn) async {
-      final targetExists = await txn.query(
+      await txn.insert(
         AppDatabase.shelfItemsTable,
-        columns: <String>['id'],
-        where: 'category_id = ? AND comic_id = ?',
-        whereArgs: <Object>[toCategoryId, comicId],
-        limit: 1,
-      );
-
-      if (targetExists.isEmpty) {
-        final sortOrder = await nextSortOrderInTxn(
-          txn,
-          categoryId: toCategoryId,
-        );
-        await txn.insert(
-          AppDatabase.shelfItemsTable,
-          ShelfItemRecord(
-            categoryId: toCategoryId,
-            comicId: comicId,
-            addedAt: now,
-            sortOrder: sortOrder,
-          ).toMap(),
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-
-      await txn.delete(
-        AppDatabase.shelfItemsTable,
-        where: 'category_id = ? AND comic_id = ?',
-        whereArgs: <Object>[fromCategoryId, comicId],
+        ShelfItemRecord(
+          categoryId: categoryId,
+          comicId: comicId,
+          addedAt: addedAt,
+          sortOrder: sortOrder,
+        ).toMap(),
       );
     });
   }
@@ -228,7 +98,7 @@ class ComicShelfStore {
   }
 
   Future<List<ComicShelfItem>> getShelfItems({
-    String categoryId = 'default',
+    String categoryId = comicDefaultCategoryId,
   }) async {
     final db = await _dbFuture;
     final rows = await db.rawQuery(
@@ -310,6 +180,7 @@ class ComicShelfStore {
     );
   }
 
+  /// 作品尚未在书架时写入类型默认分类；已归入收藏夹的作品保持原归属。
   Future<void> ensureShelfItemExistsInTxn(
     DatabaseExecutor executor, {
     required String categoryId,
@@ -319,8 +190,8 @@ class ComicShelfStore {
     final existingShelfRows = await executor.query(
       AppDatabase.shelfItemsTable,
       columns: <String>['id'],
-      where: 'category_id = ? AND comic_id = ?',
-      whereArgs: <Object>[categoryId, comicId],
+      where: 'comic_id = ?',
+      whereArgs: <Object>[comicId],
       limit: 1,
     );
 

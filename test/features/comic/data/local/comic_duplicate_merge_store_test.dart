@@ -136,9 +136,7 @@ void main() {
           '1002',
           '1003',
         ]);
-        expect(defaultItems.map((item) => item.comicId).toSet(), <String>{
-          'yamibo:2000',
-        });
+        expect(defaultItems, isEmpty);
         expect(customItems.map((item) => item.comicId).toSet(), <String>{
           'yamibo:2000',
         });

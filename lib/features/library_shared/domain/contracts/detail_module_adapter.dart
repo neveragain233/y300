@@ -98,14 +98,17 @@ abstract class DetailModuleAdapter {
 
   Future<void> updateIntro({required String workId, required String intro});
 
-  /// 修改作品所在分类（详情页 more 菜单动作）。
+  /// 修改作品所在收藏夹；[LibraryCategoryTargets.home] 表示移出收藏夹。
   Future<void> moveWorkToCategory({
     required String workId,
     required String toCategoryId,
   });
 
-  /// 读取当前模块可选分类列表。
+  /// 读取当前模块可选收藏夹列表。
   Future<List<LibraryCategory>> loadCategories();
+
+  /// 作品当前存储归属；未加入书架时返回 null。
+  Future<String?> currentCategoryId({required String workId});
 
   /// 原帖路由参数。
   Future<ThreadRouteTarget?> getThreadRouteTarget({required String workId});

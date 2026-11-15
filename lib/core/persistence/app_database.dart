@@ -9,7 +9,7 @@ class AppDatabase {
   AppDatabase._();
 
   static const String dbName = 'comic_shelf.db';
-  static const int dbVersion = 45;
+  static const int dbVersion = 46;
 
   static const String comicsTable = tables.comicsTable;
   static const String episodesTable = tables.episodesTable;

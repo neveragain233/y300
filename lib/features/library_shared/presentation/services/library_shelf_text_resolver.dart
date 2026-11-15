@@ -1,5 +1,6 @@
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/presentation/services/library_error_summary.dart';
 import 'package:y300/features/library_shared/presentation/services/library_title_fallback_policy.dart';
@@ -14,19 +15,13 @@ abstract final class LibraryShelfTextResolver {
     if (category.source == LibraryModuleKey.bookshelf) {
       return l10n.libraryShelfAllWorks;
     }
-    if (category.isSynthetic) {
-      return category.source == LibraryModuleKey.novel
-          ? l10n.libraryShelfTitle('novel')
-          : l10n.libraryShelfTitle('comic');
+    if (category.isSystemCategory) {
+      final owner = LibrarySystemCategories.ownerOf(category.categoryId);
+      return owner == null
+          ? category.name
+          : l10n.libraryShelfTitle(owner.name);
     }
-    final baseName = category.isDefault
-        ? l10n.libraryShelfDefaultCategory
-        : category.name;
-    return switch (category.source) {
-      LibraryModuleKey.comic => l10n.libraryShelfComicCategory(baseName),
-      LibraryModuleKey.novel => l10n.libraryShelfNovelCategory(baseName),
-      _ => baseName,
-    };
+    return category.name;
   }
 
   static String workTypeBadge(AppLocalizations l10n, LibraryModuleKey? source) {

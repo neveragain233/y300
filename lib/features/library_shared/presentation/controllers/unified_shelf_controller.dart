@@ -50,7 +50,7 @@ class UnifiedShelfState {
     required LibraryModuleKey moduleKey,
     required LibraryDisplayMode defaultDisplayMode,
     LibraryShelfSortOption defaultSortOption = LibraryShelfSortOption.defaults,
-    String initialCategoryId = 'default',
+    String initialCategoryId = '',
   }) {
     return UnifiedShelfState(
       moduleKey: moduleKey,
@@ -169,7 +169,7 @@ class UnifiedShelfController {
       moduleKey: adapter.moduleKey,
       defaultDisplayMode: adapter.defaultDisplayMode,
       defaultSortOption: capabilities.defaultSortOption,
-      initialCategoryId: adapter.initialCategoryId ?? 'default',
+      initialCategoryId: adapter.initialCategoryId ?? '',
     );
   }
 
@@ -583,55 +583,16 @@ class UnifiedShelfController {
     required List<LibraryCategory> sourceCategories,
     required Map<String, List<LibraryWorkItem>> itemsByCategory,
   }) {
-    final visibleMatchCountByCategory = <String, int>{
-      for (final category in sourceCategories)
-        category.categoryId:
-            (itemsByCategory[category.categoryId] ?? const <LibraryWorkItem>[])
-                .length,
-    };
-
-    final defaultCategory = sourceCategories
-        .where((e) => e.isDefault)
-        .cast<LibraryCategory?>()
-        .firstWhere((e) => e != null, orElse: () => null);
-
-    final defaultCount = defaultCategory == null
-        ? (itemsByCategory['default'] ?? const <LibraryWorkItem>[]).length
-        : (visibleMatchCountByCategory[defaultCategory.categoryId] ?? 0);
-
-    final hasAnyNonDefaultItem = sourceCategories.any((category) {
-      if (category.isDefault) {
-        return false;
-      }
-      final count = visibleMatchCountByCategory[category.categoryId] ?? 0;
-      return count > 0;
-    });
-
-    var visibleCategories = List<LibraryCategory>.from(sourceCategories);
-
-    // 规则1：default 空且其它分类有内容时，隐藏 default。
-    if (defaultCategory != null && defaultCount <= 0 && hasAnyNonDefaultItem) {
-      visibleCategories = visibleCategories
-          .where((category) => !category.isDefault)
-          .toList(growable: false);
-    }
-
-    // 规则2：若没有 default 但出现未分类作品，自动在最左补一个 default。
-    if (defaultCategory == null && defaultCount > 0) {
-      final synthetic = LibraryCategory(
-        categoryId: 'default',
-        name: '',
-        sortOrder: -1,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-        visibleMatchCount: defaultCount,
-      );
-      visibleCategories = <LibraryCategory>[synthetic, ...visibleCategories];
-      visibleMatchCountByCategory['default'] = defaultCount;
-    }
-
+    // 类型视图与收藏夹都始终可见；命中数允许重叠，全部按去重作品计数。
     return _ResolvedCategoryState(
-      visibleCategories: visibleCategories,
-      visibleMatchCountByCategory: visibleMatchCountByCategory,
+      visibleCategories: sourceCategories,
+      visibleMatchCountByCategory: <String, int>{
+        for (final category in sourceCategories)
+          category.categoryId:
+              (itemsByCategory[category.categoryId] ??
+                      const <LibraryWorkItem>[])
+                  .length,
+      },
     );
   }
 
@@ -640,7 +601,7 @@ class UnifiedShelfController {
     required String preferred,
   }) {
     if (categories.isEmpty) {
-      return 'default';
+      return '';
     }
     final hit = categories.any((category) => category.categoryId == preferred);
     if (hit) {
@@ -672,7 +633,7 @@ class UnifiedShelfController {
         sortOption: normalized.sortOption,
         displayMode: normalized.displayMode,
         gridColumnCount: normalized.gridColumnCount,
-        selectedCategoryId: normalized.lastCategoryId ?? 'default',
+        selectedCategoryId: normalized.lastCategoryId ?? '',
       ),
     );
     _viewPreferencesLoaded = true;

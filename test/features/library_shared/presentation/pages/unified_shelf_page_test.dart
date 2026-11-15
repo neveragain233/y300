@@ -153,6 +153,14 @@ void main() {
   testWidgets('search updates category match count label', (tester) async {
     final adapter = _FakeShelfAdapter(
       initialDisplayMode: LibraryDisplayMode.grid,
+      categories: [
+        LibraryCategory(
+          categoryId: 'comic-default',
+          name: '漫画',
+          sortOrder: 0,
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ],
       onQuery:
           ({
             required List<LibraryCategory> categories,
@@ -162,11 +170,11 @@ void main() {
           }) async {
             if (keyword.trim().isEmpty) {
               return {
-                'default': [_item(workId: '1', title: 'Comic A')],
+                'comic-default': [_item(workId: '1', title: 'Comic A')],
               };
             }
             return {
-              'default': [
+              'comic-default': [
                 _item(workId: '1', title: 'Comic A'),
                 _item(workId: '2', title: 'Comic B'),
               ],
@@ -198,7 +206,7 @@ void main() {
     expect(
       find.text(
         l10n.libraryShelfCategoryMatchCount(
-          l10n.libraryShelfDefaultCategory,
+          l10n.libraryShelfTitle('comic'),
           2,
         ),
       ),
@@ -1798,7 +1806,6 @@ class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter {
         categories: <LibraryCategory>[
           LibraryCategory(
             categoryId: 'default',
-            sourceCategoryId: 'default',
             source: LibraryModuleKey.bookshelf,
             name: '',
             sortOrder: -1,
@@ -1806,7 +1813,6 @@ class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter {
           ),
           LibraryCategory(
             categoryId: 'comic:default',
-            sourceCategoryId: 'default',
             source: LibraryModuleKey.comic,
             name: '默认',
             sortOrder: 0,
@@ -1814,7 +1820,6 @@ class _FakeMixedCategoryShelfAdapter extends _FakeShelfAdapter {
           ),
           LibraryCategory(
             categoryId: 'novel:default',
-            sourceCategoryId: 'default',
             source: LibraryModuleKey.novel,
             name: '默认',
             sortOrder: 1,

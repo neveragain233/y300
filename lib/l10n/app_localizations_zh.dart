@@ -948,6 +948,37 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String librarySelectionCategoryRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已将 $count 项移出分类',
+      zero: '没有项目移出分类',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String librarySelectionCategoryRemovedPartial(
+    int succeededCount,
+    int failedCount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      succeededCount,
+      locale: localeName,
+      other: '已将 $succeededCount 项移出分类',
+      zero: '没有项目移出分类',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      failedCount,
+      locale: localeName,
+      other: '失败 $failedCount 项',
+      zero: '没有失败项目',
+    );
+    return '$_temp0；$_temp1';
+  }
+
+  @override
   String librarySelectionReadStateChanged(int count, String state) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1107,23 +1138,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryShelfDeleteCategoryTitle => '删除分类';
 
   @override
-  String get libraryShelfDeleteCategoryBody => '删除后，该分类中的作品会移动到默认分类。是否继续？';
-
-  @override
-  String get libraryShelfDefaultCategory => '默认';
+  String get libraryShelfDeleteCategoryBody =>
+      '删除后，该分类中的作品会回到漫画／小说视图，不再属于该分类。是否继续？';
 
   @override
   String get libraryShelfAllWorks => '全部';
-
-  @override
-  String libraryShelfComicCategory(String name) {
-    return '漫画·$name';
-  }
-
-  @override
-  String libraryShelfNovelCategory(String name) {
-    return '小说·$name';
-  }
 
   @override
   String get libraryShelfComicBadge => '漫';
@@ -1143,10 +1162,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryShelfCreateCategoryNeedsSource => '请先切换到漫画或小说分类，再新建分类';
 
   @override
-  String get libraryShelfDefaultCategoryCannotRename => '默认分类不支持重命名';
+  String get libraryShelfRemoveFromCategory => '移出分类';
 
   @override
-  String get libraryShelfDefaultCategoryCannotDelete => '默认分类不支持删除';
+  String get libraryShelfSystemCategoryCannotRename => '系统分类不支持重命名';
+
+  @override
+  String get libraryShelfSystemCategoryCannotDelete => '系统分类不支持删除';
 
   @override
   String get libraryShelfCategoryNameHint => '请输入分类名称';
@@ -2773,7 +2795,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryOperationCacheWriteFailed => '缓存写入失败，请重试';
 
   @override
-  String get libraryOperationDefaultCategoryImmutable => '默认分类不能修改或删除';
+  String get libraryOperationDefaultCategoryImmutable => '系统分类不能修改或删除';
 
   @override
   String get moreTitle => '更多';
@@ -7025,6 +7047,37 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String librarySelectionCategoryRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已將 $count 項移出分類',
+      zero: '沒有項目移出分類',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String librarySelectionCategoryRemovedPartial(
+    int succeededCount,
+    int failedCount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      succeededCount,
+      locale: localeName,
+      other: '已將 $succeededCount 項移出分類',
+      zero: '沒有項目移出分類',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      failedCount,
+      locale: localeName,
+      other: '失敗 $failedCount 項',
+      zero: '沒有失敗項目',
+    );
+    return '$_temp0；$_temp1';
+  }
+
+  @override
   String librarySelectionReadStateChanged(int count, String state) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -7184,23 +7237,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryShelfDeleteCategoryTitle => '刪除分類';
 
   @override
-  String get libraryShelfDeleteCategoryBody => '刪除後，此分類中的作品會移至預設分類。是否繼續？';
-
-  @override
-  String get libraryShelfDefaultCategory => '預設';
+  String get libraryShelfDeleteCategoryBody =>
+      '刪除後，此分類中的作品會回到漫畫／小說視圖，不再屬於此分類。是否繼續？';
 
   @override
   String get libraryShelfAllWorks => '全部';
-
-  @override
-  String libraryShelfComicCategory(String name) {
-    return '漫畫·$name';
-  }
-
-  @override
-  String libraryShelfNovelCategory(String name) {
-    return '小說·$name';
-  }
 
   @override
   String get libraryShelfComicBadge => '漫';
@@ -7220,10 +7261,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryShelfCreateCategoryNeedsSource => '請先切換到漫畫或小說分類，再新增分類';
 
   @override
-  String get libraryShelfDefaultCategoryCannotRename => '預設分類不支援重新命名';
+  String get libraryShelfRemoveFromCategory => '移出分類';
 
   @override
-  String get libraryShelfDefaultCategoryCannotDelete => '預設分類不支援刪除';
+  String get libraryShelfSystemCategoryCannotRename => '系統分類不支援重新命名';
+
+  @override
+  String get libraryShelfSystemCategoryCannotDelete => '系統分類不支援刪除';
 
   @override
   String get libraryShelfCategoryNameHint => '請輸入分類名稱';
@@ -8850,7 +8894,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryOperationCacheWriteFailed => '快取寫入失敗，請重試';
 
   @override
-  String get libraryOperationDefaultCategoryImmutable => '預設分類不能修改或刪除';
+  String get libraryOperationDefaultCategoryImmutable => '系統分類不能修改或刪除';
 
   @override
   String get moreTitle => '更多';

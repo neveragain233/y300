@@ -472,6 +472,19 @@
       "failedCount": {"type": "int"}
     }
   },
+  "librarySelectionCategoryRemoved": "{count, plural, =0 {没有项目移出分类} other {已将 {count} 项移出分类}}",
+  "@librarySelectionCategoryRemoved": {
+    "description": "批量移出分类成功提示",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "librarySelectionCategoryRemovedPartial": "{succeededCount, plural, =0 {没有项目移出分类} other {已将 {succeededCount} 项移出分类}}；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}",
+  "@librarySelectionCategoryRemovedPartial": {
+    "description": "批量移出分类部分失败提示",
+    "placeholders": {
+      "succeededCount": {"type": "int"},
+      "failedCount": {"type": "int"}
+    }
+  },
   "librarySelectionReadStateChanged": "已将 {count, plural, =0 {0 项} other {{count} 项}}标记为{state}",
   "@librarySelectionReadStateChanged": {
     "description": "批量阅读状态修改成功提示；state 是已读或未读的本地化名称",
@@ -550,21 +563,17 @@
   "libraryShelfRenameCategory": "重命名当前分类",
   "libraryShelfDeleteCategory": "删除当前分类",
   "libraryShelfDeleteCategoryTitle": "删除分类",
-  "libraryShelfDeleteCategoryBody": "删除后，该分类中的作品会移动到默认分类。是否继续？",
-  "libraryShelfDefaultCategory": "默认",
+  "libraryShelfDeleteCategoryBody": "删除后，该分类中的作品会回到漫画／小说视图，不再属于该分类。是否继续？",
   "libraryShelfAllWorks": "全部",
-  "libraryShelfComicCategory": "漫画·{name}",
-  "@libraryShelfComicCategory": {"placeholders": {"name": {"type": "String"}}},
-  "libraryShelfNovelCategory": "小说·{name}",
-  "@libraryShelfNovelCategory": {"placeholders": {"name": {"type": "String"}}},
   "libraryShelfComicBadge": "漫",
   "libraryShelfNovelBadge": "文",
   "libraryShelfUnreadBadgeSemantics": "未读 {count} 章",
   "@libraryShelfUnreadBadgeSemantics": {"placeholders": {"count": {"type": "int"}}},
   "libraryShelfCategoryOperationFailed": "分类操作失败",
   "libraryShelfCreateCategoryNeedsSource": "请先切换到漫画或小说分类，再新建分类",
-  "libraryShelfDefaultCategoryCannotRename": "默认分类不支持重命名",
-  "libraryShelfDefaultCategoryCannotDelete": "默认分类不支持删除",
+  "libraryShelfRemoveFromCategory": "移出分类",
+  "libraryShelfSystemCategoryCannotRename": "系统分类不支持重命名",
+  "libraryShelfSystemCategoryCannotDelete": "系统分类不支持删除",
   "libraryShelfCategoryNameHint": "请输入分类名称",
   "libraryShelfCategoryMatchCount": "{name} {count, plural, =0 {0} other {{count}}}",
   "@libraryShelfCategoryMatchCount": {
@@ -1167,7 +1176,7 @@
   "libraryOperationChapterNotFound": "章节不存在或已被移除",
   "libraryOperationUnsupported": "当前模块不支持此操作",
   "libraryOperationCacheWriteFailed": "缓存写入失败，请重试",
-  "libraryOperationDefaultCategoryImmutable": "默认分类不能修改或删除",
+  "libraryOperationDefaultCategoryImmutable": "系统分类不能修改或删除",
 
   "moreTitle": "更多",
   "moreMyProfile": "我的资料",

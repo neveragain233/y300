@@ -1,3 +1,5 @@
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/domain/services/shelf_category_assign_use_case.dart';
 import 'package:y300/features/novel/data/repositories/novel_repository.dart';
 
@@ -17,8 +19,11 @@ class DefaultNovelShelfCategoryAssignUseCase
   }) async {
     final assignedWorkIds = <String>[];
     final failedWorkIds = <String>[];
-    final normalizedSourceCategoryId = sourceCategoryId.trim();
     final normalizedTargetCategoryId = targetCategoryId.trim();
+    final resolvedTargetCategoryId =
+        LibraryCategoryTargets.isHome(normalizedTargetCategoryId)
+        ? novelDefaultCategoryId
+        : normalizedTargetCategoryId;
 
     for (final rawWorkId in workIds) {
       final workId = rawWorkId.trim();
@@ -29,8 +34,8 @@ class DefaultNovelShelfCategoryAssignUseCase
       try {
         await _repository.moveNovelToCategory(
           novelId: workId,
-          fromCategoryId: normalizedSourceCategoryId,
-          toCategoryId: normalizedTargetCategoryId,
+          fromCategoryId: '',
+          toCategoryId: resolvedTargetCategoryId,
         );
         assignedWorkIds.add(workId);
       } catch (_) {
@@ -41,7 +46,7 @@ class DefaultNovelShelfCategoryAssignUseCase
     return ShelfCategoryAssignResult(
       assignedWorkIds: assignedWorkIds,
       failedWorkIds: failedWorkIds,
-      targetCategoryId: normalizedTargetCategoryId,
+      targetCategoryId: resolvedTargetCategoryId,
     );
   }
 }

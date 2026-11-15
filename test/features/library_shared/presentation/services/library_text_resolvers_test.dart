@@ -29,15 +29,19 @@ void main() {
         ),
         '漫畫',
       );
-      final defaultCategory = LibraryCategory(
-        categoryId: 'default',
+      final comicCategory = LibraryCategory(
+        categoryId: 'comic-default',
         name: 'Stored Default Name',
         sortOrder: 0,
         createdAt: DateTime(2026),
       );
       expect(
-        LibraryShelfTextResolver.categoryName(simplified, defaultCategory),
-        simplified.libraryShelfDefaultCategory,
+        LibraryShelfTextResolver.categoryName(simplified, comicCategory),
+        simplified.libraryShelfTitle('comic'),
+      );
+      expect(
+        LibraryShelfTextResolver.categoryName(traditional, comicCategory),
+        traditional.libraryShelfTitle('comic'),
       );
       for (final field in LibraryShelfSortField.values) {
         expect(

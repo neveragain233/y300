@@ -314,52 +314,50 @@ void main() {
       expect(adapter.queryCallCount, 1);
     });
 
-    test(
-      'hide default category when default is empty and others have items',
-      () async {
-        final adapter = _FakeShelfAdapter(
-          categories: [
-            LibraryCategory(
-              categoryId: 'default',
-              name: 'default',
-              sortOrder: 0,
-              createdAt: DateTime(2026, 1, 1),
-            ),
-            LibraryCategory(
+    test('empty type view stays visible beside custom collections', () async {
+      final adapter = _FakeShelfAdapter(
+        categories: [
+          LibraryCategory(
+            categoryId: 'comic-default',
+            name: '漫画',
+            sortOrder: 0,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+          LibraryCategory(
+            categoryId: 'c1',
+            name: 'follow',
+            sortOrder: 2,
+            createdAt: DateTime(2026, 1, 2),
+          ),
+        ],
+        queriedItems: {
+          'comic-default': [],
+          'c1': [
+            LibraryWorkItem(
+              workId: 'w1',
               categoryId: 'c1',
-              name: 'follow',
-              sortOrder: 1,
-              createdAt: DateTime(2026, 1, 2),
+              title: 'title',
+              unreadCount: 0,
+              totalChapterCount: 1,
+              readChapterCount: 1,
+              addedAt: DateTime.utc(2026, 1, 1),
             ),
           ],
-          queriedItems: {
-            'default': [],
-            'c1': [
-              LibraryWorkItem(
-                workId: 'w1',
-                categoryId: 'c1',
-                title: 'title',
-                unreadCount: 0,
-                totalChapterCount: 1,
-                readChapterCount: 1,
-                addedAt: DateTime.utc(2026, 1, 1),
-              ),
-            ],
-          },
-        );
-        final controller = UnifiedShelfController(adapter: adapter);
-        await controller.initialize();
+        },
+      );
+      final controller = UnifiedShelfController(adapter: adapter);
+      await controller.initialize();
 
-        expect(
-          controller.state.categories.any((e) => e.categoryId == 'default'),
-          isFalse,
-        );
-        expect(
-          controller.state.categories.any((e) => e.categoryId == 'c1'),
-          isTrue,
-        );
-      },
-    );
+      expect(
+        controller.state.categories.map((e) => e.categoryId),
+        <String>['comic-default', 'c1'],
+      );
+      expect(
+        controller.state.visibleMatchCountByCategory['comic-default'],
+        0,
+      );
+      expect(controller.state.visibleMatchCountByCategory['c1'], 1);
+    });
 
     test('keep default visible when it has items', () async {
       final adapter = _FakeShelfAdapter(

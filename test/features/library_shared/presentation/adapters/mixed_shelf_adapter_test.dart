@@ -17,21 +17,26 @@ void main() {
       moduleKey: LibraryModuleKey.comic,
       categories: <LibraryCategory>[
         LibraryCategory(
-          categoryId: 'default',
-          name: '默认',
+          categoryId: 'comic-default',
+          name: '漫画',
           sortOrder: 0,
           createdAt: _epoch,
         ),
         LibraryCategory(
           categoryId: 'c1',
           name: '追更',
-          sortOrder: 1,
+          sortOrder: 2,
           createdAt: _epoch,
         ),
       ],
       itemsByCategory: <String, List<LibraryWorkItem>>{
-        'default': <LibraryWorkItem>[
-          _item(workId: 'yamibo:1', categoryId: 'default', unreadCount: 2),
+        'comic-default': <LibraryWorkItem>[
+          _item(
+            workId: 'yamibo:1',
+            categoryId: 'comic-default',
+            unreadCount: 2,
+          ),
+          _item(workId: 'yamibo:2', categoryId: 'c1', unreadCount: 0),
         ],
         'c1': <LibraryWorkItem>[
           _item(workId: 'yamibo:2', categoryId: 'c1', unreadCount: 0),
@@ -43,21 +48,26 @@ void main() {
       moduleKey: LibraryModuleKey.novel,
       categories: <LibraryCategory>[
         LibraryCategory(
-          categoryId: 'default',
-          name: '默认',
-          sortOrder: 0,
+          categoryId: 'novel-default',
+          name: '小说',
+          sortOrder: 1,
           createdAt: _epoch,
         ),
         LibraryCategory(
           categoryId: 'n1',
           name: '追更',
-          sortOrder: 1,
+          sortOrder: 3,
           createdAt: _epoch,
         ),
       ],
       itemsByCategory: <String, List<LibraryWorkItem>>{
-        'default': <LibraryWorkItem>[
-          _item(workId: 'yamibo:1', categoryId: 'default', unreadCount: 0),
+        'novel-default': <LibraryWorkItem>[
+          _item(
+            workId: 'yamibo:1',
+            categoryId: 'novel-default',
+            unreadCount: 0,
+          ),
+          _item(workId: 'novel:49:9', categoryId: 'n1', unreadCount: 0),
         ],
         'n1': <LibraryWorkItem>[
           _item(workId: 'novel:49:9', categoryId: 'n1', unreadCount: 0),
@@ -90,8 +100,16 @@ void main() {
         'novel:novel:49:9',
       });
       expect(
-        snapshot.itemsByCategory['default']!.map((item) => item.identityKey),
-        unorderedEquals(<String>['comic:yamibo:1', 'novel:yamibo:1']),
+        snapshot.itemsByCategory['comic-default']!.map(
+          (item) => item.identityKey,
+        ),
+        unorderedEquals(<String>['comic:yamibo:1', 'comic:yamibo:2']),
+      );
+      expect(
+        snapshot.itemsByCategory['novel-default']!.map(
+          (item) => item.identityKey,
+        ),
+        unorderedEquals(<String>['novel:yamibo:1', 'novel:novel:49:9']),
       );
       expect(
         snapshot.itemsByCategory['c1']!.single.identityKey,
@@ -119,25 +137,20 @@ void main() {
     expect(novel.lastSnapshotKeyword, '');
   });
 
-  test('unclassified comics and novels get separate default views', () async {
+  test('type views are real categories containing all works of that type', () async {
     final snapshot = await adapter.querySnapshot(
       filters: LibraryFilterSet.defaults,
       sortOption: LibraryShelfSortOption.defaults,
       keyword: '',
     );
 
-    expect(
-      snapshot.categories
-          .firstWhere((category) => category.categoryId == 'comic-default')
-          .isSynthetic,
-      isTrue,
-    );
-    expect(
-      snapshot.categories
-          .firstWhere((category) => category.categoryId == 'novel-default')
-          .source,
-      LibraryModuleKey.novel,
-    );
+    for (final categoryId in <String>['comic-default', 'novel-default']) {
+      final category = snapshot.categories.firstWhere(
+        (candidate) => candidate.categoryId == categoryId,
+      );
+      expect(category.isSystemCategory, isTrue);
+      expect(category.isSynthetic, isFalse);
+    }
     expect(
       snapshot.categories.map((category) => category.categoryId),
       isNot(contains('default')),

@@ -1,16 +1,27 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 
+final _epoch = DateTime.fromMillisecondsSinceEpoch(0);
+
 void main() {
   group('LibraryCategory', () {
-    test('isDefault should be true when categoryId is default', () {
+    test('isSystemCategory follows fixed category ids, not names', () {
       final category = LibraryCategory(
-        categoryId: 'default',
-        name: '默认',
+        categoryId: 'comic-default',
+        name: '任意名称',
         sortOrder: 0,
         createdAt: DateTime(2026, 1, 1),
       );
-      expect(category.isDefault, isTrue);
+      expect(category.isSystemCategory, isTrue);
+      expect(
+        LibraryCategory(
+          categoryId: 'c1',
+          name: '漫画',
+          sortOrder: 2,
+          createdAt: _epoch,
+        ).isSystemCategory,
+        isFalse,
+      );
     });
 
     test('copyWith should override visibleMatchCount', () {
@@ -60,15 +71,14 @@ void main() {
     });
   });
 
-  test('source default category is still a default category', () {
+  test('legacy default id is no longer a system category', () {
     final category = LibraryCategory(
-      categoryId: 'comic:default',
-      sourceCategoryId: 'default',
+      categoryId: 'default',
       source: LibraryModuleKey.comic,
       name: '默认',
       sortOrder: 0,
       createdAt: DateTime(2026, 1, 1),
     );
-    expect(category.isDefault, isTrue);
+    expect(category.isSystemCategory, isFalse);
   });
 }

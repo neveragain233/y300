@@ -243,12 +243,6 @@ Future<void> createNovelShelfTables(Database db) async {
       )
     ''');
 
-  await db.insert(novelCategoriesTable, <String, Object?>{
-    'category_id': 'default',
-    'name': '默认',
-    'sort_order': 0,
-    'created_at': DateTime.now().millisecondsSinceEpoch,
-  }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
   await db.execute(
     'CREATE INDEX IF NOT EXISTS idx_novel_shelf_items_category_sort ON $novelShelfItemsTable(category_id, sort_order)',

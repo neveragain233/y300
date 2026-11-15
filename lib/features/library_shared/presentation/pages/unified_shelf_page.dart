@@ -1139,12 +1139,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     }
 
     if (value == 'rename-category') {
-      if (selectedCategory.isDefault || selectedCategory.isSynthetic) {
+      if (selectedCategory.isSystemCategory || selectedCategory.isSynthetic) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
               AppLocalizations.of(context)
-                  .libraryShelfDefaultCategoryCannotRename,
+                  .libraryShelfSystemCategoryCannotRename,
             ),
           ),
         );
@@ -1183,12 +1183,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     }
 
     if (value == 'delete-category') {
-      if (selectedCategory.isDefault || selectedCategory.isSynthetic) {
+      if (selectedCategory.isSystemCategory || selectedCategory.isSynthetic) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
               AppLocalizations.of(context)
-                  .libraryShelfDefaultCategoryCannotDelete,
+                  .libraryShelfSystemCategoryCannotDelete,
             ),
           ),
         );

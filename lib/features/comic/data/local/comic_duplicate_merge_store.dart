@@ -9,6 +9,7 @@ import 'package:y300/features/comic/data/local/comic_local_models.dart';
 import 'package:y300/features/comic/domain/services/comic_duplicate_metadata_matcher.dart';
 import 'package:y300/features/library_shared/data/services/library_cover_store.dart';
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 
 class ComicDuplicateMergeStore {
   ComicDuplicateMergeStore(
@@ -1144,35 +1145,53 @@ class ComicDuplicateMergeStore {
     if (sourceComicIds.isEmpty) {
       return;
     }
-    final rows = await txn.query(
+    final sourceRows = await txn.query(
       AppDatabase.shelfItemsTable,
       where: _whereIn('comic_id', sourceComicIds.length),
       whereArgs: sourceComicIds.toList(growable: false),
       orderBy: 'added_at ASC, sort_order ASC',
     );
-    for (final row in rows) {
-      final categoryId = row['category_id'] as String;
-      final existing = await txn.query(
-        AppDatabase.shelfItemsTable,
-        columns: const <String>['id'],
-        where: 'category_id = ? AND comic_id = ?',
-        whereArgs: <Object>[categoryId, targetComicId],
-        limit: 1,
-      );
-      if (existing.isEmpty) {
-        await txn.insert(AppDatabase.shelfItemsTable, <String, Object?>{
-          'category_id': categoryId,
-          'comic_id': targetComicId,
-          'added_at': row['added_at'],
-          'sort_order': row['sort_order'],
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
+    final targetRows = await txn.query(
+      AppDatabase.shelfItemsTable,
+      where: 'comic_id = ?',
+      whereArgs: <Object>[targetComicId],
+    );
+    if (sourceRows.isEmpty && targetRows.isEmpty) {
+      return;
     }
+
+    // 收藏夹语义只保留一个归属：任一方有自定义收藏夹时优先保留它，
+    // 否则留在类型默认分类。合并后不把同一作品同时留在两个分类。
+    final rows = <Map<String, Object?>>[...targetRows, ...sourceRows];
+    final chosen = rows.firstWhere(
+      (row) =>
+          !LibrarySystemCategories.isSystem(row['category_id'] as String),
+      orElse: () => rows.first,
+    );
+    final categoryId = chosen['category_id'] as String;
+    final addedAt = rows
+        .map((row) => row['added_at'] as int)
+        .reduce((first, second) => first < second ? first : second);
+
     await txn.delete(
       AppDatabase.shelfItemsTable,
-      where: _whereIn('comic_id', sourceComicIds.length),
-      whereArgs: sourceComicIds.toList(growable: false),
+      where: _whereIn('comic_id', sourceComicIds.length + 1),
+      whereArgs: <Object>[...sourceComicIds, targetComicId],
     );
+    final orderRows = await txn.rawQuery(
+      'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order '
+      'FROM ${AppDatabase.shelfItemsTable} WHERE category_id = ?',
+      <Object>[categoryId],
+    );
+    final sortOrder = orderRows.isEmpty
+        ? 0
+        : (orderRows.first['next_order'] as num?)?.toInt() ?? 0;
+    await txn.insert(AppDatabase.shelfItemsTable, <String, Object?>{
+      'category_id': categoryId,
+      'comic_id': targetComicId,
+      'added_at': addedAt,
+      'sort_order': sortOrder,
+    });
   }
 
   Future<void> _moveExternalComicReferencesToTarget(

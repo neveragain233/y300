@@ -67,7 +67,7 @@ void main() {
         whereArgs: const <Object?>['novel:55:521519'],
       );
       expect(shelfRows, hasLength(1));
-      expect(shelfRows.single['category_id'], 'default');
+      expect(shelfRows.single['category_id'], 'novel-default');
       expect(
         shelfRows.single['added_at'],
         DateTime(2026, 7, 1).millisecondsSinceEpoch,

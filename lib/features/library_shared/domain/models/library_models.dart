@@ -1,3 +1,4 @@
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 
 /// 模块标识：用于区分漫画与小说的默认行为差异。
@@ -71,7 +72,6 @@ class LibraryCategory {
     required this.createdAt,
     this.visibleMatchCount = 0,
     this.source,
-    this.sourceCategoryId,
     this.isSynthetic = false,
   });
 
@@ -87,13 +87,13 @@ class LibraryCategory {
   /// 混合书架分类的来源模块；单模块分类为 null。
   final LibraryModuleKey? source;
 
-  /// 来源模块内的原始分类编号；单模块分类为 null。
-  final String? sourceCategoryId;
-
-  /// 由混合书架生成的展示分类（全部、漫画默认、小说默认），不是仓储分类。
+  /// 合成展示分类（当前只有“全部”），不是仓储分类。
   final bool isSynthetic;
 
-  bool get isDefault => (sourceCategoryId ?? categoryId) == 'default';
+  /// 固定编号的系统类型视图；不可改名或删除。
+  bool get isSystemCategory =>
+      categoryId == comicDefaultCategoryId ||
+      categoryId == novelDefaultCategoryId;
 
   LibraryCategory copyWith({
     String? categoryId,
@@ -102,7 +102,6 @@ class LibraryCategory {
     DateTime? createdAt,
     int? visibleMatchCount,
     LibraryModuleKey? source,
-    String? sourceCategoryId,
     bool? isSynthetic,
   }) {
     return LibraryCategory(
@@ -112,7 +111,6 @@ class LibraryCategory {
       createdAt: createdAt ?? this.createdAt,
       visibleMatchCount: visibleMatchCount ?? this.visibleMatchCount,
       source: source ?? this.source,
-      sourceCategoryId: sourceCategoryId ?? this.sourceCategoryId,
       isSynthetic: isSynthetic ?? this.isSynthetic,
     );
   }

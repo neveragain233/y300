@@ -1,10 +1,12 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/comic/domain/repositories/comic_repository.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_query_utils.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 import 'package:y300/features/library_shared/domain/services/library_cover_asset_factory.dart';
 
 class ComicSnapshotStore {
@@ -99,12 +101,23 @@ class ComicSnapshotStore {
       for (final category in categories)
         category.categoryId: <LibraryWorkItem>[],
     };
+    // 漫画类型视图包含全部漫画；重复旧行优先保留自定义收藏夹归属。
+    final typeViewItems = <String, LibraryWorkItem>{};
     for (final row in rows) {
       final item = rowToLibraryWorkItem(row);
       sourceByCategory
           .putIfAbsent(item.categoryId, () => <LibraryWorkItem>[])
           .add(item);
+      final existing = typeViewItems[item.workId];
+      if (existing == null ||
+          (LibrarySystemCategories.isSystem(existing.categoryId) &&
+              !LibrarySystemCategories.isSystem(item.categoryId))) {
+        typeViewItems[item.workId] = item;
+      }
     }
+    sourceByCategory[comicDefaultCategoryId] = typeViewItems.values.toList(
+      growable: false,
+    );
 
     final queried = LibraryShelfQueryUtils.filterAndSortByCategory(
       source: sourceByCategory,
@@ -155,7 +168,7 @@ class ComicSnapshotStore {
       AppDatabase.categoriesTable,
       orderBy: 'sort_order ASC, created_at ASC',
     );
-    return rows
+    final categories = rows
         .map(
           (row) => LibraryCategory(
             categoryId: row['category_id'] as String,
@@ -167,6 +180,10 @@ class ComicSnapshotStore {
           ),
         )
         .toList(growable: false);
+    return LibrarySystemCategories.projectForModule(
+      categories,
+      module: LibraryModuleKey.comic,
+    );
   }
 
   LibraryWorkItem rowToLibraryWorkItem(Map<String, Object?> row) {

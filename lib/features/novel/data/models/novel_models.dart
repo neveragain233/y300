@@ -1,3 +1,5 @@
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
+
 export 'package:y300/features/novel/domain/models/novel_reading_progress.dart';
 
 export 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
@@ -22,7 +24,7 @@ class NovelItem {
     this.coverHidden = false,
     required this.updatedAt,
     required this.episodeCount,
-    this.categoryId = 'default',
+    this.categoryId = novelDefaultCategoryId,
   });
 
   final String novelId;
@@ -115,5 +117,5 @@ class NovelShelfCategory {
   final int sortOrder;
   final DateTime createdAt;
 
-  bool get isDefault => categoryId == 'default';
+  bool get isDefault => categoryId == novelDefaultCategoryId;
 }

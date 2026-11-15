@@ -26,7 +26,7 @@ void main() {
 
   test('ComicShelfCategory can mark default category', () {
     final category = ComicShelfCategory(
-      categoryId: 'default',
+      categoryId: 'comic-default',
       name: '默认',
       sortOrder: 0,
       createdAt: DateTime(2026, 1, 1),

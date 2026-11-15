@@ -372,6 +372,9 @@ class _FakeDetailAdapter
   }) async {}
 
   @override
+  Future<String?> currentCategoryId({required String workId}) async => null;
+
+  @override
   Future<List<LibraryCategory>> loadCategories() async {
     return const [];
   }

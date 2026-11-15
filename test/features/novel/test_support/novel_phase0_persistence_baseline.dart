@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 
 const novelPhase0BaselineNovelId = 'novel:55:521519';
 const novelPhase0BaselineEpisodeId = 'novel:55:521519:40692958';
@@ -10,6 +11,26 @@ Future<void> prepareNovelPhase0DatabaseVersion28(Database db) async {
     'DROP TABLE IF EXISTS ${AppDatabase.novelEpisodeSyncStagingTable}',
   );
   await db.execute('DROP TABLE IF EXISTS ${AppDatabase.novelSourceStateTable}');
+  // 还原 v28 的分类形态：没有共享分类表，模块表只有 default。
+  await db.execute(
+    'DROP TABLE IF EXISTS ${AppDatabase.libraryShelfCategoriesTable}',
+  );
+  for (final table in <String>[
+    AppDatabase.categoriesTable,
+    AppDatabase.novelCategoriesTable,
+  ]) {
+    await db.delete(
+      table,
+      where: 'category_id IN (?, ?)',
+      whereArgs: <Object>['comic-default', 'novel-default'],
+    );
+    await db.insert(table, <String, Object?>{
+      'category_id': legacyDefaultCategoryId,
+      'name': '默认',
+      'sort_order': 0,
+      'created_at': 0,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
   await db.setVersion(28);
 }
 

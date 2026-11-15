@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:sqflite/sqflite.dart';
 
 import '../app_database_tables.dart';
+import '../library_shelf_category_constants.dart';
 import 'migration_helpers.dart';
 
 /// Phase 1: 统一状态表（未读/下载/书签/标签/显示配置）。
@@ -86,12 +87,39 @@ Future<void> createSharedShelfCategoryTable(Database db) async {
         created_at INTEGER NOT NULL
       )
     ''');
-  await db.insert(libraryShelfCategoriesTable, <String, Object?>{
-    'category_id': 'default',
-    'name': '默认',
-    'sort_order': 0,
-    'created_at': 0,
-  }, conflictAlgorithm: ConflictAlgorithm.ignore);
+}
+
+/// 写入两个固定类型视图：漫画、小说。
+///
+/// 共享表与两张模块分类表保持同编号镜像行；已有行不覆盖，便于升级重复执行。
+Future<void> seedSystemShelfCategories(DatabaseExecutor db) async {
+  final targets = <String>[
+    libraryShelfCategoriesTable,
+    if (await _tableExists(db, categoriesTable)) categoriesTable,
+    if (await _tableExists(db, novelCategoriesTable)) novelCategoriesTable,
+  ];
+  for (final table in targets) {
+    await db.insert(
+      table,
+      <String, Object?>{
+        'category_id': comicDefaultCategoryId,
+        'name': comicDefaultCategoryName,
+        'sort_order': 0,
+        'created_at': 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+    await db.insert(
+      table,
+      <String, Object?>{
+        'category_id': novelDefaultCategoryId,
+        'name': novelDefaultCategoryName,
+        'sort_order': 1,
+        'created_at': 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
 }
 
 Future<void> createLibraryPerformanceIndexes(Database db) async {
@@ -258,6 +286,13 @@ Future<void> upgradeLibraryFrom38To40(Database db) async {
 /// 移动分类逻辑不需要改成第二套映射。
 Future<void> upgradeLibraryFrom44To45(Database db) async {
   await createSharedShelfCategoryTable(db);
+  // v45 的中间态仍以共享 default 承接两个模块的默认分类；45→46 再按类型拆分。
+  await db.insert(libraryShelfCategoriesTable, <String, Object?>{
+    'category_id': legacyDefaultCategoryId,
+    'name': '默认',
+    'sort_order': 0,
+    'created_at': 0,
+  }, conflictAlgorithm: ConflictAlgorithm.ignore);
   final hasComicCategories = await _tableExists(db, categoriesTable);
   final hasNovelCategories = await _tableExists(db, novelCategoriesTable);
   if (!hasComicCategories && !hasNovelCategories) {
@@ -341,7 +376,99 @@ Future<void> upgradeLibraryFrom44To45(Database db) async {
   }
 }
 
-Future<bool> _tableExists(Database db, String table) async {
+/// v45 -> v46：把共享 default 拆成漫画／小说两个固定类型视图。
+///
+/// 作品只保留一条书架行：旧 default 中的作品按类型写入系统编号；同一作品
+/// 已归入自定义收藏夹时删除重复的 default 行，保留用户选择。完成后三张分类
+/// 表都不再有 default，避免留下不可删除的隐藏分类。
+Future<void> upgradeLibraryFrom45To46(Database db) async {
+  await seedSystemShelfCategories(db);
+  if (await _tableExists(db, shelfItemsTable)) {
+    await _repointLegacyDefault(
+      db,
+      shelfTable: shelfItemsTable,
+      workColumn: 'comic_id',
+      targetCategoryId: comicDefaultCategoryId,
+    );
+  }
+  if (await _tableExists(db, novelShelfItemsTable)) {
+    await _repointLegacyDefault(
+      db,
+      shelfTable: novelShelfItemsTable,
+      workColumn: 'novel_id',
+      targetCategoryId: novelDefaultCategoryId,
+    );
+  }
+
+  // 自定义收藏夹重新从 2 开始编号，两个系统视图固定排在最前。
+  final customRows = await db.query(
+    libraryShelfCategoriesTable,
+    columns: const <String>['category_id'],
+    where: 'category_id NOT IN (?, ?, ?)',
+    whereArgs: const <Object>[
+      comicDefaultCategoryId,
+      novelDefaultCategoryId,
+      legacyDefaultCategoryId,
+    ],
+    orderBy: 'sort_order ASC, created_at ASC',
+  );
+  var sortOrder = 2;
+  for (final row in customRows) {
+    final categoryId = row['category_id'] as String;
+    for (final table in <String>[
+      libraryShelfCategoriesTable,
+      if (await _tableExists(db, categoriesTable)) categoriesTable,
+      if (await _tableExists(db, novelCategoriesTable)) novelCategoriesTable,
+    ]) {
+      await db.update(
+        table,
+        <String, Object?>{'sort_order': sortOrder},
+        where: 'category_id = ?',
+        whereArgs: <Object>[categoryId],
+      );
+    }
+    sortOrder += 1;
+  }
+
+  for (final table in <String>[
+    libraryShelfCategoriesTable,
+    if (await _tableExists(db, categoriesTable)) categoriesTable,
+    if (await _tableExists(db, novelCategoriesTable)) novelCategoriesTable,
+  ]) {
+    await db.delete(
+      table,
+      where: 'category_id = ?',
+      whereArgs: const <Object>[legacyDefaultCategoryId],
+    );
+  }
+}
+
+Future<void> _repointLegacyDefault(
+  DatabaseExecutor db, {
+  required String shelfTable,
+  required String workColumn,
+  required String targetCategoryId,
+}) async {
+  // 已归入自定义收藏夹的作品不保留旧默认行；删除后不会触发 UNIQUE 冲突。
+  await db.rawDelete(
+    '''
+    DELETE FROM $shelfTable
+    WHERE category_id = ?
+      AND $workColumn IN (
+        SELECT $workColumn FROM $shelfTable WHERE category_id != ?
+      )
+    ''',
+    <Object>[legacyDefaultCategoryId, legacyDefaultCategoryId],
+  );
+  await db.update(
+    shelfTable,
+    <String, Object?>{'category_id': targetCategoryId},
+    where: 'category_id = ?',
+    whereArgs: const <Object>[legacyDefaultCategoryId],
+  );
+}
+
+Future<bool> _tableExists(DatabaseExecutor db, String table) async {
   final rows = await db.rawQuery(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
     <Object>[table],

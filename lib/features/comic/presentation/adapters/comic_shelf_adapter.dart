@@ -12,6 +12,8 @@ import 'package:y300/features/library_shared/domain/repositories/library_state_r
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_query_utils.dart';
@@ -185,8 +187,35 @@ class ComicShelfAdapter
   Future<List<LibraryWorkItem>> loadCategoryItems({
     required String categoryId,
   }) async {
+    if (categoryId == comicDefaultCategoryId) {
+      return _loadTypeViewItems();
+    }
     final items = await _repository.getShelfItems(categoryId: categoryId);
     return Future.wait(items.map(_mapWork));
+  }
+
+  /// 漫画类型视图：聚合全部分类的漫画，并按作品去重。
+  Future<List<LibraryWorkItem>> _loadTypeViewItems() async {
+    final items = await _loadTypeViewShelfItems();
+    return Future.wait(items.map(_mapWork));
+  }
+
+  Future<List<ComicShelfItem>> _loadTypeViewShelfItems() async {
+    final categories = await _repository.getCategories();
+    final items = <String, ComicShelfItem>{};
+    for (final category in categories) {
+      for (final item in await _repository.getShelfItems(
+        categoryId: category.categoryId,
+      )) {
+        final existing = items[item.comicId];
+        if (existing == null ||
+            (existing.categoryId == comicDefaultCategoryId &&
+                item.categoryId != comicDefaultCategoryId)) {
+          items[item.comicId] = item;
+        }
+      }
+    }
+    return items.values.toList(growable: false);
   }
 
   @override
@@ -196,10 +225,13 @@ class ComicShelfAdapter
     final categories = await _repository.getCategories();
     final result = <String, List<LibraryWorkItem>>{};
     for (final category in categories) {
-      final items = await _repository.getShelfItems(
-        categoryId: category.categoryId,
-      );
-      final mappedSource = await Future.wait(items.map(_mapWork));
+      final mappedSource = category.categoryId == comicDefaultCategoryId
+          ? await _loadTypeViewItems()
+          : await Future.wait(
+              (await _repository.getShelfItems(
+                categoryId: category.categoryId,
+              )).map(_mapWork),
+            );
       result[category.categoryId] = LibraryShelfQueryUtils.filterAndSort(
         source: mappedSource,
         filters: LibraryFilterSet.defaults,
@@ -302,10 +334,13 @@ class ComicShelfAdapter
     required String fromCategoryId,
     required String toCategoryId,
   }) {
+    final resolvedTarget = LibraryCategoryTargets.isHome(toCategoryId)
+        ? comicDefaultCategoryId
+        : toCategoryId;
     return _repository.moveComicToCategory(
       comicId: workId,
       fromCategoryId: fromCategoryId,
-      toCategoryId: toCategoryId,
+      toCategoryId: resolvedTarget,
     );
   }
 
@@ -511,6 +546,10 @@ class ComicShelfAdapter
   ) async {
     final output = <String, List<LibraryWorkItem>>{};
     for (final category in categories) {
+      if (category.categoryId == comicDefaultCategoryId) {
+        output[category.categoryId] = await _loadTypeViewItems();
+        continue;
+      }
       final items = await _repository.getShelfItems(
         categoryId: category.categoryId,
       );

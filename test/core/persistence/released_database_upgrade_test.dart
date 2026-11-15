@@ -692,10 +692,14 @@ Future<void> _expectCurrentSemantics(Database db, int oldVersion) async {
     AppDatabase.libraryShelfCategoriesTable,
   );
   if (sharedCategories.isNotEmpty) {
+    final sharedIds = sharedCategories
+        .map((row) => row['category_id'] as String)
+        .toSet();
     expect(
-      sharedCategories.map((row) => row['category_id']).toSet(),
-      containsAll(<String>['default']),
+      sharedIds,
+      containsAll(<String>['comic-default', 'novel-default']),
     );
+    expect(sharedIds, isNot(contains('default')));
   }
   final comicCategory = sharedCategories
       .where((row) => row['name'] == '我的漫画分类')

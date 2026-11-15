@@ -1,4 +1,5 @@
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// Resolves shared selection action copy without putting UI text in adapters.
@@ -22,9 +23,13 @@ final class SelectionActionTextResolver {
   static String resultMessage(
     AppLocalizations l10n,
     String actionId,
-    SelectionActionOutcome result,
-  ) {
+    SelectionActionOutcome result, {
+    String? targetCategoryId,
+  }) {
     final actionLabel = label(l10n, actionId);
+    final removesFromCategory =
+        actionId == SelectionActionIds.assignCategory &&
+        LibraryCategoryTargets.isHome(targetCategoryId);
     if (actionId == SelectionActionIds.parse) {
       return l10n.librarySelectionParseQueued(
         result.enqueuedCount,
@@ -34,9 +39,16 @@ final class SelectionActionTextResolver {
     }
     switch (result.code) {
       case SelectionActionOutcomeCode.success:
-        return _successMessage(l10n, actionId, result, actionLabel);
+        return removesFromCategory
+            ? l10n.librarySelectionCategoryRemoved(result.succeededCount)
+            : _successMessage(l10n, actionId, result, actionLabel);
       case SelectionActionOutcomeCode.partialFailure:
-        return _partialFailureMessage(l10n, actionId, result, actionLabel);
+        return removesFromCategory
+            ? l10n.librarySelectionCategoryRemovedPartial(
+                result.succeededCount,
+                result.failedCount,
+              )
+            : _partialFailureMessage(l10n, actionId, result, actionLabel);
       case SelectionActionOutcomeCode.unsupported:
         return l10n.librarySelectionUnsupported(actionLabel);
       case SelectionActionOutcomeCode.missingTargetCategory:

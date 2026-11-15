@@ -1,6 +1,8 @@
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_operation_failure.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
@@ -560,14 +562,25 @@ class NovelDetailAdapter
     required String toCategoryId,
   }) async {
     final fromCategoryId = await _findCurrentCategoryId(workId);
-    if (fromCategoryId == null || fromCategoryId == toCategoryId) {
+    if (fromCategoryId == null) {
+      return;
+    }
+    final resolvedTarget = LibraryCategoryTargets.isHome(toCategoryId)
+        ? novelDefaultCategoryId
+        : toCategoryId;
+    if (fromCategoryId == resolvedTarget) {
       return;
     }
     await _repository.moveNovelToCategory(
       novelId: workId,
       fromCategoryId: fromCategoryId,
-      toCategoryId: toCategoryId,
+      toCategoryId: resolvedTarget,
     );
+  }
+
+  @override
+  Future<String?> currentCategoryId({required String workId}) {
+    return _findCurrentCategoryId(workId);
   }
 
   @override

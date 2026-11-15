@@ -4,7 +4,9 @@ import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
 import 'package:y300/features/library_shared/data/repositories/local_library_state_repository.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/library_shared/data/services/shared_shelf_category_store.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
@@ -43,11 +45,13 @@ class LocalNovelRepository
   final LibraryStateRepository _stateRepository;
 
   static const String _contentType = 'novel';
-  static const String _defaultCategoryId = 'default';
+  static const String _defaultCategoryId = novelDefaultCategoryId;
 
   @override
   Future<List<NovelShelfCategory>> getCategories() async {
-    final categories = await _sharedCategoryStore.loadCategories();
+    final categories = await _sharedCategoryStore.loadCategories(
+      module: LibraryModuleKey.novel,
+    );
     return categories
         .map(
           (category) => NovelShelfCategory(
@@ -87,45 +91,45 @@ class LocalNovelRepository
     required String fromCategoryId,
     required String toCategoryId,
   }) async {
-    if (fromCategoryId == toCategoryId) {
-      return;
-    }
-
+    // 收藏夹语义：按目标归属幂等写入，fromCategoryId 仅保留旧合同参数。
     final db = await _dbFuture;
-    final now = DateTime.now().millisecondsSinceEpoch;
-
     await db.transaction((txn) async {
-      final targetExists = await txn.query(
+      final rows = await txn.query(
         AppDatabase.novelShelfItemsTable,
-        columns: <String>['id'],
-        where: 'category_id = ? AND novel_id = ?',
-        whereArgs: <Object>[toCategoryId, novelId],
-        limit: 1,
+        columns: const <String>['category_id', 'added_at'],
+        where: 'novel_id = ?',
+        whereArgs: <Object>[novelId],
       );
-      if (targetExists.isEmpty) {
-        final sortOrder = await _nextShelfSortOrder(
-          txn,
-          categoryId: toCategoryId,
-        );
-        await txn.insert(AppDatabase.novelShelfItemsTable, <String, Object?>{
-          'category_id': toCategoryId,
-          'novel_id': novelId,
-          'added_at': now,
-          'sort_order': sortOrder,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      if (rows.isEmpty) {
+        return;
       }
-
+      if (rows.length == 1 && rows.single['category_id'] == toCategoryId) {
+        return;
+      }
+      final addedAt = rows
+          .map((row) => row['added_at'] as int)
+          .reduce((first, second) => first < second ? first : second);
       await txn.delete(
         AppDatabase.novelShelfItemsTable,
-        where: 'category_id = ? AND novel_id = ?',
-        whereArgs: <Object>[fromCategoryId, novelId],
+        where: 'novel_id = ?',
+        whereArgs: <Object>[novelId],
       );
+      final sortOrder = await _nextShelfSortOrder(
+        txn,
+        categoryId: toCategoryId,
+      );
+      await txn.insert(AppDatabase.novelShelfItemsTable, <String, Object?>{
+        'category_id': toCategoryId,
+        'novel_id': novelId,
+        'added_at': addedAt,
+        'sort_order': sortOrder,
+      });
     });
   }
 
   @override
   Future<List<NovelItem>> getShelfItems({
-    String categoryId = _defaultCategoryId,
+    String categoryId = novelDefaultCategoryId,
   }) async {
     final db = await _dbFuture;
     final rows = await db.rawQuery(
@@ -258,12 +262,23 @@ class LocalNovelRepository
       for (final category in categories)
         category.categoryId: <LibraryWorkItem>[],
     };
+    // 小说类型视图包含全部小说；同一作品的重复旧行优先保留自定义收藏夹。
+    final typeViewItems = <String, LibraryWorkItem>{};
     for (final row in rows) {
       final item = _rowToLibraryWorkItem(row);
       sourceByCategory
           .putIfAbsent(item.categoryId, () => <LibraryWorkItem>[])
           .add(item);
+      final existing = typeViewItems[item.workId];
+      if (existing == null ||
+          (LibrarySystemCategories.isSystem(existing.categoryId) &&
+              !LibrarySystemCategories.isSystem(item.categoryId))) {
+        typeViewItems[item.workId] = item;
+      }
     }
+    sourceByCategory[novelDefaultCategoryId] = typeViewItems.values.toList(
+      growable: false,
+    );
 
     final queried = LibraryShelfQueryUtils.filterAndSortByCategory(
       source: sourceByCategory,
@@ -829,7 +844,7 @@ class LocalNovelRepository
       AppDatabase.novelCategoriesTable,
       orderBy: 'sort_order ASC, created_at ASC',
     );
-    return rows
+    final categories = rows
         .map(
           (row) => LibraryCategory(
             categoryId: row['category_id'] as String,
@@ -841,6 +856,10 @@ class LocalNovelRepository
           ),
         )
         .toList(growable: false);
+    return LibrarySystemCategories.projectForModule(
+      categories,
+      module: LibraryModuleKey.novel,
+    );
   }
 
   LibraryWorkItem _rowToLibraryWorkItem(Map<String, Object?> row) {

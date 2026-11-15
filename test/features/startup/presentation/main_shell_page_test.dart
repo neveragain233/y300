@@ -2070,6 +2070,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('共享分类'), findsOneWidget);
+    expect(find.text('移出分类'), findsOneWidget);
     expect(find.text('漫画作品（1 项）'), findsNothing);
     await tester.tap(
       find.byKey(const ValueKey<String>('selection-target-category-shared:1')),

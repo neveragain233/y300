@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_action_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_action_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
@@ -89,7 +90,12 @@ class _ShelfSelectionBottomBarState
         return;
       }
       _showSelectionMessage(
-        SelectionActionTextResolver.resultMessage(l10n, action.id, result),
+        SelectionActionTextResolver.resultMessage(
+          l10n,
+          action.id,
+          result,
+          targetCategoryId: targetCategoryId,
+        ),
       );
     } catch (error) {
       if (!mounted) {
@@ -155,7 +161,8 @@ class _ShelfSelectionBottomBarState
         .where(
           (category) =>
               category.categoryId != state.activeCategoryId &&
-              !category.isSynthetic,
+              !category.isSynthetic &&
+              !category.isSystemCategory,
         )
         .toList(growable: false);
     final selected = await showModalBottomSheet<String>(
@@ -181,6 +188,16 @@ class _ShelfSelectionBottomBarState
                     Navigator.of(sheetContext).pop(category.categoryId);
                   },
                 ),
+              ListTile(
+                key: const ValueKey<String>('selection-target-category-home'),
+                leading: const Icon(Icons.playlist_remove),
+                title: Text(l10n.libraryShelfRemoveFromCategory),
+                onTap: () {
+                  Navigator.of(
+                    sheetContext,
+                  ).pop(LibraryCategoryTargets.home);
+                },
+              ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.add),

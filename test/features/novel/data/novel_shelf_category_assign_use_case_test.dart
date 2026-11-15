@@ -4,7 +4,7 @@ import 'package:y300/features/novel/data/use_cases/novel_shelf_category_assign_u
 
 void main() {
   test(
-    'DefaultNovelShelfCategoryAssignUseCase forwards source and target category ids',
+    'DefaultNovelShelfCategoryAssignUseCase sets the target category idempotently',
     () async {
       final repository = _RecordingNovelRepository();
       final useCase = DefaultNovelShelfCategoryAssignUseCase(
@@ -20,12 +20,12 @@ void main() {
       expect(repository.calls, <_MoveNovelCall>[
         const _MoveNovelCall(
           novelId: 'novel-a',
-          fromCategoryId: 'default',
+          fromCategoryId: '',
           toCategoryId: 'archive',
         ),
         const _MoveNovelCall(
           novelId: 'novel-b',
-          fromCategoryId: 'default',
+          fromCategoryId: '',
           toCategoryId: 'archive',
         ),
       ]);
@@ -34,6 +34,21 @@ void main() {
       expect(result.targetCategoryId, 'archive');
     },
   );
+
+  test('DefaultNovelShelfCategoryAssignUseCase maps home target to novel default', () async {
+    final repository = _RecordingNovelRepository();
+    final useCase = DefaultNovelShelfCategoryAssignUseCase(
+      repository: repository,
+    );
+
+    await useCase.assign(
+      workIds: <String>{'novel-a'},
+      sourceCategoryId: 'romance',
+      targetCategoryId: '__shelf_home__',
+    );
+
+    expect(repository.calls.single.toCategoryId, 'novel-default');
+  });
 
   test(
     'DefaultNovelShelfCategoryAssignUseCase keeps going after per-item failure',

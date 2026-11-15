@@ -3,9 +3,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
+import 'package:y300/features/library_shared/domain/models/library_category_targets.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_query_utils.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
 
@@ -28,8 +30,6 @@ class MixedShelfAdapter
        _novelAdapter = novelAdapter;
 
   static const String allCategoryId = 'all';
-  static const String comicDefaultViewId = 'comic-default';
-  static const String novelDefaultViewId = 'novel-default';
 
   final ShelfModuleAdapter _comicAdapter;
   final ShelfModuleAdapter _novelAdapter;
@@ -130,9 +130,6 @@ class MixedShelfAdapter
     final novel = await _novelAdapter.loadCategories();
     final merged = <String, LibraryCategory>{};
     for (final category in <LibraryCategory>[...comic, ...novel]) {
-      if (category.categoryId == 'default') {
-        continue;
-      }
       merged.putIfAbsent(category.categoryId, () => category);
     }
     final categories = merged.values.toList(growable: false)
@@ -144,23 +141,6 @@ class MixedShelfAdapter
         sortOrder: -1,
         createdAt: _epoch,
         source: LibraryModuleKey.bookshelf,
-        sourceCategoryId: allCategoryId,
-        isSynthetic: true,
-      ),
-      LibraryCategory(
-        categoryId: comicDefaultViewId,
-        name: '',
-        sortOrder: 0,
-        createdAt: _epoch,
-        source: LibraryModuleKey.comic,
-        isSynthetic: true,
-      ),
-      LibraryCategory(
-        categoryId: novelDefaultViewId,
-        name: '',
-        sortOrder: 1,
-        createdAt: _epoch,
-        source: LibraryModuleKey.novel,
         isSynthetic: true,
       ),
       ...categories,
@@ -177,18 +157,6 @@ class MixedShelfAdapter
         _childSnapshot(_novelAdapter, keyword: ''),
       ]);
       return _allItems(snapshots);
-    }
-    if (categoryId == comicDefaultViewId) {
-      final items = await _comicAdapter.loadCategoryItems(
-        categoryId: 'default',
-      );
-      return _decorateAll(items, LibraryModuleKey.comic, 'default');
-    }
-    if (categoryId == novelDefaultViewId) {
-      final items = await _novelAdapter.loadCategoryItems(
-        categoryId: 'default',
-      );
-      return _decorateAll(items, LibraryModuleKey.novel, 'default');
     }
     final results = await Future.wait(<Future<List<LibraryWorkItem>>>[
       _comicAdapter.loadCategoryItems(categoryId: categoryId),
@@ -320,11 +288,17 @@ class MixedShelfAdapter
     if (work == null) {
       throw UnsupportedError('mixedShelfMoveWork');
     }
-    final current = _itemsByIdentity[work.encoded]?.categoryId;
+    final current =
+        _itemsByIdentity[work.encoded]?.categoryId ??
+        LibrarySystemCategories.defaultIdFor(work.source) ??
+        fromCategoryId;
+    final resolvedTarget = LibraryCategoryTargets.isHome(toCategoryId)
+        ? LibrarySystemCategories.defaultIdFor(work.source) ?? toCategoryId
+        : toCategoryId;
     await _adapterFor(work.source).moveWorkToCategory(
       workId: work.workId,
-      fromCategoryId: current ?? fromCategoryId,
-      toCategoryId: toCategoryId,
+      fromCategoryId: current,
+      toCategoryId: resolvedTarget,
     );
   }
 
@@ -379,35 +353,24 @@ class MixedShelfAdapter
       }
       final selectionAdapter = adapter as ShelfSelectionActionAdapter;
       supported = true;
-      final byCurrentCategory = <String, List<String>>{};
-      for (final workId in entry.value) {
-        final workKey = LibraryWorkId(
-          source: entry.key,
-          workId: workId,
-        ).encoded;
-        final current = _itemsByIdentity[workKey]?.categoryId ?? 'default';
-        byCurrentCategory.putIfAbsent(current, () => <String>[]).add(workId);
+      final outcome = await selectionAdapter.runSelectionAction(
+        SelectionActionExecutionRequest(
+          actionId: request.actionId,
+          workIds: entry.value.toSet(),
+          activeCategoryId: request.activeCategoryId,
+          targetCategoryId: request.targetCategoryId,
+        ),
+      );
+      if (outcome.code == SelectionActionOutcomeCode.unsupported ||
+          outcome.code == SelectionActionOutcomeCode.noValidItems) {
+        failed += entry.value.length;
+        continue;
       }
-      for (final category in byCurrentCategory.entries) {
-        final outcome = await selectionAdapter.runSelectionAction(
-          SelectionActionExecutionRequest(
-            actionId: request.actionId,
-            workIds: category.value.toSet(),
-            activeCategoryId: category.key,
-            targetCategoryId: request.targetCategoryId,
-          ),
-        );
-        if (outcome.code == SelectionActionOutcomeCode.unsupported ||
-            outcome.code == SelectionActionOutcomeCode.noValidItems) {
-          failed += category.value.length;
-          continue;
-        }
-        succeeded += outcome.succeededCount;
-        failed += outcome.failedCount;
-        enqueued += outcome.enqueuedCount;
-        deduplicated += outcome.deduplicatedCount;
-        changed = changed || outcome.changed;
-      }
+      succeeded += outcome.succeededCount;
+      failed += outcome.failedCount;
+      enqueued += outcome.enqueuedCount;
+      deduplicated += outcome.deduplicatedCount;
+      changed = changed || outcome.changed;
     }
     if (!supported) {
       return SelectionActionOutcome(

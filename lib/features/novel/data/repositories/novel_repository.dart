@@ -1,3 +1,4 @@
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
@@ -25,7 +26,9 @@ abstract class NovelRepository {
     required String toCategoryId,
   });
 
-  Future<List<NovelItem>> getShelfItems({String categoryId = 'default'});
+  Future<List<NovelItem>> getShelfItems({
+    String categoryId = novelDefaultCategoryId,
+  });
 
   Future<NovelItem?> getDetail({required String novelId});
 

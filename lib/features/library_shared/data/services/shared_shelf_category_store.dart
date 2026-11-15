@@ -2,8 +2,10 @@ import 'dart:math';
 
 import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_operation_failure.dart';
+import 'package:y300/features/library_shared/domain/models/library_system_categories.dart';
 
 /// 漫画和小说共用的书架分类。
 ///
@@ -14,12 +16,13 @@ class SharedShelfCategoryStore {
 
   final Future<Database> _dbFuture;
 
-  Future<List<LibraryCategory>> loadCategories() async {
+  /// 读取共享分类；传入模块时只保留该模块的系统视图，另一类型视图不显示。
+  Future<List<LibraryCategory>> loadCategories({LibraryModuleKey? module}) async {
     final rows = await (await _dbFuture).query(
       AppDatabase.libraryShelfCategoriesTable,
       orderBy: 'sort_order ASC, created_at ASC',
     );
-    return rows
+    final categories = rows
         .map(
           (row) => LibraryCategory(
             categoryId: row['category_id'] as String,
@@ -31,6 +34,13 @@ class SharedShelfCategoryStore {
           ),
         )
         .toList(growable: false);
+    if (module == null) {
+      return categories;
+    }
+    return LibrarySystemCategories.projectForModule(
+      categories,
+      module: module,
+    );
   }
 
   Future<String> createCategory({required String name}) async {
@@ -42,10 +52,11 @@ class SharedShelfCategoryStore {
     final now = DateTime.now();
     final categoryId = _newCategoryId();
     await db.transaction((txn) async {
-      final count = await txn.rawQuery(
-        'SELECT COUNT(*) AS count FROM ${AppDatabase.libraryShelfCategoriesTable}',
+      final orderRow = await txn.rawQuery(
+        'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order '
+        'FROM ${AppDatabase.libraryShelfCategoriesTable}',
       );
-      final sortOrder = (count.first['count'] as int?) ?? 0;
+      final sortOrder = (orderRow.first['next_order'] as num?)?.toInt() ?? 0;
       final values = <String, Object?>{
         'category_id': categoryId,
         'name': trimmed,
@@ -67,7 +78,7 @@ class SharedShelfCategoryStore {
     if (trimmed.isEmpty) {
       throw ArgumentError('分类名称不能为空');
     }
-    if (categoryId == 'default') {
+    if (LibrarySystemCategories.isSystem(categoryId)) {
       throw const LibraryOperationException(
         LibraryOperationFailureCode.defaultCategoryImmutable,
       );
@@ -96,24 +107,26 @@ class SharedShelfCategoryStore {
   }
 
   Future<void> deleteCategory({required String categoryId}) async {
-    if (categoryId == 'default') {
+    if (LibrarySystemCategories.isSystem(categoryId)) {
       throw const LibraryOperationException(
         LibraryOperationFailureCode.defaultCategoryImmutable,
       );
     }
     final db = await _dbFuture;
     await db.transaction((txn) async {
-      await _moveOrphanedShelfItemsToDefault(
+      await _moveOrphanedShelfItems(
         txn,
         shelfTable: AppDatabase.shelfItemsTable,
         workColumn: 'comic_id',
         categoryId: categoryId,
+        fallbackCategoryId: comicDefaultCategoryId,
       );
-      await _moveOrphanedShelfItemsToDefault(
+      await _moveOrphanedShelfItems(
         txn,
         shelfTable: AppDatabase.novelShelfItemsTable,
         workColumn: 'novel_id',
         categoryId: categoryId,
+        fallbackCategoryId: novelDefaultCategoryId,
       );
       await txn.delete(
         AppDatabase.categoriesTable,
@@ -133,33 +146,35 @@ class SharedShelfCategoryStore {
     });
   }
 
-  Future<void> _moveOrphanedShelfItemsToDefault(
+  Future<void> _moveOrphanedShelfItems(
     Transaction txn, {
     required String shelfTable,
     required String workColumn,
     required String categoryId,
+    required String fallbackCategoryId,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    // 已存在于类型默认行的作品保留原行，避免 UNIQUE(category_id, work) 冲突。
     await txn.rawUpdate(
       '''
       UPDATE $shelfTable
-      SET category_id = 'default'
+      SET category_id = ?
       WHERE category_id = ?
         AND $workColumn NOT IN (
-          SELECT $workColumn FROM $shelfTable WHERE category_id = 'default'
+          SELECT $workColumn FROM $shelfTable WHERE category_id = ?
         )
       ''',
-      <Object>[categoryId],
+      <Object>[fallbackCategoryId, categoryId, fallbackCategoryId],
     );
     await txn.rawUpdate(
       '''
       INSERT OR IGNORE INTO $shelfTable (
         category_id, $workColumn, added_at, sort_order
       )
-      SELECT 'default', $workColumn, ?, sort_order
+      SELECT ?, $workColumn, ?, sort_order
       FROM $shelfTable WHERE category_id = ?
       ''',
-      <Object>[now, categoryId],
+      <Object>[fallbackCategoryId, now, categoryId],
     );
     await txn.delete(
       shelfTable,

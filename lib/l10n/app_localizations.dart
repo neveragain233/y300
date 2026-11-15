@@ -1732,6 +1732,21 @@ abstract class AppLocalizations {
     int failedCount,
   );
 
+  /// 批量移出分类成功提示
+  ///
+  /// In zh, this message translates to:
+  /// **'{count, plural, =0 {没有项目移出分类} other {已将 {count} 项移出分类}}'**
+  String librarySelectionCategoryRemoved(int count);
+
+  /// 批量移出分类部分失败提示
+  ///
+  /// In zh, this message translates to:
+  /// **'{succeededCount, plural, =0 {没有项目移出分类} other {已将 {succeededCount} 项移出分类}}；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}'**
+  String librarySelectionCategoryRemovedPartial(
+    int succeededCount,
+    int failedCount,
+  );
+
   /// 批量阅读状态修改成功提示；state 是已读或未读的本地化名称
   ///
   /// In zh, this message translates to:
@@ -1883,32 +1898,14 @@ abstract class AppLocalizations {
   /// No description provided for @libraryShelfDeleteCategoryBody.
   ///
   /// In zh, this message translates to:
-  /// **'删除后，该分类中的作品会移动到默认分类。是否继续？'**
+  /// **'删除后，该分类中的作品会回到漫画／小说视图，不再属于该分类。是否继续？'**
   String get libraryShelfDeleteCategoryBody;
-
-  /// No description provided for @libraryShelfDefaultCategory.
-  ///
-  /// In zh, this message translates to:
-  /// **'默认'**
-  String get libraryShelfDefaultCategory;
 
   /// No description provided for @libraryShelfAllWorks.
   ///
   /// In zh, this message translates to:
   /// **'全部'**
   String get libraryShelfAllWorks;
-
-  /// No description provided for @libraryShelfComicCategory.
-  ///
-  /// In zh, this message translates to:
-  /// **'漫画·{name}'**
-  String libraryShelfComicCategory(String name);
-
-  /// No description provided for @libraryShelfNovelCategory.
-  ///
-  /// In zh, this message translates to:
-  /// **'小说·{name}'**
-  String libraryShelfNovelCategory(String name);
 
   /// No description provided for @libraryShelfComicBadge.
   ///
@@ -1940,17 +1937,23 @@ abstract class AppLocalizations {
   /// **'请先切换到漫画或小说分类，再新建分类'**
   String get libraryShelfCreateCategoryNeedsSource;
 
-  /// No description provided for @libraryShelfDefaultCategoryCannotRename.
+  /// No description provided for @libraryShelfRemoveFromCategory.
   ///
   /// In zh, this message translates to:
-  /// **'默认分类不支持重命名'**
-  String get libraryShelfDefaultCategoryCannotRename;
+  /// **'移出分类'**
+  String get libraryShelfRemoveFromCategory;
 
-  /// No description provided for @libraryShelfDefaultCategoryCannotDelete.
+  /// No description provided for @libraryShelfSystemCategoryCannotRename.
   ///
   /// In zh, this message translates to:
-  /// **'默认分类不支持删除'**
-  String get libraryShelfDefaultCategoryCannotDelete;
+  /// **'系统分类不支持重命名'**
+  String get libraryShelfSystemCategoryCannotRename;
+
+  /// No description provided for @libraryShelfSystemCategoryCannotDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统分类不支持删除'**
+  String get libraryShelfSystemCategoryCannotDelete;
 
   /// No description provided for @libraryShelfCategoryNameHint.
   ///
@@ -4597,7 +4600,7 @@ abstract class AppLocalizations {
   /// No description provided for @libraryOperationDefaultCategoryImmutable.
   ///
   /// In zh, this message translates to:
-  /// **'默认分类不能修改或删除'**
+  /// **'系统分类不能修改或删除'**
   String get libraryOperationDefaultCategoryImmutable;
 
   /// No description provided for @moreTitle.

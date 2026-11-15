@@ -922,12 +922,12 @@ void main() {
       final categoryId = await repository.createCategory(name: '追更');
       await repository.moveComicToCategory(
         comicId: 'yamibo:100',
-        fromCategoryId: 'default',
+        fromCategoryId: 'comic-default',
         toCategoryId: categoryId,
       );
 
       final defaultItems = await repository.getShelfItems(
-        categoryId: 'default',
+        categoryId: 'comic-default',
       );
       final customItems = await repository.getShelfItems(
         categoryId: categoryId,
@@ -954,16 +954,92 @@ void main() {
       final categoryId = await repository.createCategory(name: '归档');
       await repository.moveComicToCategory(
         comicId: 'yamibo:100',
-        fromCategoryId: 'default',
+        fromCategoryId: 'comic-default',
         toCategoryId: categoryId,
       );
       await repository.deleteCategory(categoryId: categoryId);
 
       final defaultItems = await repository.getShelfItems(
-        categoryId: 'default',
+        categoryId: 'comic-default',
       );
       expect(defaultItems.length, 1);
       expect(defaultItems.first.comicId, 'yamibo:100');
+    });
+
+    test('favorite re-ingest keeps an existing custom collection', () async {
+      const comicId = 'yamibo:300';
+      await repository.addToShelf(
+        comicId: comicId,
+        tid: '300',
+        fid: '30',
+        title: '重复解析漫画',
+        parsedPost: const ParsedComicPost(
+          imageUrls: <String>[],
+          episodeLinks: <ComicEpisodeLink>[],
+          plainTextSummary: '摘要',
+        ),
+      );
+      final categoryId = await repository.createCategory(name: '收藏夹');
+      await repository.moveComicToCategory(
+        comicId: comicId,
+        fromCategoryId: 'comic-default',
+        toCategoryId: categoryId,
+      );
+
+      await repository.addFavoriteToShelf(
+        comicId: comicId,
+        tid: '300',
+        fid: '30',
+        title: '重复解析漫画',
+        favoriteAddedAt: DateTime(2026, 1, 2),
+        parsedPost: const ParsedComicPost(
+          imageUrls: <String>[],
+          episodeLinks: <ComicEpisodeLink>[],
+          plainTextSummary: '摘要',
+        ),
+      );
+
+      expect(
+        await repository.getShelfItems(categoryId: 'comic-default'),
+        isEmpty,
+      );
+      expect(
+        (await repository.getShelfItems(categoryId: categoryId)).single.comicId,
+        comicId,
+      );
+    });
+
+    test('type view snapshot includes works in a custom collection', () async {
+      const comicId = 'yamibo:301';
+      await repository.addToShelf(
+        comicId: comicId,
+        tid: '301',
+        fid: '30',
+        title: '收藏夹漫画',
+        parsedPost: const ParsedComicPost(
+          imageUrls: <String>[],
+          episodeLinks: <ComicEpisodeLink>[],
+          plainTextSummary: '摘要',
+        ),
+      );
+      final categoryId = await repository.createCategory(name: '稍后看');
+      await repository.moveComicToCategory(
+        comicId: comicId,
+        fromCategoryId: 'comic-default',
+        toCategoryId: categoryId,
+      );
+
+      final snapshot = await repository.queryShelfSnapshot(
+        filters: LibraryFilterSet.defaults,
+        sortOption: LibraryShelfSortOption.defaults,
+        keyword: '',
+      );
+
+      expect(
+        snapshot.itemsByCategory['comic-default']!.single.workId,
+        comicId,
+      );
+      expect(snapshot.itemsByCategory[categoryId]!.single.workId, comicId);
     });
 
     test('can update custom cover and display settings', () async {
@@ -1280,7 +1356,7 @@ void main() {
         expect(progresses.single.imageIndex, 3);
         expect(progresses.single.scrollOffset, 42);
         expect(images.single.localPath, '/cache/deathpair-12.jpg');
-        expect(snapshot.itemsByCategory['default']!.single.readChapterCount, 1);
+        expect(snapshot.itemsByCategory['comic-default']!.single.readChapterCount, 1);
 
         // Favorite ingest reuses the same chapter writes on later syncs.
         await repository.addFavoriteToShelf(
@@ -1412,7 +1488,7 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '',
         );
-        final item = snapshot.itemsByCategory['default']!.single;
+        final item = snapshot.itemsByCategory['comic-default']!.single;
 
         expect(result.insertedCount, 0);
         expect(result.updatedCount, 1);
@@ -1473,10 +1549,10 @@ void main() {
         sortOption: LibraryShelfSortOption.defaults,
         keyword: '',
       );
-      final item = snapshot.itemsByCategory['default']!.single;
+      final item = snapshot.itemsByCategory['comic-default']!.single;
 
-      expect(snapshot.categories.single.categoryId, 'default');
-      expect(snapshot.visibleMatchCountByCategory['default'], 1);
+      expect(snapshot.categories.single.categoryId, 'comic-default');
+      expect(snapshot.visibleMatchCountByCategory['comic-default'], 1);
       expect(item.title, '聚合漫画');
       expect(item.unreadCount, 1);
       expect(item.readChapterCount, 1);
@@ -1529,7 +1605,7 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '',
         );
-        final item = snapshot.itemsByCategory['default']!.single;
+        final item = snapshot.itemsByCategory['comic-default']!.single;
 
         expect(item.totalChapterCount, 3);
         expect(item.readChapterCount, 1);
@@ -1565,10 +1641,10 @@ void main() {
         );
 
         expect(
-          snapshot.itemsByCategory['default']!.single.workId,
+          snapshot.itemsByCategory['comic-default']!.single.workId,
           'yamibo:920',
         );
-        expect(snapshot.itemsByCategory['default']!.single.unreadCount, 1);
+        expect(snapshot.itemsByCategory['comic-default']!.single.unreadCount, 1);
       },
     );
 
@@ -2501,7 +2577,7 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '',
         );
-        final item = snapshot.itemsByCategory['default']!.single;
+        final item = snapshot.itemsByCategory['comic-default']!.single;
         final progresses = await repository.getReadingProgresses(
           comicId: result.targetComicId,
         );

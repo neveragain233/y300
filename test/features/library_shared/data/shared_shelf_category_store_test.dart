@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:y300/core/persistence/app_database.dart';
 import 'package:y300/features/library_shared/data/services/shared_shelf_category_store.dart';
 import 'package:y300/features/library_shared/domain/models/library_operation_failure.dart';
+import 'package:y300/features/library_shared/domain/models/library_models.dart';
 
 void main() {
   sqfliteFfiInit();
@@ -20,13 +21,30 @@ void main() {
     await db.close();
   });
 
-  test('shared default exists on a fresh database', () async {
+  test('system type views exist on a fresh database', () async {
     final categories = await store.loadCategories();
     expect(categories.map((category) => category.categoryId), <String>[
-      'default',
+      'comic-default',
+      'novel-default',
     ]);
-    expect(await db.query(AppDatabase.categoriesTable), hasLength(1));
-    expect(await db.query(AppDatabase.novelCategoriesTable), hasLength(1));
+    expect(categories.map((category) => category.name), <String>['漫画', '小说']);
+    expect(await db.query(AppDatabase.categoriesTable), hasLength(2));
+    expect(await db.query(AppDatabase.novelCategoriesTable), hasLength(2));
+
+    final comicCategories = await store.loadCategories(
+      module: LibraryModuleKey.comic,
+    );
+    expect(
+      comicCategories.map((category) => category.categoryId),
+      <String>['comic-default'],
+    );
+    final novelCategories = await store.loadCategories(
+      module: LibraryModuleKey.novel,
+    );
+    expect(
+      novelCategories.map((category) => category.categoryId),
+      <String>['novel-default'],
+    );
   });
 
   test('create and rename update the shared row and both mirrors', () async {
@@ -64,7 +82,7 @@ void main() {
   });
 
   test(
-    'deleting a shared category moves both module items to default',
+    'deleting a shared category moves items to each type view',
     () async {
       final categoryId = await store.createCategory(name: '共享');
       await db.insert(AppDatabase.comicsTable, <String, Object?>{
@@ -100,12 +118,12 @@ void main() {
 
       expect(
         (await db.query(AppDatabase.shelfItemsTable)).single['category_id'],
-        'default',
+        'comic-default',
       );
       expect(
         (await db.query(AppDatabase.novelShelfItemsTable))
             .single['category_id'],
-        'default',
+        'novel-default',
       );
       for (final table in <String>[
         AppDatabase.libraryShelfCategoriesTable,
@@ -125,20 +143,22 @@ void main() {
     },
   );
 
-  test('default category cannot be renamed or deleted', () async {
-    await expectLater(
-      store.renameCategory(categoryId: 'default', newName: '改名'),
-      throwsA(
-        isA<LibraryOperationException>().having(
-          (error) => error.code,
-          'code',
-          LibraryOperationFailureCode.defaultCategoryImmutable,
+  test('system type views cannot be renamed or deleted', () async {
+    for (final categoryId in <String>['comic-default', 'novel-default']) {
+      await expectLater(
+        store.renameCategory(categoryId: categoryId, newName: '改名'),
+        throwsA(
+          isA<LibraryOperationException>().having(
+            (error) => error.code,
+            'code',
+            LibraryOperationFailureCode.defaultCategoryImmutable,
+          ),
         ),
-      ),
-    );
-    await expectLater(
-      store.deleteCategory(categoryId: 'default'),
-      throwsA(isA<LibraryOperationException>()),
-    );
+      );
+      await expectLater(
+        store.deleteCategory(categoryId: categoryId),
+        throwsA(isA<LibraryOperationException>()),
+      );
+    }
   });
 }

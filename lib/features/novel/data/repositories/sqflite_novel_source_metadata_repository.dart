@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:y300/core/persistence/app_database.dart';
+import 'package:y300/core/persistence/library_shelf_category_constants.dart';
 import 'package:y300/features/novel/data/models/novel_source_catalog_json_codec.dart';
 import 'package:y300/features/novel/data/repositories/local/novel_source_metadata_writer.dart';
 import 'package:y300/features/novel/domain/models/novel_source_models.dart';
@@ -17,7 +18,7 @@ class SqfliteNovelSourceMetadataRepository
        _catalogCodec = catalogCodec;
 
   static const String _contentType = 'novel';
-  static const String _defaultCategoryId = 'default';
+  static const String _defaultCategoryId = novelDefaultCategoryId;
 
   final Future<Database> _dbFuture;
   final NovelTitleSanitizer _titleSanitizer;
