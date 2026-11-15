@@ -1538,6 +1538,8 @@ class _ThreadCard extends StatelessWidget {
                     ThreadBlockMenuButton(
                       tid: thread.tid,
                       subject: thread.subject,
+                      authorId: thread.uid,
+                      author: thread.author,
                       color: palette.bodyText,
                     ),
                   ],

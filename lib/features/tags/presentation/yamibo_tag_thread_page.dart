@@ -246,6 +246,8 @@ class _TagThreadCard extends StatelessWidget {
       trailing: ThreadBlockMenuButton(
         tid: thread.tid,
         subject: thread.title,
+        authorId: thread.authorId,
+        author: thread.authorName,
         color: palette.bodyText,
       ),
       metadata: Column(

@@ -22,6 +22,7 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
 
 import '../../profile/test_support/profile_repository_fixture.dart';
 
@@ -7547,6 +7548,213 @@ void main() {
         expect(repository.queryHistory.last.containsKey('page'), isFalse);
       },
     );
+
+    testWidgets('blocks the selected floor author from the long-press menu', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+          <String, Object?>{
+            'schemaVersion': 1,
+            'accounts': <String, Object?>{
+              '11': <String, Object?>{
+                'lastSuccessAt': 1000,
+                'members': <Object?>[],
+              },
+            },
+          },
+        ),
+      });
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final submissions = <ForumBlacklistAddSubmission>[];
+      final repository = _FakeThreadRepository(
+        (tid, page) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            posts: [
+              _post(
+                pid: 'block-floor-p1',
+                author: 'alice',
+                authorId: '42',
+                number: 1,
+                isFirst: true,
+                message: '<p>主楼正文</p>',
+              ),
+              _post(
+                pid: 'block-floor-p2',
+                author: 'bob',
+                authorId: '44',
+                number: 2,
+                message: '<p>bob 的回复</p>',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          additionalOverrides: [
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+            verifiedSessionOwnerProvider.overrideWithValue((
+              uid: '11',
+              revision: 0,
+            )),
+            blacklistAddSupportedProvider.overrideWithValue(true),
+            blacklistAddCommandProvider.overrideWithValue((submission) async {
+              submissions.add(submission);
+              return DataCommandApplied(
+                ForumBlacklistAddReceipt(
+                  userId: submission.userId,
+                  username: submission.username,
+                ),
+              );
+            }),
+            blacklistRemoteLoaderProvider.overrideWithValue(
+              (_) async => DataReadSuccess(
+                data: const ForumBlacklistData(
+                  entries: <ForumBlacklistEntry>[
+                    ForumBlacklistEntry(userId: '44', username: 'bob'),
+                  ],
+                  pagesRead: 1,
+                ),
+                capabilities: ForumBlacklistReadCapabilities(
+                  values: DataCapabilitySet.supported(
+                    ForumBlacklistCapability.values,
+                  ),
+                ),
+                metadata: const DataReadMetadata.network(),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _longPressVisibleTop(
+        tester,
+        find.byKey(const Key('thread-post-body-block-floor-p2')),
+      );
+      await _pumpThreadUiTransition(tester);
+      expect(
+        find.byKey(const Key('thread-post-block-user-action')),
+        findsOneWidget,
+      );
+      await _tapPostActionSheetItem(
+        tester,
+        const Key('thread-post-block-user-action'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(submissions.single.userId, '44');
+      expect(submissions.single.username, 'bob');
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThreadDetailPage)),
+      );
+      expect(find.text(l10n.blacklistBlockApplied('bob')), findsOneWidget);
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-block-floor-p2')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('blocks the topic author from the detail more menu', (
+      tester,
+    ) async {
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final submissions = <ForumBlacklistAddSubmission>[];
+      final repository = _FakeThreadRepository(
+        (tid, page) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            posts: [
+              _post(
+                pid: 'block-author-p1',
+                author: 'alice',
+                authorId: '42',
+                number: 1,
+                isFirst: true,
+                message: '<p>主楼正文</p>',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          additionalOverrides: [
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+            verifiedSessionOwnerProvider.overrideWithValue((
+              uid: '11',
+              revision: 0,
+            )),
+            blacklistAddSupportedProvider.overrideWithValue(true),
+            blacklistAddCommandProvider.overrideWithValue((submission) async {
+              submissions.add(submission);
+              return DataCommandApplied(
+                ForumBlacklistAddReceipt(
+                  userId: submission.userId,
+                  username: submission.username,
+                ),
+              );
+            }),
+            blacklistRemoteLoaderProvider.overrideWithValue(
+              (_) async => DataReadSuccess(
+                data: const ForumBlacklistData(
+                  entries: <ForumBlacklistEntry>[
+                    ForumBlacklistEntry(userId: '42', username: 'alice'),
+                  ],
+                  pagesRead: 1,
+                ),
+                capabilities: ForumBlacklistReadCapabilities(
+                  values: DataCapabilitySet.supported(
+                    ForumBlacklistCapability.values,
+                  ),
+                ),
+                metadata: const DataReadMetadata.network(),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('thread-detail-more-menu')));
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThreadDetailPage)),
+      );
+      expect(find.text(l10n.blacklistBlockAuthor), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('thread-detail-block-author-menu-item')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(submissions.single.userId, '42');
+      expect(submissions.single.username, 'alice');
+      expect(find.text(l10n.blacklistBlockApplied('alice')), findsOneWidget);
+    });
 
     testWidgets(
       'app bar action returns to the first post and resets direction',

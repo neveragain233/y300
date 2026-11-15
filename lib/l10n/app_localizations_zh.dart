@@ -394,7 +394,44 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get contentFilterWebBlacklistNote => '名单修改仍在网页版完成';
+  String get contentFilterWebBlacklistNote => '可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成';
+
+  @override
+  String get blacklistBlockUser => '屏蔽此用户';
+
+  @override
+  String get blacklistBlockAuthor => '屏蔽该作者';
+
+  @override
+  String blacklistBlockApplied(String name) {
+    return '已屏蔽「$name」';
+  }
+
+  @override
+  String blacklistBlockAlready(String name) {
+    return '「$name」已在黑名单';
+  }
+
+  @override
+  String get blacklistBlockLogIn => '登录后可屏蔽用户';
+
+  @override
+  String get blacklistBlockInvalidTarget => '无法确认该作者身份，未执行屏蔽';
+
+  @override
+  String get blacklistBlockSelf => '不能屏蔽自己';
+
+  @override
+  String get blacklistBlockUnsupported => '当前论坛客户端不支持屏蔽用户';
+
+  @override
+  String get blacklistBlockFailed => '屏蔽失败，请稍后重试';
+
+  @override
+  String get blacklistBlockUnknown => '暂时无法确认屏蔽是否生效，未自动重试';
+
+  @override
+  String get blacklistReviewList => '查看名单';
 
   @override
   String get contentFilterWebBlacklistOpen => '打开网页名单';
@@ -6363,7 +6400,44 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get contentFilterWebBlacklistNote => '名單修改仍在網頁版完成';
+  String get contentFilterWebBlacklistNote => '可在帖子與樓層選單封鎖用戶；解除名單仍在網頁版完成';
+
+  @override
+  String get blacklistBlockUser => '封鎖此用戶';
+
+  @override
+  String get blacklistBlockAuthor => '封鎖該作者';
+
+  @override
+  String blacklistBlockApplied(String name) {
+    return '已封鎖「$name」';
+  }
+
+  @override
+  String blacklistBlockAlready(String name) {
+    return '「$name」已在黑名單';
+  }
+
+  @override
+  String get blacklistBlockLogIn => '登入後可封鎖用戶';
+
+  @override
+  String get blacklistBlockInvalidTarget => '無法確認該作者身分，未執行封鎖';
+
+  @override
+  String get blacklistBlockSelf => '不能封鎖自己';
+
+  @override
+  String get blacklistBlockUnsupported => '目前論壇用戶端不支援封鎖用戶';
+
+  @override
+  String get blacklistBlockFailed => '封鎖失敗，請稍後重試';
+
+  @override
+  String get blacklistBlockUnknown => '暫時無法確認封鎖是否生效，未自動重試';
+
+  @override
+  String get blacklistReviewList => '查看名單';
 
   @override
   String get contentFilterWebBlacklistOpen => '開啟網頁名單';

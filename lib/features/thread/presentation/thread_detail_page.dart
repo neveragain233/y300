@@ -36,6 +36,7 @@ import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/presentation/blacklist_author_gate_view.dart';
+import 'package:y300/features/content_filter/presentation/services/blacklist_user_action.dart';
 import 'package:y300/features/content_filter/presentation/services/thread_block_action.dart';
 import 'package:y300/features/content_filter/presentation/widgets/blocked_thread_gate_view.dart';
 import 'package:y300/features/history/data/providers/history_providers.dart';
@@ -756,6 +757,22 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           onDisplaySettings: _openDisplaySettings,
           onControlsSettings: _openControlsSettings,
           onBlockThread: () => unawaited(_blockCurrentThread(state)),
+          onBlockAuthor:
+              topicAuthor != null &&
+                  blacklistUserActionAvailable(
+                    ref,
+                    userId: topicAuthor.authorId,
+                    username: topicAuthor.author,
+                  )
+              ? () => unawaited(
+                  blockBlacklistUser(
+                    context,
+                    ref,
+                    userId: topicAuthor.authorId,
+                    username: topicAuthor.author,
+                  ),
+                )
+              : null,
         ),
         onFirstPost: () => _goToFirstPost(controller),
       ),
@@ -1253,6 +1270,19 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
               () => controller.openOnlyAuthor(authorId: authorId),
               userNavigation: true,
             ),
+            onBlockUser:
+                blacklistUserActionAvailable(
+                  ref,
+                  userId: sourcePost.authorId,
+                  username: sourcePost.author,
+                )
+                ? (post) => blockBlacklistUser(
+                    context,
+                    ref,
+                    userId: post.authorId,
+                    username: post.author,
+                  )
+                : null,
           ).show(
             sourcePost: sourcePost,
             displayPost: displayPost,
@@ -1399,6 +1429,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
     required this.onDisplaySettings,
     required this.onControlsSettings,
     required this.onBlockThread,
+    this.onBlockAuthor,
   });
 
   final ThreadDetailPageState state;
@@ -1410,6 +1441,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
   final VoidCallback onDisplaySettings;
   final VoidCallback onControlsSettings;
   final VoidCallback onBlockThread;
+  final VoidCallback? onBlockAuthor;
 
   @override
   Widget build(BuildContext context) {
@@ -1446,6 +1478,12 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
           value: 'block-thread',
           label: l10n.contentFilterBlockAction,
         ),
+        if (onBlockAuthor != null)
+          AppPopupMenuItem<String>(
+            key: const Key('thread-detail-block-author-menu-item'),
+            value: 'block-author',
+            label: l10n.blacklistBlockAuthor,
+          ),
         if (state.homeUrl?.trim().isNotEmpty == true)
           AppPopupMenuItem<String>(
             value: 'home',
@@ -1474,6 +1512,9 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
             return;
           case 'block-thread':
             onBlockThread();
+            return;
+          case 'block-author':
+            onBlockAuthor?.call();
             return;
           case 'home':
             onCopyUrl(l10n.threadDetailHomeLink, state.homeUrl!);

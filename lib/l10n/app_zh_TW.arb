@@ -160,7 +160,28 @@
   "contentFilterWebBlacklistRefreshing": "正在同步…",
   "contentFilterWebBlacklistSyncFailed": "名單同步失敗，已保留上次成功的名單",
   "contentFilterWebBlacklistCount": "{count} 人",
-  "contentFilterWebBlacklistNote": "名單修改仍在網頁版完成",
+  "contentFilterWebBlacklistNote": "可在帖子與樓層選單封鎖用戶；解除名單仍在網頁版完成",
+  "blacklistBlockUser": "封鎖此用戶",
+  "blacklistBlockAuthor": "封鎖該作者",
+  "blacklistBlockApplied": "已封鎖「{name}」",
+  "blacklistBlockAlready": "「{name}」已在黑名單",
+  "blacklistBlockLogIn": "登入後可封鎖用戶",
+  "blacklistBlockInvalidTarget": "無法確認該作者身分，未執行封鎖",
+  "blacklistBlockSelf": "不能封鎖自己",
+  "blacklistBlockUnsupported": "目前論壇用戶端不支援封鎖用戶",
+  "blacklistBlockFailed": "封鎖失敗，請稍後重試",
+  "blacklistBlockUnknown": "暫時無法確認封鎖是否生效，未自動重試",
+  "blacklistReviewList": "查看名單",
+  "@blacklistBlockApplied": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "@blacklistBlockAlready": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "contentFilterWebBlacklistOpen": "開啟網頁名單",
   "contentFilterWebBlacklistMemberUid": "UID：{uid}",
   "@contentFilterWebBlacklistLastSync": {

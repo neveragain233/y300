@@ -535,6 +535,8 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                     action: ThreadBlockMenuButton(
                       tid: item.tid,
                       subject: item.title,
+                      authorId: item.authorId,
+                      author: item.authorName,
                       color: palette.bodyText,
                     ),
                     onTap: () {

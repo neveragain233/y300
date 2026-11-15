@@ -10,6 +10,20 @@ import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
 /// Result of one explicit or automatic web-blacklist synchronization.
 enum BlacklistSyncOutcome { success, noOwner, cancelled, stale, failure }
 
+/// Result of adding one user to the account's web blacklist.
+enum BlacklistAddOutcome {
+  applied,
+  alreadyListed,
+  notLoggedIn,
+  invalidTarget,
+  self,
+  unsupported,
+  rejected,
+  outcomeUnknown,
+  stale,
+  cancelled,
+}
+
 /// Per-account web-blacklist snapshots.
 ///
 /// Reads only run for a verified session owner. Results are discarded when the
@@ -20,6 +34,8 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
   static const Duration staleAfter = Duration(hours: 6);
 
   Future<BlacklistSyncOutcome>? _inFlight;
+  final _addInFlight = <String, Future<BlacklistAddOutcome>>{};
+  int _writeRevision = 0;
 
   @override
   FutureOr<BlacklistSnapshot> build() {
@@ -59,6 +75,7 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
         return BlacklistSyncOutcome.success;
       }
     }
+    final writeRevision = _writeRevision;
     final cancellation = ForumRequestCancellation();
     final result = await ref
         .read(blacklistRemoteLoaderProvider)
@@ -68,6 +85,11 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
       return cancellation.isCancelled
           ? BlacklistSyncOutcome.cancelled
           : BlacklistSyncOutcome.stale;
+    }
+    if (writeRevision != _writeRevision) {
+      // A confirmed member write landed after this read started; publishing the
+      // older list would hide it again.
+      return BlacklistSyncOutcome.stale;
     }
     if (result case DataReadSuccess<
       ForumBlacklistData,
@@ -124,6 +146,133 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
         ref.read(blacklistClockProvider)().difference(account.lastSuccessAt) >=
             staleAfter;
     return stale ? refresh() : BlacklistSyncOutcome.success;
+  }
+
+  /// Adds one user to the current owner's web blacklist.
+  ///
+  /// Repeated requests for the same target share one command. A confirmed
+  /// member is merged into the account snapshot before the full reconciliation
+  /// read, so list filtering and thread gates react immediately.
+  Future<BlacklistAddOutcome> addUser({
+    required String userId,
+    required String username,
+  }) {
+    final key = userId.trim();
+    final existing = _addInFlight[key];
+    if (existing != null) return existing;
+    late final Future<BlacklistAddOutcome> run;
+    run = _addUser(userId: key, username: username).whenComplete(() {
+      if (identical(_addInFlight[key], run)) {
+        _addInFlight.remove(key);
+      }
+    });
+    _addInFlight[key] = run;
+    return run;
+  }
+
+  Future<BlacklistAddOutcome> _addUser({
+    required String userId,
+    required String username,
+  }) async {
+    final owner = ref.read(verifiedSessionOwnerProvider);
+    if (owner == null) return BlacklistAddOutcome.notLoggedIn;
+    if (!RegExp(r'^[1-9]\d{0,19}$').hasMatch(userId) ||
+        username.isEmpty ||
+        username.trim() != username) {
+      return BlacklistAddOutcome.invalidTarget;
+    }
+    if (owner.uid == userId) return BlacklistAddOutcome.self;
+    final current = await _currentSnapshot();
+    final account = current.accountFor(owner.uid);
+    if (account?.members.any((member) => member.userId == userId) ?? false) {
+      return BlacklistAddOutcome.alreadyListed;
+    }
+    if (!ref.read(blacklistAddSupportedProvider)) {
+      return BlacklistAddOutcome.unsupported;
+    }
+    try {
+      final result = await ref.read(blacklistAddCommandProvider)(
+        ForumBlacklistAddSubmission(userId: userId, username: username),
+      );
+      if (!ref.mounted || ref.read(verifiedSessionOwnerProvider) != owner) {
+        return BlacklistAddOutcome.stale;
+      }
+      switch (result) {
+        case DataCommandApplied(:final receipt):
+          final applied = receipt;
+          _writeRevision++;
+          final latest = await _currentSnapshot();
+          if (!ref.mounted || ref.read(verifiedSessionOwnerProvider) != owner) {
+            return BlacklistAddOutcome.stale;
+          }
+          final latestAccount = latest.accountFor(owner.uid);
+          final merged = <BlacklistMember>[
+            ...?latestAccount?.members,
+            if (!(latestAccount?.members.any(
+                  (member) => member.userId == applied.userId,
+                ) ??
+                false))
+              BlacklistMember(
+                userId: applied.userId,
+                username: applied.username,
+              ),
+          ];
+          final next = latest.withAccount(
+            BlacklistAccountSnapshot(
+              ownerUid: owner.uid,
+              members: List<BlacklistMember>.unmodifiable(merged),
+              lastSuccessAt:
+                  latestAccount?.lastSuccessAt ??
+                  DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+            maxAccounts: BlacklistSnapshotCodec.maxAccounts,
+          );
+          try {
+            await ref.read(blacklistRepositoryProvider).save(next);
+          } catch (_) {
+            // The server effect is confirmed; keep the in-memory list and let
+            // the reconciliation read repair persistence.
+          }
+          if (!ref.mounted || ref.read(verifiedSessionOwnerProvider) != owner) {
+            return BlacklistAddOutcome.stale;
+          }
+          state = AsyncData(next);
+          unawaited(_reconcileAfterWrite());
+          return BlacklistAddOutcome.applied;
+        case DataCommandRejected(:final failure):
+          return failure.kind == DataCommandFailureKind.unauthenticated
+              ? BlacklistAddOutcome.notLoggedIn
+              : BlacklistAddOutcome.rejected;
+        case DataCommandNotSent(:final failure):
+          return switch (failure.kind) {
+            DataCommandFailureKind.unauthenticated =>
+              BlacklistAddOutcome.notLoggedIn,
+            DataCommandFailureKind.validation =>
+              BlacklistAddOutcome.invalidTarget,
+            DataCommandFailureKind.cancelled => BlacklistAddOutcome.cancelled,
+            _ => BlacklistAddOutcome.rejected,
+          };
+        case DataCommandUnsupported():
+          return BlacklistAddOutcome.unsupported;
+        case DataCommandOutcomeUnknown():
+          return BlacklistAddOutcome.outcomeUnknown;
+      }
+    } on Object {
+      return BlacklistAddOutcome.outcomeUnknown;
+    }
+  }
+
+  Future<void> _reconcileAfterWrite() async {
+    final existing = _inFlight;
+    if (existing != null) {
+      try {
+        await existing;
+      } catch (_) {
+        // A failed older read must not block the reconciliation read.
+      }
+    }
+    if (!ref.mounted) return;
+    await refresh(force: true);
   }
 
   Future<BlacklistSnapshot> _currentSnapshot() async {

@@ -188,7 +188,28 @@
   "contentFilterWebBlacklistRefreshing": "正在同步…",
   "contentFilterWebBlacklistSyncFailed": "名单同步失败，已保留上次成功的名单",
   "contentFilterWebBlacklistCount": "{count} 人",
-  "contentFilterWebBlacklistNote": "名单修改仍在网页版完成",
+  "contentFilterWebBlacklistNote": "可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成",
+  "blacklistBlockUser": "屏蔽此用户",
+  "blacklistBlockAuthor": "屏蔽该作者",
+  "blacklistBlockApplied": "已屏蔽「{name}」",
+  "blacklistBlockAlready": "「{name}」已在黑名单",
+  "blacklistBlockLogIn": "登录后可屏蔽用户",
+  "blacklistBlockInvalidTarget": "无法确认该作者身份，未执行屏蔽",
+  "blacklistBlockSelf": "不能屏蔽自己",
+  "blacklistBlockUnsupported": "当前论坛客户端不支持屏蔽用户",
+  "blacklistBlockFailed": "屏蔽失败，请稍后重试",
+  "blacklistBlockUnknown": "暂时无法确认屏蔽是否生效，未自动重试",
+  "blacklistReviewList": "查看名单",
+  "@blacklistBlockApplied": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "@blacklistBlockAlready": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "contentFilterWebBlacklistOpen": "打开网页名单",
   "contentFilterWebBlacklistMemberUid": "UID：{uid}",
   "@contentFilterWebBlacklistLastSync": {

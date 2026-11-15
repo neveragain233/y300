@@ -814,8 +814,74 @@ abstract class AppLocalizations {
   /// No description provided for @contentFilterWebBlacklistNote.
   ///
   /// In zh, this message translates to:
-  /// **'名单修改仍在网页版完成'**
+  /// **'可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成'**
   String get contentFilterWebBlacklistNote;
+
+  /// No description provided for @blacklistBlockUser.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽此用户'**
+  String get blacklistBlockUser;
+
+  /// No description provided for @blacklistBlockAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽该作者'**
+  String get blacklistBlockAuthor;
+
+  /// No description provided for @blacklistBlockApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽「{name}」'**
+  String blacklistBlockApplied(String name);
+
+  /// No description provided for @blacklistBlockAlready.
+  ///
+  /// In zh, this message translates to:
+  /// **'「{name}」已在黑名单'**
+  String blacklistBlockAlready(String name);
+
+  /// No description provided for @blacklistBlockLogIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录后可屏蔽用户'**
+  String get blacklistBlockLogIn;
+
+  /// No description provided for @blacklistBlockInvalidTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法确认该作者身份，未执行屏蔽'**
+  String get blacklistBlockInvalidTarget;
+
+  /// No description provided for @blacklistBlockSelf.
+  ///
+  /// In zh, this message translates to:
+  /// **'不能屏蔽自己'**
+  String get blacklistBlockSelf;
+
+  /// No description provided for @blacklistBlockUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前论坛客户端不支持屏蔽用户'**
+  String get blacklistBlockUnsupported;
+
+  /// No description provided for @blacklistBlockFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽失败，请稍后重试'**
+  String get blacklistBlockFailed;
+
+  /// No description provided for @blacklistBlockUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法确认屏蔽是否生效，未自动重试'**
+  String get blacklistBlockUnknown;
+
+  /// No description provided for @blacklistReviewList.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看名单'**
+  String get blacklistReviewList;
 
   /// No description provided for @contentFilterWebBlacklistOpen.
   ///

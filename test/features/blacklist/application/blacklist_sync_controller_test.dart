@@ -123,6 +123,282 @@ void main() {
     expect(repository.saved, isEmpty);
   });
 
+  test('a confirmed add merges immediately and reconciles the list', () async {
+    final repository = _MemoryRepository();
+    final commands = <ForumBlacklistAddSubmission>[];
+    final container = _container(
+      owner: (uid: '11', revision: 3),
+      repository: repository,
+      load: (_) async => _success(<ForumBlacklistEntry>[
+        const ForumBlacklistEntry(userId: '21', username: 'Alice'),
+        const ForumBlacklistEntry(userId: '22', username: 'Bob'),
+      ]),
+      command: (submission) async {
+        commands.add(submission);
+        return DataCommandApplied(
+          ForumBlacklistAddReceipt(
+            userId: submission.userId,
+            username: submission.username,
+          ),
+        );
+      },
+      supported: true,
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(blacklistSyncControllerProvider.notifier);
+
+    final outcome = await controller.addUser(userId: '22', username: 'Bob');
+    expect(outcome, BlacklistAddOutcome.applied);
+    expect(commands.single.userId, '22');
+    expect(commands.single.username, 'Bob');
+    expect(container.read(blacklistedUserIdsProvider), contains('22'));
+    expect(repository.saved.last.accountFor('11')!.members.single.userId, '22');
+
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(blacklistedUserIdsProvider), <String>{'21', '22'});
+  });
+
+  test(
+    'repeated requests share one command and already listed users skip it',
+    () async {
+      final gate = Completer<DataCommandResult<ForumBlacklistAddReceipt>>();
+      final commands = <ForumBlacklistAddSubmission>[];
+      final repository = _MemoryRepository(
+        BlacklistSnapshot(
+          accounts: <String, BlacklistAccountSnapshot>{
+            '11': BlacklistAccountSnapshot(
+              ownerUid: '11',
+              members: const <BlacklistMember>[
+                BlacklistMember(userId: '22', username: 'Bob'),
+              ],
+              lastSuccessAt: DateTime.fromMillisecondsSinceEpoch(1000),
+            ),
+          },
+        ),
+      );
+      final container = _container(
+        owner: (uid: '11', revision: 3),
+        repository: repository,
+        command: (submission) {
+          commands.add(submission);
+          return gate.future;
+        },
+        supported: true,
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        blacklistSyncControllerProvider.notifier,
+      );
+
+      expect(
+        await controller.addUser(userId: '22', username: 'Bob'),
+        BlacklistAddOutcome.alreadyListed,
+      );
+      final first = controller.addUser(userId: '23', username: 'Carol');
+      final second = controller.addUser(userId: '23', username: 'Carol');
+      await Future<void>.delayed(Duration.zero);
+      expect(commands, hasLength(1));
+      gate.complete(
+        const DataCommandApplied(
+          ForumBlacklistAddReceipt(userId: '23', username: 'Carol'),
+        ),
+      );
+      expect(await first, BlacklistAddOutcome.applied);
+      expect(await second, BlacklistAddOutcome.applied);
+      expect(commands, hasLength(1));
+    },
+  );
+
+  test('inconclusive or rejected commands keep the published list', () async {
+    final cases =
+        <
+          (
+            Future<DataCommandResult<ForumBlacklistAddReceipt>> Function(),
+            BlacklistAddOutcome,
+          )
+        >[
+          (
+            () async => const DataCommandOutcomeUnknown(
+              DataCommandFailure(
+                kind: DataCommandFailureKind.unknown,
+                retryPolicy: DataCommandRetryPolicy.never,
+                diagnosticMessage: 'fixture',
+              ),
+            ),
+            BlacklistAddOutcome.outcomeUnknown,
+          ),
+          (
+            () async => const DataCommandRejected(
+              DataCommandFailure(
+                kind: DataCommandFailureKind.validation,
+                retryPolicy: DataCommandRetryPolicy.never,
+                diagnosticMessage: 'fixture',
+              ),
+            ),
+            BlacklistAddOutcome.rejected,
+          ),
+          (
+            () async => const DataCommandNotSent(
+              DataCommandFailure(
+                kind: DataCommandFailureKind.unauthenticated,
+                retryPolicy: DataCommandRetryPolicy.never,
+                diagnosticMessage: 'fixture',
+              ),
+            ),
+            BlacklistAddOutcome.notLoggedIn,
+          ),
+          (
+            () async => const DataCommandUnsupported(),
+            BlacklistAddOutcome.unsupported,
+          ),
+        ];
+    for (final (command, expected) in cases) {
+      final repository = _MemoryRepository();
+      final container = _container(
+        owner: (uid: '11', revision: 3),
+        repository: repository,
+        command: (_) => command(),
+        supported: true,
+        load: (_) async => _success(const <ForumBlacklistEntry>[]),
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        blacklistSyncControllerProvider.notifier,
+      );
+      expect(await controller.addUser(userId: '22', username: 'Bob'), expected);
+      expect(container.read(blacklistedUserIdsProvider), isEmpty);
+      expect(repository.saved, isEmpty);
+    }
+  });
+
+  test('invalid targets, self and a missing owner never submit', () async {
+    var commands = 0;
+    final container = _container(
+      owner: (uid: '11', revision: 3),
+      command: (_) async {
+        commands++;
+        return const DataCommandUnsupported();
+      },
+      supported: true,
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(blacklistSyncControllerProvider.notifier);
+    expect(
+      await controller.addUser(userId: '11', username: 'Reader'),
+      BlacklistAddOutcome.self,
+    );
+    expect(
+      await controller.addUser(userId: '0', username: 'Bad'),
+      BlacklistAddOutcome.invalidTarget,
+    );
+    expect(
+      await controller.addUser(userId: '22', username: ''),
+      BlacklistAddOutcome.invalidTarget,
+    );
+    expect(
+      await controller.addUser(userId: '22', username: ' Bob'),
+      BlacklistAddOutcome.invalidTarget,
+    );
+    expect(commands, 0);
+
+    final anonymous = _container(
+      owner: null,
+      command: (_) async {
+        commands++;
+        return const DataCommandUnsupported();
+      },
+      supported: true,
+    );
+    addTearDown(anonymous.dispose);
+    expect(
+      await anonymous
+          .read(blacklistSyncControllerProvider.notifier)
+          .addUser(userId: '22', username: 'Bob'),
+      BlacklistAddOutcome.notLoggedIn,
+    );
+    expect(commands, 0);
+  });
+
+  test(
+    'an older read cannot hide a member confirmed after it started',
+    () async {
+      final readGate =
+          Completer<
+            DataReadResult<ForumBlacklistData, ForumBlacklistReadCapabilities>
+          >();
+      var reads = 0;
+      final container = _container(
+        owner: (uid: '11', revision: 3),
+        load: (_) {
+          reads++;
+          return reads == 1
+              ? readGate.future
+              : Future.value(
+                  _success(<ForumBlacklistEntry>[
+                    const ForumBlacklistEntry(userId: '21', username: 'Alice'),
+                    const ForumBlacklistEntry(userId: '22', username: 'Bob'),
+                  ]),
+                );
+        },
+        command: (submission) async => DataCommandApplied(
+          ForumBlacklistAddReceipt(
+            userId: submission.userId,
+            username: submission.username,
+          ),
+        ),
+        supported: true,
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        blacklistSyncControllerProvider.notifier,
+      );
+
+      final pendingRefresh = controller.refresh(force: true);
+      await Future<void>.delayed(Duration.zero);
+      expect(reads, 1);
+
+      final added = await controller.addUser(userId: '22', username: 'Bob');
+      expect(added, BlacklistAddOutcome.applied);
+      expect(container.read(blacklistedUserIdsProvider), contains('22'));
+
+      // The pre-write read completes without the member and must not publish.
+      readGate.complete(
+        _success(<ForumBlacklistEntry>[
+          const ForumBlacklistEntry(userId: '21', username: 'Alice'),
+        ]),
+      );
+      expect(await pendingRefresh, BlacklistSyncOutcome.stale);
+      expect(container.read(blacklistedUserIdsProvider), contains('22'));
+
+      for (var attempt = 0; attempt < 20 && reads < 2; attempt++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(reads, 2);
+      expect(container.read(blacklistedUserIdsProvider), <String>{'21', '22'});
+    },
+  );
+
+  test('a confirmed add is stale when the owner changes mid-command', () async {
+    final gate = Completer<DataCommandResult<ForumBlacklistAddReceipt>>();
+    final container = _container(
+      owner: (uid: '11', revision: 3),
+      command: (_) => gate.future,
+      supported: true,
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(blacklistSyncControllerProvider.notifier);
+    final pending = controller.addUser(userId: '22', username: 'Bob');
+    await Future<void>.delayed(Duration.zero);
+    container.read(_ownerState.notifier).set((uid: '12', revision: 4));
+    gate.complete(
+      const DataCommandApplied(
+        ForumBlacklistAddReceipt(userId: '22', username: 'Bob'),
+      ),
+    );
+    expect(await pending, BlacklistAddOutcome.stale);
+    expect(container.read(blacklistedUserIdsProvider), isEmpty);
+  });
+
   test('does not publish a result after the owner revision changes', () async {
     final repository = _MemoryRepository();
     final response =
@@ -185,6 +461,8 @@ ProviderContainer _container({
   Future<DataReadResult<ForumBlacklistData, ForumBlacklistReadCapabilities>>
   Function(ForumBlacklistQuery query)?
   load,
+  BlacklistAddRemoteCommand? command,
+  bool supported = false,
 }) {
   final sessionStore = YamiboSessionStore();
   if (owner != null) {
@@ -208,6 +486,9 @@ ProviderContainer _container({
         load ?? (_) async => _success(const <ForumBlacklistEntry>[]),
       ),
       blacklistAutoSyncProvider.overrideWithValue(false),
+      blacklistAddSupportedProvider.overrideWithValue(supported),
+      if (command != null)
+        blacklistAddCommandProvider.overrideWithValue(command),
       if (clock != null) blacklistClockProvider.overrideWithValue(clock),
       verifiedSessionOwnerProvider.overrideWith(
         (ref) => ref.watch(_ownerState),

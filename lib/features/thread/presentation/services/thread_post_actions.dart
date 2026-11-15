@@ -51,6 +51,7 @@ class ThreadPostActions {
     required this.isCurrent,
     required this.imageReferer,
     this.onViewOnlyAuthor,
+    this.onBlockUser,
     this.selectionRenderPreparer = const DefaultForumHtmlRenderPreparer(),
   });
   final BuildContext context;
@@ -61,6 +62,9 @@ class ThreadPostActions {
 
   /// 楼层菜单“只看该作者”：以该楼作者身份重新查询当前主题。
   final Future<void> Function(String authorId)? onViewOnlyAuthor;
+
+  /// 楼层菜单“屏蔽此用户”：以该楼作者身份加入当前账号黑名单。
+  final Future<void> Function(ThreadPost post)? onBlockUser;
   final ForumHtmlRenderPreparer selectionRenderPreparer;
   bool get active => context.mounted && isCurrent();
   late final ThreadPostNavigation navigation = ThreadPostNavigation(
@@ -98,6 +102,10 @@ class ThreadPostActions {
     final canCopyOption = optionText?.trim().isNotEmpty == true;
     final editTarget = _editTarget(sourcePost);
     final authorId = sourcePost.authorId.trim();
+    final canBlockUser =
+        onBlockUser != null &&
+        RegExp(r'^[1-9]\d{0,19}$').hasMatch(authorId) &&
+        sourcePost.author.trim().isNotEmpty;
     final canViewOnlyAuthor =
         onViewOnlyAuthor != null &&
         authorId.isNotEmpty &&
@@ -110,6 +118,7 @@ class ThreadPostActions {
         capabilities: target.capabilities,
         canCopyPollOption: canCopyOption,
         canViewOnlyAuthor: canViewOnlyAuthor,
+        canBlockUser: canBlockUser,
       ),
     );
     if (!context.mounted || !isCurrent() || action == null) return null;
@@ -181,6 +190,9 @@ class ThreadPostActions {
       case ThreadPostAction.onlyAuthor:
         if (!canViewOnlyAuthor) return null;
         await onViewOnlyAuthor!(authorId);
+      case ThreadPostAction.blockUser:
+        if (!canBlockUser) return null;
+        await onBlockUser!(sourcePost);
     }
     return null;
   }

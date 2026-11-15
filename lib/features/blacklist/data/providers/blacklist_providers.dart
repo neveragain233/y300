@@ -28,6 +28,22 @@ final blacklistRemoteLoaderProvider = Provider<BlacklistRemoteLoader>((ref) {
   return (query) => ref.read(yamiboForumClientProvider).loadBlacklist(query);
 });
 
+typedef BlacklistAddRemoteCommand =
+    Future<DataCommandResult<ForumBlacklistAddReceipt>> Function(
+      ForumBlacklistAddSubmission submission,
+    );
+
+/// Test seam for the authenticated web-blacklist add command.
+final blacklistAddCommandProvider = Provider<BlacklistAddRemoteCommand>((ref) {
+  return (submission) =>
+      ref.read(yamiboForumClientProvider).addToBlacklist(submission);
+});
+
+/// Whether the configured forum client can add blacklist members.
+final blacklistAddSupportedProvider = Provider<bool>((ref) {
+  return ref.watch(yamiboForumClientProvider).friendBlacklistCommand != null;
+});
+
 /// Whether a stale snapshot may be refreshed without an explicit request.
 final blacklistAutoSyncProvider = Provider<bool>((ref) => true);
 

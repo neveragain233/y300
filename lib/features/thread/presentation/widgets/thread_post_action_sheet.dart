@@ -13,6 +13,7 @@ enum ThreadPostAction {
   copyAll,
   copyFloorLink,
   onlyAuthor,
+  blockUser,
 }
 
 class ThreadPostActionSheet extends StatelessWidget {
@@ -23,6 +24,7 @@ class ThreadPostActionSheet extends StatelessWidget {
     required this.capabilities,
     this.canCopyPollOption = false,
     this.canViewOnlyAuthor = false,
+    this.canBlockUser = false,
   });
 
   final ThreadPost post;
@@ -30,6 +32,7 @@ class ThreadPostActionSheet extends StatelessWidget {
   final ThreadDetailReadCapabilities? capabilities;
   final bool canCopyPollOption;
   final bool canViewOnlyAuthor;
+  final bool canBlockUser;
 
   bool _supports(ThreadDetailCapability capability) {
     return capabilities?.supports(capability) ?? false;
@@ -41,6 +44,13 @@ class ThreadPostActionSheet extends StatelessWidget {
     return ForumContentActionSheet<ThreadPostAction>(
       key: const Key('thread-post-action-sheet'),
       actions: [
+        if (canBlockUser)
+          ForumContentAction(
+            key: const Key('thread-post-block-user-action'),
+            value: ThreadPostAction.blockUser,
+            icon: Icons.person_off_outlined,
+            label: l10n.blacklistBlockUser,
+          ),
         if (canViewOnlyAuthor)
           ForumContentAction(
             key: const Key('thread-post-only-author-action'),
