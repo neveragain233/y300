@@ -35,6 +35,7 @@ import 'package:y300/features/content_filter/application/blocked_threads_control
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/blacklist/presentation/blacklist_author_gate_view.dart';
 import 'package:y300/features/content_filter/presentation/services/blacklist_user_action.dart';
 import 'package:y300/features/content_filter/presentation/services/thread_block_action.dart';
@@ -392,12 +393,15 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         asyncState.value ??
         ThreadDetailPageState.initial(tid: widget.tid, subject: widget.subject);
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final topicAuthor = _topicAuthorPost(state);
     final blacklistedTopicAuthorId = topicAuthor?.authorId.trim() ?? '';
     final blacklistedTopicAuthor =
         blacklistedTopicAuthorId.isNotEmpty &&
         blacklistedUserIds.contains(blacklistedTopicAuthorId);
-    if (blacklistedTopicAuthor && !_allowedBlacklistedAuthorView) {
+    if (hideBlacklistedThreads &&
+        blacklistedTopicAuthor &&
+        !_allowedBlacklistedAuthorView) {
       return BlacklistAuthorGateView(
         subject: state.subject.trim().isNotEmpty
             ? state.subject

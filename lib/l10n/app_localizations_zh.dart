@@ -397,6 +397,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contentFilterWebBlacklistNote => '可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成';
 
   @override
+  String get contentFilterHideBlacklistedThreads => '屏蔽黑名单用户发起的帖子';
+
+  @override
+  String get contentFilterHideBlacklistedThreadsDetail =>
+      '关闭时与原站一致：帖子照常显示，作者的全部楼层折叠；打开后从版块、搜索和标签列表隐藏，直链先显示整帖拦截。';
+
+  @override
   String get blacklistBlockUser => '屏蔽此用户';
 
   @override
@@ -6402,6 +6409,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get contentFilterWebBlacklistNote => '可在帖子與樓層選單封鎖用戶；解除名單仍在網頁版完成';
+
+  @override
+  String get contentFilterHideBlacklistedThreads => '封鎖黑名單用戶發起的主題';
+
+  @override
+  String get contentFilterHideBlacklistedThreadsDetail =>
+      '關閉時與原站一致：主題照常顯示，作者的全部樓層折疊；開啟後從版塊、搜尋和標籤列表隱藏，直連先顯示整帖攔截。';
 
   @override
   String get blacklistBlockUser => '封鎖此用戶';

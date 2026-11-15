@@ -817,6 +817,18 @@ abstract class AppLocalizations {
   /// **'可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成'**
   String get contentFilterWebBlacklistNote;
 
+  /// No description provided for @contentFilterHideBlacklistedThreads.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽黑名单用户发起的帖子'**
+  String get contentFilterHideBlacklistedThreads;
+
+  /// No description provided for @contentFilterHideBlacklistedThreadsDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭时与原站一致：帖子照常显示，作者的全部楼层折叠；打开后从版块、搜索和标签列表隐藏，直链先显示整帖拦截。'**
+  String get contentFilterHideBlacklistedThreadsDetail;
+
   /// No description provided for @blacklistBlockUser.
   ///
   /// In zh, this message translates to:

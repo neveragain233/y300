@@ -8,6 +8,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/comic/data/providers/comic_refresh_workflow_providers.dart';
 import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_models.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
@@ -349,13 +350,15 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
     final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final visibleItems = [
       for (final item in _items)
         if (!blockedThreadIds.contains(
               ThreadBlockIdentity.normalizeTid(item.tid),
             ) &&
-            !(item.authorId != null &&
-                blacklistedUserIds.contains(item.authorId!.trim())))
+            (!hideBlacklistedThreads ||
+                !(item.authorId != null &&
+                    blacklistedUserIds.contains(item.authorId!.trim()))))
           item,
     ];
     final hiddenByRules = _items.isNotEmpty && visibleItems.isEmpty;

@@ -161,6 +161,8 @@
   "contentFilterWebBlacklistSyncFailed": "名單同步失敗，已保留上次成功的名單",
   "contentFilterWebBlacklistCount": "{count} 人",
   "contentFilterWebBlacklistNote": "可在帖子與樓層選單封鎖用戶；解除名單仍在網頁版完成",
+  "contentFilterHideBlacklistedThreads": "封鎖黑名單用戶發起的主題",
+  "contentFilterHideBlacklistedThreadsDetail": "關閉時與原站一致：主題照常顯示，作者的全部樓層折疊；開啟後從版塊、搜尋和標籤列表隱藏，直連先顯示整帖攔截。",
   "blacklistBlockUser": "封鎖此用戶",
   "blacklistBlockAuthor": "封鎖該作者",
   "blacklistBlockApplied": "已封鎖「{name}」",

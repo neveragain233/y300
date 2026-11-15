@@ -4,6 +4,7 @@ import 'package:y300/shared/widgets/forum_thread_list_tile.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
@@ -45,13 +46,15 @@ class YamiboTagThreadPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final visibleTopics = [
       for (final thread in data?.topics ?? const <ForumTagTopicSummary>[])
         if (!blockedThreadIds.contains(
               ThreadBlockIdentity.normalizeTid(thread.tid),
             ) &&
-            !(thread.authorId != null &&
-                blacklistedUserIds.contains(thread.authorId!.trim())))
+            (!hideBlacklistedThreads ||
+                !(thread.authorId != null &&
+                    blacklistedUserIds.contains(thread.authorId!.trim()))))
           thread,
     ];
     final hiddenByRules =

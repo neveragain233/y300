@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -71,6 +72,41 @@ void main() {
       find.byKey(const Key('content-filter-blacklist-refresh')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('hiding blacklisted threads defaults off and persists toggle', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          blockedThreadRepositoryProvider.overrideWithValue(
+            _MemoryRepository(const <BlockedThread>[]),
+          ),
+          blacklistRepositoryProvider.overrideWithValue(
+            _EmptyBlacklistRepository(),
+          ),
+          blacklistAutoSyncProvider.overrideWithValue(false),
+          verifiedSessionOwnerProvider.overrideWithValue(null),
+        ],
+        child: const LocalizedTestApp(home: ContentFilterPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tile = find.byKey(
+      const Key('content-filter-hide-blacklisted-threads'),
+    );
+    expect(tile, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(tile).value, isFalse);
+
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(tile).value, isTrue);
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getBool('blacklist.hide_initiated_threads.v1'), isTrue);
   });
 
   testWidgets('lists blocked threads and restores one', (tester) async {

@@ -16,6 +16,7 @@ import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/comic/data/providers/comic_refresh_workflow_providers.dart';
 import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_models.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/search/data/services/forum_search_coordinator.dart';
 import 'package:y300/features/search/presentation/forum_search_page.dart';
 
@@ -70,7 +71,49 @@ void main() {
     expect(find.text('测试漫画 第1话'), findsOneWidget);
   });
 
-  testWidgets('web blacklist hides results by author id', (tester) async {
+  testWidgets('web blacklist hides results when hiding is enabled', (
+    tester,
+  ) async {
+    _seedBlacklistMembers(const <String>['42']);
+    final sessionStore = YamiboSessionStore()
+      ..saveExtracted(
+        YamiboSessionSnapshot(
+          isLoggedIn: true,
+          uid: '11',
+          username: 'Reader',
+          formhash: '',
+          updatedAt: DateTime(2026, 1, 1),
+          source: 'test',
+        ),
+      );
+    final coordinator = _FakeForumSearchCoordinator(
+      topics: const <ForumSearchTopicSummary>[
+        ForumSearchTopicSummary(tid: '100', title: '屏蔽作者结果', authorId: '42'),
+        ForumSearchTopicSummary(tid: '200', title: '正常作者结果', authorId: '43'),
+      ],
+    );
+    await tester.pumpWidget(
+      _buildApp(
+        coordinator,
+        extraOverrides: [
+          yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+          hideBlacklistedThreadsProvider.overrideWithValue(true),
+        ],
+      ),
+    );
+    addTearDown(coordinator.dispose);
+
+    await tester.enterText(find.byKey(const Key('forum-search-input')), '关键词');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('屏蔽作者结果'), findsNothing);
+    expect(find.text('正常作者结果'), findsOneWidget);
+  });
+
+  testWidgets('blacklisted search results stay visible by default', (
+    tester,
+  ) async {
     _seedBlacklistMembers(const <String>['42']);
     final sessionStore = YamiboSessionStore()
       ..saveExtracted(
@@ -103,7 +146,7 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
 
-    expect(find.text('屏蔽作者结果'), findsNothing);
+    expect(find.text('屏蔽作者结果'), findsOneWidget);
     expect(find.text('正常作者结果'), findsOneWidget);
   });
 

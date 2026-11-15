@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
@@ -88,6 +89,7 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
     final blacklistLoading = ref
         .watch(blacklistSyncControllerProvider)
         .isLoading;
+    final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final asyncRules = ref.watch(blockedThreadsControllerProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.contentFilterTitle)),
@@ -142,9 +144,31 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
                     ?.copyWith(color: Theme.of(context).hintColor),
               ),
             ),
+          SwitchListTile(
+            key: const Key('content-filter-hide-blacklisted-threads'),
+            value: hideBlacklistedThreads,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            title: Text(l10n.contentFilterHideBlacklistedThreads),
+            subtitle: Text(l10n.contentFilterHideBlacklistedThreadsDetail),
+            onChanged: (value) => unawaited(_setHideBlacklistedThreads(value)),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _setHideBlacklistedThreads(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final saved = await ref
+        .read(blacklistDisplayPreferencesControllerProvider.notifier)
+        .setHideThreadsStartedByBlacklistedUsers(value);
+    if (!mounted || saved) {
+      return;
+    }
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.contentFilterSaveFailed)));
   }
 
   List<Widget> _buildThreadSection(AsyncValue<List<BlockedThread>> asyncRules) {

@@ -26,6 +26,7 @@ import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/domain/services/forum_image_dimension_index.dart';
 import 'package:y300/features/cache/domain/services/image_cache_service.dart';
 import 'package:y300/features/cache/presentation/widgets/cached_library_image.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/favorites/data/providers/favorite_directory_providers.dart';
 import 'package:y300/features/forum/data/providers/forum_display_repository_providers.dart';
 import 'package:y300/features/forum/presentation/forum_display_page.dart';
@@ -1947,9 +1948,133 @@ void main() {
       expect(find.byKey(const Key('forum-thread-201')), findsOneWidget);
     });
 
-    testWidgets('web blacklist hides threads by their author id', (
+    testWidgets('web blacklist hides threads when hiding is enabled', (
       tester,
     ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+          <String, Object?>{
+            'schemaVersion': 1,
+            'accounts': <String, Object?>{
+              '11': <String, Object?>{
+                'lastSuccessAt': 1000,
+                'members': <Object?>[
+                  <String, Object?>{'userId': '42', 'username': 'Blocked'},
+                ],
+              },
+            },
+          },
+        ),
+      });
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 2,
+            threads: [
+              _blockedTestThread(tid: '301', subject: '黑名单作者', uid: '42'),
+              _blockedTestThread(tid: '302', subject: '正常作者', uid: '43'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          extraOverrides: [
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+            hideBlacklistedThreadsProvider.overrideWithValue(true),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-301')), findsNothing);
+      expect(find.byKey(const Key('forum-thread-302')), findsOneWidget);
+    });
+
+    testWidgets('turning hiding off reveals blacklisted threads in place', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'blacklist.hide_initiated_threads.v1': true,
+        'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+          <String, Object?>{
+            'schemaVersion': 1,
+            'accounts': <String, Object?>{
+              '11': <String, Object?>{
+                'lastSuccessAt': 1000,
+                'members': <Object?>[
+                  <String, Object?>{'userId': '42', 'username': 'Blocked'},
+                ],
+              },
+            },
+          },
+        ),
+      });
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 2,
+            threads: [
+              _blockedTestThread(tid: '301', subject: '黑名单作者', uid: '42'),
+              _blockedTestThread(tid: '302', subject: '正常作者', uid: '43'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          extraOverrides: [
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('forum-thread-301')), findsNothing);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ForumDisplayPage)),
+      );
+      expect(
+        await container
+            .read(blacklistDisplayPreferencesControllerProvider.notifier)
+            .setHideThreadsStartedByBlacklistedUsers(false),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-301')), findsOneWidget);
+      expect(find.byKey(const Key('forum-thread-302')), findsOneWidget);
+    });
+
+    testWidgets('blacklisted threads stay visible by default', (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'content_filter.web_blacklist.snapshot.v1': jsonEncode(
           <String, Object?>{
@@ -1999,7 +2124,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('forum-thread-301')), findsNothing);
+      expect(find.byKey(const Key('forum-thread-301')), findsOneWidget);
       expect(find.byKey(const Key('forum-thread-302')), findsOneWidget);
     });
 

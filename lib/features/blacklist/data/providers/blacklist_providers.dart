@@ -5,7 +5,9 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_client_provider.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/features/blacklist/data/repositories/shared_preferences_blacklist_display_preferences_repository.dart';
 import 'package:y300/features/blacklist/data/repositories/shared_preferences_blacklist_repository.dart';
+import 'package:y300/features/blacklist/domain/repositories/blacklist_display_preferences_repository.dart';
 import 'package:y300/features/blacklist/domain/repositories/blacklist_repository.dart';
 
 final blacklistRepositoryProvider = Provider<BlacklistRepository>((ref) {
@@ -13,6 +15,13 @@ final blacklistRepositoryProvider = Provider<BlacklistRepository>((ref) {
     ref.watch(preferencesStoreProvider),
   );
 });
+
+final blacklistDisplayPreferencesRepositoryProvider =
+    Provider<BlacklistDisplayPreferencesRepository>((ref) {
+      return SharedPreferencesBlacklistDisplayPreferencesRepository(
+        ref.watch(preferencesStoreProvider),
+      );
+    });
 
 /// Test seam for sync timestamps; production uses the wall clock.
 final blacklistClockProvider = Provider<DateTime Function()>(

@@ -69,6 +69,9 @@ abstract final class PreferenceKeyNames {
   static const contentFilterWebBlacklistSnapshotV1 =
       'content_filter.web_blacklist.snapshot.v1';
 
+  static const blacklistHideInitiatedThreadsV1 =
+      'blacklist.hide_initiated_threads.v1';
+
   static const recentSearchSnapshotV1 = 'search.recent.snapshot.v1';
 
   static const legacyThreadTextFontScale = 'thread_text_font_scale';

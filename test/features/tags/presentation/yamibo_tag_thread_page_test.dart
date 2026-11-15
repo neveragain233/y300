@@ -10,6 +10,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/tags/data/providers/tag_providers.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 
@@ -18,7 +19,56 @@ import '../../../test_support/localized_test_app.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  testWidgets('web blacklist hides topics by their author id', (tester) async {
+  testWidgets('web blacklist hides topics when hiding is enabled', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'content_filter.web_blacklist.snapshot.v1': jsonEncode(<String, Object?>{
+        'schemaVersion': 1,
+        'accounts': <String, Object?>{
+          '11': <String, Object?>{
+            'lastSuccessAt': 1000,
+            'members': <Object?>[
+              <String, Object?>{'userId': '399468', 'username': 'Blocked'},
+            ],
+          },
+        },
+      }),
+    });
+    final sessionStore = YamiboSessionStore()
+      ..saveExtracted(
+        YamiboSessionSnapshot(
+          isLoggedIn: true,
+          uid: '11',
+          username: 'Reader',
+          formhash: '',
+          updatedAt: DateTime(2026, 1, 1),
+          source: 'test',
+        ),
+      );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          forumTagDirectoryRepositoryProvider.overrideWithValue(
+            _FakeForumTagDirectoryRepository(),
+          ),
+          yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+          hideBlacklistedThreadsProvider.overrideWithValue(true),
+        ],
+        child: LocalizedTestApp(
+          theme: AppTheme.light(),
+          home: const YamiboTagThreadPage(tagId: '21920'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(find.byKey(const Key('yamibo-tag-thread-572514')), findsNothing);
+    expect(find.byKey(const Key('yamibo-tag-blocked')), findsOneWidget);
+  });
+
+  testWidgets('blacklisted topics stay visible by default', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'content_filter.web_blacklist.snapshot.v1': jsonEncode(<String, Object?>{
         'schemaVersion': 1,
@@ -60,8 +110,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 80));
 
-    expect(find.byKey(const Key('yamibo-tag-thread-572514')), findsNothing);
-    expect(find.byKey(const Key('yamibo-tag-blocked')), findsOneWidget);
+    expect(find.byKey(const Key('yamibo-tag-thread-572514')), findsOneWidget);
+    expect(find.byKey(const Key('yamibo-tag-blocked')), findsNothing);
   });
 
   testWidgets('blocked topics are hidden and explained on the tag page', (

@@ -22,6 +22,7 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
 
 import '../../profile/test_support/profile_repository_fixture.dart';
@@ -7275,6 +7276,7 @@ void main() {
             repository,
             additionalOverrides: [
               yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+              hideBlacklistedThreadsProvider.overrideWithValue(true),
             ],
           ),
         );
@@ -7324,6 +7326,107 @@ void main() {
         );
       },
     );
+
+    testWidgets('blacklisted threads render with collapsed floors by default', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+          <String, Object?>{
+            'schemaVersion': 1,
+            'accounts': <String, Object?>{
+              '11': <String, Object?>{
+                'lastSuccessAt': 1000,
+                'members': <Object?>[
+                  <String, Object?>{'userId': '42', 'username': 'Blocked'},
+                  <String, Object?>{'userId': '44', 'username': 'Muted'},
+                ],
+              },
+            },
+          },
+        ),
+      });
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final repository = _FakeThreadRepository(
+        (String tid, int page) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            posts: [
+              _postWithAuthor(
+                pid: 'blacklist-default-p1',
+                author: 'Blocked',
+                authorId: '42',
+                number: 1,
+                isFirst: true,
+              ),
+              _postWithAuthor(
+                pid: 'blacklist-default-p2',
+                author: 'Muted',
+                authorId: '44',
+                number: 2,
+              ),
+              _postWithAuthor(
+                pid: 'blacklist-default-p3',
+                author: 'Normal',
+                authorId: '43',
+                number: 3,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          additionalOverrides: [
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('blacklist-author-gate')), findsNothing);
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-blacklist-default-p1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('thread-post-card-blacklist-default-p1')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-blacklist-default-p2')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('thread-post-card-blacklist-default-p3')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('thread-blacklisted-expand-blacklist-default-p1')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-post-card-blacklist-default-p1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-blacklist-default-p2')),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('first post topic tags render in the native tag bar', (
       tester,

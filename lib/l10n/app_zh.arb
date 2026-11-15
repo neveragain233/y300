@@ -189,6 +189,8 @@
   "contentFilterWebBlacklistSyncFailed": "名单同步失败，已保留上次成功的名单",
   "contentFilterWebBlacklistCount": "{count} 人",
   "contentFilterWebBlacklistNote": "可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成",
+  "contentFilterHideBlacklistedThreads": "屏蔽黑名单用户发起的帖子",
+  "contentFilterHideBlacklistedThreadsDetail": "关闭时与原站一致：帖子照常显示，作者的全部楼层折叠；打开后从版块、搜索和标签列表隐藏，直链先显示整帖拦截。",
   "blacklistBlockUser": "屏蔽此用户",
   "blacklistBlockAuthor": "屏蔽该作者",
   "blacklistBlockApplied": "已屏蔽「{name}」",
