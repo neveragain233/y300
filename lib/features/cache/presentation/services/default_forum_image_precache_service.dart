@@ -349,6 +349,16 @@ class DefaultForumImagePrecacheService
         localPath: localPath,
       );
     } catch (error) {
+      // Predecode observes corrupt cached bytes before the image is mounted.
+      // Report the exact file so the cache can retire this version on retry.
+      final cacheService = _imageCacheService;
+      if (cacheService is ImageCacheDecodeFailureReporter) {
+        (cacheService as ImageCacheDecodeFailureReporter).reportDecodeFailure(
+          request: request,
+          error: error,
+          localPath: localPath,
+        );
+      }
       return ForumImagePrecacheResult.failed(
         error,
         decodePrecacheAttempted: true,

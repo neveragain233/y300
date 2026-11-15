@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' as io;
 import 'dart:ui';
 
@@ -11,6 +12,7 @@ import 'package:y300/features/cache/data/services/image_cache_diagnostic_recorde
 import 'package:y300/features/cache/data/services/image_cache_access_recorder.dart';
 import 'package:y300/features/cache/data/services/image_cache_failure_backoff.dart';
 import 'package:y300/features/cache/data/services/image_cache_file_access.dart';
+import 'package:y300/features/cache/data/services/image_decode_failure_classifier.dart';
 import 'package:y300/features/cache/data/services/y300_forum_resource_file_service.dart';
 import 'package:y300/features/cache/domain/models/cache_capacity_models.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
@@ -110,6 +112,13 @@ class DefaultImageCacheService
   int _failureEpoch = 0;
   final _ensureTasks = <(String, String), Future<CachedImageResult>>{};
 
+  /// Cache key to the exact local file version whose decode failed.
+  ///
+  /// The path check is what makes retirement version-safe: a replacement file
+  /// recorded later is never deleted because of an older failure.
+  final Map<String, String> _undecodablePathsByKey = <String, String>{};
+  final Map<String, Future<void>> _retirementTasks = <String, Future<void>>{};
+
   ImageCacheFailureIdentity _failureIdentity(ImageCacheRequest request) => (
     cacheKey: request.cacheKey.trim(),
     sourceUrl:
@@ -192,7 +201,26 @@ class DefaultImageCacheService
           existingSourceUrl.isNotEmpty &&
           existingSourceUrl != sourceUrl;
       final existingPath = existing?.localPath?.trim();
-      if (!sourceChanged && existingPath != null && existingPath.isNotEmpty) {
+      final existingUndecodable = _isUndecodablePath(cacheKey, existingPath);
+      if (existingUndecodable &&
+          existing != null &&
+          !_isRegenerableRecord(existing)) {
+        // Downloaded and protected files are recovered by their owners.
+        _undecodablePathsByKey.remove(cacheKey);
+      } else if (!existingUndecodable &&
+          existingPath != null &&
+          existingPath.isNotEmpty) {
+        // The recorded file version changed, so an older failure no longer
+        // applies to it.
+        _undecodablePathsByKey.remove(cacheKey);
+      }
+      final existingRetired =
+          existingUndecodable &&
+          (existing == null || _isRegenerableRecord(existing));
+      if (!sourceChanged &&
+          !existingRetired &&
+          existingPath != null &&
+          existingPath.isNotEmpty) {
         stage = ImageCacheDiagnosticStage.fileInspection;
         final file = io.File(existingPath);
         if (await file.exists()) {
@@ -227,7 +255,8 @@ class DefaultImageCacheService
       final cacheManager = await _cacheManagerFuture;
       stage = ImageCacheDiagnosticStage.cacheLookup;
       final cached = await cacheManager.getFileFromCache(cacheKey);
-      if (!sourceChanged && cached != null) {
+      final cachedRetired = _isUndecodablePath(cacheKey, cached?.file.path);
+      if (!sourceChanged && !cachedRetired && cached != null) {
         stage = ImageCacheDiagnosticStage.fileInspection;
         final cachedFile = io.File(cached.file.path);
         if (await cachedFile.exists()) {
@@ -258,6 +287,22 @@ class DefaultImageCacheService
         }
       }
 
+      // A file version confirmed undecodable must not be reused. Remove the
+      // index record and cache-manager entry now, then force the download so
+      // the retry obtains new bytes even when an earlier cleanup only partially
+      // succeeded.
+      final mustReplace =
+          sourceChanged ||
+          existingRetired ||
+          cachedRetired ||
+          _undecodablePathsByKey.containsKey(cacheKey);
+      if (existingRetired && existingPath != null) {
+        await _retireUndecodableFile(
+          cacheKey: cacheKey,
+          localPath: existingPath,
+        );
+      }
+
       // Another consumer may have produced a valid local file after the 404.
       // Check both local cache paths first; the cooldown only skips downloading.
       _syncFailureScope();
@@ -272,7 +317,7 @@ class DefaultImageCacheService
         sourceUrl: sourceUrl,
         cacheKey: cacheKey,
         headers: headers.isEmpty ? null : headers,
-        force: sourceChanged,
+        force: mustReplace,
       );
       stage = ImageCacheDiagnosticStage.fileInspection;
       final bytes = await io.File(localPath).length();
@@ -291,6 +336,7 @@ class DefaultImageCacheService
       );
       _mutationReporter.reportMutation(CacheNamespace.image);
       _failureBackoff.remove(identity);
+      _undecodablePathsByKey.remove(cacheKey);
       return CachedImageResult(
         success: true,
         cacheKey: cacheKey,
@@ -344,6 +390,19 @@ class DefaultImageCacheService
     if (path == null || path.isEmpty) {
       return null;
     }
+    if (_isUndecodablePath(normalized, path)) {
+      if (!_isRegenerableRecord(record)) {
+        // Downloaded and protected files keep their own recovery rules.
+        _undecodablePathsByKey.remove(normalized);
+      } else {
+        // A file confirmed undecodable is not a cache hit. The next
+        // ensureCached call retires the record and downloads new bytes.
+        return null;
+      }
+    } else {
+      // A different recorded path means the failed version was replaced.
+      _undecodablePathsByKey.remove(normalized);
+    }
     final file = io.File(path);
     if (!await file.exists()) {
       return null;
@@ -376,6 +435,7 @@ class DefaultImageCacheService
     required ImageCacheRequest request,
     required Object error,
     StackTrace? stackTrace,
+    String? localPath,
   }) {
     _reportFailure(
       request: request,
@@ -383,6 +443,64 @@ class DefaultImageCacheService
       error: error,
       elapsed: Duration.zero,
     );
+    if (!isCorruptedImageDecodeFailure(error)) {
+      return;
+    }
+    final cacheKey = request.cacheKey.trim();
+    final failedPath = localPath?.trim();
+    if (cacheKey.isEmpty || failedPath == null || failedPath.isEmpty) {
+      return;
+    }
+    // Tombstone synchronously so an immediate retry cannot read the bad file
+    // while the destructive cleanup runs in the background.
+    _undecodablePathsByKey[cacheKey] = failedPath;
+    unawaited(
+      _retireUndecodableFile(cacheKey: cacheKey, localPath: failedPath),
+    );
+  }
+
+  Future<void> _retireUndecodableFile({
+    required String cacheKey,
+    required String localPath,
+  }) async {
+    final running = _retirementTasks[cacheKey];
+    if (running != null) {
+      return running;
+    }
+    late final Future<void> task;
+    task = _retireUndecodableFileNow(cacheKey: cacheKey, localPath: localPath)
+        .whenComplete(() {
+          if (identical(_retirementTasks[cacheKey], task)) {
+            _retirementTasks.remove(cacheKey);
+          }
+        });
+    _retirementTasks[cacheKey] = task;
+    return task;
+  }
+
+  Future<void> _retireUndecodableFileNow({
+    required String cacheKey,
+    required String localPath,
+  }) async {
+    try {
+      final record = await _repository.getByKey(cacheKey);
+      // A newer file version, another cleanup or a successful replacement may
+      // have already resolved the failure; only the recorded version is ours.
+      if (_undecodablePathsByKey[cacheKey] != localPath ||
+          record == null ||
+          record.localPath?.trim() != localPath ||
+          !_isRegenerableRecord(record)) {
+        return;
+      }
+      await _deleteRecord(record);
+      _mutationReporter.reportMutation(CacheNamespace.image);
+      // The tombstone survives cleanup: it marks that the record was retired
+      // and forces the next request to download instead of trusting whatever
+      // the cache manager might still return for this key.
+    } catch (_) {
+      // Cleanup is best effort. The tombstone keeps the bad file out of cache
+      // hits, and the next request forces a fresh download.
+    }
   }
 
   void _reportFailure({
@@ -738,6 +856,19 @@ class DefaultImageCacheService
       // may already be gone, so failure here should not block cleanup.
     }
     await _repository.deleteByKey(record.cacheKey);
+  }
+
+  /// Whether [path] is the exact file version recorded as undecodable.
+  bool _isUndecodablePath(String cacheKey, String? path) {
+    final failedPath = _undecodablePathsByKey[cacheKey];
+    return failedPath != null && path != null && failedPath == path;
+  }
+
+  /// Downloaded images and user-protected files keep their own recovery rules.
+  bool _isRegenerableRecord(CachedImageRecord record) {
+    return !record.protected &&
+        record.retentionClass != ImageRetentionClass.downloaded &&
+        record.retentionClass != ImageRetentionClass.protected;
   }
 
   String _fileNameSafe(String value) {

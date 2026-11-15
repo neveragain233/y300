@@ -1021,6 +1021,7 @@ void main() {
     expect(find.byKey(const Key('error-placeholder')), findsOneWidget);
     expect(cacheService.decodeFailures, hasLength(1));
     expect(cacheService.decodeFailures.single.cacheKey, 'thread-image');
+    expect(cacheService.decodeFailurePaths.single, localFile.path);
     expect(failures, 1);
     expect(tester.takeException(), isNull);
   });
@@ -1340,6 +1341,7 @@ class _ControlledImageCacheService
       <String, Completer<CachedImageResult>>{};
   final Map<String, int> _getCachedCounts = <String, int>{};
   final List<ImageCacheRequest> decodeFailures = <ImageCacheRequest>[];
+  final List<String?> decodeFailurePaths = <String?>[];
   final Map<String, Size> recordedDimensions = <String, Size>{};
 
   int getCachedCount(String cacheKey) => _getCachedCounts[cacheKey] ?? 0;
@@ -1420,8 +1422,10 @@ class _ControlledImageCacheService
     required ImageCacheRequest request,
     required Object error,
     StackTrace? stackTrace,
+    String? localPath,
   }) {
     decodeFailures.add(request);
+    decodeFailurePaths.add(localPath);
   }
 
   @override

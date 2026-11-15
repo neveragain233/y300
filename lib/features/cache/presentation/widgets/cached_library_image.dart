@@ -246,10 +246,13 @@ class _CachedLibraryImageState extends ConsumerState<CachedLibraryImage> {
     final service = ref.read(imageCacheServiceProvider);
     if (service is ImageCacheDecodeFailureReporter) {
       final reporter = service as ImageCacheDecodeFailureReporter;
+      // `_localPath` is the file handed to the failing provider. The cache
+      // retires that exact version and leaves any later replacement alone.
       reporter.reportDecodeFailure(
         request: request,
         error: error,
         stackTrace: stackTrace,
+        localPath: _localPath?.trim(),
       );
     }
   }

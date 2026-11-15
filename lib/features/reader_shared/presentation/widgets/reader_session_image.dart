@@ -66,7 +66,10 @@ class ReaderSessionImage extends StatelessWidget {
         onLocalPathResolved: sessionBinding.promoteLocalPath,
         imageProviderOverride: imageProviderOverride,
         remoteImageProviderOverride: remoteImageProviderOverride,
-        retryToken: retryToken,
+        // Session preparation recovery can hand back the same local path. Fold
+        // its retry generation into the widget token so the failed image stream
+        // is resolved again instead of staying on the old provider.
+        retryToken: Object.hash(retryToken, entry.retryRevision),
         showDelayedLoadingIndicator: true,
         loadingIndicatorColor: loadingIndicatorColor,
         remoteDisplayPolicy: CachedImageRemoteDisplayPolicy.afterCacheWrite,

@@ -318,6 +318,55 @@ void main() {
     expect(decodedProviders.single, isA<_FakeImageProvider>());
   });
 
+  testWidgets('a decode failure reports the exact cached file', (tester) async {
+    final cacheService = _DecodeFailureReportingImageCacheService();
+    final service = DefaultForumImagePrecacheService(
+      imageCacheService: cacheService,
+      imageRequestResolver: const DefaultForumImageRequestResolver(),
+      precacheInvoker: (_, _) async => throw Exception('Invalid image data'),
+      imageProviderBuilder:
+          ({
+            required localPath,
+            required fit,
+            required expectedDisplaySize,
+            required devicePixelRatio,
+          }) => _FakeImageProvider(localPath),
+    );
+
+    final result = await _pumpAndPrecache(tester, service, _threadSpec());
+
+    expect(result.success, isFalse);
+    expect(result.decoded, isFalse);
+    final report = cacheService.decodeFailures.single;
+    expect(report.localPath, 'C:/cache/page.jpg');
+    expect(report.error, isA<Exception>());
+    expect(
+      report.request.cacheKey,
+      cacheService.ensureRequests.single.cacheKey,
+    );
+  });
+
+  testWidgets('a decode failure stays optional for legacy cache services', (
+    tester,
+  ) async {
+    final service = DefaultForumImagePrecacheService(
+      imageCacheService: _RecordingImageCacheService(),
+      imageRequestResolver: const DefaultForumImageRequestResolver(),
+      precacheInvoker: (_, _) async => throw Exception('Invalid image data'),
+      imageProviderBuilder:
+          ({
+            required localPath,
+            required fit,
+            required expectedDisplaySize,
+            required devicePixelRatio,
+          }) => _FakeImageProvider(localPath),
+    );
+
+    final result = await _pumpAndPrecache(tester, service, _threadSpec());
+
+    expect(result.success, isFalse);
+  });
+
   testWidgets('precacheDecoded deduplicates repeated specs', (tester) async {
     final completer = Completer<CachedImageResult>();
     final cacheService = _RecordingImageCacheService(
@@ -598,6 +647,23 @@ class _RecordingImageCacheService implements ImageCacheService {
     required List<ImageCacheRole> roles,
   }) async {
     return 0;
+  }
+}
+
+class _DecodeFailureReportingImageCacheService
+    extends _RecordingImageCacheService
+    implements ImageCacheDecodeFailureReporter {
+  final decodeFailures =
+      <({ImageCacheRequest request, Object error, String? localPath})>[];
+
+  @override
+  void reportDecodeFailure({
+    required ImageCacheRequest request,
+    required Object error,
+    StackTrace? stackTrace,
+    String? localPath,
+  }) {
+    decodeFailures.add((request: request, error: error, localPath: localPath));
   }
 }
 

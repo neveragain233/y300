@@ -18,6 +18,7 @@ class ReaderImageSessionEntry {
     this.status = ReaderImageSessionStatus.idle,
     this.decoded = false,
     this.failureReason,
+    this.retryRevision = 0,
   });
 
   final String readerOwnerId;
@@ -31,12 +32,22 @@ class ReaderImageSessionEntry {
   final bool decoded;
   final String? failureReason;
 
+  /// Display retry generation advanced when an explicit retry finishes
+  /// successfully.
+  ///
+  /// A replacement file can keep the same path, and an already-mounted image
+  /// stream does not restart for an equal path. Display widgets include this
+  /// revision in their retry token so a failed stream is resolved again after
+  /// preparation recovered.
+  final int retryRevision;
+
   ReaderImageSessionEntry copyWith({
     String? localPath,
     ReaderImageSessionStatus? status,
     bool? decoded,
     String? failureReason,
     bool clearFailureReason = false,
+    int? retryRevision,
   }) {
     return ReaderImageSessionEntry(
       readerOwnerId: readerOwnerId,
@@ -51,6 +62,7 @@ class ReaderImageSessionEntry {
       failureReason: clearFailureReason
           ? null
           : (failureReason ?? this.failureReason),
+      retryRevision: retryRevision ?? this.retryRevision,
     );
   }
 }
@@ -152,6 +164,7 @@ class ReaderImageSessionStore {
     required String? cacheKey,
     required ReaderImageSessionPreloadKind kind,
     required ForumImagePrecacheResult result,
+    bool explicitRetry = false,
   }) {
     if (!_isCurrent(readerOwnerId, generation)) {
       return false;
@@ -165,10 +178,13 @@ class ReaderImageSessionStore {
     if (!result.success && (current.localPath != null || current.decoded)) {
       return true;
     }
+    // Only a successful decode may mark the entry decoded. A failed request is
+    // not evidence that display can skip its own decode, and a false flag used
+    // to swallow every later failure for this item.
     final decoded =
         current.decoded ||
-        result.decoded ||
-        kind == ReaderImageSessionPreloadKind.decoded;
+        (result.success &&
+            (result.decoded || kind == ReaderImageSessionPreloadKind.decoded));
     final status = result.success
         ? (decoded
               ? ReaderImageSessionStatus.decoded
@@ -180,11 +196,15 @@ class ReaderImageSessionStore {
       decoded: decoded,
       failureReason: result.success ? null : result.failureReason,
       clearFailureReason: result.success,
+      retryRevision: result.success && explicitRetry
+          ? current.retryRevision + 1
+          : null,
     );
     if (next.localPath == current.localPath &&
         next.status == current.status &&
         next.decoded == current.decoded &&
-        next.failureReason == current.failureReason) {
+        next.failureReason == current.failureReason &&
+        next.retryRevision == current.retryRevision) {
       return true;
     }
     slot.notifier.value = next;

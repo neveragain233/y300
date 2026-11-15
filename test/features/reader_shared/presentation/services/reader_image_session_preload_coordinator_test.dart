@@ -695,6 +695,130 @@ void main() {
       expect(sink.records.single.localPath, '/cache/retried.jpg');
     });
 
+    testWidgets('a failed preparation stays eligible for an explicit seek', (
+      tester,
+    ) async {
+      final service = _SequentialPrecacheService(<ForumImagePrecacheResult>[
+        const ForumImagePrecacheResult(
+          success: false,
+          failureReason: 'temporary_failure',
+        ),
+        const ForumImagePrecacheResult(
+          success: true,
+          decoded: true,
+          cacheKey: 'cache-0',
+          localPath: '/cache/ok.jpg',
+        ),
+      ]);
+      final coordinator = ReaderImageSessionPreloadCoordinator();
+      addTearDown(coordinator.dispose);
+      final content = _content(count: 1);
+      late BuildContext readerContext;
+      await tester.pumpWidget(
+        Builder(
+          builder: (context) {
+            readerContext = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      );
+
+      final first = await coordinator.prepareOne(
+        context: readerContext,
+        content: content,
+        index: 0,
+        capability: _TestCapability(),
+        precacheService: service,
+      );
+      expect(first?.result.success, isFalse);
+
+      coordinator.promoteSeekTarget(
+        context: readerContext,
+        content: content,
+        index: 0,
+        capability: _TestCapability(),
+        precacheService: service,
+      );
+      await tester.pump();
+
+      expect(service.decodedSpecs, hasLength(2));
+      expect(service.results, isEmpty);
+    });
+
+    testWidgets('automatic re-preparation of a failed image stays bounded', (
+      tester,
+    ) async {
+      var now = DateTime.utc(2026, 11, 15, 12);
+      final service = _FailingPrecacheService();
+      final coordinator = ReaderImageSessionPreloadCoordinator(
+        policy: const ReaderImageSessionPreloadPolicy(
+          decodedRadius: 0,
+          diskRadius: 0,
+          maxAutomaticFailureRetries: 1,
+          failureRetryDelay: Duration(seconds: 1),
+        ),
+        now: () => now,
+      );
+      addTearDown(coordinator.dispose);
+      final content = _content(count: 1);
+      late BuildContext readerContext;
+      await tester.pumpWidget(
+        Builder(
+          builder: (context) {
+            readerContext = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      );
+
+      void submitWindow() {
+        coordinator.submitWindow(
+          context: readerContext,
+          content: content,
+          focusIndex: 0,
+          scrollDirection: ContinuousImageScrollDirection.idle,
+          capability: _TestCapability(),
+          precacheService: service,
+        );
+      }
+
+      submitWindow();
+      await tester.pump();
+      expect(service.decodedAttempts, 1);
+
+      submitWindow();
+      await tester.pump();
+      expect(
+        service.decodedAttempts,
+        1,
+        reason: 'automatic work must not retry before its failure delay',
+      );
+
+      now = now.add(const Duration(seconds: 1));
+      submitWindow();
+      await tester.pump();
+      expect(service.decodedAttempts, 2);
+
+      now = now.add(const Duration(seconds: 10));
+      submitWindow();
+      await tester.pump();
+      expect(
+        service.decodedAttempts,
+        2,
+        reason: 'automatic retries stop after the bounded failure count',
+      );
+
+      coordinator.promoteSeekTarget(
+        context: readerContext,
+        content: content,
+        index: 0,
+        capability: _TestCapability(),
+        precacheService: service,
+      );
+      await tester.pump();
+      expect(service.decodedAttempts, 3);
+    });
+
     testWidgets('dispose suppresses future submissions', (tester) async {
       final service = _RecordingPrecacheService();
       final coordinator = ReaderImageSessionPreloadCoordinator()..dispose();
@@ -882,6 +1006,33 @@ class _RetryableBlockingPrecacheService extends _BlockingPrecacheService
   void allowRetry(ForumImageLoadSpec spec) {
     retrySpecs.add(spec);
     startedCountsAtRetry.add(startedSpecs.length);
+  }
+}
+
+class _FailingPrecacheService implements ForumImagePrecacheService {
+  int decodedAttempts = 0;
+
+  @override
+  Future<ForumImagePrecacheResult> ensureDiskCached(
+    ForumImageLoadSpec spec,
+  ) async {
+    return const ForumImagePrecacheResult(
+      success: false,
+      failureReason: 'disk_failed',
+    );
+  }
+
+  @override
+  Future<ForumImagePrecacheResult> precacheDecoded({
+    required BuildContext context,
+    required ForumImageLoadSpec spec,
+    Size? expectedDisplaySize,
+  }) async {
+    decodedAttempts += 1;
+    return const ForumImagePrecacheResult(
+      success: false,
+      failureReason: 'decode_failed',
+    );
   }
 }
 

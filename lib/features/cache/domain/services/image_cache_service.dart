@@ -42,6 +42,10 @@ abstract class ImageCacheService {
 /// Optional explicit retry capability. Automatic mounts and prefetches retain
 /// their failure cooldown; a user retry can clear its exact failed request.
 /// An already running request remains shared rather than downloading twice.
+///
+/// A cached file confirmed undecodable is retired (index, cache-manager entry
+/// and file) before the next request can reuse it, so the retry obtains new
+/// bytes. Protected and downloaded resources keep their own recovery rules.
 abstract interface class ImageCacheFailureControl {
   void allowRetry(ImageCacheRequest request);
 }
@@ -73,14 +77,17 @@ abstract class ImageCacheDimensionRecorder {
   });
 }
 
-/// Optional presentation-to-cache diagnostic hook for local decode failures.
+/// Optional presentation-to-cache hook for local decode failures.
 ///
-/// It deliberately accepts the original cache request instead of a file path,
-/// keeping filesystem identity out of diagnostic events.
+/// It accepts the original cache request plus the exact file that failed to
+/// decode. The cache only retires the recorded file version when the failing
+/// path still matches, so diagnostics stay path-free while recovery is keyed by
+/// resource identity and path version.
 abstract interface class ImageCacheDecodeFailureReporter {
   void reportDecodeFailure({
     required ImageCacheRequest request,
     required Object error,
     StackTrace? stackTrace,
+    String? localPath,
   });
 }

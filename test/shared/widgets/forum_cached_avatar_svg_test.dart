@@ -309,6 +309,7 @@ class _AvatarCache extends Fake
     required ImageCacheRequest request,
     required Object error,
     StackTrace? stackTrace,
+    String? localPath,
   }) {
     decodeFailures.add(request);
     decodeErrors.add(error);

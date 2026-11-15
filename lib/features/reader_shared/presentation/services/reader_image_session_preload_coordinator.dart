@@ -18,13 +18,25 @@ class ReaderImageSessionPreloadPolicy {
     this.decodedRadius = 1,
     this.diskRadius = 3,
     this.maxConcurrentTasks = 3,
+    this.maxAutomaticFailureRetries = 1,
+    this.failureRetryDelay = const Duration(milliseconds: 750),
   }) : assert(decodedRadius >= 0),
        assert(diskRadius >= decodedRadius),
-       assert(maxConcurrentTasks > 0);
+       assert(maxConcurrentTasks > 0),
+       assert(maxAutomaticFailureRetries >= 0);
 
   final int decodedRadius;
   final int diskRadius;
   final int maxConcurrentTasks;
+
+  /// Automatic window and lookahead work may retry this many times after its
+  /// first failure for one image. Further automatic attempts are suppressed for
+  /// the session so a failing resource cannot restart a fetch on every frame;
+  /// explicit seek and retry work stays available.
+  final int maxAutomaticFailureRetries;
+
+  /// Minimum spacing between automatic attempts for a failed image.
+  final Duration failureRetryDelay;
 
   static const aggressiveReaderSession = ReaderImageSessionPreloadPolicy();
 }
@@ -83,11 +95,13 @@ class ReaderImageSessionPreloadCoordinator {
     void Function(ReaderImageSessionPreloadScheduled scheduled)? onScheduled,
     void Function(ReaderImageSessionPreloadResult result)? onResult,
     ReaderPerformanceMetricsCollector? performanceMetrics,
+    DateTime Function()? now,
   }) : _policy = policy,
        _sessionStore = sessionStore,
        _onScheduled = onScheduled,
        _onResult = onResult,
-       _performanceMetrics = performanceMetrics;
+       _performanceMetrics = performanceMetrics,
+       _now = now ?? DateTime.now;
 
   final ReaderImageSessionPreloadPolicy _policy;
   final ReaderImageSessionStore? _sessionStore;
@@ -95,12 +109,15 @@ class ReaderImageSessionPreloadCoordinator {
   _onScheduled;
   final void Function(ReaderImageSessionPreloadResult result)? _onResult;
   final ReaderPerformanceMetricsCollector? _performanceMetrics;
+  final DateTime Function() _now;
   final List<_ReaderImagePreparationTask> _pending =
       <_ReaderImagePreparationTask>[];
   final Set<_ReaderImagePreparationTask> _running =
       <_ReaderImagePreparationTask>{};
   final Map<String, ReaderImageSessionPreloadKind> _finishedByIdentity =
       <String, ReaderImageSessionPreloadKind>{};
+  final Map<String, _ReaderImagePreparationFailure> _failedByIdentity =
+      <String, _ReaderImagePreparationFailure>{};
   var _generation = 0;
   var _sequence = 0;
   var _disposed = false;
@@ -124,6 +141,7 @@ class ReaderImageSessionPreloadCoordinator {
     _cancelPendingTasks();
     _cancelRunningTasks();
     _finishedByIdentity.clear();
+    _failedByIdentity.clear();
     if (readerOwnerId != null) {
       _sessionStore?.startSession(
         readerOwnerId: readerOwnerId,
@@ -142,6 +160,7 @@ class ReaderImageSessionPreloadCoordinator {
     _cancelPendingTasks();
     _cancelRunningTasks();
     _finishedByIdentity.clear();
+    _failedByIdentity.clear();
   }
 
   List<ReaderImageSessionPreloadRequest> buildRequests({
@@ -423,6 +442,10 @@ class ReaderImageSessionPreloadCoordinator {
       _performanceMetrics?.recordPreloadHit();
       return false;
     }
+    if (!task.force && _defersAutomaticRetry(task.role, identity)) {
+      _performanceMetrics?.recordPreloadHit();
+      return false;
+    }
     final running = _running.where(
       (candidate) =>
           candidate.generation == task.generation &&
@@ -534,16 +557,13 @@ class ReaderImageSessionPreloadCoordinator {
     }
     stopwatch.stop();
     if (!_disposed && task.generation == _generation) {
-      final identity = _scheduleIdentity(task.request);
-      final previous = _finishedByIdentity[identity];
-      if (!_kindSatisfies(previous, task.request.kind)) {
-        _finishedByIdentity[identity] = task.request.kind;
-      }
+      _recordPreparationOutcome(task, result);
     }
     final event = _notifyResult(
       request: task.request,
       generation: task.generation,
       result: result,
+      explicitRetry: task.force,
       preparationSink: task.preparationSink,
       elapsed: stopwatch.elapsed,
     );
@@ -552,6 +572,55 @@ class ReaderImageSessionPreloadCoordinator {
     }
     _running.remove(task);
     _pump();
+  }
+
+  /// Records what a completed task proved about its image.
+  ///
+  /// A failed task never satisfies a later request. Automatic window and
+  /// lookahead work is re-admitted only within the policy's bounded retries;
+  /// explicit seek and retry work is always admitted.
+  void _recordPreparationOutcome(
+    _ReaderImagePreparationTask task,
+    ForumImagePrecacheResult result,
+  ) {
+    final identity = _scheduleIdentity(task.request);
+    if (result.success) {
+      final previous = _finishedByIdentity[identity];
+      if (!_kindSatisfies(previous, task.request.kind)) {
+        _finishedByIdentity[identity] = task.request.kind;
+      }
+      _failedByIdentity.remove(identity);
+      return;
+    }
+    final previous = _failedByIdentity[identity];
+    final automatic = _isAutomaticRole(task.role);
+    _failedByIdentity[identity] = _ReaderImagePreparationFailure(
+      automaticFailures:
+          (previous?.automaticFailures ?? 0) + (automatic ? 1 : 0),
+      lastFailureAt: _now(),
+    );
+  }
+
+  bool _defersAutomaticRetry(
+    _ReaderImagePreparationRole role,
+    String identity,
+  ) {
+    if (!_isAutomaticRole(role)) {
+      return false;
+    }
+    final failure = _failedByIdentity[identity];
+    if (failure == null) {
+      return false;
+    }
+    if (failure.automaticFailures > _policy.maxAutomaticFailureRetries) {
+      return true;
+    }
+    return _now().difference(failure.lastFailureAt) < _policy.failureRetryDelay;
+  }
+
+  bool _isAutomaticRole(_ReaderImagePreparationRole role) {
+    return role == _ReaderImagePreparationRole.window ||
+        role == _ReaderImagePreparationRole.adjacent;
   }
 
   void _notifyScheduled({
@@ -578,6 +647,7 @@ class ReaderImageSessionPreloadCoordinator {
     required ReaderImageSessionPreloadRequest request,
     required int generation,
     required ForumImagePrecacheResult result,
+    required bool explicitRetry,
     required ReaderImagePreparationSink? preparationSink,
     required Duration elapsed,
   }) {
@@ -592,6 +662,7 @@ class ReaderImageSessionPreloadCoordinator {
               cacheKey: request.spec.cacheKey,
               kind: request.kind,
               result: result,
+              explicitRetry: explicitRetry,
             ) ??
             true);
     final stale = !currentGeneration;
@@ -797,4 +868,15 @@ class _ReaderImagePreparationTask {
   final bool force;
   final Completer<ReaderImageSessionPreloadResult?>? completer;
   final ForumImageWorkToken workToken = ForumImageWorkToken();
+}
+
+class _ReaderImagePreparationFailure {
+  const _ReaderImagePreparationFailure({
+    required this.automaticFailures,
+    required this.lastFailureAt,
+  });
+
+  /// Failed attempts started by speculative window/lookahead work.
+  final int automaticFailures;
+  final DateTime lastFailureAt;
 }
