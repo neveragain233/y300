@@ -24,32 +24,6 @@ class FavoriteCategoryStore {
     final now = DateTime.fromMillisecondsSinceEpoch(0);
     final categories = <LibraryCategory>[];
 
-    final comicCount = await _countSystemCategory(db, favoriteComicCategoryId);
-    if (comicCount > 0) {
-      categories.add(
-        LibraryCategory(
-          categoryId: favoriteComicCategoryId,
-          name: '漫画',
-          sortOrder: 0,
-          createdAt: now,
-          visibleMatchCount: comicCount,
-        ),
-      );
-    }
-
-    final novelCount = await _countSystemCategory(db, favoriteNovelCategoryId);
-    if (novelCount > 0) {
-      categories.add(
-        LibraryCategory(
-          categoryId: favoriteNovelCategoryId,
-          name: '小说',
-          sortOrder: 1,
-          createdAt: now,
-          visibleMatchCount: novelCount,
-        ),
-      );
-    }
-
     final invalidCount = await _countSystemCategory(
       db,
       favoriteInvalidCategoryId,
@@ -177,15 +151,11 @@ class FavoriteCategoryStore {
       return;
     }
 
-    await db.insert(
-      AppDatabase.favoriteThreadCategoryTable,
-      <String, Object?>{
-        'tid': normalizedTid,
-        'category_id': toCategoryId,
-        'assigned_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(AppDatabase.favoriteThreadCategoryTable, <String, Object?>{
+      'tid': normalizedTid,
+      'category_id': toCategoryId,
+      'assigned_at': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<int> _countSystemCategory(Database db, String categoryId) async {
@@ -258,32 +228,6 @@ class FavoriteCategoryStore {
     final now = DateTime.fromMillisecondsSinceEpoch(0);
     final categories = <LibraryCategory>[];
 
-    final comicCount = rawCountByCategory[favoriteComicCategoryId] ?? 0;
-    if (comicCount > 0) {
-      categories.add(
-        LibraryCategory(
-          categoryId: favoriteComicCategoryId,
-          name: '漫画',
-          sortOrder: 0,
-          createdAt: now,
-          visibleMatchCount: comicCount,
-        ),
-      );
-    }
-
-    final novelCount = rawCountByCategory[favoriteNovelCategoryId] ?? 0;
-    if (novelCount > 0) {
-      categories.add(
-        LibraryCategory(
-          categoryId: favoriteNovelCategoryId,
-          name: '小说',
-          sortOrder: 1,
-          createdAt: now,
-          visibleMatchCount: novelCount,
-        ),
-      );
-    }
-
     final invalidCount = rawCountByCategory[favoriteInvalidCategoryId] ?? 0;
     if (invalidCount > 0) {
       categories.add(
@@ -340,8 +284,7 @@ class FavoriteCategoryStore {
         return "ft.detail_state = 'invalid'";
       case favoriteDefaultCategoryId:
       default:
-        return "ft.detail_state <> 'invalid' AND "
-            "(ft.content_kind IS NULL OR ft.content_kind NOT IN ('comic', 'novel'))";
+        return "ft.detail_state <> 'invalid'";
     }
   }
 

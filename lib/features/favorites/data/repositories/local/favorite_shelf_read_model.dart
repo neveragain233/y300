@@ -262,18 +262,7 @@ class FavoriteShelfReadModel {
     final custom = FavoriteCacheRowMapper.normalizeNullable(
       row['custom_category_id'] as String?,
     );
-    if (custom != null) {
-      return custom;
-    }
-    switch (favoriteContentKindFromDb(row['content_kind'] as String?)) {
-      case ThreadContentKind.comic:
-        return favoriteComicCategoryId;
-      case ThreadContentKind.novel:
-        return favoriteNovelCategoryId;
-      case ThreadContentKind.unknown:
-      case ThreadContentKind.forum:
-        return favoriteDefaultCategoryId;
-    }
+    return custom ?? favoriteDefaultCategoryId;
   }
 
   Future<_FavoriteCoverSnapshot> _loadModuleCover(
@@ -383,24 +372,20 @@ class FavoriteShelfReadModel {
           cmp = a.unreadCount.compareTo(b.unreadCount);
           break;
         case LibraryShelfSortField.workUpdatedAt:
-          cmp = _dateOrEpoch(
-            a.workUpdatedAt,
-          ).compareTo(_dateOrEpoch(b.workUpdatedAt));
+          cmp = _dateOrEpoch(a.workUpdatedAt)
+              .compareTo(_dateOrEpoch(b.workUpdatedAt));
           break;
         case LibraryShelfSortField.fetchedAt:
-          cmp = _dateOrEpoch(
-            a.lastFetchedAt,
-          ).compareTo(_dateOrEpoch(b.lastFetchedAt));
+          cmp = _dateOrEpoch(a.lastFetchedAt)
+              .compareTo(_dateOrEpoch(b.lastFetchedAt));
           break;
         case LibraryShelfSortField.lastCheckedAt:
-          cmp = _dateOrEpoch(
-            a.lastCheckedAt,
-          ).compareTo(_dateOrEpoch(b.lastCheckedAt));
+          cmp = _dateOrEpoch(a.lastCheckedAt)
+              .compareTo(_dateOrEpoch(b.lastCheckedAt));
           break;
         case LibraryShelfSortField.lastReadAt:
-          cmp = _dateOrEpoch(
-            a.lastReadAt,
-          ).compareTo(_dateOrEpoch(b.lastReadAt));
+          cmp = _dateOrEpoch(a.lastReadAt)
+              .compareTo(_dateOrEpoch(b.lastReadAt));
           break;
         case LibraryShelfSortField.favoriteAddedAt:
           cmp = a.addedAt.compareTo(b.addedAt);

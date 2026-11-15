@@ -167,16 +167,8 @@ class FavoriteThreadCacheRecord {
     if (custom != null && custom.isNotEmpty) {
       return custom;
     }
-    switch (contentKind) {
-      case ThreadContentKind.unknown:
-        return favoriteDefaultCategoryId;
-      case ThreadContentKind.comic:
-        return favoriteComicCategoryId;
-      case ThreadContentKind.novel:
-        return favoriteNovelCategoryId;
-      case ThreadContentKind.forum:
-        return favoriteDefaultCategoryId;
-    }
+    // 内容类型只决定解析和打开方式，不再拆出漫画／小说展示分区。
+    return favoriteDefaultCategoryId;
   }
 }
 

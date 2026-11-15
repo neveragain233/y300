@@ -55,63 +55,59 @@ void main() {
       );
     });
 
-    test(
-      'loads visible system categories and keeps default free from comic and novel',
-      () async {
-        await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
-          _thread(tid: '100', title: '漫画'),
-          _thread(tid: '200', title: '小说'),
-          _thread(tid: '300', title: '论坛'),
-        ]);
-        await repository.updateThreadDetailMeta(
-          tid: '100',
-          fid: '30',
-          typeid: '398',
-          tagName: '韩国漫画',
-          contentKind: ThreadContentKind.comic,
-          workId: 'yamibo:100',
-        );
-        await repository.updateThreadDetailMeta(
-          tid: '200',
-          fid: '49',
-          typeid: '293',
-          tagName: '原创',
-          contentKind: ThreadContentKind.novel,
-          workId: 'novel:49:200',
-        );
-        await repository.updateThreadDetailMeta(
-          tid: '300',
-          fid: '1',
-          typeid: '',
-          tagName: null,
-          contentKind: ThreadContentKind.forum,
-          workId: 'thread:300',
-        );
+    test('loads one default category with every valid favorite', () async {
+      await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
+        _thread(tid: '100', title: '漫画'),
+        _thread(tid: '200', title: '小说'),
+        _thread(tid: '300', title: '论坛'),
+      ]);
+      await repository.updateThreadDetailMeta(
+        tid: '100',
+        fid: '30',
+        typeid: '398',
+        tagName: '韩国漫画',
+        contentKind: ThreadContentKind.comic,
+        workId: 'yamibo:100',
+      );
+      await repository.updateThreadDetailMeta(
+        tid: '200',
+        fid: '49',
+        typeid: '293',
+        tagName: '原创',
+        contentKind: ThreadContentKind.novel,
+        workId: 'novel:49:200',
+      );
+      await repository.updateThreadDetailMeta(
+        tid: '300',
+        fid: '1',
+        typeid: '',
+        tagName: null,
+        contentKind: ThreadContentKind.forum,
+        workId: 'thread:300',
+      );
 
-        final categories = await repository.loadVisibleCategories();
-        final comicItems = await repository.loadCategoryItems(
-          favoriteComicCategoryId,
-        );
-        final novelItems = await repository.loadCategoryItems(
-          favoriteNovelCategoryId,
-        );
-        final defaultItems = await repository.loadCategoryItems(
-          favoriteDefaultCategoryId,
-        );
+      final categories = await repository.loadVisibleCategories();
+      final defaultItems = await repository.loadCategoryItems(
+        favoriteDefaultCategoryId,
+      );
 
-        expect(
-          categories.map((category) => category.categoryId),
-          containsAll(<String>[
-            favoriteComicCategoryId,
-            favoriteNovelCategoryId,
-            favoriteDefaultCategoryId,
-          ]),
-        );
-        expect(comicItems.single.title, '漫画');
-        expect(novelItems.single.title, '小说');
-        expect(defaultItems.single.title, '论坛');
-      },
-    );
+      final categoryIds = categories
+          .map((category) => category.categoryId)
+          .toList(growable: false);
+      expect(categoryIds, isNot(contains(favoriteComicCategoryId)));
+      expect(categoryIds, isNot(contains(favoriteNovelCategoryId)));
+      expect(categoryIds, contains(favoriteDefaultCategoryId));
+      expect(
+        defaultItems.map((item) => item.title),
+        unorderedEquals(<String>['漫画', '小说', '论坛']),
+      );
+      expect(
+        defaultItems.every(
+          (item) => item.categoryId == favoriteDefaultCategoryId,
+        ),
+        isTrue,
+      );
+    });
 
     test('custom category overrides system category', () async {
       await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
@@ -128,87 +124,81 @@ void main() {
       final customId = await repository.createCategory(name: '追更');
       await repository.moveThreadToCategory(tid: '100', toCategoryId: customId);
 
-      final comicItems = await repository.loadCategoryItems(
-        favoriteComicCategoryId,
+      final defaultItems = await repository.loadCategoryItems(
+        favoriteDefaultCategoryId,
       );
       final customItems = await repository.loadCategoryItems(customId);
 
-      expect(comicItems, isEmpty);
+      expect(defaultItems, isEmpty);
       expect(customItems.single.workId, FavoriteShelfWorkId.fromTid('100'));
     });
 
-    test(
-      'invalid system category appears on demand and preserves custom assignment',
-      () async {
-        await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
-          _thread(tid: '100', title: '自定义分类中的无效帖'),
-          _thread(tid: '200', title: '无效帖'),
-          _thread(tid: '300', title: '普通帖'),
-        ]);
-        final customId = await repository.createCategory(name: '保留分类');
-        await repository.moveThreadToCategory(
-          tid: '100',
-          toCategoryId: customId,
-        );
-        await repository.updateThreadDetailMeta(
-          tid: '300',
-          fid: '1',
-          typeid: '',
-          tagName: null,
-          contentKind: ThreadContentKind.forum,
-          workId: 'thread:300',
-        );
+    test('invalid system category appears on demand and preserves custom assignment', () async {
+      await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
+        _thread(tid: '100', title: '自定义分类中的无效帖'),
+        _thread(tid: '200', title: '无效帖'),
+        _thread(tid: '300', title: '普通帖'),
+      ]);
+      final customId = await repository.createCategory(name: '保留分类');
+      await repository.moveThreadToCategory(tid: '100', toCategoryId: customId);
+      await repository.updateThreadDetailMeta(
+        tid: '300',
+        fid: '1',
+        typeid: '',
+        tagName: null,
+        contentKind: ThreadContentKind.forum,
+        workId: 'thread:300',
+      );
 
-        expect(
-          (await repository.loadVisibleCategories()).map(
-            (category) => category.categoryId,
-          ),
-          isNot(contains(favoriteInvalidCategoryId)),
-        );
+      expect(
+        (await repository.loadVisibleCategories()).map(
+          (category) => category.categoryId,
+        ),
+        isNot(contains(favoriteInvalidCategoryId)),
+      );
 
-        await repository.markThreadDetailInvalid(tid: '100');
-        await repository.markThreadDetailInvalid(tid: '200');
+      await repository.markThreadDetailInvalid(tid: '100');
+      await repository.markThreadDetailInvalid(tid: '200');
 
-        final categories = await repository.loadVisibleCategories();
-        final invalidItems = await repository.loadCategoryItems(
-          favoriteInvalidCategoryId,
-        );
-        final defaultItems = await repository.loadCategoryItems(
-          favoriteDefaultCategoryId,
-        );
-        final customItems = await repository.loadCategoryItems(customId);
+      final categories = await repository.loadVisibleCategories();
+      final invalidItems = await repository.loadCategoryItems(
+        favoriteInvalidCategoryId,
+      );
+      final defaultItems = await repository.loadCategoryItems(
+        favoriteDefaultCategoryId,
+      );
+      final customItems = await repository.loadCategoryItems(customId);
 
-        expect(
-          categories
-              .where(
-                (category) => category.categoryId == favoriteInvalidCategoryId,
-              )
-              .single
-              .name,
-          '无效',
-        );
-        expect(invalidItems.map((item) => item.title), <String>[
-          '自定义分类中的无效帖',
-          '无效帖',
-        ]);
-        expect(defaultItems.single.title, '普通帖');
-        expect(customItems, isEmpty);
+      expect(
+        categories
+            .where(
+              (category) => category.categoryId == favoriteInvalidCategoryId,
+            )
+            .single
+            .name,
+        '无效',
+      );
+      expect(invalidItems.map((item) => item.title), <String>[
+        '自定义分类中的无效帖',
+        '无效帖',
+      ]);
+      expect(defaultItems.single.title, '普通帖');
+      expect(customItems, isEmpty);
 
-        await repository.updateThreadDetailMeta(
-          tid: '100',
-          fid: '1',
-          typeid: '',
-          tagName: null,
-          contentKind: ThreadContentKind.forum,
-          workId: 'thread:100',
-        );
+      await repository.updateThreadDetailMeta(
+        tid: '100',
+        fid: '1',
+        typeid: '',
+        tagName: null,
+        contentKind: ThreadContentKind.forum,
+        workId: 'thread:100',
+      );
 
-        expect(
-          (await repository.loadCategoryItems(customId)).single.title,
-          '自定义分类中的无效帖',
-        );
-      },
-    );
+      expect(
+        (await repository.loadCategoryItems(customId)).single.title,
+        '自定义分类中的无效帖',
+      );
+    });
 
     test('markRemovedTids returns removed active records', () async {
       await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
@@ -363,72 +353,66 @@ void main() {
       },
     );
 
-    test(
-      'comic auto refresh backfill selects active comics with empty or current-only episodes',
-      () async {
-        final db = await AppDatabase.open(databaseName: dbName);
-        await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
-          _thread(tid: '100', title: '空章节漫画'),
-          _thread(tid: '200', title: '当前帖漫画'),
-          _thread(tid: '300', title: '已补全漫画'),
-        ]);
-        for (final tid in <String>['100', '200', '300']) {
-          await repository.updateThreadDetailMeta(
-            tid: tid,
-            fid: '30',
-            typeid: '398',
-            tagName: '韩国漫画',
-            contentKind: ThreadContentKind.comic,
-            workId: 'yamibo:$tid',
-          );
-          await db.insert(AppDatabase.comicsTable, <String, Object?>{
-            'comic_id': 'yamibo:$tid',
-            'source_tid': tid,
-            'source_fid': '30',
-            'title': '漫画$tid',
-            'created_at': DateTime(2026, 1, 1).millisecondsSinceEpoch,
-            'updated_at': DateTime(2026, 1, 1).millisecondsSinceEpoch,
-          });
-        }
-        await db.insert(AppDatabase.episodesTable, <String, Object?>{
-          'episode_id': 'yamibo:200:200',
-          'comic_id': 'yamibo:200',
-          'episode_title': '当前帖',
-          'source_tid': '200',
-          'source_url': 'thread-200-1-1.html',
-          'order_index': 0,
-        });
-        await db.insert(AppDatabase.episodesTable, <String, Object?>{
-          'episode_id': 'yamibo:300:301',
-          'comic_id': 'yamibo:300',
-          'episode_title': '第1话',
-          'source_tid': '301',
-          'source_url': 'thread-301-1-1.html',
-          'order_index': 0,
-        });
-        await db.insert(AppDatabase.episodesTable, <String, Object?>{
-          'episode_id': 'yamibo:300:302',
-          'comic_id': 'yamibo:300',
-          'episode_title': '第2话',
-          'source_tid': '302',
-          'source_url': 'thread-302-1-1.html',
-          'order_index': 1,
-        });
-
-        final candidates = await repository
-            .getComicAutoRefreshBackfillCandidates();
-
-        expect(candidates.map((record) => record.tid), <String>['100', '200']);
-        expect(
-          await repository.hasCompletedComicAutoRefreshBackfill(),
-          isFalse,
+    test('comic auto refresh backfill selects active comics with empty or current-only episodes', () async {
+      final db = await AppDatabase.open(databaseName: dbName);
+      await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
+        _thread(tid: '100', title: '空章节漫画'),
+        _thread(tid: '200', title: '当前帖漫画'),
+        _thread(tid: '300', title: '已补全漫画'),
+      ]);
+      for (final tid in <String>['100', '200', '300']) {
+        await repository.updateThreadDetailMeta(
+          tid: tid,
+          fid: '30',
+          typeid: '398',
+          tagName: '韩国漫画',
+          contentKind: ThreadContentKind.comic,
+          workId: 'yamibo:$tid',
         );
-        await repository.markComicAutoRefreshBackfillCompleted(
-          checkedCount: candidates.length,
-        );
-        expect(await repository.hasCompletedComicAutoRefreshBackfill(), isTrue);
-      },
-    );
+        await db.insert(AppDatabase.comicsTable, <String, Object?>{
+          'comic_id': 'yamibo:$tid',
+          'source_tid': tid,
+          'source_fid': '30',
+          'title': '漫画$tid',
+          'created_at': DateTime(2026, 1, 1).millisecondsSinceEpoch,
+          'updated_at': DateTime(2026, 1, 1).millisecondsSinceEpoch,
+        });
+      }
+      await db.insert(AppDatabase.episodesTable, <String, Object?>{
+        'episode_id': 'yamibo:200:200',
+        'comic_id': 'yamibo:200',
+        'episode_title': '当前帖',
+        'source_tid': '200',
+        'source_url': 'thread-200-1-1.html',
+        'order_index': 0,
+      });
+      await db.insert(AppDatabase.episodesTable, <String, Object?>{
+        'episode_id': 'yamibo:300:301',
+        'comic_id': 'yamibo:300',
+        'episode_title': '第1话',
+        'source_tid': '301',
+        'source_url': 'thread-301-1-1.html',
+        'order_index': 0,
+      });
+      await db.insert(AppDatabase.episodesTable, <String, Object?>{
+        'episode_id': 'yamibo:300:302',
+        'comic_id': 'yamibo:300',
+        'episode_title': '第2话',
+        'source_tid': '302',
+        'source_url': 'thread-302-1-1.html',
+        'order_index': 1,
+      });
+
+      final candidates = await repository
+          .getComicAutoRefreshBackfillCandidates();
+
+      expect(candidates.map((record) => record.tid), <String>['100', '200']);
+      expect(await repository.hasCompletedComicAutoRefreshBackfill(), isFalse);
+      await repository.markComicAutoRefreshBackfillCompleted(
+        checkedCount: candidates.length,
+      );
+      expect(await repository.hasCompletedComicAutoRefreshBackfill(), isTrue);
+    });
 
     test('favorite shelf item reuses comic and novel module covers', () async {
       final db = await AppDatabase.open(databaseName: dbName);
@@ -515,8 +499,11 @@ void main() {
       expect(hiddenNovelItems.single.coverImageUrl, isNull);
       expect(hiddenNovelItems.single.coverLocalPath, isNull);
       expect(hiddenNovelItems.single.customCoverLocalPath, isNull);
-      final hiddenSnapshotNovel =
-          hiddenSnapshot.itemsByCategory[favoriteNovelCategoryId]!.single;
+      final hiddenSnapshotNovel = hiddenSnapshot
+          .itemsByCategory[favoriteDefaultCategoryId]!
+          .singleWhere(
+            (item) => item.workId == FavoriteShelfWorkId.fromTid('200'),
+          );
       expect(hiddenSnapshotNovel.coverImageUrl, isNull);
       expect(hiddenSnapshotNovel.coverLocalPath, isNull);
       expect(hiddenSnapshotNovel.customCoverLocalPath, isNull);
@@ -564,14 +551,16 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '收藏',
         );
-        final comicItems = snapshot.itemsByCategory[favoriteComicCategoryId]!;
+        final comicItems = snapshot.itemsByCategory[favoriteDefaultCategoryId]!;
 
+        final snapshotCategoryIds = snapshot.categories
+            .map((category) => category.categoryId)
+            .toList(growable: false);
+        expect(snapshotCategoryIds, contains(favoriteDefaultCategoryId));
+        expect(snapshotCategoryIds, isNot(contains(favoriteComicCategoryId)));
+        expect(snapshotCategoryIds, isNot(contains(favoriteNovelCategoryId)));
         expect(
-          snapshot.categories.map((category) => category.categoryId),
-          contains(favoriteComicCategoryId),
-        );
-        expect(
-          snapshot.visibleMatchCountByCategory[favoriteComicCategoryId],
+          snapshot.visibleMatchCountByCategory[favoriteDefaultCategoryId],
           1,
         );
         expect(comicItems.single.workId, FavoriteShelfWorkId.fromTid('100'));
@@ -625,19 +614,17 @@ void main() {
       },
     );
 
-    test(
-      'category deletion rolls back assignments and later returns items to their system category',
-      () async {
-        await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
-          _thread(tid: '100', title: 'favorite'),
-        ]);
-        final categoryId = await repository.createCategory(name: 'custom');
-        await repository.moveThreadToCategory(
-          tid: '100',
-          toCategoryId: categoryId,
-        );
-        final db = await AppDatabase.open(databaseName: dbName);
-        await db.execute("""
+    test('category deletion rolls back assignments and later returns items to their system category', () async {
+      await repository.upsertRemoteThreads(<FavoriteThreadCacheUpsert>[
+        _thread(tid: '100', title: 'favorite'),
+      ]);
+      final categoryId = await repository.createCategory(name: 'custom');
+      await repository.moveThreadToCategory(
+        tid: '100',
+        toCategoryId: categoryId,
+      );
+      final db = await AppDatabase.open(databaseName: dbName);
+      await db.execute("""
         CREATE TRIGGER favorite_test_reject_category_delete
         BEFORE DELETE ON ${AppDatabase.favoriteCategoriesTable}
         BEGIN
@@ -645,47 +632,46 @@ void main() {
         END
         """);
 
-        await expectLater(
-          repository.deleteCategory(categoryId: categoryId),
-          throwsA(isA<DatabaseException>()),
-        );
+      await expectLater(
+        repository.deleteCategory(categoryId: categoryId),
+        throwsA(isA<DatabaseException>()),
+      );
 
-        expect(
-          (await repository.getActiveThreadByTid('100'))?.customCategoryId,
-          categoryId,
-        );
-        expect(
-          (await repository.loadCategoryItems(categoryId)).single.workId,
-          FavoriteShelfWorkId.fromTid('100'),
-        );
-        expect(
-          (await repository.loadVisibleCategories()).map(
-            (category) => category.categoryId,
-          ),
-          contains(categoryId),
-        );
+      expect(
+        (await repository.getActiveThreadByTid('100'))?.customCategoryId,
+        categoryId,
+      );
+      expect(
+        (await repository.loadCategoryItems(categoryId)).single.workId,
+        FavoriteShelfWorkId.fromTid('100'),
+      );
+      expect(
+        (await repository.loadVisibleCategories()).map(
+          (category) => category.categoryId,
+        ),
+        contains(categoryId),
+      );
 
-        await db.execute('DROP TRIGGER favorite_test_reject_category_delete');
-        await repository.deleteCategory(categoryId: categoryId);
+      await db.execute('DROP TRIGGER favorite_test_reject_category_delete');
+      await repository.deleteCategory(categoryId: categoryId);
 
-        expect(
-          (await repository.getActiveThreadByTid('100'))?.customCategoryId,
-          isNull,
-        );
-        expect(
-          (await repository.loadVisibleCategories()).map(
-            (category) => category.categoryId,
-          ),
-          isNot(contains(categoryId)),
-        );
-        expect(
-          (await repository.loadCategoryItems(
-            favoriteDefaultCategoryId,
-          )).single.workId,
-          FavoriteShelfWorkId.fromTid('100'),
-        );
-      },
-    );
+      expect(
+        (await repository.getActiveThreadByTid('100'))?.customCategoryId,
+        isNull,
+      );
+      expect(
+        (await repository.loadVisibleCategories()).map(
+          (category) => category.categoryId,
+        ),
+        isNot(contains(categoryId)),
+      );
+      expect(
+        (await repository.loadCategoryItems(favoriteDefaultCategoryId))
+            .single
+            .workId,
+        FavoriteShelfWorkId.fromTid('100'),
+      );
+    });
 
     test(
       'incremental completion and failure preserve the last full-sync baseline',
@@ -757,22 +743,17 @@ void main() {
           sortOption: LibraryShelfSortOption.defaults,
           keyword: '',
         );
-        for (final categoryId in [
-          favoriteComicCategoryId,
-          favoriteNovelCategoryId,
-        ]) {
-          final items = snapshot.itemsByCategory[categoryId]!;
-          expect(items, hasLength(expectedPerModule));
-          expect(items.every((item) => item.coverImageUrl != null), isTrue);
-          expect(items.every((item) => item.hasTags), isTrue);
-        }
+        final items = snapshot.itemsByCategory[favoriteDefaultCategoryId]!;
+        expect(items, hasLength(expectedPerModule));
+        expect(items.every((item) => item.coverImageUrl != null), isTrue);
+        expect(items.every((item) => item.hasTags), isTrue);
         return counted.queryCount;
       }
 
       await _seedSnapshotRange(db, 0, 10);
-      final smallShelfQueries = await queryCountFor(5);
+      final smallShelfQueries = await queryCountFor(10);
       await _seedSnapshotRange(db, 10, 100);
-      final largeShelfQueries = await queryCountFor(50);
+      final largeShelfQueries = await queryCountFor(100);
 
       expect(smallShelfQueries, greaterThan(0));
       expect(largeShelfQueries, smallShelfQueries);

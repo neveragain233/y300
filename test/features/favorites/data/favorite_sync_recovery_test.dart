@@ -155,11 +155,11 @@ void main() {
     expect(record?.contentKind, ThreadContentKind.novel);
     expect(record?.detailState, FavoriteDetailState.resolved);
     expect(record?.workId, 'novel:55:200');
-    expect(await local.loadCategoryItems(favoriteDefaultCategoryId), isEmpty);
-    expect(
-      await local.loadCategoryItems(favoriteNovelCategoryId),
-      hasLength(1),
+    final defaultItems = await local.loadCategoryItems(
+      favoriteDefaultCategoryId,
     );
+    expect(defaultItems, hasLength(1));
+    expect(defaultItems.single.categoryId, favoriteDefaultCategoryId);
     expect(await db.query(AppDatabase.novelSourceStateTable), hasLength(1));
   }
 
