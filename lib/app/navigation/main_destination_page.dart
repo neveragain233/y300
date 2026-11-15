@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/history_entry_router.dart';
+import 'package:y300/app/navigation/main_bookshelf_page.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/navigation/message_routes.dart';
 import 'package:y300/app/startup/main_shell_library_gate.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
-import 'package:y300/features/comic/presentation/comic_tab_page.dart';
 import 'package:y300/features/favorites/presentation/favorite_shelf_page.dart';
 import 'package:y300/features/forum/presentation/forum_shell_page.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_controller.dart';
@@ -14,7 +14,6 @@ import 'package:y300/features/history/presentation/history_page.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_bottom_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_providers.dart';
-import 'package:y300/features/novel/presentation/novel_tab_page.dart';
 import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 
 typedef MainDestinationRouteFactory = Route<void> Function(
@@ -82,12 +81,8 @@ class MainDestinationPage extends ConsumerWidget {
       MainShellDestination.favorites => MainShellLibraryGate(
         child: FavoriteShelfPage(isActive: isActive),
       ),
-      MainShellDestination.comic => MainShellLibraryGate(
-        child: ComicTabPage(isActive: isActive),
-      ),
-      MainShellDestination.novel => MainShellLibraryGate(
-        child: NovelTabPage(isActive: isActive),
-      ),
+      MainShellDestination.comic || MainShellDestination.novel =>
+        MainShellLibraryGate(child: MainBookshelfPage(isActive: isActive)),
       MainShellDestination.blogs => ProfileBlogPage(isActive: isActive),
       MainShellDestination.history => HistoryPage(
         onOpenEntry: ref.read(historyEntryRouterProvider).open,

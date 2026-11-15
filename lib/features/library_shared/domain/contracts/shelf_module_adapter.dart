@@ -17,6 +17,11 @@ abstract class ShelfModuleAdapter {
   /// 默认显示模式：漫画通常网格，小说通常列表。
   LibraryDisplayMode get defaultDisplayMode;
 
+  /// 需要触发本页重读的刷新信号模块集合。
+  ///
+  /// 单模块默认只认自己；混合书架覆盖为漫画与小说两个来源。
+  Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
+
   /// 可选的长任务进度。默认没有进度源，收藏等模块可按需接入。
   ValueListenable<LibraryShelfTaskProgress?>? get taskProgress => null;
 
@@ -75,16 +80,21 @@ class ShelfModuleCapabilities {
     this.supportsReadState = true,
     this.supportsBookmarkFilter = false,
     this.defaultSortOption = LibraryShelfSortOption.defaults,
-  });
+    bool? showsUnreadBadge,
+  }) : showsUnreadBadge = showsUnreadBadge ?? supportsReadState;
 
   const ShelfModuleCapabilities.defaults()
     : supportsReadState = true,
       supportsBookmarkFilter = false,
-      defaultSortOption = LibraryShelfSortOption.defaults;
+      defaultSortOption = LibraryShelfSortOption.defaults,
+      showsUnreadBadge = true;
 
   final bool supportsReadState;
   final bool supportsBookmarkFilter;
   final LibraryShelfSortOption defaultSortOption;
+
+  /// 是否显示卡片左上角未读章节数；与筛选能力分开，混合书架只展示漫画角标。
+  final bool showsUnreadBadge;
 
   List<LibraryShelfSortField> get availableSortFields =>
       <LibraryShelfSortField>[
@@ -160,6 +170,17 @@ abstract class ShelfModuleActionAdapter {
   List<LibraryShelfMenuAction> get menuActions;
 
   Future<ShelfModuleActionOutcome> runMenuAction(LibraryShelfMenuAction action);
+}
+
+/// 可选能力：在指定来源分类下新建分类。
+///
+/// 混合书架无法只凭分类名判断应该写入漫画还是小说仓储；页面把当前分类键
+/// 一并传入，由组合适配器解码后分派。
+abstract interface class ShelfCategorySourceAdapter {
+  Future<String> createCategoryInSource({
+    required String sourceCategoryId,
+    required String name,
+  });
 }
 
 enum LibraryShelfTaskProgressCode {

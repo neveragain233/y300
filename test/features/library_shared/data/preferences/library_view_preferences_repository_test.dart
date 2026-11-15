@@ -45,13 +45,9 @@ void main() {
 
       final loaded = await repository.load(defaults: defaults);
       final preferences = await SharedPreferences.getInstance();
-      final snapshot =
-          jsonDecode(
-                preferences.getString(
-                  PreferenceKeys.libraryShelfComicSnapshotV1.name,
-                )!,
-              )
-              as Map<String, dynamic>;
+      final snapshot = jsonDecode(
+        preferences.getString(PreferenceKeys.libraryShelfComicSnapshotV1.name)!,
+      ) as Map<String, dynamic>;
 
       expect(loaded.displayMode, LibraryDisplayMode.list);
       expect(loaded.gridColumnCount, 6);
@@ -64,6 +60,62 @@ void main() {
         ),
         1,
       );
+    },
+  );
+
+  test('bookshelf seed copies only display mode and grid columns', () async {
+    await repository.save(
+      defaults.copyWith(
+        displayMode: LibraryDisplayMode.list,
+        gridColumnCount: 5,
+        filters: const LibraryFilterSet(unread: TriStateFilterValue.include),
+        lastCategoryId: 'c1',
+      ),
+    );
+    final bookshelfDefaults = LibraryShelfViewPreferences.defaults(
+      moduleKey: LibraryModuleKey.bookshelf,
+      displayMode: LibraryDisplayMode.grid,
+      sortOption: LibraryShelfSortOption.defaults,
+    );
+
+    await repository.seedBookshelfFrom(sourceModule: LibraryModuleKey.comic);
+    final seeded = await repository.load(defaults: bookshelfDefaults);
+
+    expect(seeded.displayMode, LibraryDisplayMode.list);
+    expect(seeded.gridColumnCount, 5);
+    expect(seeded.sortOption.field, bookshelfDefaults.sortOption.field);
+    expect(
+      seeded.sortOption.direction,
+      bookshelfDefaults.sortOption.direction,
+    );
+    expect(seeded.filters.isDefault, isTrue);
+    expect(seeded.lastCategoryId, isNull);
+
+    await repository.save(seeded.copyWith(gridColumnCount: 2));
+    await repository.seedBookshelfFrom(sourceModule: LibraryModuleKey.comic);
+    final afterUserChange = await repository.load(defaults: bookshelfDefaults);
+    expect(afterUserChange.gridColumnCount, 2);
+  });
+
+  test(
+    'bookshelf seed reads legacy display values when source has none',
+    () async {
+      legacySource.value = const LegacyLibraryDisplayPreferences(
+        displayMode: LibraryDisplayMode.list,
+        gridColumnCount: 7,
+      );
+      final bookshelfDefaults = LibraryShelfViewPreferences.defaults(
+        moduleKey: LibraryModuleKey.bookshelf,
+        displayMode: LibraryDisplayMode.grid,
+        sortOption: LibraryShelfSortOption.defaults,
+      );
+
+      await repository.seedBookshelfFrom(sourceModule: LibraryModuleKey.novel);
+      final seeded = await repository.load(defaults: bookshelfDefaults);
+
+      expect(seeded.displayMode, LibraryDisplayMode.list);
+      expect(seeded.gridColumnCount, 7);
+      expect(legacySource.callCount, 1);
     },
   );
 

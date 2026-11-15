@@ -108,6 +108,9 @@ abstract final class PreferenceKeys {
   static const libraryShelfFavoriteSnapshotV1 = PreferenceKey<String>(
     PreferenceKeyNames.libraryShelfFavoriteSnapshotV1,
   );
+  static const libraryShelfBookshelfSnapshotV1 = PreferenceKey<String>(
+    PreferenceKeyNames.libraryShelfBookshelfSnapshotV1,
+  );
   static const libraryShelfComicMigrationVersion = PreferenceKey<int>(
     PreferenceKeyNames.libraryShelfComicMigrationVersion,
   );
@@ -116,6 +119,9 @@ abstract final class PreferenceKeys {
   );
   static const libraryShelfFavoriteMigrationVersion = PreferenceKey<int>(
     PreferenceKeyNames.libraryShelfFavoriteMigrationVersion,
+  );
+  static const libraryShelfBookshelfMigrationVersion = PreferenceKey<int>(
+    PreferenceKeyNames.libraryShelfBookshelfMigrationVersion,
   );
 
   static const imageCacheMaxBytes = PreferenceKey<int>(

@@ -136,6 +136,7 @@ final class SqliteLibraryViewPreferencesLegacySource
       LibraryModuleKey.comic => 'comic',
       LibraryModuleKey.novel => 'novel',
       LibraryModuleKey.favorite => 'favorite',
+      LibraryModuleKey.bookshelf => 'bookshelf',
     };
   }
 }

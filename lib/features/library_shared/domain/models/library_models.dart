@@ -1,7 +1,50 @@
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 
 /// 模块标识：用于区分漫画与小说的默认行为差异。
-enum LibraryModuleKey { comic, novel, favorite }
+enum LibraryModuleKey { comic, novel, favorite, bookshelf }
+
+/// 混合书架中的作品身份：来源类型 + 原始作品编号。
+///
+/// 单模块页面继续直接使用原始 workId；只有混合书架用编码后的身份键
+/// 区分同编号的漫画与小说，避免选择、页面键和差异比较互相覆盖。
+class LibraryWorkId {
+  const LibraryWorkId({required this.source, required this.workId});
+
+  final LibraryModuleKey source;
+  final String workId;
+
+  String get encoded => '${source.name}:$workId';
+
+  /// 按第一个冒号拆分；原始作品编号本身可以继续包含冒号。
+  static LibraryWorkId? tryParse(String value) {
+    final index = value.indexOf(':');
+    if (index <= 0 || index == value.length - 1) {
+      return null;
+    }
+    final sourceName = value.substring(0, index);
+    LibraryModuleKey? source;
+    for (final key in LibraryModuleKey.values) {
+      if (key.name == sourceName) {
+        source = key;
+        break;
+      }
+    }
+    if (source == null) {
+      return null;
+    }
+    return LibraryWorkId(source: source, workId: value.substring(index + 1));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LibraryWorkId &&
+          other.source == source &&
+          other.workId == workId;
+
+  @override
+  int get hashCode => Object.hash(source, workId);
+}
 
 /// 作品展示方式：网格或列表。
 enum LibraryDisplayMode { grid, list }
@@ -27,8 +70,11 @@ class LibraryCategory {
     required this.sortOrder,
     required this.createdAt,
     this.visibleMatchCount = 0,
+    this.source,
+    this.sourceCategoryId,
   });
 
+  /// 页面与状态使用的分类键。混合书架中使用带来源的身份键。
   final String categoryId;
   final String name;
   final int sortOrder;
@@ -37,7 +83,13 @@ class LibraryCategory {
   /// 搜索模式下该分类命中数。
   final int visibleMatchCount;
 
-  bool get isDefault => categoryId == 'default';
+  /// 混合书架分类的来源模块；单模块分类为 null。
+  final LibraryModuleKey? source;
+
+  /// 来源模块内的原始分类编号；单模块分类为 null。
+  final String? sourceCategoryId;
+
+  bool get isDefault => (sourceCategoryId ?? categoryId) == 'default';
 
   LibraryCategory copyWith({
     String? categoryId,
@@ -45,6 +97,8 @@ class LibraryCategory {
     int? sortOrder,
     DateTime? createdAt,
     int? visibleMatchCount,
+    LibraryModuleKey? source,
+    String? sourceCategoryId,
   }) {
     return LibraryCategory(
       categoryId: categoryId ?? this.categoryId,
@@ -52,6 +106,8 @@ class LibraryCategory {
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       visibleMatchCount: visibleMatchCount ?? this.visibleMatchCount,
+      source: source ?? this.source,
+      sourceCategoryId: sourceCategoryId ?? this.sourceCategoryId,
     );
   }
 }
@@ -100,10 +156,19 @@ class LibraryWorkItem {
     this.hasTags = false,
     this.hasBookmarks = false,
     this.isDownloaded = false,
+    this.source,
   });
 
   final String workId;
   final String categoryId;
+
+  /// 混合书架作品的来源模块；单模块作品为 null。
+  final LibraryModuleKey? source;
+
+  /// 混合书架中区分同编号作品的唯一身份键。
+  String get identityKey => source == null
+      ? workId
+      : LibraryWorkId(source: source!, workId: workId).encoded;
   final String title;
   final String? secondaryName;
   final String? coverImageUrl;
@@ -131,6 +196,7 @@ class LibraryWorkItem {
   final bool isDownloaded;
 
   LibraryWorkItem copyWith({
+    String? categoryId,
     String? title,
     String? secondaryName,
     String? coverImageUrl,
@@ -151,13 +217,14 @@ class LibraryWorkItem {
     bool? hasTags,
     bool? hasBookmarks,
     bool? isDownloaded,
+    LibraryModuleKey? source,
     bool clearCoverLocalPath = false,
     bool clearCustomCoverLocalPath = false,
     bool clearCustomCoverFocus = false,
   }) {
     return LibraryWorkItem(
       workId: workId,
-      categoryId: categoryId,
+      categoryId: categoryId ?? this.categoryId,
       title: title ?? this.title,
       secondaryName: secondaryName ?? this.secondaryName,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
@@ -186,6 +253,7 @@ class LibraryWorkItem {
       hasTags: hasTags ?? this.hasTags,
       hasBookmarks: hasBookmarks ?? this.hasBookmarks,
       isDownloaded: isDownloaded ?? this.isDownloaded,
+      source: source ?? this.source,
     );
   }
 }
@@ -293,6 +361,7 @@ class LibraryChapterItem {
   final String episodeId;
   final String workId;
   final String title;
+
   /// 重命名后仍可按来源章节名检索，显示继续使用 title。
   final String? sourceTitle;
   final int orderIndex;

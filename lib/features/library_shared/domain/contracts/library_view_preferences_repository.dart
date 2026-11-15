@@ -1,3 +1,4 @@
+import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_view_preferences.dart';
 
 abstract interface class LibraryViewPreferencesRepository {
@@ -6,6 +7,13 @@ abstract interface class LibraryViewPreferencesRepository {
   });
 
   Future<void> save(LibraryShelfViewPreferences preferences);
+}
+
+/// 首次打开混合书架时，从旧的单模块书架承接显示方式。
+///
+/// 只复制显示模式和网格列数；筛选、排序与上次分类不跨模块继承。
+abstract interface class LibraryViewPreferencesSeeder {
+  Future<void> seedBookshelfFrom({required LibraryModuleKey sourceModule});
 }
 
 /// Process-local fallback for isolated controller/widget hosts.

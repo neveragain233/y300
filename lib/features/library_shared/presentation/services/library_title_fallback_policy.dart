@@ -16,6 +16,7 @@ abstract final class LibraryTitleFallbackPolicy {
       LibraryModuleKey.comic => _legacyComicTitles.contains(title),
       LibraryModuleKey.novel => _legacyNovelTitles.contains(title),
       LibraryModuleKey.favorite => false,
+      LibraryModuleKey.bookshelf => false,
     };
   }
 

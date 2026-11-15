@@ -25,6 +25,11 @@ class LibraryDetailHistoryVisitMapper {
         'module',
         'Favorite details are not work history targets',
       ),
+      LibraryModuleKey.bookshelf => throw ArgumentError.value(
+        module,
+        'module',
+        'The mixed shelf is not a work history target',
+      ),
     };
     final customLocalPath = _nonEmpty(header.customCoverLocalPath);
     final customRemoteUrl = _nonEmpty(header.customCoverImageUrl);

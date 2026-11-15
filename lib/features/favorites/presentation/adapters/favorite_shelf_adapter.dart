@@ -104,6 +104,9 @@ class FavoriteShelfAdapter
   LibraryModuleKey get moduleKey => LibraryModuleKey.favorite;
 
   @override
+  Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
+
+  @override
   LibraryDisplayMode get defaultDisplayMode => LibraryDisplayMode.list;
 
   @override

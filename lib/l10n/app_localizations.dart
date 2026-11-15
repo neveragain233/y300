@@ -1874,6 +1874,54 @@ abstract class AppLocalizations {
   /// **'默认'**
   String get libraryShelfDefaultCategory;
 
+  /// No description provided for @libraryShelfAllWorks.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get libraryShelfAllWorks;
+
+  /// No description provided for @libraryShelfComicCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'漫画·{name}'**
+  String libraryShelfComicCategory(String name);
+
+  /// No description provided for @libraryShelfNovelCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'小说·{name}'**
+  String libraryShelfNovelCategory(String name);
+
+  /// No description provided for @libraryShelfComicBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'漫'**
+  String get libraryShelfComicBadge;
+
+  /// No description provided for @libraryShelfNovelBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'文'**
+  String get libraryShelfNovelBadge;
+
+  /// No description provided for @libraryShelfUnreadBadgeSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'未读 {count} 章'**
+  String libraryShelfUnreadBadgeSemantics(int count);
+
+  /// No description provided for @libraryShelfCategoryOperationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类操作失败'**
+  String get libraryShelfCategoryOperationFailed;
+
+  /// No description provided for @libraryShelfCreateCategoryNeedsSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先切换到漫画或小说分类，再新建分类'**
+  String get libraryShelfCreateCategoryNeedsSource;
+
   /// No description provided for @libraryShelfDefaultCategoryCannotRename.
   ///
   /// In zh, this message translates to:
@@ -1909,6 +1957,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'随机打开作品'**
   String get libraryShelfRandomOpen;
+
+  /// No description provided for @libraryShelfContinueReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续上次阅读'**
+  String get libraryShelfContinueReading;
+
+  /// No description provided for @libraryShelfNoRecentReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无最近阅读记录'**
+  String get libraryShelfNoRecentReading;
 
   /// No description provided for @libraryShelfNoRandomWork.
   ///
@@ -3971,6 +4031,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'章节正文暂不可用'**
   String get novelReaderContentMissing;
+
+  /// No description provided for @novelReaderChapterUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次阅读的章节已不可用，请从作品详情重新选择章节'**
+  String get novelReaderChapterUnavailable;
 
   /// No description provided for @novelReaderLoadFailed.
   ///

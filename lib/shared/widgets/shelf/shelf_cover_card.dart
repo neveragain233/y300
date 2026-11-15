@@ -47,6 +47,7 @@ class ShelfCoverCard extends StatelessWidget {
     this.customCoverFocusY,
     this.onLongPress,
     this.topLeftBadge,
+    this.trailingBadge,
     this.showTwoLineCustomEllipsis = false,
     this.imageReferer,
     this.coverLayerBuilder,
@@ -66,6 +67,9 @@ class ShelfCoverCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final Widget? topLeftBadge;
+
+  /// 标题覆盖区右侧的类型角标；长标题先让出固定空间，再省略。
+  final Widget? trailingBadge;
   final bool showTwoLineCustomEllipsis;
   final String? imageReferer;
   final ShelfCoverLayerBuilder? coverLayerBuilder;
@@ -186,6 +190,15 @@ class ShelfCoverCard extends StatelessWidget {
       fontWeight: FontWeight.w500,
     );
 
+    final titleText = showTwoLineCustomEllipsis
+        ? _TwoLineEllipsisText(title, style: style)
+        : Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          );
+    final badge = trailingBadge;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
@@ -196,13 +209,15 @@ class ShelfCoverCard extends StatelessWidget {
           colors: [Color(0x00000000), Color(0xA6000000), Color(0xCC000000)],
         ),
       ),
-      child: showTwoLineCustomEllipsis
-          ? _TwoLineEllipsisText(title, style: style)
-          : Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: style,
+      child: badge == null
+          ? titleText
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(child: titleText),
+                const SizedBox(width: 6),
+                badge,
+              ],
             ),
     );
   }

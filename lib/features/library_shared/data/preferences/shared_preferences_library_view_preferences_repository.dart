@@ -5,10 +5,11 @@ import 'package:y300/features/library_shared/data/preferences/library_view_prefe
 import 'package:y300/features/library_shared/data/preferences/library_view_preferences_snapshot_codec.dart';
 import 'package:y300/features/library_shared/domain/contracts/library_view_preferences_repository.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
+import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_view_preferences.dart';
 
 final class SharedPreferencesLibraryViewPreferencesRepository
-    implements LibraryViewPreferencesRepository {
+    implements LibraryViewPreferencesRepository, LibraryViewPreferencesSeeder {
   SharedPreferencesLibraryViewPreferencesRepository({
     required PreferencesStore preferencesStore,
     required LibraryViewPreferencesLegacySource legacySource,
@@ -68,6 +69,64 @@ final class SharedPreferencesLibraryViewPreferencesRepository
   }
 
   @override
+  Future<void> seedBookshelfFrom({
+    required LibraryModuleKey sourceModule,
+  }) async {
+    final bookshelfKeys = _keysFor(LibraryModuleKey.bookshelf);
+    if (await _preferencesStore.contains(bookshelfKeys.snapshot)) {
+      return;
+    }
+    final completedVersion =
+        await _preferencesStore.read(bookshelfKeys.migrationVersion) ?? 0;
+    if (completedVersion >= migrationVersion) {
+      return;
+    }
+    final sourceKeys = _keysFor(sourceModule);
+    LibraryDisplayMode? displayMode;
+    int? gridColumnCount;
+    if (await _preferencesStore.contains(sourceKeys.snapshot)) {
+      final sourceDefaults = LibraryShelfViewPreferences.defaults(
+        moduleKey: sourceModule,
+        displayMode: _defaultDisplayModeFor(sourceModule),
+        sortOption: LibraryShelfSortOption.defaults,
+      );
+      final sourcePreferences = _codec.decode(
+        await _preferencesStore.read(sourceKeys.snapshot),
+        defaults: sourceDefaults,
+      );
+      displayMode = sourcePreferences.displayMode;
+      gridColumnCount = sourcePreferences.gridColumnCount;
+    } else {
+      try {
+        final legacy = await _legacySource.loadDisplayPreferences(
+          moduleKey: sourceModule,
+          defaultDisplayMode: _defaultDisplayModeFor(sourceModule),
+          defaultGridColumnCount: 3,
+        );
+        if (legacy != null) {
+          displayMode = legacy.displayMode;
+          gridColumnCount = legacy.gridColumnCount;
+        }
+      } catch (_) {
+        // A broken legacy row must not block the mixed shelf from opening.
+      }
+    }
+    final defaults = LibraryShelfViewPreferences.defaults(
+      moduleKey: LibraryModuleKey.bookshelf,
+      displayMode: _defaultDisplayModeFor(LibraryModuleKey.bookshelf),
+      sortOption: LibraryShelfSortOption.defaults,
+    );
+    final seeded = _codec.normalize(
+      defaults.copyWith(
+        displayMode: displayMode ?? defaults.displayMode,
+        gridColumnCount: gridColumnCount ?? defaults.gridColumnCount,
+      ),
+      defaults: defaults,
+    );
+    await _write(bookshelfKeys, seeded, defaults: defaults);
+  }
+
+  @override
   Future<void> save(LibraryShelfViewPreferences preferences) async {
     final defaults = LibraryShelfViewPreferences.defaults(
       moduleKey: preferences.moduleKey,
@@ -79,6 +138,12 @@ final class SharedPreferencesLibraryViewPreferencesRepository
       preferences,
       defaults: defaults,
     );
+  }
+
+  LibraryDisplayMode _defaultDisplayModeFor(LibraryModuleKey moduleKey) {
+    return moduleKey == LibraryModuleKey.novel
+        ? LibraryDisplayMode.list
+        : LibraryDisplayMode.grid;
   }
 
   Future<void> _write(
@@ -106,6 +171,10 @@ final class SharedPreferencesLibraryViewPreferencesRepository
       LibraryModuleKey.favorite => const _LibraryViewPreferenceKeys(
         snapshot: PreferenceKeys.libraryShelfFavoriteSnapshotV1,
         migrationVersion: PreferenceKeys.libraryShelfFavoriteMigrationVersion,
+      ),
+      LibraryModuleKey.bookshelf => const _LibraryViewPreferenceKeys(
+        snapshot: PreferenceKeys.libraryShelfBookshelfSnapshotV1,
+        migrationVersion: PreferenceKeys.libraryShelfBookshelfMigrationVersion,
       ),
     };
   }

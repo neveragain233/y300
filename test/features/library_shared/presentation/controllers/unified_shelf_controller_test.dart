@@ -238,46 +238,43 @@ void main() {
       expect(second.state.selectedCategoryId, 'later');
     });
 
-    test(
-      'initialize prefers snapshot adapter without loading categories separately',
-      () async {
-        final adapter = _SnapshotShelfAdapter(
-          categories: [
-            LibraryCategory(
+    test('initialize prefers snapshot adapter without loading categories separately', () async {
+      final adapter = _SnapshotShelfAdapter(
+        categories: [
+          LibraryCategory(
+            categoryId: 'default',
+            name: 'default',
+            sortOrder: 0,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        ],
+        queriedItems: {
+          'default': [
+            LibraryWorkItem(
+              workId: 'w1',
               categoryId: 'default',
-              name: 'default',
-              sortOrder: 0,
-              createdAt: DateTime(2026, 1, 1),
+              title: 'snapshot title',
+              unreadCount: 2,
+              totalChapterCount: 3,
+              readChapterCount: 1,
+              addedAt: DateTime.utc(2026, 1, 1),
             ),
           ],
-          queriedItems: {
-            'default': [
-              LibraryWorkItem(
-                workId: 'w1',
-                categoryId: 'default',
-                title: 'snapshot title',
-                unreadCount: 2,
-                totalChapterCount: 3,
-                readChapterCount: 1,
-                addedAt: DateTime.utc(2026, 1, 1),
-              ),
-            ],
-          },
-        );
-        final controller = UnifiedShelfController(adapter: adapter);
+        },
+      );
+      final controller = UnifiedShelfController(adapter: adapter);
 
-        await controller.initialize();
+      await controller.initialize();
 
-        expect(controller.state.isLoading, isFalse);
-        expect(
-          controller.state.itemsByCategory['default']?.single.title,
-          'snapshot title',
-        );
-        expect(adapter.snapshotCallCount, 1);
-        expect(adapter.loadCategoriesCallCount, 0);
-        expect(adapter.queryCallCount, 0);
-      },
-    );
+      expect(controller.state.isLoading, isFalse);
+      expect(
+        controller.state.itemsByCategory['default']?.single.title,
+        'snapshot title',
+      );
+      expect(adapter.snapshotCallCount, 1);
+      expect(adapter.loadCategoriesCallCount, 0);
+      expect(adapter.queryCallCount, 0);
+    });
 
     test('feature flag can disable snapshot query fallback path', () async {
       final adapter = _SnapshotShelfAdapter(
@@ -575,41 +572,35 @@ void main() {
       controller.dispose();
     });
 
-    test(
-      'disabling stale-while-revalidate makes refresh enter loading state with old content',
-      () async {
-        final adapter = _BlockingReloadShelfAdapter(
-          categories: [
-            LibraryCategory(
-              categoryId: 'default',
-              name: 'default',
-              sortOrder: 0,
-              createdAt: DateTime(2026, 1, 1),
-            ),
-          ],
-        );
-        final controller = UnifiedShelfController(
-          adapter: adapter,
-          featureFlags: ShelfFeatureFlags.defaults.copyWith(
-            useStaleWhileRevalidate: false,
+    test('disabling stale-while-revalidate makes refresh enter loading state with old content', () async {
+      final adapter = _BlockingReloadShelfAdapter(
+        categories: [
+          LibraryCategory(
+            categoryId: 'default',
+            name: 'default',
+            sortOrder: 0,
+            createdAt: DateTime(2026, 1, 1),
           ),
-        );
+        ],
+      );
+      final controller = UnifiedShelfController(
+        adapter: adapter,
+        featureFlags: ShelfFeatureFlags.defaults.copyWith(
+          useStaleWhileRevalidate: false,
+        ),
+      );
 
-        await controller.initialize();
-        final refreshFuture = controller.refresh();
-        await adapter.secondQueryStarted.future;
+      await controller.initialize();
+      final refreshFuture = controller.refresh();
+      await adapter.secondQueryStarted.future;
 
-        expect(controller.state.isLoading, isTrue);
-        expect(
-          controller.state.itemsByCategory['default']?.single.workId,
-          'w1',
-        );
+      expect(controller.state.isLoading, isTrue);
+      expect(controller.state.itemsByCategory['default']?.single.workId, 'w1');
 
-        adapter.completeSecondQuery();
-        await refreshFuture;
-        controller.dispose();
-      },
-    );
+      adapter.completeSecondQuery();
+      await refreshFuture;
+      controller.dispose();
+    });
 
     test(
       'default stale-while-revalidate keeps old content visible during refresh',
@@ -762,6 +753,52 @@ void main() {
       controller.dispose();
     });
 
+    test('adapter can accept refresh signals from multiple modules', () async {
+      final bus = LibraryShelfRefreshBus();
+      addTearDown(bus.dispose);
+      final adapter = _FakeShelfAdapter(
+        categories: [
+          LibraryCategory(
+            categoryId: 'default',
+            name: 'default',
+            sortOrder: 0,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        ],
+        queriedItems: {
+          'default': [_workItem('w1')],
+        },
+        shelfRefreshSignals: bus.signal,
+        refreshModuleKeys: const <LibraryModuleKey>{
+          LibraryModuleKey.comic,
+          LibraryModuleKey.novel,
+        },
+      );
+      final stateChanged = Completer<void>();
+      final controller = UnifiedShelfController(
+        adapter: adapter,
+        onStateChanged: () {
+          if (!stateChanged.isCompleted) {
+            stateChanged.complete();
+          }
+        },
+      );
+
+      await controller.initialize();
+      adapter.queriedItems = {
+        'default': [_workItem('w2')],
+      };
+
+      bus.notify(
+        modules: const <LibraryModuleKey>{LibraryModuleKey.novel},
+        reason: 'novel_updated',
+        source: LibraryMutationSource.novelRefresh,
+      );
+      await stateChanged.future;
+
+      expect(controller.state.itemsByCategory['default']?.single.workId, 'w2');
+    });
+
     test(
       'background task with reloadOnCompletion false does not trigger reload',
       () async {
@@ -798,7 +835,6 @@ void main() {
         progress.dispose();
       },
     );
-
   });
 }
 
@@ -820,6 +856,7 @@ class _FakeShelfAdapter implements ShelfModuleAdapter {
     required this.queriedItems,
     this.taskProgress,
     this.shelfRefreshSignals,
+    this.refreshModuleKeys = const <LibraryModuleKey>{LibraryModuleKey.comic},
   });
 
   final List<LibraryCategory> categories;
@@ -837,6 +874,9 @@ class _FakeShelfAdapter implements ShelfModuleAdapter {
 
   @override
   LibraryModuleKey get moduleKey => LibraryModuleKey.comic;
+
+  @override
+  final Set<LibraryModuleKey> refreshModuleKeys;
 
   @override
   Future<Object> buildDetailRouteArgument({required String workId}) async =>

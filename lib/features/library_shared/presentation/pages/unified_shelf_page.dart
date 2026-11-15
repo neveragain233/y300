@@ -3,8 +3,8 @@ import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -307,7 +307,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                                       showUnreadBadge:
                                           resolveShelfModuleCapabilities(
                                             widget.adapter,
-                                          ).supportsReadState,
+                                          ).showsUnreadBadge,
                                       selectedWorkIds:
                                           _selectionController.selectedWorkIds,
                                       selectionEnabled: _selectionEnabled,
@@ -395,7 +395,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   }
 
   Set<String> get _currentVisibleWorkIds {
-    return _currentCategoryItems.map((item) => item.workId).toSet();
+    return _currentCategoryItems.map((item) => item.identityKey).toSet();
   }
 
   Future<void> _handleItemTap(String workId) async {
@@ -467,7 +467,18 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         _selectionController.invert(_currentVisibleWorkIds);
       },
       loadAvailableCategories: () => widget.adapter.loadCategories(),
-      createCategory: (name) => widget.adapter.createCategory(name: name),
+      createCategory: (name) async {
+        if (widget.adapter is ShelfCategorySourceAdapter &&
+            _controller.selectedCategory?.source != null) {
+          final categoryId = await _controller.createCategoryInCurrentSource(
+            name,
+          );
+          if (categoryId != null) {
+            return categoryId;
+          }
+        }
+        return widget.adapter.createCategory(name: name);
+      },
       runSelectionAction: (request) {
         final adapter = widget.adapter as ShelfSelectionActionAdapter;
         return adapter.runSelectionAction(request);
@@ -639,6 +650,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       LibraryModuleKey.comic => RecentSearchScope.comicShelf,
       LibraryModuleKey.novel => RecentSearchScope.novelShelf,
       LibraryModuleKey.favorite => RecentSearchScope.favoriteShelf,
+      LibraryModuleKey.bookshelf => RecentSearchScope.bookshelfShelf,
     };
   }
 
@@ -920,13 +932,35 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     }
 
     if (value == 'add-category') {
+      final l10n = AppLocalizations.of(context);
+      if (widget.adapter.moduleKey == LibraryModuleKey.bookshelf &&
+          _controller.selectedCategory?.source == null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.libraryShelfCreateCategoryNeedsSource)),
+        );
+        return;
+      }
       final name = await _showCategoryNameDialog(
-        title: AppLocalizations.of(context).libraryShelfCreateCategory,
+        title: l10n.libraryShelfCreateCategory,
       );
       if (name == null || name.trim().isEmpty) {
         return;
       }
-      await _controller.createCategory(name.trim());
+      try {
+        await _controller.createCategoryInCurrentSource(name.trim());
+      } catch (_) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)
+                    .libraryShelfCategoryOperationFailed,
+              ),
+            ),
+          );
+        }
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -958,10 +992,24 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       if (name == null || name.trim().isEmpty) {
         return;
       }
-      await _controller.renameCategory(
-        categoryId: selectedCategory.categoryId,
-        newName: name.trim(),
-      );
+      try {
+        await _controller.renameCategory(
+          categoryId: selectedCategory.categoryId,
+          newName: name.trim(),
+        );
+      } catch (_) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)
+                    .libraryShelfCategoryOperationFailed,
+              ),
+            ),
+          );
+        }
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -1341,12 +1389,15 @@ class _WorkGrid extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
+              final l10n = AppLocalizations.of(context);
               return ShelfCoverCard(
-                key: ValueKey<String>('unified-shelf-grid-item-${item.workId}'),
-                coverKey: item.workId,
+                key: ValueKey<String>(
+                  'unified-shelf-grid-item-${item.identityKey}',
+                ),
+                coverKey: item.identityKey,
                 title: LibraryShelfTextResolver.workTitle(
-                  AppLocalizations.of(context),
-                  moduleKey,
+                  l10n,
+                  item.source ?? moduleKey,
                   item.title,
                   item.workId,
                 ),
@@ -1360,15 +1411,28 @@ class _WorkGrid extends StatelessWidget {
                 coverLayerBuilder: useShelfCoverImage
                     ? null
                     : _legacyCoverLayerBuilder,
-                onTap: () async => onTapItem(item.workId),
+                onTap: () async => onTapItem(item.identityKey),
                 onLongPress: selectionEnabled
-                    ? () async => onLongPressItem(item.workId)
+                    ? () async => onLongPressItem(item.identityKey)
                     : null,
                 topLeftBadge: showUnreadBadge
-                    ? _UnreadBadge(count: item.unreadCount)
+                    ? _UnreadBadge(
+                        count: item.unreadCount,
+                        semanticLabel: l10n.libraryShelfUnreadBadgeSemantics(
+                          item.unreadCount,
+                        ),
+                      )
                     : null,
+                trailingBadge: item.source == null
+                    ? null
+                    : _WorkTypeBadge(
+                        label: LibraryShelfTextResolver.workTypeBadge(
+                          l10n,
+                          item.source,
+                        ),
+                      ),
                 showTwoLineCustomEllipsis: true,
-                selected: selectedWorkIds.contains(item.workId),
+                selected: selectedWorkIds.contains(item.identityKey),
               );
             },
           ),
@@ -1517,7 +1581,7 @@ class _WorkList extends StatelessWidget {
             const Divider(height: 1, thickness: .5),
         itemBuilder: (context, index) {
           final item = items[index];
-          final selected = selectedWorkIds.contains(item.workId);
+          final selected = selectedWorkIds.contains(item.identityKey);
           final shelfPalette = const ShelfThemePaletteResolver().resolve(
             Theme.of(context),
           );
@@ -1532,7 +1596,9 @@ class _WorkList extends StatelessWidget {
                 )
               : null;
           return AnimatedContainer(
-            key: ValueKey<String>('unified-shelf-list-item-${item.workId}'),
+            key: ValueKey<String>(
+              'unified-shelf-list-item-${item.identityKey}',
+            ),
             duration: AppLayoutTokens.motionDuration(context),
             curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
@@ -1550,28 +1616,49 @@ class _WorkList extends StatelessWidget {
                 color: Theme.of(context).scaffoldBackgroundColor,
                 child: ListTile(
                   key: ValueKey<String>(
-                    'unified-shelf-list-tile-${item.workId}',
+                    'unified-shelf-list-tile-${item.identityKey}',
                   ),
                   minTileHeight: 72,
                   selected: selected,
-                  onTap: () async => onTapItem(item.workId),
+                  onTap: () async => onTapItem(item.identityKey),
                   onLongPress: selectionEnabled
-                      ? () async => onLongPressItem(item.workId)
+                      ? () async => onLongPressItem(item.identityKey)
                       : null,
                   leading: leading,
                   title: Text(
                     LibraryShelfTextResolver.workTitle(
                       AppLocalizations.of(context),
-                      moduleKey,
+                      item.source ?? moduleKey,
                       item.title,
                       item.workId,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: showUnreadBadge
-                      ? _UnreadBadge(count: item.unreadCount)
-                      : null,
+                  trailing: item.source == null && !showUnreadBadge
+                      ? null
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (item.source != null) ...[
+                              _WorkTypeBadge(
+                                label: LibraryShelfTextResolver.workTypeBadge(
+                                  AppLocalizations.of(context),
+                                  item.source,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            if (showUnreadBadge)
+                              _UnreadBadge(
+                                count: item.unreadCount,
+                                semanticLabel: AppLocalizations.of(context)
+                                    .libraryShelfUnreadBadgeSemantics(
+                                      item.unreadCount,
+                                    ),
+                              ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -1654,26 +1741,60 @@ class _WorkList extends StatelessWidget {
 }
 
 class _UnreadBadge extends StatelessWidget {
-  const _UnreadBadge({required this.count});
+  const _UnreadBadge({required this.count, required this.semanticLabel});
 
   final int count;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     if (count <= 0) {
       return const SizedBox.shrink();
     }
+    return Semantics(
+      label: semanticLabel,
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$count',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkTypeBadge extends StatelessWidget {
+  const _WorkTypeBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    if (label.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(8),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        '$count',
+        label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.onPrimary,
-          fontWeight: FontWeight.w700,
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

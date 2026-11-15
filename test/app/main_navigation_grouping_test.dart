@@ -52,10 +52,7 @@ void main() {
         MainNavigationGroup.bookshelf,
         MainNavigationGroup.my,
       ]);
-      expect(groups.bookshelfDestinations, [
-        MainShellDestination.comic,
-        MainShellDestination.novel,
-      ]);
+      expect(groups.bookshelfDestinations, [MainShellDestination.comic]);
       expect(settings, MainNavigationSettings.defaults());
       expect(MainNavigationSettingsSnapshotCodec.encode(settings), encoded);
       expect(MainNavigationSettingsSnapshotCodec.decode(encoded), settings);
@@ -98,6 +95,27 @@ void main() {
       );
     },
   );
+
+  test('first visible bookshelf member is the only projected entry', () {
+    final groups = MainNavigationGrouping(
+      MainNavigationSettings(
+        managedOrder: const [
+          MainShellDestination.novel,
+          MainShellDestination.comic,
+          MainShellDestination.forum,
+        ],
+        hiddenDestinations: const {},
+      ),
+    );
+    expect(groups.bookshelfDestinations, [MainShellDestination.novel]);
+    expect(
+      groups.destinationFor(
+        MainNavigationGroup.bookshelf,
+        preferredBookshelf: MainShellDestination.comic,
+      ),
+      MainShellDestination.novel,
+    );
+  });
 
   test('history-only legacy configuration keeps My reachable', () {
     final groups = MainNavigationGrouping(

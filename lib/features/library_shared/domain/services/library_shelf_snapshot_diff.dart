@@ -79,7 +79,7 @@ class LibraryShelfSnapshotDiffer {
     final result = <String, LibraryWorkItem>{};
     for (final items in itemsByCategory.values) {
       for (final item in items) {
-        result[item.workId] = item;
+        result[item.identityKey] = item;
       }
     }
     return result;

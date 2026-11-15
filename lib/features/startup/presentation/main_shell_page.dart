@@ -6,7 +6,6 @@ import 'package:prism_ui/liquid_glass.dart';
 import 'package:y300/app/clipboard/forum_clipboard_link_host.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
-import 'package:y300/app/navigation/main_bookshelf_switcher.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
 import 'package:y300/app/navigation/main_destination_stack.dart';
 import 'package:y300/app/navigation/main_navigation_group_presentation.dart';
@@ -26,7 +25,6 @@ import 'package:y300/app/startup/main_shell_startup_providers.dart';
 import 'package:y300/app/startup/message_attention_visibility_host.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_bottom_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_providers.dart';
-import 'package:y300/features/library_shared/presentation/widgets/shelf_page_title_scope.dart';
 import 'package:y300/features/messages/application/message_attention_providers.dart';
 import 'package:y300/features/messages/presentation/widgets/message_attention_icon.dart';
 import 'package:y300/features/more/presentation/more_page.dart';
@@ -61,7 +59,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
       _browsers[MainShellDestination.forum]!;
   Offset _contentGlobalOrigin = Offset.zero;
   MainShellDestination? _currentDestination;
-  MainShellDestination? _lastBookshelfDestination;
   final Set<MainShellDestination> _builtDestinations = <MainShellDestination>{};
   double? _chromeHeight;
   late final MainShellStartupCoordinator _startup;
@@ -120,9 +117,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     final grouping = MainNavigationGrouping(settings);
     final currentDestination = _resolveCurrentDestination(settings, grouping);
     _currentDestination = currentDestination;
-    if (MainNavigationGrouping.isBookshelf(currentDestination)) {
-      _lastBookshelfDestination = currentDestination;
-    }
     final activeBrowser = _browsers[currentDestination];
     _builtDestinations.add(currentDestination);
     final attentionState = ref.watch(messageAttentionStateProvider);
@@ -227,7 +221,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                         ),
                         children: _buildIndexedPages(
                           settings,
-                          grouping: grouping,
                           currentDestination: currentDestination,
                         ),
                       ),
@@ -365,12 +358,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     MainNavigationGroup group,
     MainNavigationGrouping grouping,
   ) {
-    if (group == MainNavigationGroup.bookshelf) {
-      return grouping.destinationFor(
-        group,
-        preferredBookshelf: _lastBookshelfDestination,
-      );
-    }
     return grouping.destinationFor(group);
   }
 
@@ -381,9 +368,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _currentDestination = destination;
-      if (MainNavigationGrouping.isBookshelf(destination)) {
-        _lastBookshelfDestination = destination;
-      }
       _builtDestinations.add(destination);
     });
   }
@@ -400,9 +384,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
       }
       if (group == MainNavigationGroup.bookshelf) {
         if (grouping.bookshelfDestinations.isNotEmpty) {
-          return grouping.bookshelfDestinations.contains(current)
-              ? current
-              : grouping.bookshelfDestinations.first;
+          return grouping.bookshelfDestinations.first;
         }
       } else if (settings.isVisible(current)) {
         return current;
@@ -419,7 +401,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
 
   List<Widget> _buildIndexedPages(
     MainNavigationSettings settings, {
-    required MainNavigationGrouping grouping,
     required MainShellDestination currentDestination,
   }) {
     return MainShellDestination.values
@@ -434,11 +415,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
             key: ValueKey<String>('main-shell-page-${destination.name}'),
             child: TickerMode(
               enabled: isActive,
-              child: _buildPage(
-                destination,
-                grouping: grouping,
-                isActive: isActive,
-              ),
+              child: _buildPage(destination, isActive: isActive),
             ),
           );
         })
@@ -447,10 +424,9 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
 
   Widget _buildPage(
     MainShellDestination destination, {
-    required MainNavigationGrouping grouping,
     required bool isActive,
   }) {
-    final page = switch (destination) {
+    return switch (destination) {
       MainShellDestination.more => const MorePage(),
       _ => MainDestinationPage(
         destination: destination,
@@ -459,20 +435,6 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
         globalOrigin: _contentGlobalOrigin,
       ),
     };
-    if (!MainNavigationGrouping.isBookshelf(destination)) {
-      return page;
-    }
-    final shelfDestinations = grouping.bookshelfDestinations;
-    return ShelfPageTitleScope(
-      title: shelfDestinations.length >= 2
-          ? MainBookshelfSwitcher(
-              current: destination,
-              destinations: shelfDestinations,
-              onSelected: _selectDestination,
-            )
-          : null,
-      child: page,
-    );
   }
 }
 

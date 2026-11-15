@@ -4,6 +4,7 @@ enum RecentSearchNamespace {
   comicShelf,
   novelShelf,
   favoriteShelf,
+  bookshelfShelf,
   history,
   accountDirectory,
   workChapters,
@@ -29,6 +30,10 @@ final class RecentSearchScope {
   );
   static const favoriteShelf = RecentSearchScope._(
     RecentSearchNamespace.favoriteShelf,
+    null,
+  );
+  static const bookshelfShelf = RecentSearchScope._(
+    RecentSearchNamespace.bookshelfShelf,
     null,
   );
   static const history = RecentSearchScope._(
@@ -61,6 +66,7 @@ final class RecentSearchScope {
     RecentSearchNamespace.comicShelf => 'shelf:comic',
     RecentSearchNamespace.novelShelf => 'shelf:novel',
     RecentSearchNamespace.favoriteShelf => 'shelf:favorite',
+    RecentSearchNamespace.bookshelfShelf => 'shelf:bookshelf',
     RecentSearchNamespace.history => 'history',
     RecentSearchNamespace.accountDirectory => 'account:$ownerKey',
     RecentSearchNamespace.workChapters => 'work:$ownerKey:chapters',

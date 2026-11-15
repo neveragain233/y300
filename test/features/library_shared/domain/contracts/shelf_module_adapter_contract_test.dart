@@ -23,6 +23,10 @@ class _FakeShelfModuleAdapter implements ShelfModuleAdapter {
   LibraryModuleKey get moduleKey => LibraryModuleKey.comic;
 
   @override
+  Set<LibraryModuleKey> get refreshModuleKeys =>
+      <LibraryModuleKey>{moduleKey};
+
+  @override
   ValueListenable<LibraryShelfTaskProgress?>? get taskProgress => null;
 
   @override

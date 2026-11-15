@@ -32,6 +32,36 @@ void main() {
     },
   );
 
+  test('same raw work id from two sources is diffed as two identities', () {
+    const differ = LibraryShelfSnapshotDiffer();
+    final previous = LibraryShelfSnapshot(
+      categories: [_category('default')],
+      itemsByCategory: {
+        'default': [
+          _item('yamibo:1', title: 'A', source: LibraryModuleKey.comic),
+          _item('yamibo:1', title: 'B', source: LibraryModuleKey.novel),
+        ],
+      },
+      visibleMatchCountByCategory: const {'default': 2},
+    );
+    final next = LibraryShelfSnapshot(
+      categories: [_category('default')],
+      itemsByCategory: {
+        'default': [
+          _item('yamibo:1', title: 'A changed', source: LibraryModuleKey.comic),
+          _item('yamibo:1', title: 'B', source: LibraryModuleKey.novel),
+        ],
+      },
+      visibleMatchCountByCategory: const {'default': 2},
+    );
+
+    final diff = differ.diff(previous: previous, next: next);
+
+    expect(diff.addedWorkIds, isEmpty);
+    expect(diff.removedWorkIds, isEmpty);
+    expect(diff.changedWorkIds, <String>{'comic:yamibo:1'});
+  });
+
   test('LibraryShelfSnapshotDiffer reports custom cover focus changes', () {
     const differ = LibraryShelfSnapshotDiffer();
     final previous = LibraryShelfSnapshot(
@@ -79,6 +109,7 @@ LibraryWorkItem _item(
   required String title,
   double? customCoverFocusX,
   double? customCoverFocusY,
+  LibraryModuleKey? source,
 }) {
   return LibraryWorkItem(
     workId: id,
@@ -90,5 +121,6 @@ LibraryWorkItem _item(
     totalChapterCount: 1,
     readChapterCount: 0,
     addedAt: DateTime(2026, 1, 1),
+    source: source,
   );
 }

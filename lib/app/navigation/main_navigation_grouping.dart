@@ -6,9 +6,7 @@ enum MainNavigationGroup { forum, favorites, bookshelf, messages, my }
 final class MainNavigationGrouping {
   MainNavigationGrouping(MainNavigationSettings settings)
     : startupPage = settings.startupPage,
-      bookshelfDestinations = List.unmodifiable(
-        settings.visibleManagedDestinations.where(isBookshelf),
-      ),
+      bookshelfDestinations = _canonicalBookshelfDestinations(settings),
       groups = List.unmodifiable({
         for (final destination in settings.visibleManagedDestinations)
           if (groupFor(destination) != MainNavigationGroup.my)
@@ -43,6 +41,19 @@ final class MainNavigationGrouping {
   }
 
   final List<MainShellDestination> bookshelfDestinations;
+
+  static List<MainShellDestination> _canonicalBookshelfDestinations(
+    MainNavigationSettings settings,
+  ) {
+    for (final destination in settings.visibleManagedDestinations) {
+      if (isBookshelf(destination)) {
+        return List<MainShellDestination>.unmodifiable(<MainShellDestination>[
+          destination,
+        ]);
+      }
+    }
+    return const <MainShellDestination>[];
+  }
 
   static bool isBookshelf(MainShellDestination destination) =>
       destination == MainShellDestination.comic ||

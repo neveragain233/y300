@@ -309,6 +309,28 @@ class UnifiedShelfController {
     await _reload();
   }
 
+  /// 在混合书架当前来源分类下新建分类；单模块仍走 [createCategory]。
+  Future<String?> createCategoryInCurrentSource(String name) async {
+    final trimmed = name.trim();
+    final category = selectedCategory;
+    final sourceAdapter = _adapter is ShelfCategorySourceAdapter
+        ? _adapter as ShelfCategorySourceAdapter
+        : null;
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    if (sourceAdapter != null && category?.source != null) {
+      final categoryId = await sourceAdapter.createCategoryInSource(
+        sourceCategoryId: category!.categoryId,
+        name: trimmed,
+      );
+      await _reload();
+      return categoryId;
+    }
+    await createCategory(trimmed);
+    return null;
+  }
+
   Future<void> renameCategory({
     required String categoryId,
     required String newName,
@@ -518,8 +540,9 @@ class UnifiedShelfController {
 
   void _handleShelfRefreshSignalChanged() {
     final signal = _shelfRefreshSignals?.value;
+    final refreshKeys = _adapter.refreshModuleKeys;
     if (signal == null ||
-        !signal.modules.contains(_adapter.moduleKey) ||
+        !signal.modules.any(refreshKeys.contains) ||
         _disposed ||
         _adapterRefreshInProgress) {
       return;

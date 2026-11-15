@@ -246,10 +246,10 @@ class LocalLibraryStateRepository
     final sourceTable = switch (moduleKey) {
       LibraryModuleKey.comic => AppDatabase.episodesTable,
       LibraryModuleKey.novel => AppDatabase.workEpisodesTable,
-      LibraryModuleKey.favorite => null,
+      LibraryModuleKey.favorite || LibraryModuleKey.bookshelf => null,
     };
     if (sourceTable == null) {
-      throw UnsupportedError('收藏模块不支持批量阅读状态写入');
+      throw UnsupportedError('该模块不支持批量阅读状态写入');
     }
     final sourceWorkColumn = moduleKey == LibraryModuleKey.comic
         ? 'comic_id'
@@ -334,10 +334,10 @@ class LocalLibraryStateRepository
     final sourceTable = switch (moduleKey) {
       LibraryModuleKey.comic => AppDatabase.episodesTable,
       LibraryModuleKey.novel => AppDatabase.workEpisodesTable,
-      LibraryModuleKey.favorite => null,
+      LibraryModuleKey.favorite || LibraryModuleKey.bookshelf => null,
     };
     if (sourceTable == null) {
-      throw UnsupportedError('收藏模块不支持章节阅读状态写入');
+      throw UnsupportedError('该模块不支持章节阅读状态写入');
     }
     final db = await _dbFuture;
     final contentType = _moduleKeyToContentType(moduleKey);
@@ -738,6 +738,8 @@ class LocalLibraryStateRepository
         return 'novel';
       case LibraryModuleKey.favorite:
         return 'favorite';
+      case LibraryModuleKey.bookshelf:
+        return 'bookshelf';
     }
   }
 

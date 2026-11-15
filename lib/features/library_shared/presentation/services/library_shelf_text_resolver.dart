@@ -11,9 +11,25 @@ abstract final class LibraryShelfTextResolver {
   }
 
   static String categoryName(AppLocalizations l10n, LibraryCategory category) {
-    return category.isDefault
+    if (category.source == LibraryModuleKey.bookshelf) {
+      return l10n.libraryShelfAllWorks;
+    }
+    final baseName = category.isDefault
         ? l10n.libraryShelfDefaultCategory
         : category.name;
+    return switch (category.source) {
+      LibraryModuleKey.comic => l10n.libraryShelfComicCategory(baseName),
+      LibraryModuleKey.novel => l10n.libraryShelfNovelCategory(baseName),
+      _ => baseName,
+    };
+  }
+
+  static String workTypeBadge(AppLocalizations l10n, LibraryModuleKey? source) {
+    return switch (source) {
+      LibraryModuleKey.comic => l10n.libraryShelfComicBadge,
+      LibraryModuleKey.novel => l10n.libraryShelfNovelBadge,
+      _ => '',
+    };
   }
 
   static String workTitle(
@@ -29,6 +45,7 @@ abstract final class LibraryShelfTextResolver {
       LibraryModuleKey.comic => l10n.comicUntitledWork(workId),
       LibraryModuleKey.novel => l10n.novelUntitledWork(workId),
       LibraryModuleKey.favorite => rawTitle,
+      LibraryModuleKey.bookshelf => rawTitle,
     };
   }
 

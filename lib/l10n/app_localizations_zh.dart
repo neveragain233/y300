@@ -1101,6 +1101,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryShelfDefaultCategory => '默认';
 
   @override
+  String get libraryShelfAllWorks => '全部';
+
+  @override
+  String libraryShelfComicCategory(String name) {
+    return '漫画·$name';
+  }
+
+  @override
+  String libraryShelfNovelCategory(String name) {
+    return '小说·$name';
+  }
+
+  @override
+  String get libraryShelfComicBadge => '漫';
+
+  @override
+  String get libraryShelfNovelBadge => '文';
+
+  @override
+  String libraryShelfUnreadBadgeSemantics(int count) {
+    return '未读 $count 章';
+  }
+
+  @override
+  String get libraryShelfCategoryOperationFailed => '分类操作失败';
+
+  @override
+  String get libraryShelfCreateCategoryNeedsSource => '请先切换到漫画或小说分类，再新建分类';
+
+  @override
   String get libraryShelfDefaultCategoryCannotRename => '默认分类不支持重命名';
 
   @override
@@ -1125,6 +1155,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryShelfRandomOpen => '随机打开作品';
+
+  @override
+  String get libraryShelfContinueReading => '继续上次阅读';
+
+  @override
+  String get libraryShelfNoRecentReading => '暂无最近阅读记录';
 
   @override
   String get libraryShelfNoRandomWork => '当前分类没有可打开的作品';
@@ -2399,6 +2435,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get novelReaderContentMissing => '章节正文暂不可用';
+
+  @override
+  String get novelReaderChapterUnavailable => '上次阅读的章节已不可用，请从作品详情重新选择章节';
 
   @override
   String novelReaderLoadFailed(String error) {
@@ -7127,6 +7166,36 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryShelfDefaultCategory => '預設';
 
   @override
+  String get libraryShelfAllWorks => '全部';
+
+  @override
+  String libraryShelfComicCategory(String name) {
+    return '漫畫·$name';
+  }
+
+  @override
+  String libraryShelfNovelCategory(String name) {
+    return '小說·$name';
+  }
+
+  @override
+  String get libraryShelfComicBadge => '漫';
+
+  @override
+  String get libraryShelfNovelBadge => '文';
+
+  @override
+  String libraryShelfUnreadBadgeSemantics(int count) {
+    return '未讀 $count 章';
+  }
+
+  @override
+  String get libraryShelfCategoryOperationFailed => '分類操作失敗';
+
+  @override
+  String get libraryShelfCreateCategoryNeedsSource => '請先切換到漫畫或小說分類，再新增分類';
+
+  @override
   String get libraryShelfDefaultCategoryCannotRename => '預設分類不支援重新命名';
 
   @override
@@ -7151,6 +7220,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get libraryShelfRandomOpen => '隨機開啟作品';
+
+  @override
+  String get libraryShelfContinueReading => '繼續上次閱讀';
+
+  @override
+  String get libraryShelfNoRecentReading => '暫無最近閱讀記錄';
 
   @override
   String get libraryShelfNoRandomWork => '目前分類沒有可開啟的作品';
@@ -8425,6 +8500,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get novelReaderContentMissing => '章節正文暫不可用';
+
+  @override
+  String get novelReaderChapterUnavailable => '上次閱讀的章節已不可用，請從作品詳情重新選擇章節';
 
   @override
   String novelReaderLoadFailed(String error) {

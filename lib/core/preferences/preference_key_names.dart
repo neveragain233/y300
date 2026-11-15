@@ -47,12 +47,15 @@ abstract final class PreferenceKeyNames {
   static const libraryShelfComicSnapshotV1 = 'library.shelf.comic.v1';
   static const libraryShelfNovelSnapshotV1 = 'library.shelf.novel.v1';
   static const libraryShelfFavoriteSnapshotV1 = 'library.shelf.favorite.v1';
+  static const libraryShelfBookshelfSnapshotV1 = 'library.shelf.bookshelf.v1';
   static const libraryShelfComicMigrationVersion =
       'library.shelf.comic.migration_version';
   static const libraryShelfNovelMigrationVersion =
       'library.shelf.novel.migration_version';
   static const libraryShelfFavoriteMigrationVersion =
       'library.shelf.favorite.migration_version';
+  static const libraryShelfBookshelfMigrationVersion =
+      'library.shelf.bookshelf.migration_version';
 
   static const imageCacheMaxBytes = 'image_cache_max_bytes';
   static const cacheMaxBytesV1 = 'storage.cache.max_bytes.v1';
