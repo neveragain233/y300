@@ -47,11 +47,13 @@ class ComicReaderPage extends ConsumerStatefulWidget {
     super.key,
     required this.comicId,
     required this.episodeId,
+    this.openPolicy = ComicEpisodeOpenPolicy.resumeIfUnread,
     this.diagnosticRecorder = const NoopContinuousImageDiagnosticRecorder(),
   });
 
   final String comicId;
   final String episodeId;
+  final ComicEpisodeOpenPolicy openPolicy;
   final ContinuousImageDiagnosticRecorder diagnosticRecorder;
 
   @override
@@ -59,8 +61,11 @@ class ComicReaderPage extends ConsumerStatefulWidget {
 }
 
 class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
-  ComicReaderArgs get _readerArgs =>
-      ComicReaderArgs(comicId: widget.comicId, episodeId: widget.episodeId);
+  ComicReaderArgs get _readerArgs => ComicReaderArgs(
+    comicId: widget.comicId,
+    episodeId: widget.episodeId,
+    openPolicy: widget.openPolicy,
+  );
 
   ComicReaderController _controller() {
     return ref.read(comicReaderControllerProvider(_readerArgs).notifier);

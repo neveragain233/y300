@@ -9,7 +9,11 @@ import 'package:y300/features/novel/presentation/services/novel_reader_document_
 import 'package:y300/features/novel/presentation/services/novel_reader_shared_preferences_bridge.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_converter_factory.dart';
 
-enum NovelReaderLoadFailureCode { noChapters, chapterContentMissing }
+enum NovelReaderLoadFailureCode {
+  noChapters,
+  chapterContentMissing,
+  requestedChapterUnavailable,
+}
 
 final class NovelReaderLoadException implements Exception {
   const NovelReaderLoadException(this.code, {this.detail});
@@ -98,9 +102,18 @@ class DefaultNovelReaderBootstrapService
         NovelReaderLoadFailureCode.noChapters,
       );
     }
+    final restoreRequested =
+        context.openPolicy == NovelEpisodeOpenPolicy.restoreLastPosition;
     final currentEpisode = episodes.firstWhere(
       (episode) => episode.episodeId == context.requestedEpisodeId,
-      orElse: () => episodes.first,
+      orElse: () {
+        if (restoreRequested) {
+          throw const NovelReaderLoadException(
+            NovelReaderLoadFailureCode.requestedChapterUnavailable,
+          );
+        }
+        return episodes.first;
+      },
     );
 
     final content = await _repository.getChapterContent(
@@ -148,6 +161,7 @@ class DefaultNovelReaderBootstrapService
       episodeId: currentEpisode.episodeId,
       openPolicy:
           completed &&
+              !restoreRequested &&
               context.preservedProgress?.episodeId != currentEpisode.episodeId
           ? NovelEpisodeOpenPolicy.startAtBeginning
           : context.openPolicy,

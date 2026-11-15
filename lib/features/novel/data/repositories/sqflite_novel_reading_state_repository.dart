@@ -9,7 +9,10 @@ import '../../domain/models/novel_reading_progress.dart';
 import '../../domain/repositories/novel_reading_state_repository.dart';
 
 class SqfliteNovelReadingStateRepository
-    implements NovelReadingStateRepository, NovelWorkReadingResetRepository {
+    implements
+        NovelReadingStateRepository,
+        NovelWorkReadingResetRepository,
+        NovelRecentReadingQuery {
   SqfliteNovelReadingStateRepository(this._dbFuture);
   final Future<Database> _dbFuture;
 
@@ -65,6 +68,32 @@ class SqfliteNovelReadingStateRepository
         },
       );
     });
+  }
+
+  @override
+  Future<NovelRecentReading?> getMostRecentReading() async {
+    final rows = await (await _dbFuture).rawQuery('''
+      SELECT p.novel_id, p.episode_id, p.updated_at
+      FROM ${AppDatabase.novelReadingProgressTable} p
+      INNER JOIN ${AppDatabase.worksTable} w
+        ON w.work_id = p.novel_id AND w.content_type = 'novel'
+      INNER JOIN ${AppDatabase.workEpisodesTable} e
+        ON e.episode_id = p.episode_id
+       AND e.work_id = p.novel_id
+       AND e.content_type = 'novel'
+      ORDER BY p.updated_at DESC, p.rowid DESC
+      LIMIT 1
+      ''');
+    if (rows.isEmpty) {
+      return null;
+    }
+    final row = rows.first;
+    return NovelRecentReading(
+      novelId: row['novel_id'] as String,
+      episodeId: row['episode_id'] as String,
+      readAt:
+          _date(row['updated_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+    );
   }
 
   @override

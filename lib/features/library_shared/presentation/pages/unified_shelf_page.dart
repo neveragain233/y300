@@ -2,6 +2,7 @@ import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
@@ -18,12 +19,16 @@ import 'package:y300/features/library_shared/domain/models/library_filter_models
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
+import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
+import 'package:y300/features/library_shared/domain/services/recent_reading.dart';
 import 'package:y300/features/library_shared/domain/services/shelf_feature_flags.dart';
 import 'package:y300/features/library_shared/presentation/controllers/unified_shelf_controller.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_app_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_controller.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
+import 'package:y300/features/library_shared/presentation/services/recent_reading_action.dart';
+import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:y300/features/library_shared/presentation/services/library_task_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_sort_option_tile.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
@@ -51,6 +56,7 @@ class UnifiedShelfPage extends ConsumerStatefulWidget {
     this.featureFlags = ShelfFeatureFlags.defaults,
     this.isActive = true,
     this.selectionHost,
+    this.recentReadingAction,
   });
 
   final ShelfModuleAdapter adapter;
@@ -60,6 +66,7 @@ class UnifiedShelfPage extends ConsumerStatefulWidget {
   final ShelfFeatureFlags featureFlags;
   final bool isActive;
   final ShelfSelectionHostController? selectionHost;
+  final RecentReadingAction? recentReadingAction;
 
   @override
   ConsumerState<UnifiedShelfPage> createState() => _UnifiedShelfPageState();
@@ -74,6 +81,11 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final Object _selectionOwnerToken = Object();
+  RecentReadingTarget? _recentReadingTarget;
+  Future<void>? _recentReadingTargetFlight;
+  Future<void>? _recentReadingOpenFlight;
+  ValueListenable<LibraryShelfRefreshSignal?>? _recentReadingRefreshSignals;
+  bool _recentReadingBusy = false;
 
   @override
   void initState() {
@@ -91,6 +103,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     // Local reads need no layout. Render the snapshot notification immediately,
     // even when initialize() is still persisting the resolved category.
     unawaited(_controller.initialize());
+    _bindRecentReadingSignals();
+    unawaited(_refreshRecentReadingTarget());
   }
 
   void _handleControllerStateChanged() {
@@ -118,6 +132,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   @override
   void didUpdateWidget(covariant UnifiedShelfPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.recentReadingAction, widget.recentReadingAction)) {
+      _bindRecentReadingSignals();
+      unawaited(_refreshRecentReadingTarget());
+    } else if (!oldWidget.isActive && widget.isActive) {
+      unawaited(_refreshRecentReadingTarget());
+    }
     if (oldWidget.isActive != widget.isActive) {
       _controller.setBackgroundReloadEnabled(widget.isActive);
       if (widget.isActive) {
@@ -139,6 +159,9 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       ..removeListener(_handleSelectionStateChanged)
       ..dispose();
     _controller.stateListenable.removeListener(_handleControllerStateChanged);
+    _recentReadingRefreshSignals?.removeListener(
+      _handleRecentReadingRefreshSignal,
+    );
     _controller.dispose();
     _pageController.dispose();
     _searchController.dispose();
@@ -185,172 +208,199 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       },
       child: Scaffold(
         appBar: _buildAppBar(state),
-        body: RefreshIndicator(
-          // 书架内容位于 PageView 内部，垂直列表/网格滚动通知深度通常 > 0。
-          // 显式放宽 predicate，确保网格/列表场景都能触发下拉刷新。
-          notificationPredicate: (notification) {
-            return notification.metrics.axis == Axis.vertical;
-          },
-          onRefresh: _handlePullToRefresh,
-          child: state.isLoading
-              ? Column(
-                  children: [
-                    _buildTaskProgressBanner(),
-                    const Expanded(
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    _buildTaskProgressBanner(),
-                    if (state.errorMessage != null &&
-                        state.errorMessage!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            LibraryShelfTextResolver.loadError(
-                              l10n,
-                              state.errorMessage,
-                            ),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: RefreshIndicator(
+                // 书架内容位于 PageView 内部，垂直列表/网格滚动通知深度通常 > 0。
+                // 显式放宽 predicate，确保网格/列表场景都能触发下拉刷新。
+                notificationPredicate: (notification) {
+                  return notification.metrics.axis == Axis.vertical;
+                },
+                onRefresh: _handlePullToRefresh,
+                child: state.isLoading
+                    ? Column(
+                        children: [
+                          _buildTaskProgressBanner(),
+                          const Expanded(
+                            child: Center(child: CircularProgressIndicator()),
                           ),
-                        ),
-                      ),
-                    if (state.isSearchMode && state.keyword.trim().isEmpty)
-                      RecentSearchView(
-                        scope: _recentScopeFor(state.moduleKey),
-                        onSelected: _applyRecentKeyword,
-                      ),
-                    if (categories.isNotEmpty)
-                      IgnorePointer(
-                        ignoring: selecting,
-                        child: FixedSlotPagerHeader(
-                          pageController: _pageController,
-                          tabs: tabs,
-                          selectedIndex: selectedIndex,
-                          onTap: (index) async {
-                            await _controller.selectCategory(
-                              categories[index].categoryId,
-                            );
-                            if (!mounted) {
-                              return;
-                            }
-                            _pruneSelectionForCurrentCategory();
-                            _syncSelectionHost();
-                            setState(() {});
-                            await _pageController.animateToPage(
-                              index,
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
-                            );
-                          },
-                          indicatorKey: const Key(
-                            'unified-shelf-category-indicator',
-                          ),
-                          tabKeyBuilder: (id) => ValueKey<String>(
-                            'unified-shelf-category-tab-$id',
-                          ),
-                        ),
-                      ),
-                    if (categories.isNotEmpty)
-                      Divider(height: 1, color: shelfPalette.categoryDivider),
-                    Expanded(
-                      child: categories.isEmpty
-                          ? _AlwaysScrollableEmptyState(
-                              message: l10n.libraryShelfEmpty,
-                            )
-                          : ValueListenableBuilder<UnifiedShelfState>(
-                              valueListenable: _controller.stateListenable,
-                              builder: (context, liveState, _) {
-                                return PageView.builder(
-                                  controller: _pageController,
-                                  physics: selecting
-                                      ? const NeverScrollableScrollPhysics()
-                                      : null,
-                                  itemCount: categories.length,
-                                  onPageChanged: (index) async {
-                                    await _controller.selectCategory(
-                                      categories[index].categoryId,
-                                    );
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    _pruneSelectionForCurrentCategory();
-                                    _syncSelectionHost();
-                                    setState(() {});
-                                  },
-                                  itemBuilder: (context, index) {
-                                    final category = categories[index];
-                                    final items =
-                                        liveState.itemsByCategory[category
-                                            .categoryId] ??
-                                        const <LibraryWorkItem>[];
-                                    return _ShelfCategoryPage(
-                                      key: PageStorageKey<String>(
-                                        'unified-shelf-category-page-${category.categoryId}',
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildTaskProgressBanner(),
+                          if (state.errorMessage != null &&
+                              state.errorMessage!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  LibraryShelfTextResolver.loadError(
+                                    l10n,
+                                    state.errorMessage,
+                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error,
                                       ),
-                                      categoryId: category.categoryId,
-                                      moduleKey: liveState.moduleKey,
-                                      items: items,
-                                      displayMode: liveState.displayMode,
-                                      gridColumns: liveState.gridColumnCount,
-                                      imageReferer: imageReferer,
-                                      useShelfCoverImage: widget
-                                          .featureFlags
-                                          .useShelfCoverImage,
-                                      showUnreadBadge:
-                                          resolveShelfModuleCapabilities(
-                                            widget.adapter,
-                                          ).showsUnreadBadge,
-                                      selectedWorkIds:
-                                          _selectionController.selectedWorkIds,
-                                      selectionEnabled: _selectionEnabled,
-                                      onTapItem: _handleItemTap,
-                                      onLongPressItem: _handleItemLongPress,
-                                      onVisibleRangeChanged:
-                                          ({
-                                            required firstIndex,
-                                            required lastIndex,
-                                          }) {
-                                            _controller.reportVisibleRange(
-                                              categoryId: category.categoryId,
-                                              firstIndex: firstIndex,
-                                              lastIndex: lastIndex,
-                                            );
-                                          },
-                                    );
-                                  },
-                                  findChildIndexCallback: (key) {
-                                    final valueKey = key is ValueKey<String>
-                                        ? key.value
-                                        : null;
-                                    if (valueKey == null ||
-                                        !valueKey.startsWith(
-                                          'unified-shelf-category-page-',
-                                        )) {
-                                      return null;
-                                    }
-                                    final categoryId = valueKey.substring(
-                                      'unified-shelf-category-page-'.length,
-                                    );
-                                    final index = categories.indexWhere(
-                                      (category) =>
-                                          category.categoryId == categoryId,
-                                    );
-                                    return index < 0 ? null : index;
-                                  },
-                                );
-                              },
+                                ),
+                              ),
                             ),
-                    ),
-                  ],
-                ),
+                          if (state.isSearchMode &&
+                              state.keyword.trim().isEmpty)
+                            RecentSearchView(
+                              scope: _recentScopeFor(state.moduleKey),
+                              onSelected: _applyRecentKeyword,
+                            ),
+                          if (categories.isNotEmpty)
+                            IgnorePointer(
+                              ignoring: selecting,
+                              child: FixedSlotPagerHeader(
+                                pageController: _pageController,
+                                tabs: tabs,
+                                selectedIndex: selectedIndex,
+                                onTap: (index) async {
+                                  await _controller.selectCategory(
+                                    categories[index].categoryId,
+                                  );
+                                  if (!mounted) {
+                                    return;
+                                  }
+                                  _pruneSelectionForCurrentCategory();
+                                  _syncSelectionHost();
+                                  setState(() {});
+                                  await _pageController.animateToPage(
+                                    index,
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeOutCubic,
+                                  );
+                                },
+                                indicatorKey: const Key(
+                                  'unified-shelf-category-indicator',
+                                ),
+                                tabKeyBuilder: (id) => ValueKey<String>(
+                                  'unified-shelf-category-tab-$id',
+                                ),
+                              ),
+                            ),
+                          if (categories.isNotEmpty)
+                            Divider(
+                              height: 1,
+                              color: shelfPalette.categoryDivider,
+                            ),
+                          Expanded(
+                            child: categories.isEmpty
+                                ? _AlwaysScrollableEmptyState(
+                                    message: l10n.libraryShelfEmpty,
+                                  )
+                                : ValueListenableBuilder<UnifiedShelfState>(
+                                    valueListenable:
+                                        _controller.stateListenable,
+                                    builder: (context, liveState, _) {
+                                      return PageView.builder(
+                                        controller: _pageController,
+                                        physics: selecting
+                                            ? const NeverScrollableScrollPhysics()
+                                            : null,
+                                        itemCount: categories.length,
+                                        onPageChanged: (index) async {
+                                          await _controller.selectCategory(
+                                            categories[index].categoryId,
+                                          );
+                                          if (!mounted) {
+                                            return;
+                                          }
+                                          _pruneSelectionForCurrentCategory();
+                                          _syncSelectionHost();
+                                          setState(() {});
+                                        },
+                                        itemBuilder: (context, index) {
+                                          final category = categories[index];
+                                          final items =
+                                              liveState.itemsByCategory[category
+                                                  .categoryId] ??
+                                              const <LibraryWorkItem>[];
+                                          return _ShelfCategoryPage(
+                                            key: PageStorageKey<String>(
+                                              'unified-shelf-category-page-${category.categoryId}',
+                                            ),
+                                            categoryId: category.categoryId,
+                                            moduleKey: liveState.moduleKey,
+                                            items: items,
+                                            displayMode: liveState.displayMode,
+                                            gridColumns:
+                                                liveState.gridColumnCount,
+                                            imageReferer: imageReferer,
+                                            useShelfCoverImage: widget
+                                                .featureFlags
+                                                .useShelfCoverImage,
+                                            showUnreadBadge:
+                                                resolveShelfModuleCapabilities(
+                                                  widget.adapter,
+                                                ).showsUnreadBadge,
+                                            selectedWorkIds:
+                                                _selectionController
+                                                    .selectedWorkIds,
+                                            selectionEnabled: _selectionEnabled,
+                                            onTapItem: _handleItemTap,
+                                            onLongPressItem:
+                                                _handleItemLongPress,
+                                            onVisibleRangeChanged:
+                                                ({
+                                                  required firstIndex,
+                                                  required lastIndex,
+                                                }) {
+                                                  _controller
+                                                      .reportVisibleRange(
+                                                        categoryId:
+                                                            category.categoryId,
+                                                        firstIndex: firstIndex,
+                                                        lastIndex: lastIndex,
+                                                      );
+                                                },
+                                          );
+                                        },
+                                        findChildIndexCallback: (key) {
+                                          final valueKey =
+                                              key is ValueKey<String>
+                                              ? key.value
+                                              : null;
+                                          if (valueKey == null ||
+                                              !valueKey.startsWith(
+                                                'unified-shelf-category-page-',
+                                              )) {
+                                            return null;
+                                          }
+                                          final categoryId = valueKey.substring(
+                                            'unified-shelf-category-page-'
+                                                .length,
+                                          );
+                                          final index = categories.indexWhere(
+                                            (category) =>
+                                                category.categoryId ==
+                                                categoryId,
+                                          );
+                                          return index < 0 ? null : index;
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            if (_recentReadingVisible)
+              Positioned(
+                right: 16 + MediaQuery.paddingOf(context).right,
+                bottom: 16 + mainShellBottomScrollInset(context),
+                child: _buildRecentReadingButton(),
+              ),
+          ],
         ),
       ),
     );
@@ -362,6 +412,140 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       // Production inherits the app-level container through the branch above.
       return ProviderScope(child: content);
     }
+  }
+
+  void _bindRecentReadingSignals() {
+    final next = widget.recentReadingAction == null
+        ? null
+        : widget.adapter.shelfRefreshSignals;
+    if (identical(_recentReadingRefreshSignals, next)) {
+      return;
+    }
+    _recentReadingRefreshSignals?.removeListener(
+      _handleRecentReadingRefreshSignal,
+    );
+    _recentReadingRefreshSignals = next;
+    next?.addListener(_handleRecentReadingRefreshSignal);
+  }
+
+  void _handleRecentReadingRefreshSignal() {
+    unawaited(_refreshRecentReadingTarget());
+  }
+
+  Future<void> _refreshRecentReadingTarget() async {
+    final existing = _recentReadingTargetFlight;
+    if (existing != null || !mounted) {
+      return existing;
+    }
+    final action = widget.recentReadingAction;
+    if (action == null) {
+      return;
+    }
+    final flight = _loadRecentReadingTarget(action);
+    _recentReadingTargetFlight = flight;
+    try {
+      await flight;
+    } finally {
+      if (identical(_recentReadingTargetFlight, flight)) {
+        _recentReadingTargetFlight = null;
+      }
+    }
+  }
+
+  Future<void> _loadRecentReadingTarget(RecentReadingAction action) async {
+    RecentReadingTarget? target;
+    try {
+      target = await action.resolve();
+    } catch (_) {
+      target = null;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (_recentReadingTarget == target) {
+      return;
+    }
+    setState(() {
+      _recentReadingTarget = target;
+    });
+  }
+
+  Future<void> _openRecentReading() async {
+    final action = widget.recentReadingAction;
+    if (action == null || _recentReadingOpenFlight != null) {
+      return;
+    }
+    final flight = _runRecentReadingOpen(action);
+    _recentReadingOpenFlight = flight;
+    try {
+      await flight;
+    } finally {
+      if (identical(_recentReadingOpenFlight, flight)) {
+        _recentReadingOpenFlight = null;
+      }
+    }
+  }
+
+  Future<void> _runRecentReadingOpen(RecentReadingAction action) async {
+    setState(() {
+      _recentReadingBusy = true;
+    });
+    try {
+      RecentReadingTarget? target;
+      try {
+        target = await action.resolve();
+      } catch (_) {
+        target = null;
+      }
+      if (!mounted) {
+        return;
+      }
+      if (target == null) {
+        setState(() {
+          _recentReadingTarget = null;
+        });
+        return;
+      }
+      await action.open(context, target);
+      if (!mounted) {
+        return;
+      }
+      await _refreshRecentReadingTarget();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _recentReadingBusy = false;
+        });
+      }
+    }
+  }
+
+  bool get _recentReadingVisible {
+    final action = widget.recentReadingAction;
+    return action != null &&
+        !_selectionController.isSelecting &&
+        !_controller.state.isSearchMode &&
+        MediaQuery.viewInsetsOf(context).bottom == 0;
+  }
+
+  Widget _buildRecentReadingButton() {
+    final l10n = AppLocalizations.of(context);
+    final enabled =
+        _recentReadingTarget != null &&
+        !_recentReadingBusy &&
+        _recentReadingVisible;
+    return TransientFeedbackObstacle(
+      bottom: 80,
+      child: FloatingActionButton.extended(
+        key: const Key('unified-shelf-recent-reading'),
+        onPressed: enabled ? _openRecentReading : null,
+        tooltip: enabled
+            ? l10n.libraryShelfContinueReading
+            : l10n.libraryShelfNoRecentReading,
+        icon: const Icon(Icons.play_arrow),
+        label: Text(l10n.libraryShelfContinueReading),
+      ),
+    );
   }
 
   Future<void> _handlePullToRefresh() async {

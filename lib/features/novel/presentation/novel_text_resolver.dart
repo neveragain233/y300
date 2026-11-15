@@ -114,6 +114,8 @@ abstract final class NovelTextResolver {
         NovelReaderLoadFailureCode.noChapters => l10n.novelReaderNoChapters,
         NovelReaderLoadFailureCode.chapterContentMissing =>
           l10n.novelReaderContentMissing,
+        NovelReaderLoadFailureCode.requestedChapterUnavailable =>
+          l10n.novelReaderChapterUnavailable,
       };
     }
     return l10n.novelReaderLoadFailed(LibraryErrorSummary.resolve(l10n, error));

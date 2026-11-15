@@ -1,1 +1,5 @@
-enum NovelEpisodeOpenPolicy { resumeLastRead, startAtBeginning }
+enum NovelEpisodeOpenPolicy {
+  resumeLastRead,
+  startAtBeginning,
+  restoreLastPosition,
+}

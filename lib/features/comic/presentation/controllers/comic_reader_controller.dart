@@ -23,10 +23,15 @@ import 'package:y300/features/library_shared/domain/models/library_cover_asset.d
 import 'package:y300/features/reader_shared/domain/image_session/reader_image_session.dart';
 
 class ComicReaderArgs {
-  const ComicReaderArgs({required this.comicId, required this.episodeId});
+  const ComicReaderArgs({
+    required this.comicId,
+    required this.episodeId,
+    this.openPolicy = ComicEpisodeOpenPolicy.resumeIfUnread,
+  });
 
   final String comicId;
   final String episodeId;
+  final ComicEpisodeOpenPolicy openPolicy;
 
   @override
   bool operator ==(Object other) {
@@ -35,11 +40,12 @@ class ComicReaderArgs {
     }
     return other is ComicReaderArgs &&
         other.comicId == comicId &&
-        other.episodeId == episodeId;
+        other.episodeId == episodeId &&
+        other.openPolicy == openPolicy;
   }
 
   @override
-  int get hashCode => Object.hash(comicId, episodeId);
+  int get hashCode => Object.hash(comicId, episodeId, openPolicy);
 }
 
 typedef _EpisodeRetryProbeKey = ({String episodeId, int generation});
@@ -354,7 +360,7 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
       _clearAutomaticImageRecoveryTracking();
       _progressPersistDebounceTimer?.cancel();
     });
-    return _loadState(episodeId: _currentEpisodeId);
+    return _loadState(episodeId: _currentEpisodeId, policy: _args.openPolicy);
   }
 
   Future<ComicReaderNoticeCode?> toggleBookmark() async {
@@ -1537,7 +1543,8 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
       throw StateError('reader_disposed');
     }
     final shouldRestoreProgress =
-        policy == ComicEpisodeOpenPolicy.resumeIfUnread && !isRead;
+        policy == ComicEpisodeOpenPolicy.restoreSavedPosition ||
+        (policy == ComicEpisodeOpenPolicy.resumeIfUnread && !isRead);
     final progress = shouldRestoreProgress
         ? await _repository.getReadingProgressForEpisode(
             comicId: _args.comicId,

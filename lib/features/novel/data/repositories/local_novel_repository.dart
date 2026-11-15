@@ -16,6 +16,7 @@ import 'package:y300/features/novel/data/repositories/novel_repository.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_marks.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_anchor_format.dart';
 import 'package:y300/features/novel/domain/repositories/novel_reading_state_repository.dart';
+
 import 'sqflite_novel_reading_state_repository.dart';
 
 class LocalNovelRepository
@@ -23,6 +24,7 @@ class LocalNovelRepository
         NovelRepository,
         NovelReadingStateRepository,
         NovelWorkReadingResetRepository,
+        NovelRecentReadingQuery,
         NovelShelfSnapshotRepository,
         NovelCoverCacheWriter,
         NovelCustomMetadataWriter,
@@ -196,16 +198,12 @@ class LocalNovelRepository
           txn,
           categoryId: toCategoryId,
         );
-        await txn.insert(
-          AppDatabase.novelShelfItemsTable,
-          <String, Object?>{
-            'category_id': toCategoryId,
-            'novel_id': novelId,
-            'added_at': now,
-            'sort_order': sortOrder,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await txn.insert(AppDatabase.novelShelfItemsTable, <String, Object?>{
+          'category_id': toCategoryId,
+          'novel_id': novelId,
+          'added_at': now,
+          'sort_order': sortOrder,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
 
       await txn.delete(
@@ -696,6 +694,10 @@ class LocalNovelRepository
       ),
     );
   }
+
+  @override
+  Future<NovelRecentReading?> getMostRecentReading() =>
+      _readingState.getMostRecentReading();
 
   @override
   Future<NovelReadingProgress?> getReadingProgress({

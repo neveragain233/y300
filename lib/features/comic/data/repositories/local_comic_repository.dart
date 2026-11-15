@@ -39,7 +39,8 @@ class LocalComicRepository
         ComicCoverMergeRecovery,
         ComicEpisodeManagementRepository,
         ComicEpisodeImageDirectoryReplacer,
-        ComicEpisodeImageCacheMetadataWriter {
+        ComicEpisodeImageCacheMetadataWriter,
+        ComicRecentReadingQuery {
   LocalComicRepository(
     this._dbFuture, {
     required LibraryCoverStore libraryCoverStore,
@@ -534,6 +535,11 @@ class LocalComicRepository
       imageIndex: imageIndex,
       scrollOffset: scrollOffset,
     );
+  }
+
+  @override
+  Future<ComicReadingProgress?> getMostRecentReadingProgress() {
+    return _readingProgressStore.getMostRecentReadingProgress();
   }
 
   @override

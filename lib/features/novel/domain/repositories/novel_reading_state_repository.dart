@@ -1,4 +1,5 @@
 import 'package:y300/features/library_shared/domain/models/library_state_models.dart';
+
 import '../models/novel_reading_progress.dart';
 
 class NovelReadingStateSnapshot {
@@ -60,6 +61,23 @@ abstract interface class NovelReadingStateRepository {
     required DateTime readAt,
     bool Function()? canCommit,
   });
+}
+
+/// 跨作品读取最近一次小说阅读进度，只返回作品与章节仍有效的一条。
+class NovelRecentReading {
+  const NovelRecentReading({
+    required this.novelId,
+    required this.episodeId,
+    required this.readAt,
+  });
+
+  final String novelId;
+  final String episodeId;
+  final DateTime readAt;
+}
+
+abstract interface class NovelRecentReadingQuery {
+  Future<NovelRecentReading?> getMostRecentReading();
 }
 
 /// Optional whole-work mutation. Clears public positions, the recent chapter

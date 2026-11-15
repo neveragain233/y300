@@ -385,7 +385,6 @@ void main() {
     for (final destination in [
       MainShellDestination.favorites,
       MainShellDestination.comic,
-      MainShellDestination.novel,
     ]) {
       testWidgets(
         'shelf modal covers shell chrome for ${destination.name} with ${style.name}',
@@ -418,9 +417,6 @@ void main() {
                 ? l10n.appNavigationFavorites
                 : l10n.appNavigationBookshelf,
           );
-          if (destination == MainShellDestination.novel) {
-            await _switchBookshelfMember(tester, l10n.appNavigationNovel);
-          }
           await tester.pumpAndSettle();
           final page = find.byKey(Key('main-shell-page-${destination.name}'));
           final source = tester.element(page);
@@ -674,7 +670,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('bookshelf group switches members and keeps both pages', (
+  testWidgets('bookshelf group opens one mixed page without type switcher', (
     tester,
   ) async {
     final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
@@ -694,20 +690,20 @@ void main() {
       tester.element(find.byType(MainShellPage)),
     );
     await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
-    final comic = tester.element(
-      find.byKey(const Key('main-shell-page-comic')),
-    );
-    expect(find.byKey(const Key('main-bookshelf-switcher')), findsOneWidget);
-
-    await _switchBookshelfMember(tester, '小说');
-    expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
-    expect(find.byKey(const Key('main-shell-page-comic')), findsNothing);
-
-    await _switchBookshelfMember(tester, '漫画');
+    final bookshelfPage = find.byKey(const Key('main-shell-page-comic'));
+    final original = tester.element(bookshelfPage);
+    expect(find.byKey(const Key('main-bookshelf-switcher')), findsNothing);
+    expect(find.byKey(const Key('main-shell-page-novel')), findsNothing);
+    final recentReading = find.byKey(const Key('unified-shelf-recent-reading'));
+    expect(recentReading, findsOneWidget);
     expect(
-      tester.element(find.byKey(const Key('main-shell-page-comic'))),
-      same(comic),
+      tester.widget<FloatingActionButton>(recentReading).onPressed,
+      isNull,
     );
+
+    await _tapNavigationGroup(tester, l10n.appNavigationFavorites);
+    await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
+    expect(tester.element(bookshelfPage), same(original));
     expect(tester.takeException(), isNull);
   });
 
@@ -1166,11 +1162,8 @@ void main() {
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byIcon(Icons.search), findsOneWidget);
 
-    await _switchBookshelfMember(tester, '小说');
-    expect(
-      find.byKey(const Key('unified-shelf-category-indicator')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('main-shell-page-comic')), findsOneWidget);
+    expect(find.byKey(const Key('main-bookshelf-switcher')), findsNothing);
 
     await _tapNavigationGroup(tester, l10n.appNavigationMy);
     expect(find.byKey(const Key('more-login-entry')), findsOneWidget);
@@ -1178,10 +1171,10 @@ void main() {
       find.byType(IndexedStack),
     );
     final fullyBuiltTickerModes = _builtTickerModes(fullyBuiltStack);
-    expect(fullyBuiltTickerModes, hasLength(5));
+    expect(fullyBuiltTickerModes, hasLength(4));
     expect(
       fullyBuiltTickerModes.map((tickerMode) => tickerMode.enabled),
-      <bool>[false, false, false, false, true],
+      <bool>[false, false, false, true],
     );
 
     final container = ProviderScope.containerOf(
@@ -1217,7 +1210,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
-    expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
+    expect(find.byKey(const Key('main-shell-page-comic')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1351,9 +1344,7 @@ void main() {
       expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
       expect(find.byKey(const Key('main-shell-page-forum')), findsNothing);
 
-      await _switchBookshelfMember(tester, '漫画');
-      final comicPageFinder = find.byKey(const Key('main-shell-page-comic'));
-      final originalComicElement = tester.element(comicPageFinder);
+      expect(find.byKey(const Key('main-bookshelf-switcher')), findsNothing);
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MainShellPage)),
       );
@@ -1361,33 +1352,31 @@ void main() {
         mainNavigationSettingsControllerProvider.notifier,
       );
 
+      // 漫画移到最前，书架规范入口从小说切到漫画，但页面栈只保留一个书架页。
       await controller.reorder(1, 0);
       await tester.pump();
 
       expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
       expect(_selectedNavigationIndex(tester), 0);
-      expect(tester.element(comicPageFinder), same(originalComicElement));
+      expect(find.byKey(const Key('main-shell-page-novel')), findsNothing);
+      expect(find.byKey(const Key('main-shell-page-comic')), findsOneWidget);
 
       await controller.setVisibility(MainShellDestination.comic, false);
       await tester.pump();
 
       expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
       expect(_selectedNavigationIndex(tester), 0);
-      expect(comicPageFinder, findsNothing);
+      expect(find.byKey(const Key('main-shell-page-comic')), findsNothing);
       expect(find.byKey(const Key('main-shell-page-novel')), findsOneWidget);
-      expect(find.byKey(const Key('main-bookshelf-switcher')), findsNothing);
 
       await controller.setVisibility(MainShellDestination.comic, true);
       await tester.pump();
 
       expect(_navigationLabels(tester), <String>['书架', '收藏', '我的']);
       expect(_selectedNavigationIndex(tester), 0);
-      expect(comicPageFinder, findsNothing);
+      expect(find.byKey(const Key('main-shell-page-novel')), findsNothing);
+      expect(find.byKey(const Key('main-shell-page-comic')), findsOneWidget);
 
-      await _switchBookshelfMember(tester, '漫画');
-
-      expect(comicPageFinder, findsOneWidget);
-      expect(tester.element(comicPageFinder), same(originalComicElement));
       expect(messages.reads, isEmpty);
       await controller.setVisibility(MainShellDestination.messages, true);
       await tester.pump();
@@ -1467,7 +1456,7 @@ void main() {
     expect(capsuleIcon(Icons.auto_stories), findsOneWidget);
   });
 
-  testWidgets('independent shelf search queries survive switching', (
+  testWidgets('mixed shelf keeps one search state across group switching', (
     tester,
   ) async {
     final queueSnapshot = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
@@ -1516,57 +1505,23 @@ void main() {
 
     final l10n = AppLocalizationsZh();
     await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
-    final comic = tester.element(
+    final bookshelf = tester.element(
       find.byKey(const Key('main-shell-page-comic')),
     );
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '漫画关键词');
-    await _switchBookshelfMember(tester, '小说');
-    final novel = tester.element(
-      find.byKey(const Key('main-shell-page-novel')),
-    );
-    await tester.tap(find.byIcon(Icons.search));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '小说关键词');
-    await _switchBookshelfMember(tester, '漫画');
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      '漫画关键词',
-    );
-    expect(
-      tester.element(find.byKey(const Key('main-shell-page-comic'))),
-      same(comic),
-    );
-    await _switchBookshelfMember(tester, '小说');
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      '小说关键词',
-    );
-    expect(
-      tester.element(find.byKey(const Key('main-shell-page-novel'))),
-      same(novel),
-    );
+    await tester.enterText(find.byType(TextField), '混合关键词');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
     await _tapNavigationGroup(tester, l10n.appNavigationForum);
     await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
     expect(
-      tester.element(find.byKey(const Key('main-shell-page-novel'))),
-      same(novel),
-    );
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      '小说关键词',
-    );
-    await _switchBookshelfMember(tester, '漫画');
-    expect(
       tester.element(find.byKey(const Key('main-shell-page-comic'))),
-      same(comic),
+      same(bookshelf),
     );
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      '漫画关键词',
+      '混合关键词',
     );
     expect(tester.takeException(), isNull);
   });
@@ -2305,13 +2260,6 @@ Future<void> _tapNavigationGroup(WidgetTester tester, String label) async {
     target = find.descendant(of: bar, matching: find.text(label));
   }
   await tester.tap(target);
-  await _pumpShellTab(tester);
-}
-
-Future<void> _switchBookshelfMember(WidgetTester tester, String label) async {
-  final switcher = find.byKey(const Key('main-bookshelf-switcher'));
-  expect(switcher, findsOneWidget);
-  await tester.tap(find.descendant(of: switcher, matching: find.text(label)));
   await _pumpShellTab(tester);
 }
 

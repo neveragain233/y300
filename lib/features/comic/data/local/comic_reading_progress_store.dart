@@ -16,17 +16,13 @@ class ComicReadingProgressStore {
     final db = await _dbFuture;
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.transaction((txn) async {
-      await txn.insert(
-        AppDatabase.readingProgressTable,
-        <String, Object?>{
-          'comic_id': comicId,
-          'episode_id': episodeId,
-          'image_index': imageIndex,
-          'scroll_offset': scrollOffset,
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await txn.insert(AppDatabase.readingProgressTable, <String, Object?>{
+        'comic_id': comicId,
+        'episode_id': episodeId,
+        'image_index': imageIndex,
+        'scroll_offset': scrollOffset,
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
       await txn.update(
         AppDatabase.comicsTable,
         <String, Object?>{'last_read_episode_id': episodeId, 'updated_at': now},
@@ -48,6 +44,22 @@ class ComicReadingProgressStore {
       limit: 1,
     );
 
+    return rows.isEmpty ? null : _fromRow(rows.first);
+  }
+
+  Future<ComicReadingProgress?> getMostRecentReadingProgress() async {
+    final db = await _dbFuture;
+    final rows = await db.rawQuery('''
+      SELECT p.*
+      FROM ${AppDatabase.readingProgressTable} p
+      INNER JOIN ${AppDatabase.comicsTable} c
+        ON c.comic_id = p.comic_id
+      INNER JOIN ${AppDatabase.episodesTable} e
+        ON e.episode_id = p.episode_id AND e.comic_id = p.comic_id
+      WHERE e.is_hidden = 0
+      ORDER BY p.updated_at DESC, p.rowid DESC
+      LIMIT 1
+      ''');
     return rows.isEmpty ? null : _fromRow(rows.first);
   }
 

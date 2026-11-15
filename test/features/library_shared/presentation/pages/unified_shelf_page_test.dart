@@ -18,10 +18,12 @@ import 'package:y300/features/library_shared/domain/models/library_cover_asset.d
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
+import 'package:y300/features/library_shared/domain/services/recent_reading.dart';
 import 'package:y300/features/library_shared/domain/services/shelf_feature_flags.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_image_provider.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_shelf_page.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
+import 'package:y300/features/library_shared/presentation/services/recent_reading_action.dart';
 import 'package:y300/l10n/app_localizations_zh.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
@@ -1589,6 +1591,145 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'recent reading button stays disabled until a target exists and opens it once',
+    (tester) async {
+      RecentReadingTarget? target;
+      RecentReadingTarget? opened;
+      var resolveCount = 0;
+      final action = RecentReadingAction(
+        resolve: () async {
+          resolveCount++;
+          return target;
+        },
+        open: (context, next) async {
+          opened = next;
+          target = null;
+        },
+      );
+      var isActive = true;
+      late StateSetter setPageState;
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setPageState = setState;
+              return UnifiedShelfPage(
+                adapter: _FakeShelfAdapter(
+                  initialDisplayMode: LibraryDisplayMode.grid,
+                ),
+                recentReadingAction: action,
+                isActive: isActive,
+                onOpenWork: (_, _) async {},
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = find.byKey(const Key('unified-shelf-recent-reading'));
+      expect(button, findsOneWidget);
+      expect(tester.widget<FloatingActionButton>(button).onPressed, isNull);
+
+      target = RecentReadingTarget(
+        moduleKey: LibraryModuleKey.comic,
+        workId: 'comic:1',
+        episodeId: 'e1',
+        readAt: DateTime(2026, 6, 1),
+      );
+      isActive = false;
+      setPageState(() {});
+      await tester.pump();
+      isActive = true;
+      setPageState(() {});
+      await tester.pumpAndSettle();
+      expect(resolveCount, greaterThan(1));
+      expect(tester.widget<FloatingActionButton>(button).onPressed, isNotNull);
+
+      final expected = target;
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(opened, expected);
+      expect(tester.widget<FloatingActionButton>(button).onPressed, isNull);
+    },
+  );
+
+  testWidgets('mixed items show source badges and unread semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final l10n = AppLocalizationsZh();
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          home: UnifiedShelfPage(
+            adapter: _FakeShelfAdapter(
+              initialDisplayMode: LibraryDisplayMode.list,
+              itemsByCategory: <String, List<LibraryWorkItem>>{
+                'default': <LibraryWorkItem>[
+                  _item(
+                    workId: 'yamibo:1',
+                    title: '漫画作品',
+                  ).copyWith(source: LibraryModuleKey.comic),
+                  _item(
+                    workId: 'novel:1',
+                    title: '小说作品',
+                    unreadCount: 0,
+                  ).copyWith(source: LibraryModuleKey.novel),
+                ],
+              },
+            ),
+            onOpenWork: (_, _) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.libraryShelfComicBadge), findsOneWidget);
+      expect(find.text(l10n.libraryShelfNovelBadge), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          RegExp(l10n.libraryShelfUnreadBadgeSemantics(1)),
+        ),
+        findsOneWidget,
+      );
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('recent reading button hides in search mode', (tester) async {
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: UnifiedShelfPage(
+          adapter: _FakeShelfAdapter(
+            initialDisplayMode: LibraryDisplayMode.grid,
+          ),
+          recentReadingAction: RecentReadingAction(
+            resolve: () async => RecentReadingTarget(
+              moduleKey: LibraryModuleKey.novel,
+              workId: 'novel:1',
+              episodeId: 'e1',
+              readAt: DateTime(2026, 6, 1),
+            ),
+            open: (_, _) async {},
+          ),
+          onOpenWork: (_, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('unified-shelf-recent-reading')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('unified-shelf-search-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('unified-shelf-recent-reading')), findsNothing);
+  });
 }
 
 Color _borderColorForListItem(WidgetTester tester, Finder itemFinder) {
@@ -1689,6 +1830,9 @@ class _FakeShelfAdapter
 
   @override
   LibraryModuleKey get moduleKey => LibraryModuleKey.comic;
+
+  @override
+  Set<LibraryModuleKey> get refreshModuleKeys => <LibraryModuleKey>{moduleKey};
 
   @override
   LibraryDisplayMode get defaultDisplayMode => initialDisplayMode;

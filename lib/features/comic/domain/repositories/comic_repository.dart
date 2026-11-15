@@ -16,6 +16,11 @@ abstract interface class ComicReadingProgressResetter {
   });
 }
 
+/// 跨作品读取最近一次漫画阅读进度，只返回作品与章节仍有效的一条。
+abstract interface class ComicRecentReadingQuery {
+  Future<ComicReadingProgress?> getMostRecentReadingProgress();
+}
+
 /// Optional persistence capability for resetting every reading-related field
 /// owned by one comic while preserving bookmarks, downloads, and image cache.
 abstract interface class ComicWorkReadingStateResetter {
