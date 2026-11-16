@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
+import 'package:y300/app/theme/app_system_ui.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
     show RenderAbstractViewport, ScrollCacheExtent;
@@ -18,6 +20,7 @@ import 'package:y300/features/reader_shared/domain/reader_preferences/reader_pre
 import 'package:y300/features/reader_shared/presentation/continuous_image/continuous_image_reader_view.dart';
 import 'package:y300/features/reader_shared/presentation/continuous_image/continuous_image_viewport_tracker.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_capability.dart';
+import 'package:y300/features/reader_shared/presentation/engine/reader_background_resolver.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_display_settings_sheet.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_image_session_coordinator.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_page_indicator_overlay.dart';
@@ -33,6 +36,7 @@ import 'package:y300/features/reader_shared/presentation/reader_preferences/read
 import 'package:y300/features/reader_shared/presentation/reader_text_resolver.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_preload_coordinator.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
+import 'package:y300/features/reader_shared/presentation/widgets/reader_thumbnail_strip.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// 通用图片阅读壳：垂直/横向模式、缩放、overlay 工具栏、进度滑块、页码浮层、
@@ -64,8 +68,14 @@ class ImageReaderEngine extends ConsumerWidget {
     final preferences =
         ref.watch(readerPreferencesControllerProvider).value ??
         ReaderPreferences.defaults();
+    final background = resolveReaderBackground(
+      themeSurface: Theme.of(context).colorScheme.surface,
+      background: preferences.background,
+      readerMode: preferences.readerMode,
+      pagedCanvasColor: capability.pagedCanvasColor,
+    );
     return ReaderContentRegion(
-      backgroundColor: _resolveReaderBackground(Theme.of(context), preferences),
+      backgroundColor: background,
       maxWidth: preferences.readerMode == ReaderModePreference.vertical
           ? AppLayoutTokens.imageReadingMaxWidth
           : double.infinity,
@@ -98,16 +108,6 @@ class _ImageReaderEngineContent extends ConsumerStatefulWidget {
       _ImageReaderEngineState();
 }
 
-Color _resolveReaderBackground(
-  ThemeData theme,
-  ReaderPreferences preferences,
-) => switch (preferences.background) {
-  ReaderBackgroundPreference.followTheme => theme.colorScheme.surface,
-  ReaderBackgroundPreference.black => Colors.black,
-  ReaderBackgroundPreference.white => Colors.white,
-  ReaderBackgroundPreference.gray => const Color(0xFF202124),
-};
-
 class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     implements ReaderEngineActions {
   late ScrollController _scrollController;
@@ -138,6 +138,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   bool get _isSliderCommitInFlight => _seekCoordinator.isSliderLocked;
   int? get _pendingCommittedIndex => _seekCoordinator.pendingIndex;
   int get _seekGeneration => _seekCoordinator.generation;
+
+  /// 缩略图拖动中的候选页；只影响页码和预览，不写阅读位置。
+  int? _thumbnailPreviewIndex;
+  int? get _effectivePreviewIndex =>
+      _thumbnailPreviewIndex ?? _sliderPreviewIndex;
+  Size? _lastReaderLayoutSize;
 
   final ValueNotifier<bool> _pageIndicatorHighlighted = ValueNotifier(false);
   bool _pageIndicatorVisible = false;
@@ -269,11 +275,31 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final preferences = preferencesState.value ?? ReaderPreferences.defaults();
     final mode = _readerMode(preferences);
     final content = _capability.content;
+    final background = _backgroundColor(preferences);
     _diagnosticMode = preferences.readerMode;
+
+    // 窗口布局变化后旧尺寸下的未提交缩略图候选不再有效。
+    final layoutSize = MediaQuery.sizeOf(context);
+    if (_lastReaderLayoutSize != null && _lastReaderLayoutSize != layoutSize) {
+      _thumbnailPreviewIndex = null;
+    }
+    _lastReaderLayoutSize = layoutSize;
 
     if (content.isEmpty) {
       return Scaffold(
-        body: Center(child: Text(AppLocalizations.of(context).readerNoImages)),
+        backgroundColor: background,
+        body: Center(
+          child: Text(
+            AppLocalizations.of(context).readerNoImages,
+            style: TextStyle(
+              color:
+                  ThemeData.estimateBrightnessForColor(background) ==
+                      Brightness.dark
+                  ? Colors.white70
+                  : null,
+            ),
+          ),
+        ),
       );
     }
 
@@ -310,59 +336,78 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
     // Chrome and viewport must retire together: a chapter can change while a
     // modal is dismissing and the old tail's semantics are still offstage.
-    return Scaffold(
-      key: ValueKey<int>(_readerSessionGeneration),
-      body: Stack(
-        children: [
-          ReaderOverlayScaffold(
-            controller: _overlayController,
-            gestureCoordinator: _gestureCoordinator,
-            topBar: _buildTopBar(engineContext),
-            bottomBar: _buildBottomBar(engineContext, preferences),
-            onLeftTap: mode == ContinuousImageReaderMode.vertical
-                ? null
-                : () => _turnPageByTap(
-                    mode: preferences.readerMode,
-                    total: total,
-                    isLeftTap: true,
-                  ),
-            onRightTap: mode == ContinuousImageReaderMode.vertical
-                ? null
-                : () => _turnPageByTap(
-                    mode: preferences.readerMode,
-                    total: total,
-                    isLeftTap: false,
-                  ),
-            bottomSafeFraction: mode == ContinuousImageReaderMode.vertical
-                ? 0.2
-                : 0,
-            tapZonesBlockedListenable: _zoomGate,
-            child: _buildContentLayer(
-              context: context,
-              content: content,
-              mode: mode,
-              preferences: preferences,
-              engineContext: engineContext,
+    final chromePalette = const ReaderChromePaletteResolver().resolve(
+      Theme.of(context),
+    );
+    // 固定黑底的翻页画布与浅色控件栏亮度相反；工具栏展开时系统栏图标
+    // 跟随顶/底栏的 chrome 色，其余阅读器保持原有背景策略。
+    final fixedPagedCanvas =
+        mode == ContinuousImageReaderMode.horizontal &&
+        _capability.pagedCanvasColor != null;
+    final overlaySurface = _overlayController.isMenuVisible && fixedPagedCanvas
+        ? chromePalette.chromeBackground
+        : background;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // 工具栏展开时顶/底栏的 chrome 色才是系统栏背后的实际颜色。
+      value: AppSystemUi.onSurfaces(
+        top: overlaySurface,
+        bottom: overlaySurface,
+      ),
+      child: Scaffold(
+        key: ValueKey<int>(_readerSessionGeneration),
+        backgroundColor: background,
+        body: Stack(
+          children: [
+            ReaderOverlayScaffold(
+              controller: _overlayController,
+              gestureCoordinator: _gestureCoordinator,
+              topBar: _buildTopBar(engineContext),
+              bottomBar: _buildBottomBar(engineContext, preferences),
+              onLeftTap: mode == ContinuousImageReaderMode.vertical
+                  ? null
+                  : () => _turnPageByTap(
+                      mode: preferences.readerMode,
+                      total: total,
+                      isLeftTap: true,
+                    ),
+              onRightTap: mode == ContinuousImageReaderMode.vertical
+                  ? null
+                  : () => _turnPageByTap(
+                      mode: preferences.readerMode,
+                      total: total,
+                      isLeftTap: false,
+                    ),
+              bottomSafeFraction: mode == ContinuousImageReaderMode.vertical
+                  ? 0.2
+                  : 0,
+              tapZonesBlockedListenable: _zoomGate,
+              child: _buildContentLayer(
+                context: context,
+                content: content,
+                mode: mode,
+                preferences: preferences,
+                engineContext: engineContext,
+              ),
             ),
-          ),
-          ValueListenableBuilder<bool>(
-            valueListenable: _pageIndicatorHighlighted,
-            builder: (context, highlighted, _) => ReaderPageIndicatorOverlay(
-              visible: _pageIndicatorVisible,
-              highlighted: highlighted,
-              currentPage: (_sliderPreviewIndex ?? _lastKnownIndex) + 1,
-              totalPages: total,
-              positionLabel: _sequencePositionLabel(),
+            ValueListenableBuilder<bool>(
+              valueListenable: _pageIndicatorHighlighted,
+              builder: (context, highlighted, _) => ReaderPageIndicatorOverlay(
+                visible: _pageIndicatorVisible,
+                highlighted: highlighted,
+                currentPage: (_effectivePreviewIndex ?? _lastKnownIndex) + 1,
+                totalPages: total,
+                positionLabel: _sequencePositionLabel(),
+              ),
             ),
-          ),
-          if (actionSurface != null)
-            ReaderTailActionOverlay(
-              key: ValueKey(_tailActionController.identity),
-              controller: _tailActionController,
-              surface: actionSurface,
-              menuVisible: _overlayController.isMenuVisible,
-            ),
-        ],
+            if (actionSurface != null)
+              ReaderTailActionOverlay(
+                key: ValueKey(_tailActionController.identity),
+                controller: _tailActionController,
+                surface: actionSurface,
+                menuVisible: _overlayController.isMenuVisible,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1206,7 +1251,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   }
 
   Color _backgroundColor(ReaderPreferences preferences) {
-    return _resolveReaderBackground(Theme.of(context), preferences);
+    return resolveReaderBackground(
+      themeSurface: Theme.of(context).colorScheme.surface,
+      background: preferences.background,
+      readerMode: preferences.readerMode,
+      pagedCanvasColor: _capability.pagedCanvasColor,
+    );
   }
 
   Color _loadingIndicatorColor(ReaderPreferences preferences) {
@@ -1308,6 +1358,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         _setZoomGate(false, paged: false);
         _activePagedIndex.value = initialIndex;
         _lastKnownIndex = initialIndex;
+        _thumbnailPreviewIndex = null;
         _seekCoordinator.reset(resetThrottle: false);
         _restoreCoordinator.invalidate();
         _sessionPreloadCoordinator.resetSession(
@@ -1353,6 +1404,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _setZoomGate(false, paged: false);
     _activePagedIndex.value = initialIndex;
     _lastKnownIndex = initialIndex;
+    _thumbnailPreviewIndex = null;
     _seekCoordinator.reset();
     _restoreCoordinator.invalidate();
     _positionRetryScheduled = false;
@@ -2149,6 +2201,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
   void _onProgressChangeStart(double sliderValue, int total) {
     final index = sliderValue.round().clamp(0, total - 1).toInt();
+    _thumbnailPreviewIndex = null;
     setState(() => _seekCoordinator.preview(index));
     _recordReaderDiagnostic(
       type: ContinuousImageDiagnosticEventType.seekPreviewChanged,
@@ -2163,6 +2216,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   void _onProgressChanged(double sliderValue, int total) {
     final index = sliderValue.round().clamp(0, total - 1).toInt();
     final didChange = _sliderPreviewIndex != index;
+    _thumbnailPreviewIndex = null;
     setState(() => _seekCoordinator.preview(index));
     if (didChange) {
       _recordReaderDiagnostic(
@@ -2180,10 +2234,23 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     required double sliderValue,
     required ReaderPreferences preferences,
     required int total,
+  }) {
+    return _commitSeekToIndex(
+      targetIndex: sliderValue.round().clamp(0, total - 1).toInt(),
+      preferences: preferences,
+      total: total,
+      respectThrottle: true,
+    );
+  }
+
+  Future<void> _commitSeekToIndex({
+    required int targetIndex,
+    required ReaderPreferences preferences,
+    required int total,
+    required bool respectThrottle,
   }) async {
     final content = _capability.content;
     final positionState = _positionState;
-    final targetIndex = sliderValue.round().clamp(0, total - 1).toInt();
     if (!mounted ||
         positionState == null ||
         positionState.ownerId != content.ownerId ||
@@ -2208,6 +2275,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final request = _seekCoordinator.beginSlider(
       targetIndex: targetIndex,
       now: DateTime.now(),
+      respectInterval: respectThrottle,
       isSurfaceCurrent: () =>
           _isCurrentImageSession(session) &&
           _isCurrentPositionState(positionState, total) &&
@@ -2687,6 +2755,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       isScrollControlled: true,
       builder: (context) => ReaderDisplaySettingsSheet(
         preferences: preferences,
+        backgroundNote: _capability.pagedBackgroundSettingsNote,
         onModeChanged: (mode) => unawaited(_onReaderModeChanged(mode)),
         onPageFitChanged: (value) => unawaited(controller.setPageFit(value)),
         onBackgroundChanged: (value) =>
@@ -2721,6 +2790,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (currentMode == nextMode) {
       return;
     }
+    // 模式切换同时改变缩略图视觉顺序和翻页固定底色，旧候选立即作废。
+    _thumbnailPreviewIndex = null;
     if (currentMode == ReaderModePreference.vertical) {
       _verticalPositionDriver.cancelActive(
         ReaderVerticalSeekCancelReason.modeChanged,
@@ -2877,9 +2948,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     ReaderPreferences preferences,
   ) {
     final total = context.totalCount;
-    final currentIndex = _sliderPreviewIndex ?? _lastKnownIndex;
+    final currentIndex = _effectivePreviewIndex ?? _lastKnownIndex;
     final nav = _capability.chapterNav(context);
     return ReaderBottomBarConfig(
+      thumbnailStrip: _overlayController.isMenuVisible
+          ? _buildThumbnailStrip(preferences: preferences)
+          : null,
       progress: ReaderProgressConfig.discrete(
         current: currentIndex + 1,
         total: total,
@@ -2900,6 +2974,107 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         ),
       ),
       actions: _withMenuDismiss(_capability.bottomActions(context)),
+    );
+  }
+
+  Widget? _buildThumbnailStrip({required ReaderPreferences preferences}) {
+    final content = _capability.content;
+    if (!_capability.showsThumbnailStrip || content.length <= 1) {
+      return null;
+    }
+    return _capability.buildThumbnailStrip(
+      context,
+      ReaderThumbnailStripSpec(
+        ownerId: content.ownerId,
+        items: content.items,
+        currentIndex: _lastKnownIndex.clamp(0, content.length - 1).toInt(),
+        previewIndex: _thumbnailPreviewIndex,
+        reversed: preferences.readerMode == ReaderModePreference.rtl,
+        enabled: !_isSliderCommitInFlight,
+        sessionBindingFor: _thumbnailSessionBindingFor,
+        onPreview: _onThumbnailPreview,
+        onSubmit: _onThumbnailSubmit,
+        onCancel: _onThumbnailCancel,
+      ),
+    );
+  }
+
+  ReaderImageSessionBinding _thumbnailSessionBindingFor(
+    ContinuousImageItem item,
+  ) {
+    final content = _capability.content;
+    if (_imageSessionStore.readerOwnerId != content.ownerId ||
+        _imageSessionStore.generation !=
+            _sessionPreloadCoordinator.generation) {
+      _imageSessionStore.startSession(
+        readerOwnerId: content.ownerId,
+        generation: _sessionPreloadCoordinator.generation,
+        items: content.items,
+      );
+    }
+    return _imageSessionStore.bindingFor(
+      item,
+      initialLocalPath: _capability.initialLocalPathFor(item),
+    );
+  }
+
+  /// 缩略图候选只更新页码和预览，不提交阅读位置或已读证据。
+  void _onThumbnailPreview(int index) {
+    if (!mounted) {
+      return;
+    }
+    final content = _capability.content;
+    if (content.isEmpty) {
+      return;
+    }
+    final target = index.clamp(0, content.length - 1).toInt();
+    if (_thumbnailPreviewIndex == target) {
+      return;
+    }
+    setState(() => _thumbnailPreviewIndex = target);
+    _recordReaderDiagnostic(
+      type: ContinuousImageDiagnosticEventType.seekPreviewChanged,
+      index: _lastKnownIndex,
+      generation: _seekGeneration,
+      targetIndex: target,
+      status: 'thumbnail',
+      result: 'preview',
+    );
+  }
+
+  void _onThumbnailCancel() {
+    if (!mounted || _thumbnailPreviewIndex == null) {
+      return;
+    }
+    setState(() => _thumbnailPreviewIndex = null);
+  }
+
+  void _onThumbnailSubmit(int index) {
+    if (!mounted || _isSliderCommitInFlight) {
+      return;
+    }
+    final content = _capability.content;
+    if (content.isEmpty) {
+      return;
+    }
+    final target = index.clamp(0, content.length - 1).toInt();
+    if (_thumbnailPreviewIndex != null) {
+      setState(() => _thumbnailPreviewIndex = null);
+    }
+    if (target == _lastKnownIndex) {
+      return;
+    }
+    final preferences =
+        ref.read(readerPreferencesControllerProvider).value ??
+        ReaderPreferences.defaults();
+    unawaited(
+      _commitSeekToIndex(
+        targetIndex: target,
+        preferences: preferences,
+        total: content.length,
+        // 缩略图点按是明确的单次提交，不能被滑块节流吞掉。
+        respectThrottle: false,
+      ),
     );
   }
 
@@ -2981,9 +3156,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   }
 
   void _onOverlayVisibilityChanged() {
-    if (mounted) {
-      setState(() {});
+    if (!mounted) {
+      return;
     }
+    if (!_overlayController.isMenuVisible && _thumbnailPreviewIndex != null) {
+      // 工具栏收起即卸载缩略图条，未提交候选同时作废。
+      _thumbnailPreviewIndex = null;
+    }
+    setState(() {});
   }
 
   void _onVerticalReaderZoomStateChanged(bool isZoomed) {

@@ -57,6 +57,19 @@ class ComicReaderCapability extends ReaderCapability {
   @override
   ReaderKind get readerKind => ReaderKind.comic;
 
+  /// 左右翻页画布固定纯黑；滚动模式仍使用用户背景偏好。
+  static const Color fixedPagedCanvasColor = Colors.black;
+
+  @override
+  Color? get pagedCanvasColor => fixedPagedCanvasColor;
+
+  @override
+  String? get pagedBackgroundSettingsNote =>
+      l10n.readerPagedBackgroundBlackNote;
+
+  @override
+  bool get showsThumbnailStrip => true;
+
   @override
   ReaderImagePreparationSink get imagePreparationSink =>
       _ComicReaderImagePreparationSink(controller);
@@ -309,6 +322,51 @@ class ComicReaderCapability extends ReaderCapability {
   }
 
   @override
+  Widget buildThumbnailStrip(
+    BuildContext context,
+    ReaderThumbnailStripSpec spec,
+  ) {
+    return ReaderThumbnailStrip(
+      key: ValueKey<String>('comic-reader-thumbnail-strip-${spec.ownerId}'),
+      spec: spec,
+      imageBuilder: _buildThumbnailImage,
+    );
+  }
+
+  Widget _buildThumbnailImage(
+    BuildContext context,
+    ReaderThumbnailImageSpec spec,
+  ) {
+    final pageNumber = spec.index + 1;
+    final placeholder = _ComicReaderThumbnailPlaceholder(
+      pageNumber: pageNumber,
+      preview: spec.preview,
+    );
+    final image = _imageForIndex(spec.index);
+    if (image == null) {
+      return placeholder;
+    }
+    return ReaderSessionImage(
+      sessionBinding: spec.sessionBinding,
+      cacheRequest: cacheRequestFor(spec.item),
+      fit: spec.preview ? BoxFit.contain : BoxFit.cover,
+      expectedDisplaySize: spec.expectedDisplaySize,
+      placeholder: placeholder,
+      errorPlaceholder: _ComicReaderThumbnailPlaceholder(
+        pageNumber: pageNumber,
+        preview: spec.preview,
+        failed: true,
+      ),
+      imageReferer: imageReferer,
+      retryToken: Object.hash(
+        viewState.imageSessionRevision,
+        image.retryRevision,
+      ),
+      // 缩略图与预览不回报尺寸或失败，避免影响正文进度与已读判定。
+    );
+  }
+
+  @override
   ForumImageLoadSpec? imageLoadSpecFor(ContinuousImageItem item) {
     final uri = Uri.tryParse(item.url.trim());
     if (uri == null) {
@@ -365,6 +423,10 @@ class ComicReaderCapability extends ReaderCapability {
       return const SizedBox.shrink();
     }
     final imageUrl = image.imageUrl;
+    final retryPlaceholder = ImageRetryPlaceholder(
+      onRetry: spec.onRetry,
+      retryButtonKey: ValueKey<String>('comic-reader-retry-$imageUrl'),
+    );
     return ReaderSessionImage(
       sessionBinding: spec.sessionBinding,
       cacheRequest: cacheRequestFor(spec.item),
@@ -372,10 +434,9 @@ class ComicReaderCapability extends ReaderCapability {
       expectedDisplaySize: spec.expectedDisplaySize,
       width: spec.paged ? null : double.infinity,
       placeholder: _ComicReaderImagePlaceholder(paged: spec.paged),
-      errorPlaceholder: ImageRetryPlaceholder(
-        onRetry: spec.onRetry,
-        retryButtonKey: ValueKey<String>('comic-reader-retry-$imageUrl'),
-      ),
+      errorPlaceholder: spec.paged
+          ? _pagedCanvasForeground(context, retryPlaceholder)
+          : retryPlaceholder,
       retryToken: Object.hash(
         viewState.imageSessionRevision,
         image.retryRevision,
@@ -397,6 +458,24 @@ class ComicReaderCapability extends ReaderCapability {
         imageUrl: imageUrl,
         expectedEpisodeId: viewState.episodeId,
       ),
+    );
+  }
+
+  /// 黑色翻页画布上的失败占位沿用共享组件，只覆盖可读前景。
+  Widget _pagedCanvasForeground(BuildContext context, Widget child) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: Colors.white,
+          onSurfaceVariant: Colors.white70,
+        ),
+        textTheme: theme.textTheme.apply(
+          bodyColor: Colors.white70,
+          displayColor: Colors.white70,
+        ),
+      ),
+      child: child,
     );
   }
 
@@ -446,6 +525,42 @@ class _ComicReaderImagePlaceholder extends StatelessWidget {
     return ColoredBox(
       color: chromePalette.imageLoadingPlaceholderBackground,
       child: const SizedBox.shrink(),
+    );
+  }
+}
+
+/// 缩略图/预览的加载与失败占位：保留逻辑页码，不改变序号或触发正文状态。
+class _ComicReaderThumbnailPlaceholder extends StatelessWidget {
+  const _ComicReaderThumbnailPlaceholder({
+    required this.pageNumber,
+    required this.preview,
+    this.failed = false,
+  });
+
+  final int pageNumber;
+  final bool preview;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = const ReaderChromePaletteResolver().resolve(
+      Theme.of(context),
+    );
+    return ColoredBox(
+      color: failed
+          ? palette.progressTrackBackground
+          : palette.imageLoadingPlaceholderBackground,
+      child: Center(
+        child: Text(
+          '$pageNumber',
+          maxLines: 1,
+          style: TextStyle(
+            color: palette.onChromeVariant,
+            fontSize: preview ? 20 : 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

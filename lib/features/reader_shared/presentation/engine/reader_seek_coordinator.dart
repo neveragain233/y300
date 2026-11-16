@@ -38,10 +38,13 @@ final class ReaderSeekCoordinator {
     required int targetIndex,
     required bool Function() isSurfaceCurrent,
     required DateTime now,
+    bool respectInterval = true,
   }) {
     if (_closed || !isSurfaceCurrent()) return null;
     final lastCommitAt = _lastCommitAt;
-    if (lastCommitAt != null && now.difference(lastCommitAt) < commitInterval) {
+    if (respectInterval &&
+        lastCommitAt != null &&
+        now.difference(lastCommitAt) < commitInterval) {
       return null;
     }
     _lastCommitAt = now;

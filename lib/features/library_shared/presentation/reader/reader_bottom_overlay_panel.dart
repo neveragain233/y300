@@ -15,6 +15,7 @@ class ReaderBottomOverlayPanel extends StatelessWidget {
       Theme.of(context),
     );
     final progress = config.progress;
+    final thumbnailStrip = config.thumbnailStrip;
     return Material(
       key: const Key('shared-reader-bottom-overlay-panel'),
       color: palette.chromeBackground,
@@ -30,6 +31,14 @@ class ReaderBottomOverlayPanel extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (thumbnailStrip != null)
+                  KeyedSubtree(
+                    key: const Key('shared-reader-thumbnail-strip-slot'),
+                    child: thumbnailStrip,
+                  ),
+                if (thumbnailStrip != null &&
+                    (progress != null || config.actions.isNotEmpty))
+                  const SizedBox(height: 6),
                 if (progress != null) ReaderProgressControl(config: progress),
                 if (config.actions.isNotEmpty) ...[
                   if (progress != null) const SizedBox(height: 6),

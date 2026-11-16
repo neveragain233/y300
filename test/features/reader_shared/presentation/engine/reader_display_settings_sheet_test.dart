@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_display_settings_sheet.dart';
@@ -64,6 +66,41 @@ void main() {
     expect(selectedMode, ReaderModePreference.ltr);
     expect(selectedFit, ReaderPageFitPreference.fitHeight);
     expect(selectedBackground, ReaderBackgroundPreference.black);
+  });
+
+  testWidgets('shows the background note only in paged modes', (tester) async {
+    const note = 'paged mode note';
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: ReaderDisplaySettingsSheet(
+            preferences: ReaderPreferences.defaults(),
+            backgroundNote: note,
+            onModeChanged: (_) {},
+            onPageFitChanged: (_) {},
+            onBackgroundChanged: (_) {},
+            onPageSpacingChanged: (_) {},
+            onShowPageIndicatorChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    // 默认是左到右翻页，说明可见且背景选项仍保留。
+    expect(
+      find.byKey(const Key('comic-reader-paged-background-note')),
+      findsOneWidget,
+    );
+    expect(find.text(note), findsOneWidget);
+    expect(find.text('黑'), findsOneWidget);
+
+    await tester.tap(find.text('垂直'));
+    await tester.pump();
+    expect(
+      find.byKey(const Key('comic-reader-paged-background-note')),
+      findsNothing,
+    );
+    expect(find.text('黑'), findsOneWidget);
   });
 
   testWidgets('renders Traditional Chinese display choices', (tester) async {

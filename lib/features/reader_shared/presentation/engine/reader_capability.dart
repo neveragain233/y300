@@ -8,6 +8,7 @@ import 'package:y300/features/reader_shared/domain/image_session/reader_image_se
 import 'package:y300/features/reader_shared/presentation/continuous_image/continuous_image_reader_view.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_tail_surface.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
+import 'package:y300/features/reader_shared/presentation/widgets/reader_thumbnail_strip.dart';
 
 enum ReaderKind { generic, thread, comic }
 
@@ -169,6 +170,29 @@ class ReaderImageBuildSpec {
 /// 相关项靠"能力为空"，而非引擎内 if-else。
 abstract class ReaderCapability {
   ReaderKind get readerKind => ReaderKind.generic;
+
+  /// 横向单页画布的固定底色；null 表示继续使用背景偏好。
+  ///
+  /// 固定色只覆盖当前模式的阅读画布，不写回用户偏好；纵向滚动仍读偏好。
+  Color? get pagedCanvasColor => null;
+
+  /// 横向单页时显示设置在背景选项下方的说明；null 不显示。
+  String? get pagedBackgroundSettingsNote => null;
+
+  /// 工具栏展开时是否显示章内缩略图条。
+  bool get showsThumbnailStrip => false;
+
+  /// 构建章内缩略图条。
+  ///
+  /// 引擎只提供内容、当前/候选索引和提交回调；图像必须由能力复用
+  /// [ReaderImageSessionBinding] 与 [cacheRequestFor] 构建，不得新建缓存或
+  /// 下载通道。
+  Widget buildThumbnailStrip(
+    BuildContext context,
+    ReaderThumbnailStripSpec spec,
+  ) {
+    return const SizedBox.shrink();
+  }
 
   /// 阅读内容来源。
   ReaderContent get content;

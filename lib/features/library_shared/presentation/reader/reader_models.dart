@@ -104,10 +104,17 @@ class ReaderTopBarConfig {
 }
 
 class ReaderBottomBarConfig {
-  const ReaderBottomBarConfig({required this.actions, this.progress});
+  const ReaderBottomBarConfig({
+    required this.actions,
+    this.progress,
+    this.thumbnailStrip,
+  });
 
   final List<ReaderToolbarAction> actions;
   final ReaderProgressConfig? progress;
+
+  /// 进度条上方的可选导航内容槽（漫画缩略图条）。null 时不占位。
+  final Widget? thumbnailStrip;
 }
 
 class ReaderProgressConfig {

@@ -161,7 +161,11 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                   reader,
                   if (viewState.isSwitchingEpisode ||
                       viewState.isRefreshingEpisode)
-                    const Positioned.fill(child: _ComicReaderSwitchOverlay()),
+                    Positioned.fill(
+                      child: _ComicReaderSwitchOverlay(
+                        background: _readerBackgroundColor(preferences),
+                      ),
+                    ),
                 ],
               );
             },
@@ -266,17 +270,12 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
   }
 
   Color _readerBackgroundColor(ReaderPreferences preferences) {
-    final scheme = Theme.of(context).colorScheme;
-    switch (preferences.background) {
-      case ReaderBackgroundPreference.followTheme:
-        return scheme.surface;
-      case ReaderBackgroundPreference.black:
-        return Colors.black;
-      case ReaderBackgroundPreference.white:
-        return Colors.white;
-      case ReaderBackgroundPreference.gray:
-        return const Color(0xFF202124);
-    }
+    return resolveReaderBackground(
+      themeSurface: Theme.of(context).colorScheme.surface,
+      background: preferences.background,
+      readerMode: preferences.readerMode,
+      pagedCanvasColor: ComicReaderCapability.fixedPagedCanvasColor,
+    );
   }
 
   Future<void> _openSourceThread(ComicReaderViewState viewState) async {
@@ -556,14 +555,22 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
 }
 
 class _ComicReaderSwitchOverlay extends StatelessWidget {
-  const _ComicReaderSwitchOverlay();
+  const _ComicReaderSwitchOverlay({required this.background});
+
+  final Color background;
 
   @override
   Widget build(BuildContext context) {
+    final onDark =
+        ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
     return AbsorbPointer(
       child: ColoredBox(
-        color: Theme.of(context).colorScheme.surface,
-        child: const Center(child: CircularProgressIndicator()),
+        color: background,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: onDark ? Colors.white70 : null,
+          ),
+        ),
       ),
     );
   }
@@ -697,6 +704,9 @@ class _ReaderOpeningPlaceholderState extends State<_ReaderOpeningPlaceholder> {
 
   @override
   Widget build(BuildContext context) {
+    final onDark =
+        ThemeData.estimateBrightnessForColor(widget.background) ==
+        Brightness.dark;
     return ColoredBox(
       key: const Key('comic-reader-page-opening'),
       color: widget.background,
@@ -704,7 +714,8 @@ class _ReaderOpeningPlaceholderState extends State<_ReaderOpeningPlaceholder> {
         child: _showCopy
             ? Text(
                 AppLocalizations.of(context).comicOpeningEpisode,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: onDark ? Colors.white70 : null),
               )
             : const SizedBox.shrink(),
       ),

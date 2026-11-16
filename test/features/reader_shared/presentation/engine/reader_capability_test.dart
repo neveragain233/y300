@@ -21,6 +21,9 @@ void main() {
       expect(capability.bottomActions(context), isEmpty);
       expect(capability.chapterNav(context), isNull);
       expect(capability.verticalTrailingBuilder(context), isNull);
+      expect(capability.pagedCanvasColor, isNull);
+      expect(capability.pagedBackgroundSettingsNote, isNull);
+      expect(capability.showsThumbnailStrip, isFalse);
     });
 
     test('lifecycle hooks are no-ops by default', () async {

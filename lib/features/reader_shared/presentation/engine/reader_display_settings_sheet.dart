@@ -17,6 +17,7 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
     required this.onBackgroundChanged,
     required this.onPageSpacingChanged,
     required this.onShowPageIndicatorChanged,
+    this.backgroundNote,
   });
 
   final ReaderPreferences preferences;
@@ -25,6 +26,9 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
   final ValueChanged<ReaderBackgroundPreference> onBackgroundChanged;
   final ValueChanged<double> onPageSpacingChanged;
   final ValueChanged<bool> onShowPageIndicatorChanged;
+
+  /// 横向模式下背景选项的补充说明；null 不占位。
+  final String? backgroundNote;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,7 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
         onBackgroundChanged: onBackgroundChanged,
         onPageSpacingChanged: onPageSpacingChanged,
         onShowPageIndicatorChanged: onShowPageIndicatorChanged,
+        backgroundNote: backgroundNote,
       ),
     );
   }
@@ -124,6 +129,7 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
     required this.onBackgroundChanged,
     required this.onPageSpacingChanged,
     required this.onShowPageIndicatorChanged,
+    required this.backgroundNote,
   });
 
   final ReaderPreferences preferences;
@@ -132,6 +138,7 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
   final ValueChanged<ReaderBackgroundPreference> onBackgroundChanged;
   final ValueChanged<double> onPageSpacingChanged;
   final ValueChanged<bool> onShowPageIndicatorChanged;
+  final String? backgroundNote;
 
   @override
   State<_ReaderDisplaySettingsContent> createState() =>
@@ -151,6 +158,11 @@ class _ReaderDisplaySettingsContentState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final backgroundNote = widget.backgroundNote?.trim();
+    final showBackgroundNote =
+        _current.readerMode != ReaderModePreference.vertical &&
+        backgroundNote != null &&
+        backgroundNote.isNotEmpty;
     return ListView(
       key: const Key('comic-reader-display-settings-sheet'),
       shrinkWrap: true,
@@ -187,6 +199,30 @@ class _ReaderDisplaySettingsContentState
             widget.onBackgroundChanged(value);
           },
         ),
+        if (showBackgroundNote)
+          Padding(
+            key: const Key('comic-reader-paged-background-note'),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    backgroundNote,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
           child: Row(
