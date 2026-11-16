@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:y300/app/content_rendering/native_forum_html_render_theme_factory.dart';
 import 'package:y300/core/media/device_memory_profile.dart';
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart' show ValueListenable, setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +100,10 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.displayExtraCommentsByPostId = const {},
     this.enableBodyChunking = true,
     this.allowedBlacklistedAuthorId,
+    this.replyTailPosts = const <ThreadPost>[],
+    this.movedBlacklistedPids = const <String>{},
+    this.showReplyTail = false,
+    this.replyTailRevision = 0,
     this.onToggleAuthorFilter,
     this.onOrderChanged,
     this.floorNavigation,
@@ -115,6 +119,18 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
   final double bottomInset;
   final ValueChanged<double>? onRepliesHeaderHeightChanged;
   final bool enableBodyChunking;
+
+  /// Blocked replies collected for the end of the last page.
+  final List<ThreadPost> replyTailPosts;
+
+  /// Stable pids removed from their source floor position.
+  final Set<String> movedBlacklistedPids;
+
+  /// Whether the current page is the thread's last page.
+  final bool showReplyTail;
+
+  /// Display generation for the reply tail projection.
+  final int replyTailRevision;
 
   /// Topic author allowed for this route when the whole-thread prompt was
   /// accepted; their floors are not collapsed for this session.
@@ -182,6 +198,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   final _entryPlanner = const ThreadDetailRenderEntryPlanner();
   @override
   final GlobalKey _viewportKey = GlobalKey(debugLabel: 'thread-detail-list');
+  @override
+  final GlobalKey _listEndKey = GlobalKey(debugLabel: 'thread-detail-list-end');
   @override
   GlobalKey _targetCenterKey = GlobalKey(
     debugLabel: 'thread-detail-target-center',
@@ -300,12 +318,18 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     }
     final oldProjection = oldWidget.projection;
     final newProjection = widget.projection;
+    final tailChanged =
+        oldWidget.replyTailRevision != widget.replyTailRevision ||
+        oldWidget.showReplyTail != widget.showReplyTail ||
+        !setEquals(oldWidget.movedBlacklistedPids, widget.movedBlacklistedPids);
     final shouldRestoreProjectionAnchor =
-        oldProjection != null &&
-        newProjection != null &&
         identical(oldWidget.scrollController, widget.scrollController) &&
-        oldProjection.sourceRevision == newProjection.sourceRevision &&
-        oldProjection.displayIdentity != newProjection.displayIdentity;
+        ((oldProjection != null &&
+                newProjection != null &&
+                oldProjection.sourceRevision == newProjection.sourceRevision &&
+                oldProjection.displayIdentity !=
+                    newProjection.displayIdentity) ||
+            tailChanged);
     final projectionAnchor = shouldRestoreProjectionAnchor
         ? _projectionAnchorCoordinator.capture(_sourcePidsFor(oldWidget))
         : null;
@@ -508,7 +532,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => KeyedSubtree(
                       key: ValueKey(entries[index].key),
-                      child: _buildEntry(context, entries[index], palette),
+                      child: _withListEndMarker(
+                        entries: entries,
+                        index: index,
+                        child: _buildEntry(context, entries[index], palette),
+                      ),
                     ),
                     childCount: entries.length,
                     addAutomaticKeepAlives: true,
@@ -545,7 +573,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             final entry = entries[index];
             return KeyedSubtree(
               key: ValueKey(entry.key),
-              child: _buildEntry(context, entry, palette),
+              child: _withListEndMarker(
+                entries: entries,
+                index: index,
+                child: _buildEntry(context, entry, palette),
+              ),
             );
           },
         ),
@@ -560,6 +592,17 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       if (key == ValueKey(entries[index].key)) return index;
     }
     return null;
+  }
+
+  /// Marks the last rendered entry so page-end detection can require actual
+  /// layout of the pagination/footer instead of a stale scroll extent.
+  Widget _withListEndMarker({
+    required List<ThreadDetailRenderEntry> entries,
+    required int index,
+    required Widget child,
+  }) {
+    if (index != entries.length - 1) return child;
+    return KeyedSubtree(key: _listEndKey, child: child);
   }
 
   void _clearFooterExpansions() {
@@ -704,31 +747,82 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         _canChunkBodies;
   }
 
+  ThreadDetailContent? _displayProjectionOwner;
+  List<ThreadDetailPostProjection>? _displayProjectionCache;
+
   @override
   List<ThreadDetailPostProjection> get _postProjections {
-    final projected = widget.projection?.posts;
-    if (projected != null) {
-      return projected;
+    // The display list is the single projection shared by rendering, the floor
+    // navigation sequence and anchor capture; compute it once per widget build.
+    // A new widget instance is the only way the tail projection can change.
+    final cached = _displayProjectionCache;
+    if (cached != null && identical(_displayProjectionOwner, widget)) {
+      return cached;
     }
-    return [
-      for (final post in widget.state.posts)
-        ThreadDetailPostProjection(sourcePost: post, displayPost: post),
-    ];
+    _displayProjectionOwner = widget;
+    return _displayProjectionCache = _buildDisplayProjections(widget);
+  }
+
+  List<ThreadDetailPostProjection> _buildDisplayProjections(
+    ThreadDetailContent target,
+  ) {
+    final moved = target.movedBlacklistedPids;
+    final seen = <String>{};
+    final projections = <ThreadDetailPostProjection>[];
+    final projected = target.projection?.posts;
+    if (projected != null) {
+      for (final item in projected) {
+        final pid = item.sourcePost.pid;
+        if (moved.contains(pid) || !seen.add(pid)) continue;
+        projections.add(item);
+      }
+    } else {
+      for (final post in target.state.posts) {
+        if (moved.contains(post.pid) || !seen.add(post.pid)) continue;
+        projections.add(
+          ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+        );
+      }
+    }
+    if (!target.showReplyTail) return List.unmodifiable(projections);
+    for (final post in target.replyTailPosts) {
+      if (!seen.add(post.pid)) continue;
+      final converted = target.projection?.findByPid(post.pid);
+      projections.add(
+        converted ??
+            ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+      );
+    }
+    return List.unmodifiable(projections);
+  }
+
+  List<String> _displayPidsFor(ThreadDetailContent target) {
+    final moved = target.movedBlacklistedPids;
+    final seen = <String>{};
+    final pids = <String>[];
+    final projected = target.projection?.posts;
+    if (projected != null) {
+      for (final item in projected) {
+        final pid = item.sourcePost.pid;
+        if (moved.contains(pid) || !seen.add(pid)) continue;
+        pids.add(pid);
+      }
+    } else {
+      for (final post in target.state.posts) {
+        if (moved.contains(post.pid) || !seen.add(post.pid)) continue;
+        pids.add(post.pid);
+      }
+    }
+    if (!target.showReplyTail) return pids;
+    for (final post in target.replyTailPosts) {
+      if (seen.add(post.pid)) pids.add(post.pid);
+    }
+    return pids;
   }
 
   @override
-  Iterable<String> _sourcePidsFor(ThreadDetailContent target) sync* {
-    final projections = target.projection?.posts;
-    if (projections != null) {
-      for (final projection in projections) {
-        yield projection.sourcePost.pid;
-      }
-      return;
-    }
-    for (final post in target.state.posts) {
-      yield post.pid;
-    }
-  }
+  Iterable<String> _sourcePidsFor(ThreadDetailContent target) =>
+      _displayPidsFor(target);
 
   Widget _buildTargetAnchoredList({
     required List<ThreadDetailRenderEntry> entries,
@@ -916,6 +1010,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
               child: child,
             );
           }
+          child = _withListEndMarker(
+            entries: entries,
+            index: entryIndex,
+            child: child,
+          );
           return KeyedSubtree(
             key: ValueKey(entry.key),
             child: IndexedSemantics(index: entryIndex, child: child),
@@ -974,11 +1073,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   /// 目标楼在回复栏之下时才需要让出吸顶栏高度；首楼与倒序末栏不避让。
   @override
   bool _targetBelowRepliesHeader(String pid) {
-    final posts = widget.state.posts;
+    final posts = _postProjections;
     if (posts.isEmpty) return false;
-    final firstIndex = posts.indexWhere((post) => post.isFirst);
+    final firstIndex = posts.indexWhere((item) => item.sourcePost.isFirst);
     if (firstIndex < 0) return true;
-    final index = posts.indexWhere((post) => post.pid == pid);
+    final index = posts.indexWhere((item) => item.sourcePost.pid == pid);
     return index > firstIndex;
   }
 

@@ -7428,6 +7428,294 @@ void main() {
       );
     });
 
+    testWidgets(
+      'blocked replies from earlier pages collect at the end of the last page',
+      (tester) async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'content_filter.web_blacklist.snapshot.v1': jsonEncode(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'accounts': <String, Object?>{
+                '11': <String, Object?>{
+                  'lastSuccessAt': 1000,
+                  'members': <Object?>[
+                    <String, Object?>{'userId': '44', 'username': 'Muted'},
+                  ],
+                },
+              },
+            },
+          ),
+        });
+        final sessionStore = YamiboSessionStore()
+          ..saveExtracted(
+            YamiboSessionSnapshot(
+              isLoggedIn: true,
+              uid: '11',
+              username: 'Reader',
+              formhash: '',
+              updatedAt: DateTime(2026, 1, 1),
+              source: 'test',
+            ),
+          );
+        final requests = <int>[];
+        final repository = _FakeThreadRepository((tid, page, query) async {
+          requests.add(page);
+          return ApiSuccess(
+            page == 2
+                ? _threadDetailData(
+                    tid: tid,
+                    currentPage: 2,
+                    lastPage: 2,
+                    posts: [
+                      _post(
+                        pid: 'tail-page-p3',
+                        author: 'Normal',
+                        authorId: '43',
+                        number: 3,
+                        message: '<p>最后一页的普通回复</p>',
+                      ),
+                      _post(
+                        pid: 'tail-page-b2',
+                        author: 'Muted',
+                        authorId: '44',
+                        number: 4,
+                        message: '<p>最后一页的被屏蔽回复</p>',
+                      ),
+                    ],
+                  )
+                : _threadDetailData(
+                    tid: tid,
+                    currentPage: 1,
+                    lastPage: 2,
+                    posts: [
+                      _post(
+                        pid: 'tail-page-p1',
+                        author: 'Owner',
+                        authorId: '41',
+                        number: 1,
+                        isFirst: true,
+                        message: '<p>主题正文</p>',
+                      ),
+                      _post(
+                        pid: 'tail-page-b1',
+                        author: 'Muted',
+                        authorId: '44',
+                        number: 2,
+                        message: '<p>前页的被屏蔽回复</p>',
+                      ),
+                    ],
+                  ),
+          );
+        });
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            repository,
+            home: const ThreadDetailPage(
+              tid: '100',
+              subject: '测试主题',
+              initialPage: 2,
+            ),
+            additionalOverrides: [
+              yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(requests, containsAll(<int>[1, 2]));
+        expect(
+          find.byKey(const Key('thread-blacklisted-post-tail-page-b1')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('thread-blacklisted-post-tail-page-b2')),
+          findsOneWidget,
+        );
+        final normalTop = tester
+            .getTopLeft(find.byKey(const Key('thread-post-card-tail-page-p3')))
+            .dy;
+        final firstTailTop = tester
+            .getTopLeft(
+              find.byKey(const Key('thread-blacklisted-post-tail-page-b1')),
+            )
+            .dy;
+        final secondTailTop = tester
+            .getTopLeft(
+              find.byKey(const Key('thread-blacklisted-post-tail-page-b2')),
+            )
+            .dy;
+        expect(firstTailTop, greaterThan(normalTop));
+        expect(secondTailTop, greaterThan(firstTailTop));
+      },
+    );
+
+    testWidgets('the last page down key returns to the first page topic body', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(411, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final requests = <int>[];
+      final repository = _FakeThreadRepository((tid, page, query) async {
+        requests.add(page);
+        return ApiSuccess(
+          page == 2
+              ? _threadDetailData(
+                  tid: tid,
+                  currentPage: 2,
+                  lastPage: 2,
+                  posts: [
+                    _post(
+                      pid: 'body-return-p21',
+                      author: 'bob',
+                      authorId: '2',
+                      number: 21,
+                      message: List.generate(
+                        40,
+                        (line) => '<p>末页回复段落 $line</p>',
+                      ).join(),
+                    ),
+                  ],
+                )
+              : _threadDetailData(
+                  tid: tid,
+                  currentPage: 1,
+                  lastPage: 2,
+                  posts: [
+                    _post(
+                      pid: 'body-return-p1',
+                      author: 'alice',
+                      authorId: '1',
+                      number: 1,
+                      isFirst: true,
+                      message: List.generate(
+                        20,
+                        (line) => '<p>首楼正文段落 $line</p>',
+                      ).join(),
+                    ),
+                    _post(
+                      pid: 'body-return-p2',
+                      author: 'bob',
+                      authorId: '2',
+                      number: 2,
+                      message: '<p>普通回复</p>',
+                    ),
+                  ],
+                ),
+        );
+      });
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          home: const ThreadDetailPage(
+            tid: '100',
+            subject: '测试主题',
+            initialPage: 2,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final list = find.byKey(const Key('thread-detail-list'));
+      await tester.drag(list, const Offset(0, -4000));
+      await tester.pumpAndSettle();
+      final next = find.byKey(const Key('thread-next-post-button'));
+      expect(
+        find.descendant(
+          of: next,
+          matching: find.byIcon(Icons.vertical_align_top),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+
+      expect(requests, <int>[2, 1]);
+      final firstPost = find.byKey(
+        const Key('thread-post-card-body-return-p1'),
+      );
+      expect(firstPost, findsOneWidget);
+      expect(
+        tester.getTopLeft(firstPost).dy,
+        closeTo(tester.getTopLeft(list).dy, 20),
+      );
+    });
+
+    testWidgets('one tap at the real page bottom loads the next page', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(411, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final requests = <int>[];
+      final repository = _FakeThreadRepository((tid, page, query) async {
+        requests.add(page);
+        return ApiSuccess(
+          page == 2
+              ? _threadDetailData(
+                  tid: tid,
+                  currentPage: 2,
+                  lastPage: 2,
+                  posts: [
+                    _post(
+                      pid: 'bottom-p21',
+                      author: 'bob',
+                      authorId: '2',
+                      number: 21,
+                      message: '<p>第二页回复</p>',
+                    ),
+                  ],
+                )
+              : _threadDetailData(
+                  tid: tid,
+                  currentPage: 1,
+                  lastPage: 2,
+                  posts: [
+                    _post(
+                      pid: 'bottom-p1',
+                      author: 'alice',
+                      authorId: '1',
+                      number: 1,
+                      isFirst: true,
+                      message: List.generate(
+                        30,
+                        (line) => '<p>首楼正文段落 $line</p>',
+                      ).join(),
+                    ),
+                    for (var index = 2; index <= 4; index++)
+                      _post(
+                        pid: 'bottom-p$index',
+                        author: 'bob',
+                        authorId: '2',
+                        number: index,
+                        message: '<p>短回复 $index</p>',
+                      ),
+                  ],
+                ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+      final list = find.byKey(const Key('thread-detail-list'));
+      await tester.drag(list, const Offset(0, -4000));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-post-card-bottom-p3')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('thread-next-post-button')));
+      await tester.pumpAndSettle();
+
+      expect(requests, <int>[1, 2]);
+    });
+
     testWidgets('first post topic tags render in the native tag bar', (
       tester,
     ) async {

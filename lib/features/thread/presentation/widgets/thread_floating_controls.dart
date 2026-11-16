@@ -93,7 +93,8 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
       animation: widget.navigation,
       builder: (context, _) {
         final singleEnabled = widget.hasContent && widget.navigation.canAdvance;
-        final singleLabel = widget.navigation.atEnd
+        final atEnd = widget.navigation.atEnd;
+        final singleLabel = atEnd
             ? l10n.threadControlsFirstPost
             : widget.navigation.forward
             ? l10n.threadControlsNextPost
@@ -103,23 +104,39 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
           widget.onFirstPost();
         }
 
-        Widget button(bool forward) => IconButton(
-          key: Key(
-            forward ? 'thread-next-post-button' : 'thread-previous-post-button',
-          ),
-          tooltip: forward
+        Widget button(bool forward) {
+          // 已确认全帖末端时，向下键与单键一样转为返回主题正文，图标、
+          // 读屏名称和执行动作共用同一状态。
+          final endAction = forward && atEnd;
+          final label = endAction
+              ? l10n.threadControlsFirstPost
+              : forward
               ? l10n.threadControlsNextPost
-              : l10n.threadControlsPreviousPost,
-          onPressed: widget.hasContent && widget.navigation.canMove(forward)
-              ? () => widget.navigation.move(
-                  forward,
-                  animate: !MediaQuery.disableAnimationsOf(context),
-                )
-              : null,
-          icon: Icon(
-            forward ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-          ),
-        );
+              : l10n.threadControlsPreviousPost;
+          return IconButton(
+            key: Key(
+              forward
+                  ? 'thread-next-post-button'
+                  : 'thread-previous-post-button',
+            ),
+            tooltip: label,
+            onPressed: widget.hasContent && widget.navigation.canMove(forward)
+                ? () => widget.navigation.move(
+                    forward,
+                    animate: !MediaQuery.disableAnimationsOf(context),
+                  )
+                : null,
+            icon: Icon(
+              endAction
+                  ? Icons.vertical_align_top
+                  : forward
+                  ? Icons.keyboard_arrow_down
+                  : Icons.keyboard_arrow_up,
+              semanticLabel: label,
+            ),
+          );
+        }
+
         return _surface(
           color,
           Row(
@@ -138,7 +155,7 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
                           padding: EdgeInsets.zero,
                         ),
                         onPressed: singleEnabled
-                            ? widget.navigation.atEnd
+                            ? atEnd
                                   ? firstPost
                                   : () => widget.navigation.advance(
                                       animate: !MediaQuery.disableAnimationsOf(
@@ -146,13 +163,13 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
                                       ),
                                     )
                             : null,
-                        onLongPress: !singleEnabled || widget.navigation.atEnd
+                        onLongPress: !singleEnabled || atEnd
                             ? null
                             : preferences.holdToFirstPost
                             ? firstPost
                             : widget.navigation.reverseDirection,
                         child: Icon(
-                          widget.navigation.atEnd
+                          atEnd
                               ? Icons.vertical_align_top
                               : widget.navigation.forward
                               ? Icons.keyboard_arrow_down

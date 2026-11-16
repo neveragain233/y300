@@ -388,6 +388,197 @@ void main() {
     expect(viewport.targets, ['p2']);
   });
 
+  testWidgets('a confirmed bottom crosses the page before any visible floor', (
+    tester,
+  ) async {
+    var loads = 0;
+    var page = _page();
+    final viewport = _Viewport()
+      ..visiblePostId = 'p1'
+      ..atBottom = true;
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => page,
+      loadAdjacent: (forward, current) async {
+        loads++;
+        page = _page(number: 2, pids: ['p4', 'p5']);
+        return true;
+      },
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    final pending = nav.move(true, animate: false);
+    expect(viewport.targets, isEmpty);
+    await _settle(tester, pending);
+    expect(loads, 1);
+    expect(viewport.targets, ['p4']);
+  });
+
+  testWidgets('a page whose replies were all moved still advances', (
+    tester,
+  ) async {
+    var loads = 0;
+    var page = const ThreadFloorPage(
+      owner: 'thread',
+      page: 1,
+      pids: <String>[],
+      hasPrevious: false,
+      hasNext: true,
+    );
+    final viewport = _Viewport()
+      ..visiblePostId = null
+      ..atBottom = true;
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => page,
+      loadAdjacent: (forward, current) async {
+        loads++;
+        page = const ThreadFloorPage(
+          owner: 'thread',
+          page: 2,
+          pids: <String>['p4'],
+          hasPrevious: true,
+          hasNext: false,
+        );
+        return true;
+      },
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    final pending = nav.move(true, animate: false);
+    await _settle(tester, pending);
+    expect(loads, 1);
+    expect(viewport.targets, ['p4']);
+  });
+
+  testWidgets('a pending reply tail never confirms the thread end', (
+    tester,
+  ) async {
+    var pendingRequests = 0;
+    var loads = 0;
+    var boundaries = 0;
+    final viewport = _Viewport()
+      ..visiblePostId = 'p3'
+      ..atBottom = true;
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => const ThreadFloorPage(
+        owner: 'thread',
+        page: 1,
+        pids: <String>['p1', 'p2', 'p3'],
+        hasPrevious: false,
+        hasNext: false,
+        topicPid: 'p1',
+        tailPending: true,
+      ),
+      loadAdjacent: (_, _) async {
+        loads++;
+        return false;
+      },
+      onBoundaryReached: () => boundaries++,
+      onTailPending: () => pendingRequests++,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.move(true, animate: false);
+    expect(pendingRequests, 1);
+    expect(loads, 0);
+    expect(boundaries, 0);
+    expect(viewport.targets, isEmpty);
+    expect(nav.atEnd, isFalse);
+  });
+
+  testWidgets('returning to the topic body loads the first page first', (
+    tester,
+  ) async {
+    var loads = 0;
+    var page = _page(number: 3, pids: ['p21', 'p22']);
+    final viewport = _Viewport()
+      ..visiblePostId = 'p22'
+      ..atBottom = true;
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => page,
+      loadAdjacent: (_, _) async => false,
+      loadTopicBody: (current) async {
+        loads++;
+        page = _page(number: 1, pids: ['p1', 'p2', 'p3']);
+        return true;
+      },
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    final pending = nav.move(true, animate: false);
+    await _settle(tester, pending);
+    expect(loads, 1);
+    expect(viewport.targets, ['p1']);
+  });
+
+  testWidgets('clearing the author filter while returning still lands', (
+    tester,
+  ) async {
+    var loads = 0;
+    var page = const ThreadFloorPage(
+      owner: 'author-filtered',
+      page: 2,
+      pids: <String>['a21', 'a22'],
+      hasPrevious: true,
+      hasNext: false,
+    );
+    final viewport = _Viewport()
+      ..visiblePostId = 'a22'
+      ..atBottom = true;
+    late final ThreadFloorNavigationCoordinator nav;
+    nav = ThreadFloorNavigationCoordinator(
+      readPage: () => page,
+      loadAdjacent: (_, _) async => false,
+      loadTopicBody: (current) async {
+        loads++;
+        page = const ThreadFloorPage(
+          owner: 'thread',
+          page: 1,
+          pids: <String>['p1', 'a2'],
+          hasPrevious: false,
+          hasNext: false,
+          topicPid: 'p1',
+        );
+        // 新状态到达后布局会刷新协调器；返回正文的加载窗口不能被取消。
+        nav.refresh();
+        return true;
+      },
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    final pending = nav.move(true, animate: false);
+    await _settle(tester, pending);
+    expect(loads, 1);
+    expect(viewport.targets, ['p1']);
+  });
+
+  testWidgets('last floor arrival is not a thread-end confirmation', (
+    tester,
+  ) async {
+    var boundaries = 0;
+    var page = const ThreadFloorPage(
+      owner: 'thread',
+      page: 1,
+      pids: <String>['p1', 'p2'],
+      hasPrevious: false,
+      hasNext: false,
+      topicPid: 'p1',
+    );
+    final viewport = _Viewport()..visiblePostId = 'p1';
+    final nav = ThreadFloorNavigationCoordinator(
+      readPage: () => page,
+      loadAdjacent: (_, _) async => false,
+      onBoundaryReached: () => boundaries++,
+    );
+    addTearDown(nav.dispose);
+    nav.bind(viewport);
+    await nav.move(true, animate: false);
+    expect(viewport.targets, ['p2']);
+    expect(boundaries, 0);
+    await nav.move(true, animate: false);
+    expect(viewport.pageEnds, 1);
+    expect(boundaries, 1);
+  });
+
   testWidgets(
     'failed adjacent page can be retried from the current last post',
     (tester) async {
@@ -427,11 +618,15 @@ ThreadFloorPage _page({
   pids: pids,
   hasPrevious: number > 1,
   hasNext: number == 1,
+  topicPid: number == 1 && pids.isNotEmpty ? pids.first : null,
 );
 
 class _Viewport implements ThreadFloorViewport {
   @override
   bool atBottom = false;
+
+  @override
+  void refreshEndGeometry() {}
   double scrollOffset = 0;
   bool postHeaderAbove = false;
   final imageStopsByPid = <String, List<ThreadFloorImageStop>>{};

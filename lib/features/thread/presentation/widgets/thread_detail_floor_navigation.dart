@@ -4,6 +4,7 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     implements ThreadFloorViewport {
   ThreadPostViewportAnchorCoordinator get _projectionAnchorCoordinator;
   GlobalKey get _viewportKey;
+  GlobalKey get _listEndKey;
   Object? get _renderLayoutIdentity;
   double get _repliesHeaderHeight;
   bool get _repliesHeaderPinned;
@@ -66,13 +67,15 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
   void _bindFloorNavigation() => widget.floorNavigation?.bind(this);
 
   void _updateFloorNavigation(ThreadDetailContent previous) {
-    final pids = widget.state.posts.map((post) => post.pid).toSet();
+    final pids = _sourcePidsFor(widget).toSet();
     _floorHeaderKeys.removeWhere((pid, _) => !pids.contains(pid));
     if (!identical(previous.floorNavigation, widget.floorNavigation)) {
       previous.floorNavigation?.unbind(this);
       _bindFloorNavigation();
     }
     if (!identical(previous.state.posts, widget.state.posts) ||
+        previous.showReplyTail != widget.showReplyTail ||
+        previous.replyTailRevision != widget.replyTailRevision ||
         previous.projection?.displayIdentity !=
             widget.projection?.displayIdentity) {
       _floorGeneration++;
@@ -230,14 +233,61 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     return current() && reached;
   }
 
+  bool _atBottom = false;
+
   @override
-  bool get atBottom {
+  bool get atBottom => _atBottom;
+
+  @override
+  void refreshEndGeometry() {
+    if (!mounted) return;
+    _atBottom = _measureEndGeometry();
+  }
+
+  bool _measureEndGeometry() {
     final controller = widget.scrollController;
     if (controller == null || controller.positions.length != 1) return false;
     final position = controller.position;
-    return position.hasContentDimensions &&
-        position.pixels >= position.maxScrollExtent - 1;
+    if (!position.hasContentDimensions) return false;
+    if (position.pixels < position.maxScrollExtent - _endTolerance) {
+      return false;
+    }
+    // 滚动边界之外还要核对末条目已经参与布局并落在视口内：惰性列表按陈旧
+    // 的最大滚动范围也会先报到底，末楼楼头可见更不能代替正文末端。
+    final bottom = _endEntryBottom();
+    if (bottom == null) return false;
+    final viewportBox = _viewportKey.currentContext?.findRenderObject();
+    if (viewportBox is! RenderBox ||
+        !viewportBox.attached ||
+        !viewportBox.hasSize) {
+      return false;
+    }
+    return bottom >= -_endTolerance &&
+        bottom <= viewportBox.size.height + _endTolerance;
   }
+
+  /// 末条目底边相对正文视口的位置；惰性列表重建窗口内全局键可能指向
+  /// 已退出 sliver 子列表的保留子项，此时无法换算坐标，按未确认处理。
+  double? _endEntryBottom() {
+    final end = _listEndKey.currentContext?.findRenderObject();
+    final viewport = _viewportKey.currentContext?.findRenderObject();
+    if (end is! RenderBox ||
+        viewport is! RenderBox ||
+        !end.attached ||
+        !end.hasSize ||
+        !viewport.attached ||
+        !viewport.hasSize) {
+      return null;
+    }
+    try {
+      final top = end.localToGlobal(Offset.zero, ancestor: viewport).dy;
+      return top + end.size.height;
+    } on Object {
+      return null;
+    }
+  }
+
+  static const double _endTolerance = 1;
 
   @override
   Future<bool> revealPageEnd({
@@ -265,10 +315,12 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
       isCurrent: current,
     );
     if (!current()) return false;
-    if (endpoint != ThreadDetailEndpointNavigationResult.unavailable) {
-      return endpoint == ThreadDetailEndpointNavigationResult.reached;
+    refreshEndGeometry();
+    if (endpoint == ThreadDetailEndpointNavigationResult.reached && atBottom) {
+      return true;
     }
-    // 完整正文保留原渲染实例，并在惰性列表布局后核对最新页尾。
+    // 完整正文保留原渲染实例，并在惰性列表布局后核对最新页尾。迟到图片和
+    // 分块测量会继续改变范围，因此按实测几何收敛而不是固定三帧。
     _projectionAnchorCoordinator.beginExplicitNavigation();
     _pendingChunkAnchor = null;
     if (animate) {
@@ -280,10 +332,12 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     } else {
       controller.jumpTo(controller.position.maxScrollExtent);
     }
-    for (var attempt = 0; attempt < 3; attempt++) {
+    for (var attempt = 0; attempt < 12; attempt++) {
       await WidgetsBinding.instance.endOfFrame;
       if (!current()) return false;
+      refreshEndGeometry();
       if (atBottom) return true;
+      if (!controller.hasClients) return false;
       controller.jumpTo(controller.position.maxScrollExtent);
     }
     return false;
@@ -295,7 +349,8 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     required bool animate,
     required bool Function() isCurrent,
   }) async {
-    if (!mounted || !widget.state.posts.any((post) => post.pid == pid)) {
+    if (!mounted ||
+        !_sourcePidsFor(widget).any((candidate) => candidate == pid)) {
       return false;
     }
     final generation = ++_floorGeneration;

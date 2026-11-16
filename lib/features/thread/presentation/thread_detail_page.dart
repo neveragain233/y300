@@ -10,6 +10,7 @@ import 'package:y300/features/thread/domain/models/thread_controls_preferences.d
 import 'package:y300/features/thread/presentation/thread_controls_preferences_controller.dart';
 import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/features/thread/presentation/services/thread_floor_navigation_coordinator.dart';
+import 'package:y300/features/thread/presentation/services/thread_reply_tail_coordinator.dart';
 import 'package:y300/features/thread/presentation/services/thread_controls_visibility_controller.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_floating_controls.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_page_picker_sheet.dart';
@@ -115,6 +116,11 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   late final ScrollController _scrollController;
   late final ThreadImageReaderReturnCoordinator _imageReaderReturnCoordinator;
   late final ThreadFloorNavigationCoordinator _floorNavigation;
+  late final ThreadReplyTailCoordinator _replyTail;
+  Set<String> _tailMembership = const <String>{};
+  int _blacklistRevision = 0;
+  String? _tailPageKey;
+  bool _tailAutoAttempted = false;
   final _controlsVisibility = ThreadControlsVisibilityController();
   double _controlsHeight = 56;
   double _repliesHeaderHeight = 0;
@@ -150,6 +156,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     _floorNavigation = ThreadFloorNavigationCoordinator(
       readPage: _readFloorPage,
       loadAdjacent: _loadAdjacentFloor,
+      loadTopicBody: _loadTopicBody,
       onStarted: () {
         ref
             .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
@@ -159,7 +166,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       },
       onConfirmed: () => _bodyReadingCoordinator?.markUserNavigation(),
       onBoundaryReached: () => unawaited(HapticFeedback.lightImpact()),
+      onTailPending: _retryReplyTail,
     );
+    _replyTail = ThreadReplyTailCoordinator(
+      readPage: (page) => ref
+          .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
+          .readReplyTailPage(page),
+    )..addListener(_handleReplyTailChanged);
     _bindReadingObserver();
   }
 
@@ -321,6 +334,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         !identical(oldWidget.initialHandoff, widget.initialHandoff) ||
         oldWidget.landing != widget.landing) {
       _postRouteSession.invalidate();
+      _replyTail.reset();
+      _tailAutoAttempted = false;
     }
     if (oldWidget.tid != widget.tid ||
         oldWidget.targetPid?.trim() != widget.targetPid?.trim() ||
@@ -344,6 +359,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     }
     _postRouteSession.dispose();
     _highlightClearTimer?.cancel();
+    _replyTail
+      ..removeListener(_handleReplyTailChanged)
+      ..dispose();
     _floorNavigation.dispose();
     _controlsVisibility.dispose();
     _imageReaderReturnCoordinator.dispose();
@@ -386,6 +404,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     ref.listen<AsyncValue<int>>(sessionRevisionProvider, (previous, next) {
       if (previous?.value != null && previous?.value != next.value) {
         _cancelFloorNavigation();
+        _replyTail.reset();
+        _tailAutoAttempted = false;
       }
     });
     final controller = ref.read(threadDetailControllerProvider(args).notifier);
@@ -464,7 +484,27 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         }
       },
     );
+    final tailMembership = _tailMembershipFor(
+      blacklistedUserIds,
+      allowedAuthorId: _allowedBlacklistedAuthorView
+          ? blacklistedTopicAuthorId
+          : null,
+    );
+    if (!_sameIds(_tailMembership, tailMembership)) {
+      _tailMembership = tailMembership;
+      _blacklistRevision++;
+    }
+    _replyTail.observe(
+      threadId: state.tid.trim().isEmpty ? widget.tid : state.tid,
+      queryIdentity: _queryIdentityFor(state),
+      page: state.currentPage,
+      posts: state.posts,
+      isLastPage: _isThreadLastPage(state),
+      blacklistedUserIds: _tailMembership,
+      pinnedPid: widget.targetPid,
+    );
     _floorNavigation.refresh();
+    _scheduleReplyTailCollection(state);
     _scheduleHistoryVisit(
       asyncState: asyncState,
       state: state,
@@ -505,7 +545,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             tooltip: l10n.threadControlsFirstPost,
             onPressed: asyncState.value == null || state.posts.isEmpty
                 ? null
-                : () => _goToFirstPost(controller),
+                : () => unawaited(_goToFirstPost(controller)),
             icon: const Icon(Icons.vertical_align_top),
           ),
           const AdaptiveDetailExpandAction(),
@@ -597,6 +637,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                       ? blacklistedTopicAuthorId
                                       : null,
                                   displayExtraCommentsByPostId: extraComments,
+                                  replyTailPosts: _replyTail.tailPosts,
+                                  movedBlacklistedPids: _replyTail.movedPids,
+                                  showReplyTail: _replyTail.showTail,
+                                  replyTailRevision: _replyTail.revision,
                                   scrollController: _scrollController,
                                   highlightPostPid: _highlightPostPid,
                                   targetPid: widget.targetPid,
@@ -778,7 +822,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                 )
               : null,
         ),
-        onFirstPost: () => _goToFirstPost(controller),
+        onFirstPost: () => unawaited(_goToFirstPost(controller)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButtonAnimator: FloatingActionButtonAnimator.noAnimation,
@@ -989,20 +1033,120 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         .read(threadDetailControllerProvider(_currentThreadArgs))
         .value;
     if (value == null) return null;
-    final entries = value.queryParameters.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final display = _displayPostsFor(value);
     return ThreadFloorPage(
       owner: (
         value.tid,
-        Uri(queryParameters: Map.fromEntries(entries)).query,
+        _queryIdentityFor(value),
         ref.read(sessionRevisionProvider).value ?? 0,
+        _blacklistRevision,
       ),
       page: value.currentPage,
-      pids: value.posts.map((post) => post.pid).toList(growable: false),
+      pids: display.map((post) => post.pid).toList(growable: false),
       hasPrevious: value.currentPage > 1,
       hasNext: value.hasMore,
       loading: value.isLoadingMore,
+      topicPid: _topicPidOf(display),
+      tailPending: _replyTail.tailPending,
     );
+  }
+
+  /// 与渲染条目共用同一份展示顺序：移走的被屏蔽回复只出现在末页尾部。
+  List<ThreadPost> _displayPostsFor(ThreadDetailPageState state) {
+    final moved = _replyTail.movedPids;
+    final posts = <ThreadPost>[
+      for (final post in state.posts)
+        if (!moved.contains(post.pid)) post,
+    ];
+    if (!_replyTail.showTail) return posts;
+    final seen = <String>{for (final post in posts) post.pid};
+    for (final post in _replyTail.tailPosts) {
+      if (seen.add(post.pid)) posts.add(post);
+    }
+    return posts;
+  }
+
+  String? _topicPidOf(List<ThreadPost> posts) {
+    for (final post in posts) {
+      if (post.isFirst || post.number == 1) return post.pid;
+    }
+    return null;
+  }
+
+  String _queryIdentityFor(ThreadDetailPageState state) {
+    final entries = state.queryParameters.entries.toList()
+      ..sort((left, right) => left.key.compareTo(right.key));
+    return Uri(queryParameters: Map.fromEntries(entries)).query;
+  }
+
+  static bool _isThreadLastPage(ThreadDetailPageState state) {
+    return state.currentPage > 0 &&
+        !state.isLoadingInitial &&
+        state.loadFailure == null &&
+        state.posts.isNotEmpty &&
+        !state.hasMore;
+  }
+
+  Set<String> _tailMembershipFor(
+    Set<String> blacklistedUserIds, {
+    required String? allowedAuthorId,
+  }) {
+    if (blacklistedUserIds.isEmpty) return const <String>{};
+    final allowed = allowedAuthorId?.trim();
+    if (allowed == null || allowed.isEmpty) {
+      return Set<String>.unmodifiable(blacklistedUserIds);
+    }
+    return Set<String>.unmodifiable(
+      blacklistedUserIds.where((id) => id != allowed),
+    );
+  }
+
+  static bool _sameIds(Set<String> left, Set<String> right) {
+    if (left.length != right.length) return false;
+    for (final value in left) {
+      if (!right.contains(value)) return false;
+    }
+    return true;
+  }
+
+  void _scheduleReplyTailCollection(ThreadDetailPageState state) {
+    if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) return;
+    if (_replyTail.hasFailure) return;
+    final tailKey =
+        '${state.tid}|${_queryIdentityFor(state)}|${state.currentPage}';
+    if (_tailPageKey != tailKey) {
+      _tailPageKey = tailKey;
+      _tailAutoAttempted = false;
+    }
+    if (_tailAutoAttempted) return;
+    _tailAutoAttempted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) {
+        return;
+      }
+      unawaited(_replyTail.ensureComplete(isCurrent: () => mounted));
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// 显式重试：末页末端操作发现尾部集合未完成时继续补取。
+  void _retryReplyTail() {
+    if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) {
+        return;
+      }
+      _tailAutoAttempted = true;
+      unawaited(
+        _replyTail.ensureComplete(isCurrent: () => mounted, force: true),
+      );
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  void _handleReplyTailChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   /// 返回图片阅读器时，若该楼位于回复栏下方，图片顶边让出吸顶栏高度。
@@ -1016,19 +1160,49 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     final firstIndex = posts.indexWhere((post) => post.isFirst);
     if (firstIndex < 0) return _repliesHeaderHeight;
     final index = posts.indexWhere((post) => post.pid == pid);
-    return index > firstIndex ? _repliesHeaderHeight : 0;
+    if (index >= 0) return index > firstIndex ? _repliesHeaderHeight : 0;
+    return _replyTail.tailPosts.any((post) => post.pid == pid)
+        ? _repliesHeaderHeight
+        : 0;
   }
 
-  void _goToFirstPost(ThreadDetailController controller) {
-    // 单键与顶栏共用回首楼动作；操作后单键回到向下。
+  Future<void> _goToFirstPost(ThreadDetailController controller) async {
+    // 顶栏、单键与双键向下共用“返回第一页主题正文”；过滤排除首楼时先解除
+    // 作者过滤，跨页加载失败保留原页和原位置。
     _floorNavigation.resetDirection();
-    if (_readFloorPage()?.page == 1) {
-      _floorNavigation.firstPost(
-        animate: !MediaQuery.disableAnimationsOf(context),
+    final current = ref
+        .read(threadDetailControllerProvider(_currentThreadArgs))
+        .value;
+    if (current != null && current.isOnlyAuthorView) {
+      await _runReadingViewAction(
+        controller.openAllPosts,
+        userNavigation: true,
       );
-    } else {
-      unawaited(_runPageActionAndScrollTop(() => controller.loadPage(1)));
+      if (!mounted) return;
     }
+    await _floorNavigation.firstPost(
+      animate: !MediaQuery.disableAnimationsOf(context),
+    );
+  }
+
+  Future<bool> _loadTopicBody(bool Function() current) async {
+    var loaded = false;
+    await _runReadingViewAction(
+      () async {
+        if (!current() || !mounted) return;
+        final provider = threadDetailControllerProvider(_currentThreadArgs);
+        final controller = ref.read(provider.notifier);
+        // “只看该作者”排除主题正文时先解除作者过滤，正倒序偏好保留。
+        if (ref.read(provider).value?.isOnlyAuthorView == true) {
+          await controller.openAllPosts();
+          if (!mounted || !current()) return;
+        }
+        loaded = await controller.loadTopicBody(isCurrent: current);
+      },
+      userNavigation: true,
+      preserveFloorNavigation: true,
+    );
+    return loaded;
   }
 
   Future<bool> _loadAdjacentFloor(bool forward, bool Function() current) async {

@@ -1,4 +1,5 @@
 import 'package:y300/features/thread/presentation/services/thread_post_comment_service.dart';
+import 'package:y300/features/thread/presentation/services/thread_reply_tail_coordinator.dart';
 
 import 'dart:async';
 
@@ -303,6 +304,32 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
     final page = forward
         ? _pageFromUrl(current.nextPageUrl) ?? current.currentPage + 1
         : _pageFromUrl(current.previousPageUrl) ?? current.currentPage - 1;
+    return _loadFloorPage(page, current: current, isCurrent: isCurrent);
+  }
+
+  /// Loads the server's first page for returning to the topic body.
+  ///
+  /// A failed read keeps the visible page and position; the caller only reveals
+  /// the first post after this call confirms the actual page and floor.
+  Future<bool> loadTopicBody({required bool Function() isCurrent}) async {
+    final current = state.value;
+    if (current == null || current.isLoadingMore || !isCurrent()) return false;
+    if (current.currentPage == 1) {
+      return _containsTopicBody(current.posts);
+    }
+    final loaded = await _loadFloorPage(
+      1,
+      current: current,
+      isCurrent: isCurrent,
+    );
+    return loaded && _containsTopicBody(state.value?.posts ?? const []);
+  }
+
+  Future<bool> _loadFloorPage(
+    int page, {
+    required ThreadDetailPageState current,
+    required bool Function() isCurrent,
+  }) async {
     final operation = _replaceWithPage(
       page: page,
       shouldApply: isCurrent,
@@ -333,6 +360,37 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
         isCurrent() &&
         state.value?.currentPage == page &&
         state.value?.loadFailure == null;
+  }
+
+  bool _containsTopicBody(List<ThreadPost> posts) {
+    return posts.any((post) => post.isFirst || post.number == 1);
+  }
+
+  /// Reads one page for the blocked-reply tail without touching visible state.
+  ///
+  /// The caller owns cancellation: late results are rejected by the tail
+  /// coordinator's generation instead of mutating this controller.
+  Future<ThreadReplyTailPage?> readReplyTailPage(int page) async {
+    final current = state.value;
+    if (!ref.mounted || current == null || page <= 0) return null;
+    final tid = current.tid.trim().isEmpty ? _args.tid : current.tid;
+    final result = await _readRepository().getThreadDetail(
+      tid: tid,
+      page: page,
+      query: ThreadDetailQuery.fromLegacyParameters(current.queryParameters),
+    );
+    if (!ref.mounted) return null;
+    if (result
+        case DataReadSuccess<ThreadDetailData, ThreadDetailReadCapabilities>(
+          :final data,
+        )) {
+      return ThreadReplyTailPage(
+        page: data.currentPage,
+        posts: data.posts,
+        hasMore: data.hasMore,
+      );
+    }
+    return null;
   }
 
   void cancelFloorPageLoad() {

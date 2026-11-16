@@ -60,6 +60,8 @@ mixin _ThreadDetailEndpointNavigation on ConsumerState<ThreadDetailContent> {
         );
     if (ownerChanged ||
         postsChanged ||
+        previous.showReplyTail != widget.showReplyTail ||
+        previous.replyTailRevision != widget.replyTailRevision ||
         previous.projection?.displayIdentity !=
             widget.projection?.displayIdentity) {
       _endpointGeneration++;

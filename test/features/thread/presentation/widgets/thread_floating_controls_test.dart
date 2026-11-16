@@ -426,6 +426,9 @@ Widget _app(
 class _Viewport implements ThreadFloorViewport {
   @override
   bool atBottom = false;
+
+  @override
+  void refreshEndGeometry() {}
   @override
   double? get scrollPixels => 0;
 
