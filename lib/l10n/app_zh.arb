@@ -671,7 +671,27 @@
   },
   "libraryDetailUseTagAsCatalogFailed": "设置目录失败",
   "libraryDetailManageChapters": "管理章节",
-  "libraryDetailSetCustomCover": "自定义封面",
+  "libraryDetailSetCustomCover": "从相册选择封面",
+  "libraryDetailSetCoverFromPost": "从帖子图片选择",
+  "libraryDetailCoverCandidatesTitle": "从帖子图片选择封面",
+  "libraryDetailCoverCandidatesEmpty": "这个帖子里没有可用作封面的图片",
+  "libraryDetailCoverCandidatesLoadFailed": "帖子图片读取失败",
+  "libraryDetailCoverCandidateSemantics": "第 {index} 张图片，用作封面",
+  "@libraryDetailCoverCandidateSemantics": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDetailCoverCandidateImportFailed": "读取封面图片失败：{error}",
+  "@libraryDetailCoverCandidateImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailRemoveCustomCover": "取消封面",
   "libraryDetailEditIntro": "编辑简介",
   "libraryDetailIntroHint": "请输入简介",
@@ -882,6 +902,8 @@
   "libraryCoverFocalTitle": "调整封面焦点",
   "libraryCoverFocalHelp": "拖动选框选择封面取景区域，原图不会被裁剪",
   "libraryCoverImageLoadFailed": "图片加载失败",
+  "libraryCoverRetry": "重试",
+  "libraryCoverLoadFailed": "封面加载失败，点按重试",
   "libraryCoverCenter": "居中",
 
   "libraryErrorRedactedLink": "[链接已隐藏]",
@@ -920,6 +942,9 @@
   "readerBackgroundGray": "灰",
   "readerPageSpacing": "页间距",
   "readerPageIndicator": "页码浮层",
+  "readerPagedBackgroundBlackNote": "翻页模式固定黑色背景；背景选择在滚动模式生效。",
+  "readerThumbnailPageSemantics": "第 {current} 页，共 {total} 页",
+  "@readerThumbnailPageSemantics": {"placeholders":{"current":{"type":"int"},"total":{"type":"int"}}},
   "readerNoImages": "没有可阅读图片",
   "readerImageLoadFailed": "图片加载失败",
   "readerTailContent": "末尾内容",
@@ -1089,6 +1114,24 @@
   "novelThemeSepia": "护眼",
   "novelThemeDark": "深色",
   "novelThemeFollowApp": "跟随应用",
+  "novelThemePaperWhite": "纸白",
+  "novelThemeCream": "米黄",
+  "novelThemeSage": "浅绿",
+  "novelThemeGray": "灰色",
+  "novelThemeCharcoal": "深灰",
+  "novelThemeInk": "黑色",
+  "novelBodyColor": "正文颜色",
+  "novelBodyColorFollowReadingTheme": "跟随阅读配色",
+  "novelBodyColorPreserveAuthor": "保留原帖颜色",
+  "novelBodyBrightness": "正文亮度",
+  "novelBackgroundTexture": "背景纹理",
+  "novelTextureSolid": "纯色",
+  "novelTexturePaper": "纸纹",
+  "novelTextureGrain": "细颗粒",
+  "novelParagraphIndent": "段落缩进",
+  "novelParagraphIndentIncrease": "增加段落缩进",
+  "novelParagraphIndentKeep": "保持原状",
+  "novelParagraphIndentRemove": "去除段落缩进",
   "novelReading": "阅读",
   "novelReadingMode": "阅读模式",
   "novelConversionMode": "简繁",

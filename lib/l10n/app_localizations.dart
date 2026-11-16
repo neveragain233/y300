@@ -2328,8 +2328,44 @@ abstract class AppLocalizations {
   /// No description provided for @libraryDetailSetCustomCover.
   ///
   /// In zh, this message translates to:
-  /// **'自定义封面'**
+  /// **'从相册选择封面'**
   String get libraryDetailSetCustomCover;
+
+  /// No description provided for @libraryDetailSetCoverFromPost.
+  ///
+  /// In zh, this message translates to:
+  /// **'从帖子图片选择'**
+  String get libraryDetailSetCoverFromPost;
+
+  /// No description provided for @libraryDetailCoverCandidatesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'从帖子图片选择封面'**
+  String get libraryDetailCoverCandidatesTitle;
+
+  /// No description provided for @libraryDetailCoverCandidatesEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个帖子里没有可用作封面的图片'**
+  String get libraryDetailCoverCandidatesEmpty;
+
+  /// No description provided for @libraryDetailCoverCandidatesLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子图片读取失败'**
+  String get libraryDetailCoverCandidatesLoadFailed;
+
+  /// No description provided for @libraryDetailCoverCandidateSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 张图片，用作封面'**
+  String libraryDetailCoverCandidateSemantics(int index);
+
+  /// No description provided for @libraryDetailCoverCandidateImportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'读取封面图片失败：{error}'**
+  String libraryDetailCoverCandidateImportFailed(String error);
 
   /// No description provided for @libraryDetailRemoveCustomCover.
   ///
@@ -3155,6 +3191,18 @@ abstract class AppLocalizations {
   /// **'图片加载失败'**
   String get libraryCoverImageLoadFailed;
 
+  /// No description provided for @libraryCoverRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get libraryCoverRetry;
+
+  /// No description provided for @libraryCoverLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'封面加载失败，点按重试'**
+  String get libraryCoverLoadFailed;
+
   /// No description provided for @libraryCoverCenter.
   ///
   /// In zh, this message translates to:
@@ -3316,6 +3364,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'页码浮层'**
   String get readerPageIndicator;
+
+  /// No description provided for @readerPagedBackgroundBlackNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻页模式固定黑色背景；背景选择在滚动模式生效。'**
+  String get readerPagedBackgroundBlackNote;
+
+  /// No description provided for @readerThumbnailPageSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {current} 页，共 {total} 页'**
+  String readerThumbnailPageSemantics(int current, int total);
 
   /// No description provided for @readerNoImages.
   ///
@@ -4184,6 +4244,114 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'跟随应用'**
   String get novelThemeFollowApp;
+
+  /// No description provided for @novelThemePaperWhite.
+  ///
+  /// In zh, this message translates to:
+  /// **'纸白'**
+  String get novelThemePaperWhite;
+
+  /// No description provided for @novelThemeCream.
+  ///
+  /// In zh, this message translates to:
+  /// **'米黄'**
+  String get novelThemeCream;
+
+  /// No description provided for @novelThemeSage.
+  ///
+  /// In zh, this message translates to:
+  /// **'浅绿'**
+  String get novelThemeSage;
+
+  /// No description provided for @novelThemeGray.
+  ///
+  /// In zh, this message translates to:
+  /// **'灰色'**
+  String get novelThemeGray;
+
+  /// No description provided for @novelThemeCharcoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'深灰'**
+  String get novelThemeCharcoal;
+
+  /// No description provided for @novelThemeInk.
+  ///
+  /// In zh, this message translates to:
+  /// **'黑色'**
+  String get novelThemeInk;
+
+  /// No description provided for @novelBodyColor.
+  ///
+  /// In zh, this message translates to:
+  /// **'正文颜色'**
+  String get novelBodyColor;
+
+  /// No description provided for @novelBodyColorFollowReadingTheme.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随阅读配色'**
+  String get novelBodyColorFollowReadingTheme;
+
+  /// No description provided for @novelBodyColorPreserveAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留原帖颜色'**
+  String get novelBodyColorPreserveAuthor;
+
+  /// No description provided for @novelBodyBrightness.
+  ///
+  /// In zh, this message translates to:
+  /// **'正文亮度'**
+  String get novelBodyBrightness;
+
+  /// No description provided for @novelBackgroundTexture.
+  ///
+  /// In zh, this message translates to:
+  /// **'背景纹理'**
+  String get novelBackgroundTexture;
+
+  /// No description provided for @novelTextureSolid.
+  ///
+  /// In zh, this message translates to:
+  /// **'纯色'**
+  String get novelTextureSolid;
+
+  /// No description provided for @novelTexturePaper.
+  ///
+  /// In zh, this message translates to:
+  /// **'纸纹'**
+  String get novelTexturePaper;
+
+  /// No description provided for @novelTextureGrain.
+  ///
+  /// In zh, this message translates to:
+  /// **'细颗粒'**
+  String get novelTextureGrain;
+
+  /// No description provided for @novelParagraphIndent.
+  ///
+  /// In zh, this message translates to:
+  /// **'段落缩进'**
+  String get novelParagraphIndent;
+
+  /// No description provided for @novelParagraphIndentIncrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加段落缩进'**
+  String get novelParagraphIndentIncrease;
+
+  /// No description provided for @novelParagraphIndentKeep.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持原状'**
+  String get novelParagraphIndentKeep;
+
+  /// No description provided for @novelParagraphIndentRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'去除段落缩进'**
+  String get novelParagraphIndentRemove;
 
   /// No description provided for @novelReading.
   ///

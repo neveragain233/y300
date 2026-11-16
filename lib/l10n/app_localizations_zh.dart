@@ -1403,7 +1403,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDetailManageChapters => '管理章节';
 
   @override
-  String get libraryDetailSetCustomCover => '自定义封面';
+  String get libraryDetailSetCustomCover => '从相册选择封面';
+
+  @override
+  String get libraryDetailSetCoverFromPost => '从帖子图片选择';
+
+  @override
+  String get libraryDetailCoverCandidatesTitle => '从帖子图片选择封面';
+
+  @override
+  String get libraryDetailCoverCandidatesEmpty => '这个帖子里没有可用作封面的图片';
+
+  @override
+  String get libraryDetailCoverCandidatesLoadFailed => '帖子图片读取失败';
+
+  @override
+  String libraryDetailCoverCandidateSemantics(int index) {
+    return '第 $index 张图片，用作封面';
+  }
+
+  @override
+  String libraryDetailCoverCandidateImportFailed(String error) {
+    return '读取封面图片失败：$error';
+  }
 
   @override
   String get libraryDetailRemoveCustomCover => '取消封面';
@@ -1942,6 +1964,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryCoverImageLoadFailed => '图片加载失败';
 
   @override
+  String get libraryCoverRetry => '重试';
+
+  @override
+  String get libraryCoverLoadFailed => '封面加载失败，点按重试';
+
+  @override
   String get libraryCoverCenter => '居中';
 
   @override
@@ -2025,6 +2053,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerPageIndicator => '页码浮层';
+
+  @override
+  String get readerPagedBackgroundBlackNote => '翻页模式固定黑色背景；背景选择在滚动模式生效。';
+
+  @override
+  String readerThumbnailPageSemantics(int current, int total) {
+    return '第 $current 页，共 $total 页';
+  }
 
   @override
   String get readerNoImages => '没有可阅读图片';
@@ -2537,6 +2573,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get novelThemeFollowApp => '跟随应用';
+
+  @override
+  String get novelThemePaperWhite => '纸白';
+
+  @override
+  String get novelThemeCream => '米黄';
+
+  @override
+  String get novelThemeSage => '浅绿';
+
+  @override
+  String get novelThemeGray => '灰色';
+
+  @override
+  String get novelThemeCharcoal => '深灰';
+
+  @override
+  String get novelThemeInk => '黑色';
+
+  @override
+  String get novelBodyColor => '正文颜色';
+
+  @override
+  String get novelBodyColorFollowReadingTheme => '跟随阅读配色';
+
+  @override
+  String get novelBodyColorPreserveAuthor => '保留原帖颜色';
+
+  @override
+  String get novelBodyBrightness => '正文亮度';
+
+  @override
+  String get novelBackgroundTexture => '背景纹理';
+
+  @override
+  String get novelTextureSolid => '纯色';
+
+  @override
+  String get novelTexturePaper => '纸纹';
+
+  @override
+  String get novelTextureGrain => '细颗粒';
+
+  @override
+  String get novelParagraphIndent => '段落缩进';
+
+  @override
+  String get novelParagraphIndentIncrease => '增加段落缩进';
+
+  @override
+  String get novelParagraphIndentKeep => '保持原状';
+
+  @override
+  String get novelParagraphIndentRemove => '去除段落缩进';
 
   @override
   String get novelReading => '阅读';
@@ -7502,7 +7592,29 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryDetailManageChapters => '管理章節';
 
   @override
-  String get libraryDetailSetCustomCover => '自訂封面';
+  String get libraryDetailSetCustomCover => '從相冊選擇封面';
+
+  @override
+  String get libraryDetailSetCoverFromPost => '從帖子圖片選擇';
+
+  @override
+  String get libraryDetailCoverCandidatesTitle => '從帖子圖片選擇封面';
+
+  @override
+  String get libraryDetailCoverCandidatesEmpty => '這個帖子裡沒有可用作封面的圖片';
+
+  @override
+  String get libraryDetailCoverCandidatesLoadFailed => '帖子圖片讀取失敗';
+
+  @override
+  String libraryDetailCoverCandidateSemantics(int index) {
+    return '第 $index 張圖片，用作封面';
+  }
+
+  @override
+  String libraryDetailCoverCandidateImportFailed(String error) {
+    return '讀取封面圖片失敗：$error';
+  }
 
   @override
   String get libraryDetailRemoveCustomCover => '取消封面';
@@ -8041,6 +8153,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryCoverImageLoadFailed => '圖片載入失敗';
 
   @override
+  String get libraryCoverRetry => '重試';
+
+  @override
+  String get libraryCoverLoadFailed => '封面載入失敗，點按重試';
+
+  @override
   String get libraryCoverCenter => '置中';
 
   @override
@@ -8124,6 +8242,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerPageIndicator => '頁碼浮層';
+
+  @override
+  String get readerPagedBackgroundBlackNote => '翻頁模式固定黑色背景；背景選擇在捲動模式生效。';
+
+  @override
+  String readerThumbnailPageSemantics(int current, int total) {
+    return '第 $current 頁，共 $total 頁';
+  }
 
   @override
   String get readerNoImages => '沒有可閱讀圖片';
@@ -8636,6 +8762,60 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get novelThemeFollowApp => '跟隨應用程式';
+
+  @override
+  String get novelThemePaperWhite => '紙白';
+
+  @override
+  String get novelThemeCream => '米黃';
+
+  @override
+  String get novelThemeSage => '淺綠';
+
+  @override
+  String get novelThemeGray => '灰色';
+
+  @override
+  String get novelThemeCharcoal => '深灰';
+
+  @override
+  String get novelThemeInk => '黑色';
+
+  @override
+  String get novelBodyColor => '正文顏色';
+
+  @override
+  String get novelBodyColorFollowReadingTheme => '跟隨閱讀配色';
+
+  @override
+  String get novelBodyColorPreserveAuthor => '保留原帖顏色';
+
+  @override
+  String get novelBodyBrightness => '正文亮度';
+
+  @override
+  String get novelBackgroundTexture => '背景紋理';
+
+  @override
+  String get novelTextureSolid => '純色';
+
+  @override
+  String get novelTexturePaper => '紙紋';
+
+  @override
+  String get novelTextureGrain => '細顆粒';
+
+  @override
+  String get novelParagraphIndent => '段落縮進';
+
+  @override
+  String get novelParagraphIndentIncrease => '增加段落縮進';
+
+  @override
+  String get novelParagraphIndentKeep => '保持原狀';
+
+  @override
+  String get novelParagraphIndentRemove => '去除段落縮進';
 
   @override
   String get novelReading => '閱讀';
