@@ -799,6 +799,9 @@ class _NovelReaderHtmlPagedSurfaceState
     final coordinatorSignature = (
       theme: widget.theme.signature,
       preferences: htmlPreferences,
+      // The coordinator owns the paragraph indent mode for its whole plan;
+      // a mode change must rebuild it, not just the pagination key.
+      paragraphIndent: widget.preferences.paragraphIndent,
       sourceId: widget.episode.episodeId,
       threadId: widget.episode.sourceTid,
       imageOwner: widget.episode.sourceTid,

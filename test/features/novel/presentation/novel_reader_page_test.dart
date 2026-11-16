@@ -2126,6 +2126,65 @@ void main() {
     },
   );
 
+  testWidgets('paragraph indent setting reflows paged body in place', (
+    tester,
+  ) async {
+    final repository = _FakeNovelRepository(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        flowMode: NovelReaderFlowMode.pagedLtr,
+      ),
+      firstRawHtml:
+          '<div align="left"><font>&nbsp; &nbsp; &nbsp; &nbsp;第一段正文。</font></div>'
+          '<div align="left"><font>第二段正文。</font></div>',
+    );
+    await tester.pumpWidget(_buildReaderApp(repository: repository));
+    await _pumpPagedCacheReady(tester);
+
+    String pageText() => tester
+        .widgetList<RichText>(
+          find.descendant(
+            of: find.byKey(const Key('novel-reader-paged-page-view')),
+            matching: find.byType(RichText),
+          ),
+        )
+        .map((widget) => widget.text.toPlainText())
+        .join();
+
+    await _showReaderMenu(tester);
+    await tester.tap(
+      find.byKey(const Key('shared-reader-bottom-action-display')),
+    );
+    await tester.pumpAndSettle();
+    final strings = AppLocalizations.of(
+      tester.element(find.byType(NovelReaderPage)),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('novel-reader-paragraph-indent-control')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(strings.novelParagraphIndentRemove));
+    for (var frame = 0; frame < 160; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      if (pageText().startsWith('第一段正文。')) break;
+    }
+    expect(pageText(), contains('第一段正文。第二段正文。'));
+    expect(pageText(), isNot(contains('\u00a0')));
+
+    await tester.tap(find.text(strings.novelParagraphIndentIncrease));
+    for (var frame = 0; frame < 160; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      if (pageText().startsWith('\u3000\u3000第一段正文。')) break;
+    }
+    expect(pageText(), contains('\u3000\u3000第一段正文。\u3000\u3000第二段正文。'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(
+      repository.latestPreferences?.paragraphIndent,
+      NovelReaderParagraphIndentMode.increase,
+    );
+  });
+
   testWidgets('NovelReaderPage persists the safe area display switch', (
     tester,
   ) async {

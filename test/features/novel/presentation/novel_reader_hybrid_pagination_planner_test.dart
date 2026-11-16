@@ -48,6 +48,24 @@ void main() {
     },
   );
 
+  test('isolated incremental planner keeps the paragraph indent mode', () {
+    final planner = DefaultNovelReaderHybridPaginationPlanner(
+      measureAdapter: _RecordingMeasureAdapter(),
+      preferences: _preferences,
+      theme: _theme,
+      baseStyle: _baseStyle,
+      paragraphIndent: NovelReaderParagraphIndentMode.increase,
+    );
+
+    final isolated = planner.createIsolated();
+
+    expect(isolated, isA<DefaultNovelReaderHybridPaginationPlanner>());
+    expect(
+      (isolated as DefaultNovelReaderHybridPaginationPlanner).paragraphIndent,
+      NovelReaderParagraphIndentMode.increase,
+    );
+  });
+
   test('block after an inline heading starts its own indented paragraph', () async {
     final chapter = await _prepare(
       '<strong>episode 348</strong>'

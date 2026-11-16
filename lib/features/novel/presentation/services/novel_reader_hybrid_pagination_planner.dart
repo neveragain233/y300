@@ -1325,6 +1325,7 @@ final class DefaultNovelReaderHybridPaginationPlanner
       atomClassifier: atomClassifier,
       layoutPolicyResolver: layoutPolicyResolver,
       textRunExtractor: textRunExtractor,
+      paragraphIndent: paragraphIndent,
       complexBlockEngine: complexBlockEngine,
       complexSearchBudget: complexSearchBudget,
       flowableComplexEngine: flowableComplexEngine,
