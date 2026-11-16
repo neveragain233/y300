@@ -117,6 +117,17 @@ class _NovelReaderDisplaySettingsSheetState
                       _draft.copyWith(pagePadding: _snap(value, 1)),
                     ),
                   ),
+                  ReaderSegmentControl<NovelReaderParagraphIndentMode>(
+                    key: const Key('novel-reader-paragraph-indent-control'),
+                    scrollable: true,
+                    label: l10n.novelParagraphIndent,
+                    value: _draft.paragraphIndent,
+                    values: NovelReaderParagraphIndentMode.values,
+                    labelBuilder: (value) => _paragraphIndentLabel(l10n, value),
+                    onChanged: (value) => _applyPreferences(
+                      _draft.copyWith(paragraphIndent: value),
+                    ),
+                  ),
                 ],
               ),
               _SettingsSection(
@@ -128,54 +139,48 @@ class _NovelReaderDisplaySettingsSheetState
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _ThemeChip(
-                          key: const Key('novel-theme-follow-app'),
-                          label: l10n.novelThemeFollowApp,
-                          selected:
-                              _draft.themePreset ==
-                              NovelReaderThemePreset.followApp,
-                          onSelected: () => _applyPreferences(
-                            _draft.copyWith(
-                              themePreset: NovelReaderThemePreset.followApp,
+                        for (final preset in NovelReaderThemePreset.values)
+                          _ThemeChip(
+                            key: Key('novel-theme-${_themeKey(preset)}'),
+                            label: _themeLabel(l10n, preset),
+                            selected: _draft.themePreset == preset,
+                            onSelected: () => _applyPreferences(
+                              _draft.copyWith(themePreset: preset),
                             ),
                           ),
-                        ),
-                        _ThemeChip(
-                          key: const Key('novel-theme-light'),
-                          label: l10n.novelThemeLight,
-                          selected:
-                              _draft.themePreset ==
-                              NovelReaderThemePreset.light,
-                          onSelected: () => _applyPreferences(
-                            _draft.copyWith(
-                              themePreset: NovelReaderThemePreset.light,
-                            ),
-                          ),
-                        ),
-                        _ThemeChip(
-                          key: const Key('novel-theme-sepia'),
-                          label: l10n.novelThemeSepia,
-                          selected:
-                              _draft.themePreset ==
-                              NovelReaderThemePreset.sepia,
-                          onSelected: () => _applyPreferences(
-                            _draft.copyWith(
-                              themePreset: NovelReaderThemePreset.sepia,
-                            ),
-                          ),
-                        ),
-                        _ThemeChip(
-                          key: const Key('novel-theme-dark'),
-                          label: l10n.novelThemeDark,
-                          selected:
-                              _draft.themePreset == NovelReaderThemePreset.dark,
-                          onSelected: () => _applyPreferences(
-                            _draft.copyWith(
-                              themePreset: NovelReaderThemePreset.dark,
-                            ),
-                          ),
-                        ),
                       ],
+                    ),
+                  ),
+                  _SettingsSlider(
+                    key: const Key('novel-reader-body-brightness-slider'),
+                    label: l10n.novelBodyBrightness,
+                    value: _draft.bodyBrightness,
+                    min: NovelReaderPreferences.minimumBodyBrightness,
+                    max: NovelReaderPreferences.maximumBodyBrightness,
+                    displayValue: '${(_draft.bodyBrightness * 100).round()}%',
+                    onChanged: (value) => _applyPreferences(
+                      _draft.copyWith(bodyBrightness: _snap(value, 0.05)),
+                    ),
+                  ),
+                  ReaderSegmentControl<NovelReaderBackgroundTexture>(
+                    key: const Key('novel-reader-background-texture-control'),
+                    label: l10n.novelBackgroundTexture,
+                    value: _draft.backgroundTexture,
+                    values: NovelReaderBackgroundTexture.values,
+                    labelBuilder: (value) => _textureLabel(l10n, value),
+                    onChanged: (value) => _applyPreferences(
+                      _draft.copyWith(backgroundTexture: value),
+                    ),
+                  ),
+                  ReaderSegmentControl<NovelReaderBodyColorMode>(
+                    key: const Key('novel-reader-body-color-mode-control'),
+                    scrollable: true,
+                    label: l10n.novelBodyColor,
+                    value: _draft.bodyColorMode,
+                    values: NovelReaderBodyColorMode.values,
+                    labelBuilder: (value) => _bodyColorLabel(l10n, value),
+                    onChanged: (value) => _applyPreferences(
+                      _draft.copyWith(bodyColorMode: value),
                     ),
                   ),
                 ],
@@ -283,6 +288,93 @@ class _NovelReaderDisplaySettingsSheetState
         ),
       ),
     );
+  }
+
+  String _themeKey(NovelReaderThemePreset preset) {
+    switch (preset) {
+      case NovelReaderThemePreset.followApp:
+        return 'follow-app';
+      case NovelReaderThemePreset.light:
+        return 'light';
+      case NovelReaderThemePreset.paperWhite:
+        return 'paper-white';
+      case NovelReaderThemePreset.cream:
+        return 'cream';
+      case NovelReaderThemePreset.sepia:
+        return 'sepia';
+      case NovelReaderThemePreset.sage:
+        return 'sage';
+      case NovelReaderThemePreset.gray:
+        return 'gray';
+      case NovelReaderThemePreset.dark:
+        return 'dark';
+      case NovelReaderThemePreset.charcoal:
+        return 'charcoal';
+      case NovelReaderThemePreset.ink:
+        return 'ink';
+    }
+  }
+
+  String _themeLabel(AppLocalizations l10n, NovelReaderThemePreset preset) {
+    switch (preset) {
+      case NovelReaderThemePreset.followApp:
+        return l10n.novelThemeFollowApp;
+      case NovelReaderThemePreset.light:
+        return l10n.novelThemeLight;
+      case NovelReaderThemePreset.paperWhite:
+        return l10n.novelThemePaperWhite;
+      case NovelReaderThemePreset.cream:
+        return l10n.novelThemeCream;
+      case NovelReaderThemePreset.sepia:
+        return l10n.novelThemeSepia;
+      case NovelReaderThemePreset.sage:
+        return l10n.novelThemeSage;
+      case NovelReaderThemePreset.gray:
+        return l10n.novelThemeGray;
+      case NovelReaderThemePreset.dark:
+        return l10n.novelThemeDark;
+      case NovelReaderThemePreset.charcoal:
+        return l10n.novelThemeCharcoal;
+      case NovelReaderThemePreset.ink:
+        return l10n.novelThemeInk;
+    }
+  }
+
+  String _textureLabel(
+    AppLocalizations l10n,
+    NovelReaderBackgroundTexture texture,
+  ) {
+    switch (texture) {
+      case NovelReaderBackgroundTexture.solid:
+        return l10n.novelTextureSolid;
+      case NovelReaderBackgroundTexture.paper:
+        return l10n.novelTexturePaper;
+      case NovelReaderBackgroundTexture.grain:
+        return l10n.novelTextureGrain;
+    }
+  }
+
+  String _bodyColorLabel(AppLocalizations l10n, NovelReaderBodyColorMode mode) {
+    switch (mode) {
+      case NovelReaderBodyColorMode.followReadingTheme:
+        return l10n.novelBodyColorFollowReadingTheme;
+      case NovelReaderBodyColorMode.preserveAuthorColors:
+        return l10n.novelBodyColorPreserveAuthor;
+    }
+  }
+
+  String _paragraphIndentLabel(
+    AppLocalizations l10n,
+    NovelReaderParagraphIndentMode mode,
+  ) {
+    switch (mode) {
+      case NovelReaderParagraphIndentMode.increase:
+        return l10n.novelParagraphIndentIncrease;
+      case NovelReaderParagraphIndentMode.keep:
+        return l10n.novelParagraphIndentKeep;
+      case NovelReaderParagraphIndentMode.remove:
+        return l10n.novelParagraphIndentRemove;
+    }
   }
 
   void _applyPreferences(NovelReaderPreferences next) {

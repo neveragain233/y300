@@ -169,6 +169,12 @@ final class DefaultForumHtmlThemeAdapter implements ForumHtmlThemeAdapter {
       isQuoteSurface: isQuoteSurface,
     );
     final semanticForeground = _semanticForeground(role, theme);
+    // Inline content keeps its link color unless a semantic role overrides it.
+    final semanticTarget =
+        role == ForumHtmlSemanticColorRole.body &&
+            parent.resolved.semanticRole == ForumHtmlSemanticColorRole.link
+        ? theme.link
+        : semanticForeground;
     final ownedSurface = _ownedSurface(
       element,
       theme,
@@ -208,23 +214,32 @@ final class DefaultForumHtmlThemeAdapter implements ForumHtmlThemeAdapter {
       return state;
     }
 
+    // The reading theme owns decorative author backgrounds. The concealment
+    // check still reads the original pair, so hidden text stays hidden.
+    final followsReadingTheme =
+        policy.authorColorMode == ForumHtmlAuthorColorMode.readingTheme;
     var background = parent.resolved.effectiveBackground;
     if (author.background != null) {
       stats.explicitBackgroundCount++;
-      try {
-        background = _backgroundToneResolver.resolve(
-          requested: originalBackground,
-          role: author.backgroundRole,
-          theme: theme,
-          policy: policy,
-        );
-        _rewriteBackground(element, background);
-        if (background.toARGB32() != originalBackground.toARGB32()) {
-          stats.remappedBackgroundCount++;
-        }
-      } catch (_) {
-        stats.semanticFallbackCount++;
+      if (followsReadingTheme) {
+        stats.remappedBackgroundCount++;
         _rewriteBackground(element, null);
+      } else {
+        try {
+          background = _backgroundToneResolver.resolve(
+            requested: originalBackground,
+            role: author.backgroundRole,
+            theme: theme,
+            policy: policy,
+          );
+          _rewriteBackground(element, background);
+          if (background.toARGB32() != originalBackground.toARGB32()) {
+            stats.remappedBackgroundCount++;
+          }
+        } catch (_) {
+          stats.semanticFallbackCount++;
+          _rewriteBackground(element, null);
+        }
       }
     } else if (author.unsupportedBackground) {
       stats.unsupportedColorCount++;
@@ -276,17 +291,21 @@ final class DefaultForumHtmlThemeAdapter implements ForumHtmlThemeAdapter {
     var shouldWriteForeground = false;
     if (author.foreground != null) {
       stats.explicitForegroundCount++;
-      requestedForeground = author.foreground!;
+      if (followsReadingTheme) {
+        requestedForeground = semanticTarget;
+      } else {
+        requestedForeground = author.foreground!;
+      }
       shouldWriteForeground = true;
     } else if (author.unsupportedForeground) {
       stats.unsupportedColorCount++;
       stats.semanticFallbackCount++;
-      requestedForeground = semanticForeground;
+      requestedForeground = semanticTarget;
       shouldWriteForeground = true;
     } else if (author.transparentForeground) {
       _rewriteForeground(element, null);
     } else if (role != parent.resolved.semanticRole) {
-      requestedForeground = semanticForeground;
+      requestedForeground = semanticTarget;
       shouldWriteForeground = true;
     }
 

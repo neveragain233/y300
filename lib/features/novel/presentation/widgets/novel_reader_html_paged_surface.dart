@@ -1376,6 +1376,7 @@ class _NovelReaderHtmlPagedSurfaceState
         textDirection: renderEnvironment.textDirection,
         textAlign: renderEnvironment.textAlign,
         textScaler: renderEnvironment.textScaler,
+        paragraphIndent: widget.preferences.paragraphIndent,
         workDemand: _workDemand,
         boundaryCache:
             widget.paginationBoundaryCache ??
@@ -1497,7 +1498,7 @@ class _NovelReaderHtmlPagedSurfaceState
       preferences.pagePadding,
       preferences.fontFamily,
       preferences.contentMaxWidth,
-      preferences.firstLineIndent,
+      preferences.paragraphIndent.storageValue,
       preferences.fontWeight,
       preferences.textAlign.name,
       htmlPreferences.typography.fontScale,

@@ -61,8 +61,14 @@ class DefaultNovelReaderPreferenceImpactAnalyzer
     if (previous.themePreset != next.themePreset ||
         previous.pageEffect != next.pageEffect ||
         previous.pageSpeed != next.pageSpeed ||
-        previous.showProgressIndicator != next.showProgressIndicator) {
+        previous.showProgressIndicator != next.showProgressIndicator ||
+        previous.bodyBrightness != next.bodyBrightness ||
+        previous.backgroundTexture != next.backgroundTexture) {
       impacts.add(NovelReaderPreferenceImpact.repaintOnly);
+    }
+    if (previous.bodyColorMode != next.bodyColorMode) {
+      // Body color ownership rewrites prepared HTML, not just paint.
+      impacts.add(NovelReaderPreferenceImpact.contentRebuild);
     }
     if (previous.fontSize != next.fontSize ||
         previous.lineHeight != next.lineHeight ||
@@ -70,7 +76,7 @@ class DefaultNovelReaderPreferenceImpactAnalyzer
         previous.pagePadding != next.pagePadding ||
         previous.fontFamily != next.fontFamily ||
         previous.contentMaxWidth != next.contentMaxWidth ||
-        previous.firstLineIndent != next.firstLineIndent ||
+        previous.paragraphIndent != next.paragraphIndent ||
         previous.fontWeight != next.fontWeight ||
         previous.textAlign != next.textAlign ||
         previous.safeAreaEnabled != next.safeAreaEnabled) {

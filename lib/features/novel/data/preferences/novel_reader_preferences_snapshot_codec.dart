@@ -29,6 +29,10 @@ final class NovelReaderPreferencesSnapshotCodec {
       'themePreset': normalized.themePreset.storageValue,
       'conversionMode': normalized.conversionMode.storageValue,
       'safeAreaEnabled': normalized.safeAreaEnabled,
+      'bodyBrightness': normalized.bodyBrightness,
+      'backgroundTexture': normalized.backgroundTexture.storageValue,
+      'bodyColorMode': normalized.bodyColorMode.storageValue,
+      'paragraphIndent': normalized.paragraphIndent.storageValue,
     });
   }
 
@@ -86,6 +90,21 @@ final class NovelReaderPreferencesSnapshotCodec {
           decoded['safeAreaEnabled'],
           fallback: defaults.safeAreaEnabled,
         ),
+        bodyBrightness: _validDouble(
+          decoded['bodyBrightness'],
+          min: NovelReaderPreferences.minimumBodyBrightness,
+          max: NovelReaderPreferences.maximumBodyBrightness,
+          fallback: defaults.bodyBrightness,
+        ),
+        backgroundTexture: NovelReaderBackgroundTextureCodec.fromStorage(
+          decoded['backgroundTexture'] as String?,
+        ),
+        bodyColorMode: NovelReaderBodyColorModeCodec.fromStorage(
+          decoded['bodyColorMode'] as String?,
+        ),
+        paragraphIndent: NovelReaderParagraphIndentModeCodec.fromStorage(
+          decoded['paragraphIndent'] as String?,
+        ),
       );
     } on FormatException {
       return defaults;
@@ -120,6 +139,15 @@ final class NovelReaderPreferencesSnapshotCodec {
       themePreset: preferences.themePreset,
       conversionMode: preferences.conversionMode,
       safeAreaEnabled: preferences.safeAreaEnabled,
+      bodyBrightness: _validDouble(
+        preferences.bodyBrightness,
+        min: NovelReaderPreferences.minimumBodyBrightness,
+        max: NovelReaderPreferences.maximumBodyBrightness,
+        fallback: defaults.bodyBrightness,
+      ),
+      backgroundTexture: preferences.backgroundTexture,
+      bodyColorMode: preferences.bodyColorMode,
+      paragraphIndent: preferences.paragraphIndent,
     );
   }
 

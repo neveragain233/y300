@@ -15,6 +15,7 @@ import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_document.dart';
 import 'package:y300/features/novel/presentation/services/novel_html_chapter_render_preparer.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_display_resolvers.dart';
+import 'package:y300/features/novel/presentation/services/novel_reader_paragraph_indent_projection.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_document_view.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 
@@ -39,6 +40,32 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('vertical scroll shows projected paragraph indentation', (
+    tester,
+  ) async {
+    const indent = NovelReaderParagraphIndentProjection.indentText;
+    await tester.pumpWidget(
+      _host(
+        theme: _lightTheme,
+        preparer: const NovelHtmlChapterRenderPreparer(),
+        rawHtml: '<p>第一段正文</p><p>第二段正文<br>续行文字</p>',
+        preferences: NovelReaderPreferences.defaults().copyWith(
+          paragraphIndent: NovelReaderParagraphIndentMode.increase,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final visible = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .map((widget) => widget.text.toPlainText())
+        .join();
+    expect(visible, contains('$indent第一段正文'));
+    expect(visible, contains('$indent第二段正文'));
+    expect(visible, contains('$indent续行文字'));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('long v1 br text uses background preparation and lazy chunks', (
     tester,
@@ -517,7 +544,7 @@ NovelReaderTypography _fontTypography(String? family) => NovelReaderTypography(
   quote: _typography.quote,
   link: _typography.link,
   textAlign: TextAlign.start,
-  firstLineIndent: 0,
+  paragraphIndent: NovelReaderParagraphIndentMode.keep,
   contentMaxWidth: 720,
 );
 
@@ -576,7 +603,7 @@ const _typography = NovelReaderTypography(
   quote: TextStyle(fontSize: 18),
   link: TextStyle(fontSize: 18),
   textAlign: TextAlign.start,
-  firstLineIndent: 0,
+  paragraphIndent: NovelReaderParagraphIndentMode.keep,
   contentMaxWidth: 720,
 );
 

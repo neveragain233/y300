@@ -1,8 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+/// Whether author-declared colors stay (contrast-adapted) or the consumer's
+/// reading theme owns ordinary body color.
+///
+/// [readingTheme] keeps concealment, link targets and structure, but replaces
+/// author foregrounds and decorative backgrounds with the semantic theme
+/// values. The default preserves forum post presentation.
+enum ForumHtmlAuthorColorMode { preserve, readingTheme }
+
 @immutable
 final class ForumHtmlColorAdaptationPolicy {
   const ForumHtmlColorAdaptationPolicy({
+    this.authorColorMode = ForumHtmlAuthorColorMode.preserve,
     this.minimumTextContrast = 4.5,
     this.maximumHighlightChroma = 32.0,
     this.darkInlineHighlightTone = 30.0,
@@ -30,6 +39,7 @@ final class ForumHtmlColorAdaptationPolicy {
 
   static const standard = ForumHtmlColorAdaptationPolicy();
 
+  final ForumHtmlAuthorColorMode authorColorMode;
   final double minimumTextContrast;
   final double maximumHighlightChroma;
   final double darkInlineHighlightTone;

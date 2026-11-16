@@ -1548,7 +1548,7 @@ void main() {
             textAlign: value == 'align'
                 ? TextAlign.center
                 : typography.textAlign,
-            firstLineIndent: typography.firstLineIndent,
+            paragraphIndent: typography.paragraphIndent,
             contentMaxWidth: typography.contentMaxWidth,
           );
         }

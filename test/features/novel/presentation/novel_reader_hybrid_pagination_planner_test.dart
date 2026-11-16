@@ -18,6 +18,7 @@ import 'package:y300/features/novel/presentation/services/novel_reader_complex_h
 import 'package:y300/features/novel/presentation/services/novel_reader_flowable_complex_pagination_engine.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_html_preparation_service.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_hybrid_pagination_planner.dart';
+import 'package:y300/features/novel/presentation/services/novel_reader_paragraph_indent_projection.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_pagination_cancellation.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_pagination_coordinator.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_pagination_demand.dart';
@@ -47,6 +48,74 @@ void main() {
     },
   );
 
+  test('block after an inline heading starts its own indented paragraph', () async {
+    final chapter = await _prepare(
+      '<strong>episode 348</strong>'
+      '<div align="left"><font>&nbsp; &nbsp; &nbsp; &nbsp;第一段正文</font></div>'
+      '<div align="left"><font>第二段正文</font></div>',
+    );
+    final plan = await DefaultNovelReaderHybridPaginationPlanner(
+      measureAdapter: _RecordingMeasureAdapter(),
+      preferences: _preferences,
+      theme: _theme,
+      baseStyle: _baseStyle,
+      paragraphIndent: NovelReaderParagraphIndentMode.increase,
+    ).paginate(chapter, _key(chapter, height: 200));
+    final html = plan.pages.map((page) => page.html).join();
+
+    expect(
+      RegExp(NovelReaderParagraphIndentProjection.indentText)
+          .allMatches(html)
+          .length,
+      3,
+    );
+    expect(
+      html,
+      contains(
+        '<div align="left">${NovelReaderParagraphIndentProjection.indentText}<font>第一段正文</font></div>',
+      ),
+    );
+    expect(
+      html,
+      contains(
+        '<div align="left">${NovelReaderParagraphIndentProjection.indentText}<font>第二段正文</font></div>',
+      ),
+    );
+    expect(html, isNot(contains('&nbsp;')));
+  });
+
+  test(
+    'paragraph indent reaches page html while anchors keep source offsets',
+    () async {
+      final chapter = await _prepare('<p>第一段</p><p>第二段<br>续行</p>');
+      final plan = await DefaultNovelReaderHybridPaginationPlanner(
+        measureAdapter: _RecordingMeasureAdapter(),
+        preferences: _preferences,
+        theme: _theme,
+        baseStyle: _baseStyle,
+        paragraphIndent: NovelReaderParagraphIndentMode.increase,
+      ).paginate(chapter, _key(chapter, height: 200));
+      final html = plan.pages.map((page) => page.html).join();
+
+      expect(
+        RegExp(NovelReaderParagraphIndentProjection.indentText)
+            .allMatches(html)
+            .length,
+        3,
+      );
+      expect(plan.pages.first.startAnchor.nodeId, isNotNull);
+      expect(
+        plan.pages.first.startAnchor.textOffset,
+        chapter.flowUnits.first.startAnchor.textOffset,
+      );
+      final visible = _visibleText(html)
+          .replaceAll(NovelReaderParagraphIndentProjection.indentText, '');
+      expect(visible, contains('第一段'));
+      expect(visible, contains('第二段'));
+      expect(visible, contains('续行'));
+    },
+  );
+
   test(
     'collapse followed by style and line breaks has no blank final page',
     () async {
@@ -68,9 +137,8 @@ void main() {
       final adapter = _RecordingMeasureAdapter(
         heightFor: (request, _) => request.html.contains('<style>') ? 0 : 10,
       );
-      final plan = await _planner(
-        adapter,
-      ).paginate(chapter, _key(chapter, height: 120));
+      final plan = await _planner(adapter)
+          .paginate(chapter, _key(chapter, height: 120));
 
       expect(plan.pages, hasLength(2));
       expect(plan.pages.first.html, contains('正文介绍。'));
@@ -83,9 +151,8 @@ void main() {
         isEmpty,
       );
       final baseline = await _prepare(content);
-      final baselinePlan = await _planner(
-        _RecordingMeasureAdapter(),
-      ).paginate(baseline, _key(baseline, height: 120));
+      final baselinePlan = await _planner(_RecordingMeasureAdapter())
+          .paginate(baseline, _key(baseline, height: 120));
       expect(
         plan.pages.map((page) => page.html),
         baselinePlan.pages.map((page) => page.html),
@@ -133,9 +200,8 @@ void main() {
         '<i class="pstatus">$notice</i><br><br><p>正文第一段。</p>',
       );
       final adapter = _RecordingMeasureAdapter();
-      final plan = await _planner(
-        adapter,
-      ).paginate(chapter, _key(chapter, height: 160));
+      final plan = await _planner(adapter)
+          .paginate(chapter, _key(chapter, height: 160));
 
       expect(plan.pageCount, 1);
       expect(plan.pages.single.html, contains(notice));
@@ -160,9 +226,8 @@ void main() {
       final chapter = await _prepare(
         '<p>前文</p><i class="pstatus">编辑提示</i><p>后文</p>',
       );
-      final plan = await _planner(
-        _RecordingMeasureAdapter(),
-      ).paginate(chapter, _key(chapter, height: 160));
+      final plan = await _planner(_RecordingMeasureAdapter())
+          .paginate(chapter, _key(chapter, height: 160));
       expect(plan.pageCount, 1);
       expect(plan.pages.single.html, contains('前文'));
       expect(plan.pages.single.html, contains('编辑提示'));
@@ -176,9 +241,8 @@ void main() {
     );
     final adapter = _RecordingMeasureAdapter();
 
-    final plan = await _planner(
-      adapter,
-    ).paginate(chapter, _key(chapter, height: 120));
+    final plan = await _planner(adapter)
+        .paginate(chapter, _key(chapter, height: 120));
 
     expect(plan.pageCount, greaterThan(2));
     expect(plan.textFastPathCount, plan.pageCount);
@@ -208,9 +272,8 @@ void main() {
         '<table><tr><td>表格正文</td></tr></table>'
         '<img src="data/attachment/forum/phase4.jpg">',
       );
-      final plan = await _planner(
-        _RecordingMeasureAdapter(),
-      ).paginate(chapter, _key(chapter, height: 160));
+      final plan = await _planner(_RecordingMeasureAdapter())
+          .paginate(chapter, _key(chapter, height: 160));
 
       expect(plan.routeCounts[NovelReaderPaginationRoute.safeText], 1);
       expect(plan.routeCounts[NovelReaderPaginationRoute.rubyInline], 1);
@@ -227,8 +290,7 @@ void main() {
             .singleWhere((page) => page.containsIsolatedImage)
             .requiresInnerScroll,
         isTrue,
-        reason:
-            'Unknown image geometry must not be allowed to overflow after decode.',
+        reason: 'Unknown image geometry must not be allowed to overflow after decode.',
       );
       expect(plan.pages.expand((page) => page.imageIndices), contains(0));
       expect(plan.pages.any((page) => page.html.contains('<ruby>')), isTrue);
@@ -252,9 +314,8 @@ void main() {
         },
       );
 
-      final plan = await _planner(
-        adapter,
-      ).paginate(chapter, _key(chapter, height: 120));
+      final plan = await _planner(adapter)
+          .paginate(chapter, _key(chapter, height: 120));
 
       expect(plan.rendererValidationMismatchCount, 1);
       expect(plan.safeTextFallbackCount, 0);
@@ -278,9 +339,8 @@ void main() {
         },
       );
 
-      final plan = await _planner(
-        adapter,
-      ).paginate(chapter, _key(chapter, height: 120));
+      final plan = await _planner(adapter)
+          .paginate(chapter, _key(chapter, height: 120));
 
       expect(plan.rendererValidationMismatchCount, 2);
       expect(plan.safeTextFallbackCount, 1);
@@ -300,9 +360,8 @@ void main() {
     'uses first-page remaining height to compose adjacent text atoms',
     () async {
       final chapter = await _prepare('<p>第一段短文。</p><p>第二段短文。</p>');
-      final plan = await _planner(
-        _RecordingMeasureAdapter(),
-      ).paginate(chapter, _key(chapter, height: 120));
+      final plan = await _planner(_RecordingMeasureAdapter())
+          .paginate(chapter, _key(chapter, height: 120));
 
       expect(plan.pageCount, 1);
       expect(plan.pages.single.html, contains('第一段短文'));
@@ -318,9 +377,8 @@ void main() {
     ).join();
     final chapter = await _prepare(source);
 
-    final plan = await _planner(
-      _RecordingMeasureAdapter(),
-    ).paginate(chapter, _key(chapter, height: 120));
+    final plan = await _planner(_RecordingMeasureAdapter())
+        .paginate(chapter, _key(chapter, height: 120));
 
     expect(plan.pageCount, greaterThan(1));
     expect(plan.pageCount, lessThan(24));
@@ -342,9 +400,8 @@ void main() {
       '<img src="data/attachment/forum/blank-page.jpg">',
     );
 
-    final plan = await _planner(
-      _RecordingMeasureAdapter(),
-    ).paginate(chapter, _key(chapter, height: 42));
+    final plan = await _planner(_RecordingMeasureAdapter())
+        .paginate(chapter, _key(chapter, height: 42));
 
     expect(plan.pages, hasLength(2));
     expect(plan.pages.first.html, contains('图片前正文'));
@@ -369,9 +426,8 @@ void main() {
         '<img src="data/attachment/forum/blank-chunk.jpg">',
       );
 
-      final plan = await _planner(
-        _RecordingMeasureAdapter(),
-      ).paginate(chapter, _key(chapter, height: 60));
+      final plan = await _planner(_RecordingMeasureAdapter())
+          .paginate(chapter, _key(chapter, height: 60));
 
       expect(
         plan.pages.where((page) => page.containsIsolatedImage),
@@ -402,9 +458,8 @@ void main() {
     );
     final chapter = await _prepare(html);
 
-    final plan = await _planner(
-      _RecordingMeasureAdapter(),
-    ).paginate(chapter, _key(chapter, height: 600));
+    final plan = await _planner(_RecordingMeasureAdapter())
+        .paginate(chapter, _key(chapter, height: 600));
 
     final imagePageIndex = plan.pages.indexWhere(
       (page) => page.containsIsolatedImage,
@@ -540,9 +595,8 @@ void main() {
         '<h2>章节标题</h2>'
         '<p>标题后的第一行正文。</p>',
       );
-      final plan = await _planner(
-        _RecordingMeasureAdapter(),
-      ).paginate(chapter, _key(chapter, height: 180));
+      final plan = await _planner(_RecordingMeasureAdapter())
+          .paginate(chapter, _key(chapter, height: 180));
 
       final headingPage = plan.pages.singleWhere(
         (page) => page.html.contains('<h2>'),
@@ -567,9 +621,8 @@ void main() {
       },
     );
 
-    final plan = await _planner(
-      adapter,
-    ).paginate(chapter, _key(chapter, height: 120));
+    final plan = await _planner(adapter)
+        .paginate(chapter, _key(chapter, height: 120));
 
     expect(plan.pageCount, 2);
     expect(plan.pages.first.html, contains('表格前的短文'));
@@ -596,9 +649,8 @@ void main() {
       },
     );
 
-    final plan = await _planner(
-      adapter,
-    ).paginate(chapter, _key(chapter, height: 120));
+    final plan = await _planner(adapter)
+        .paginate(chapter, _key(chapter, height: 120));
 
     expect(plan.pageCount, 2);
     expect(plan.pages.first.html, contains('表格前的短文'));
@@ -662,9 +714,8 @@ void main() {
       final adapter = _RecordingMeasureAdapter(
         heightFor: (request, _) => request.html.contains('<table>') ? 300 : 10,
       );
-      final plan = await _planner(
-        adapter,
-      ).paginate(chapter, _key(chapter, height: 100));
+      final plan = await _planner(adapter)
+          .paginate(chapter, _key(chapter, height: 100));
 
       expect(plan.pageCount, 1);
       expect(plan.pages.single.requiresInnerScroll, isTrue);
@@ -1201,9 +1252,8 @@ void main() {
       },
     );
 
-    final plan = await _planner(
-      adapter,
-    ).paginate(chapter, _key(chapter, height: 200));
+    final plan = await _planner(adapter)
+        .paginate(chapter, _key(chapter, height: 200));
 
     expect(plan.routeCounts[NovelReaderPaginationRoute.flowableComplexText], 1);
     expect(plan.pageCount, 1);
@@ -1249,9 +1299,8 @@ void main() {
           (request.endOffset! - request.startOffset!) * 10.0,
     );
 
-    final plan = await _planner(
-      adapter,
-    ).paginate(chapter, _key(chapter, height: 80));
+    final plan = await _planner(adapter)
+        .paginate(chapter, _key(chapter, height: 80));
 
     expect(plan.pageCount, 3);
     expect(plan.flowableComplexFragmentCount, 3);
@@ -1496,31 +1545,27 @@ void main() {
     );
   }
 
-  test(
-    'a measured oversized minimum becomes a dedicated page without a second probe',
-    () async {
-      final text = List.filled(9000, '甲').join();
-      final chapter = await _prepare('<p><ruby>$text<rt>注</rt></ruby></p>');
-      final adapter = _RecordingMeasureAdapter(heightFor: (_, _) => 200);
-      final plan = await _planner(
-        adapter,
-      ).paginate(chapter, _key(chapter, height: 100));
+  test('a measured oversized minimum becomes a dedicated page without a second probe', () async {
+    final text = List.filled(9000, '甲').join();
+    final chapter = await _prepare('<p><ruby>$text<rt>注</rt></ruby></p>');
+    final adapter = _RecordingMeasureAdapter(heightFor: (_, _) => 200);
+    final plan = await _planner(adapter)
+        .paginate(chapter, _key(chapter, height: 100));
 
-      expect(adapter.requests, hasLength(1));
-      expect(plan.measurementCount, 1);
-      expect(plan.minimumComplexFragmentCount, 1);
-      expect(plan.atomicWidgetPageCount, 1);
-      expect(plan.flowableComplexFragmentCount, 0);
-      expect(plan.pages, hasLength(1));
-      expect(plan.pages.single.requiresInnerScroll, isTrue);
-      expect(plan.pages.single.isDedicatedContentPage, isTrue);
-      expect(plan.pages.single.html, adapter.requests.single.html);
-      expect(_visibleText(plan.pages.single.html), _visibleText(chapter.html));
-      expect(plan.flowabilityFailureReasonCounts, {
-        NovelReaderFlowableComplexFallbackReason.minimumFragmentOverflow: 1,
-      });
-    },
-  );
+    expect(adapter.requests, hasLength(1));
+    expect(plan.measurementCount, 1);
+    expect(plan.minimumComplexFragmentCount, 1);
+    expect(plan.atomicWidgetPageCount, 1);
+    expect(plan.flowableComplexFragmentCount, 0);
+    expect(plan.pages, hasLength(1));
+    expect(plan.pages.single.requiresInnerScroll, isTrue);
+    expect(plan.pages.single.isDedicatedContentPage, isTrue);
+    expect(plan.pages.single.html, adapter.requests.single.html);
+    expect(_visibleText(plan.pages.single.html), _visibleText(chapter.html));
+    expect(plan.flowabilityFailureReasonCounts, {
+      NovelReaderFlowableComplexFallbackReason.minimumFragmentOverflow: 1,
+    });
+  });
 
   test(
     'an indivisible minimum beyond the finite exception limit is not measured',
@@ -1712,11 +1757,10 @@ NovelReaderPaginationKey _key(
   );
 }
 
-typedef _HeightFor =
-    double Function(
-      NovelReaderPaginationMeasureRequest request,
-      int validationCall,
-    );
+typedef _HeightFor = double Function(
+  NovelReaderPaginationMeasureRequest request,
+  int validationCall,
+);
 
 final class _RecordingMeasureAdapter
     implements NovelReaderPaginationMeasureAdapter {

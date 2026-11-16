@@ -1,6 +1,17 @@
 import 'package:y300/features/novel/domain/models/novel_reader_spacing.dart';
 
-enum NovelReaderThemePreset { followApp, light, sepia, dark }
+enum NovelReaderThemePreset {
+  followApp,
+  light,
+  paperWhite,
+  cream,
+  sepia,
+  sage,
+  gray,
+  dark,
+  charcoal,
+  ink,
+}
 
 enum NovelReaderFlowMode { vertical, pagedLtr, pagedRtl }
 
@@ -17,6 +28,22 @@ enum NovelReaderPageSpeed {
 }
 
 enum NovelReaderTextAlignMode { start, justify, center }
+
+/// Who owns ordinary body color inside a novel chapter.
+enum NovelReaderBodyColorMode {
+  /// The reading palette replaces author foregrounds and decorative
+  /// backgrounds; concealment, structure and link targets stay intact.
+  followReadingTheme,
+
+  /// Author colors remain, with the existing readability adaptation.
+  preserveAuthorColors,
+}
+
+/// Independent background material drawn beneath novel body text.
+enum NovelReaderBackgroundTexture { solid, paper, grain }
+
+/// First-line indentation of ordinary body paragraphs.
+enum NovelReaderParagraphIndentMode { increase, keep, remove }
 
 /// Traditional/simplified conversion direction for the novel reader.
 enum NovelReaderConversionMode { none, toSimplified, toTraditional }
@@ -53,10 +80,22 @@ extension NovelReaderThemePresetCodec on NovelReaderThemePreset {
         return 'followApp';
       case NovelReaderThemePreset.light:
         return 'light';
+      case NovelReaderThemePreset.paperWhite:
+        return 'paperWhite';
+      case NovelReaderThemePreset.cream:
+        return 'cream';
       case NovelReaderThemePreset.sepia:
         return 'sepia';
+      case NovelReaderThemePreset.sage:
+        return 'sage';
+      case NovelReaderThemePreset.gray:
+        return 'gray';
       case NovelReaderThemePreset.dark:
         return 'dark';
+      case NovelReaderThemePreset.charcoal:
+        return 'charcoal';
+      case NovelReaderThemePreset.ink:
+        return 'ink';
     }
   }
 
@@ -67,14 +106,94 @@ extension NovelReaderThemePresetCodec on NovelReaderThemePreset {
       case 'follow_system':
       case 'system':
         return NovelReaderThemePreset.followApp;
-      case 'sepia':
-        return NovelReaderThemePreset.sepia;
-      case 'dark':
-        return NovelReaderThemePreset.dark;
       case 'light':
         return NovelReaderThemePreset.light;
+      case 'paperWhite':
+        return NovelReaderThemePreset.paperWhite;
+      case 'cream':
+        return NovelReaderThemePreset.cream;
+      case 'sepia':
+        return NovelReaderThemePreset.sepia;
+      case 'sage':
+        return NovelReaderThemePreset.sage;
+      case 'gray':
+        return NovelReaderThemePreset.gray;
+      case 'dark':
+        return NovelReaderThemePreset.dark;
+      case 'charcoal':
+        return NovelReaderThemePreset.charcoal;
+      case 'ink':
+        return NovelReaderThemePreset.ink;
       default:
         return NovelReaderThemePreset.followApp;
+    }
+  }
+}
+
+extension NovelReaderBodyColorModeCodec on NovelReaderBodyColorMode {
+  String get storageValue {
+    switch (this) {
+      case NovelReaderBodyColorMode.followReadingTheme:
+        return 'followReadingTheme';
+      case NovelReaderBodyColorMode.preserveAuthorColors:
+        return 'preserveAuthorColors';
+    }
+  }
+
+  static NovelReaderBodyColorMode fromStorage(String? value) {
+    return value == 'preserveAuthorColors'
+        ? NovelReaderBodyColorMode.preserveAuthorColors
+        : NovelReaderBodyColorMode.followReadingTheme;
+  }
+}
+
+extension NovelReaderBackgroundTextureCodec on NovelReaderBackgroundTexture {
+  String get storageValue {
+    switch (this) {
+      case NovelReaderBackgroundTexture.solid:
+        return 'solid';
+      case NovelReaderBackgroundTexture.paper:
+        return 'paper';
+      case NovelReaderBackgroundTexture.grain:
+        return 'grain';
+    }
+  }
+
+  static NovelReaderBackgroundTexture fromStorage(String? value) {
+    switch (value) {
+      case 'paper':
+        return NovelReaderBackgroundTexture.paper;
+      case 'grain':
+        return NovelReaderBackgroundTexture.grain;
+      case 'solid':
+      default:
+        return NovelReaderBackgroundTexture.solid;
+    }
+  }
+}
+
+extension NovelReaderParagraphIndentModeCodec
+    on NovelReaderParagraphIndentMode {
+  String get storageValue {
+    switch (this) {
+      case NovelReaderParagraphIndentMode.increase:
+        return 'increase';
+      case NovelReaderParagraphIndentMode.keep:
+        return 'keep';
+      case NovelReaderParagraphIndentMode.remove:
+        return 'remove';
+    }
+  }
+
+  static NovelReaderParagraphIndentMode fromStorage(String? value) {
+    switch (value) {
+      case 'increase':
+        return NovelReaderParagraphIndentMode.increase;
+      case 'remove':
+        return NovelReaderParagraphIndentMode.remove;
+      case 'keep':
+      default:
+        return NovelReaderParagraphIndentMode.keep;
     }
   }
 }
@@ -147,12 +266,15 @@ class NovelReaderPreferences {
     this.pageSpeed = NovelReaderPageSpeed.standard,
     NovelReaderThemePreset themePreset = NovelReaderThemePreset.followApp,
     this.contentMaxWidth = 720,
-    this.firstLineIndent = 0,
+    this.paragraphIndent = NovelReaderParagraphIndentMode.keep,
     this.fontWeight = 400,
     this.textAlign = NovelReaderTextAlignMode.start,
     this.showProgressIndicator = true,
     this.conversionMode = NovelReaderConversionMode.none,
     this.safeAreaEnabled = true,
+    this.bodyBrightness = 1,
+    this.backgroundTexture = NovelReaderBackgroundTexture.solid,
+    this.bodyColorMode = NovelReaderBodyColorMode.followReadingTheme,
     String? themeMode,
   }) : themePreset = themeMode == null
            ? themePreset
@@ -169,12 +291,15 @@ class NovelReaderPreferences {
     required this.pageSpeed,
     required this.themePreset,
     required this.contentMaxWidth,
-    required this.firstLineIndent,
+    required this.paragraphIndent,
     required this.fontWeight,
     required this.textAlign,
     required this.showProgressIndicator,
     required this.conversionMode,
     required this.safeAreaEnabled,
+    required this.bodyBrightness,
+    required this.backgroundTexture,
+    required this.bodyColorMode,
   });
 
   factory NovelReaderPreferences.defaults() {
@@ -189,14 +314,21 @@ class NovelReaderPreferences {
       pageSpeed: NovelReaderPageSpeed.standard,
       themePreset: NovelReaderThemePreset.followApp,
       contentMaxWidth: 720,
-      firstLineIndent: 0,
+      paragraphIndent: NovelReaderParagraphIndentMode.keep,
       fontWeight: 400,
       textAlign: NovelReaderTextAlignMode.start,
       showProgressIndicator: true,
       conversionMode: NovelReaderConversionMode.none,
       safeAreaEnabled: true,
+      bodyBrightness: 1,
+      backgroundTexture: NovelReaderBackgroundTexture.solid,
+      bodyColorMode: NovelReaderBodyColorMode.followReadingTheme,
     );
   }
+
+  /// Bounds for the independent body-text brightness slider.
+  static const double minimumBodyBrightness = 0.55;
+  static const double maximumBodyBrightness = 1;
 
   final double fontSize;
   final double lineHeight;
@@ -210,12 +342,17 @@ class NovelReaderPreferences {
   final NovelReaderPageSpeed pageSpeed;
   final NovelReaderThemePreset themePreset;
   final double contentMaxWidth;
-  final double firstLineIndent;
+  final NovelReaderParagraphIndentMode paragraphIndent;
   final int fontWeight;
   final NovelReaderTextAlignMode textAlign;
   final bool showProgressIndicator;
   final NovelReaderConversionMode conversionMode;
   final bool safeAreaEnabled;
+
+  /// Scales body text tone only; reader controls keep their own palette.
+  final double bodyBrightness;
+  final NovelReaderBackgroundTexture backgroundTexture;
+  final NovelReaderBodyColorMode bodyColorMode;
 
   String get themeMode => themePreset.storageValue;
 
@@ -235,12 +372,15 @@ class NovelReaderPreferences {
         other.pageSpeed == pageSpeed &&
         other.themePreset == themePreset &&
         other.contentMaxWidth == contentMaxWidth &&
-        other.firstLineIndent == firstLineIndent &&
+        other.paragraphIndent == paragraphIndent &&
         other.fontWeight == fontWeight &&
         other.textAlign == textAlign &&
         other.showProgressIndicator == showProgressIndicator &&
         other.conversionMode == conversionMode &&
-        other.safeAreaEnabled == safeAreaEnabled;
+        other.safeAreaEnabled == safeAreaEnabled &&
+        other.bodyBrightness == bodyBrightness &&
+        other.backgroundTexture == backgroundTexture &&
+        other.bodyColorMode == bodyColorMode;
   }
 
   @override
@@ -255,12 +395,15 @@ class NovelReaderPreferences {
     pageSpeed,
     themePreset,
     contentMaxWidth,
-    firstLineIndent,
+    paragraphIndent,
     fontWeight,
     textAlign,
     showProgressIndicator,
     conversionMode,
     safeAreaEnabled,
+    bodyBrightness,
+    backgroundTexture,
+    bodyColorMode,
   );
 
   NovelReaderPreferences copyWith({
@@ -275,12 +418,15 @@ class NovelReaderPreferences {
     NovelReaderPageSpeed? pageSpeed,
     NovelReaderThemePreset? themePreset,
     double? contentMaxWidth,
-    double? firstLineIndent,
+    NovelReaderParagraphIndentMode? paragraphIndent,
     int? fontWeight,
     NovelReaderTextAlignMode? textAlign,
     bool? showProgressIndicator,
     NovelReaderConversionMode? conversionMode,
     bool? safeAreaEnabled,
+    double? bodyBrightness,
+    NovelReaderBackgroundTexture? backgroundTexture,
+    NovelReaderBodyColorMode? bodyColorMode,
   }) {
     return NovelReaderPreferences._(
       fontSize: fontSize ?? this.fontSize,
@@ -295,13 +441,16 @@ class NovelReaderPreferences {
           ? (themePreset ?? this.themePreset)
           : NovelReaderThemePresetCodec.fromStorage(themeMode),
       contentMaxWidth: contentMaxWidth ?? this.contentMaxWidth,
-      firstLineIndent: firstLineIndent ?? this.firstLineIndent,
+      paragraphIndent: paragraphIndent ?? this.paragraphIndent,
       fontWeight: fontWeight ?? this.fontWeight,
       textAlign: textAlign ?? this.textAlign,
       showProgressIndicator:
           showProgressIndicator ?? this.showProgressIndicator,
       conversionMode: conversionMode ?? this.conversionMode,
       safeAreaEnabled: safeAreaEnabled ?? this.safeAreaEnabled,
+      bodyBrightness: bodyBrightness ?? this.bodyBrightness,
+      backgroundTexture: backgroundTexture ?? this.backgroundTexture,
+      bodyColorMode: bodyColorMode ?? this.bodyColorMode,
     );
   }
 }

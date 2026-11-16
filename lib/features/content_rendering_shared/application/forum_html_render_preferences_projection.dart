@@ -11,5 +11,8 @@ extension ForumHtmlRenderPreferencesProjection on ForumHtmlReaderPreferences {
     preserveAuthorFontSize: preserveAuthorFontSize,
     // Both the system default and an imported font are explicit reader choices.
     preserveAuthorFontFamily: false,
+    authorColorMode: preserveAuthorColors
+        ? ForumHtmlAuthorColorMode.preserve
+        : ForumHtmlAuthorColorMode.readingTheme,
   );
 }

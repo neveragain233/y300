@@ -14,7 +14,10 @@ extension ForumHtmlPreparationPreferencesIdentity on ForumHtmlRenderPreparer {
     // A subclass can override prepare and introduce additional dependencies.
     // Only the exact default facade has this verified preparation projection.
     return runtimeType == DefaultForumHtmlRenderPreparer
-        ? preferences.preserveAuthorFontSize
+        ? (
+            preserveAuthorFontSize: preferences.preserveAuthorFontSize,
+            preserveAuthorColors: preferences.preserveAuthorColors,
+          )
         : preferences;
   }
 }

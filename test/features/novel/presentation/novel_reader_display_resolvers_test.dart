@@ -5,6 +5,7 @@ import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_display_resolvers.dart';
+import 'package:y300/shared/utils/wcag_color_contrast.dart';
 
 void main() {
   const themeResolver = NovelReaderThemeResolver();
@@ -38,6 +39,64 @@ void main() {
     expect(sepia.foreground, const Color(0xFF4C3A21));
     expect(dark.background, const Color(0xFF141414));
     expect(dark.foreground, const Color(0xFFE9E9E9));
+  });
+
+  test('body brightness dims article tone but not reader controls', () {
+    final theme = ThemeData.light();
+    final base = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.dark,
+      ),
+      theme: theme,
+    );
+    final dimmed = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.dark,
+        bodyBrightness: 0.55,
+      ),
+      theme: theme,
+    );
+
+    expect(dimmed.foreground, isNot(base.foreground));
+    expect(
+      WcagColorContrast.ratio(dimmed.foreground, dimmed.background),
+      greaterThanOrEqualTo(4.5),
+    );
+    expect(dimmed.controlForeground, base.controlForeground);
+    expect(dimmed.controlMuted, base.controlMuted);
+  });
+
+  test('expanded presets keep their brightness and readable body pairs', () {
+    final theme = ThemeData.light();
+    for (final preset in NovelReaderThemePreset.values) {
+      final palette = themeResolver.resolve(
+        preferences: NovelReaderPreferences.defaults().copyWith(
+          themePreset: preset,
+        ),
+        theme: theme,
+      );
+      expect(
+        WcagColorContrast.ratio(palette.foreground, palette.background),
+        greaterThanOrEqualTo(4.5),
+        reason: preset.name,
+      );
+    }
+    final paper = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.paperWhite,
+      ),
+      theme: theme,
+    );
+    final ink = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.ink,
+      ),
+      theme: ThemeData.dark(),
+    );
+    expect(paper.brightness, Brightness.light);
+    expect(paper.background, const Color(0xFFFAFAF5));
+    expect(ink.brightness, Brightness.dark);
+    expect(ink.background, const Color(0xFF000000));
   });
 
   test('NovelReaderThemeResolver follows the active application theme', () {
@@ -81,7 +140,7 @@ void main() {
         fontWeight: 700,
         fontFamily: _fontId,
         textAlign: NovelReaderTextAlignMode.justify,
-        firstLineIndent: 32,
+        paragraphIndent: NovelReaderParagraphIndentMode.increase,
         contentMaxWidth: 680,
       ),
       theme: theme,
@@ -97,7 +156,7 @@ void main() {
     expect(typography.body.fontWeight, FontWeight.w700);
     expect(typography.body.fontFamily, 'fixture-serif');
     expect(typography.textAlign, TextAlign.justify);
-    expect(typography.firstLineIndent, 32);
+    expect(typography.paragraphIndent, NovelReaderParagraphIndentMode.increase);
     expect(typography.contentMaxWidth, 680);
   });
 
@@ -147,7 +206,7 @@ void main() {
       expect(style.fontFamily, 'fixture-reading-family');
     }
     expect(typography.chapterTitle.fontWeight, FontWeight.w700);
-    expect(typography.quote.color, palette.muted);
+    expect(typography.quote.color, palette.foreground);
     expect(typography.link.color, palette.link);
     expect(typography.body.fontSize, preferences.fontSize);
     expect(typography.body.height, preferences.lineHeight);

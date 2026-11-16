@@ -15,6 +15,9 @@ class NovelHtmlReaderPreferencesAdapter {
       ),
       conversionMode: _conversionMode(preferences.conversionMode),
       preserveAuthorFontSize: true,
+      preserveAuthorColors:
+          preferences.bodyColorMode ==
+          NovelReaderBodyColorMode.preserveAuthorColors,
     );
   }
 

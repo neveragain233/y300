@@ -22,113 +22,98 @@ void main() {
   const service = DefaultNovelReaderHtmlPreparationService();
   const adapter = NovelHtmlReaderPreferencesAdapter();
 
-  test(
-    'production semantic and visual preparation share conversion and retain canonical nodes',
-    () async {
-      const channel = MethodChannel('flutter_open_chinese_convert');
-      final nativeCalls = <MethodCall>[];
-      final messenger =
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        nativeCalls.add(call);
-        return ((call.arguments as List<Object?>).first as String).replaceAll(
-          '臺',
-          '台',
+  test('production semantic and visual preparation share conversion and retain canonical nodes', () async {
+    const channel = MethodChannel('flutter_open_chinese_convert');
+    final nativeCalls = <MethodCall>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      nativeCalls.add(call);
+      return ((call.arguments as List<Object?>).first as String).replaceAll(
+        '臺',
+        '台',
+      );
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    const rawHtml = '<p title="臺属性">臺正文</p><pre><code>臺代码</code></pre>';
+    final semantic = await container
+        .read(novelReaderDocumentBuildServiceProvider)
+        .build(
+          NovelReaderDocumentBuildRequest(
+            episodeId: _episode.episodeId,
+            rawHtml: rawHtml,
+            fallbackParagraphs: List.generate(100, (index) => '臺回退段落$index'),
+          ),
+          converter: resolveTextConverter(TextConversionMode.toSimplified),
         );
-      });
-      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      const rawHtml = '<p title="臺属性">臺正文</p><pre><code>臺代码</code></pre>';
-      final semantic = await container
-          .read(novelReaderDocumentBuildServiceProvider)
-          .build(
-            NovelReaderDocumentBuildRequest(
-              episodeId: _episode.episodeId,
-              rawHtml: rawHtml,
-              fallbackParagraphs: List.generate(100, (index) => '臺回退段落$index'),
+    expect(semantic.plainText, contains('台正文'));
+    expect(semantic.plainText, contains('臺代码'));
+    expect(nativeCalls, hasLength(2));
+    final prepared = await container
+        .read(novelReaderHtmlPreparationServiceProvider)
+        .prepare(
+          rawHtml: rawHtml,
+          episode: _episode,
+          preferences: adapter.map(
+            NovelReaderPreferences.defaults().copyWith(
+              conversionMode: NovelReaderConversionMode.toSimplified,
             ),
-            converter: resolveTextConverter(TextConversionMode.toSimplified),
-          );
-      expect(semantic.plainText, contains('台正文'));
-      expect(semantic.plainText, contains('臺代码'));
-      expect(nativeCalls, hasLength(2));
-      final prepared = await container
-          .read(novelReaderHtmlPreparationServiceProvider)
-          .prepare(
-            rawHtml: rawHtml,
-            episode: _episode,
-            preferences: adapter.map(
-              NovelReaderPreferences.defaults().copyWith(
-                conversionMode: NovelReaderConversionMode.toSimplified,
-              ),
-            ),
-            theme: _theme,
-            sourceId: _episode.episodeId,
-            threadId: _episode.sourceTid,
-            imageCacheOwnerId: _episode.sourceTid,
-            semanticDocument: semantic,
-          );
-      expect(nativeCalls, hasLength(2));
-      expect(prepared.renderDocument.preparedHtml, contains('title="臺属性"'));
-      expect(prepared.renderDocument.preparedHtml, contains('臺代码'));
-      expect(
-        prepared.flowUnits.first.startAnchor.nodeId,
-        semantic.blocks.first.anchorId,
-      );
-      expect(
-        prepared.flowUnits.first.startAnchor.hasCanonicalTextOffset,
-        isTrue,
-      );
-    },
-  );
+          ),
+          theme: _theme,
+          sourceId: _episode.episodeId,
+          threadId: _episode.sourceTid,
+          imageCacheOwnerId: _episode.sourceTid,
+          semanticDocument: semantic,
+        );
+    expect(nativeCalls, hasLength(2));
+    expect(prepared.renderDocument.preparedHtml, contains('title="臺属性"'));
+    expect(prepared.renderDocument.preparedHtml, contains('臺代码'));
+    expect(
+      prepared.flowUnits.first.startAnchor.nodeId,
+      semantic.blocks.first.anchorId,
+    );
+    expect(prepared.flowUnits.first.startAnchor.hasCanonicalTextOffset, isTrue);
+  });
 
-  test(
-    'converted text cannot acquire a different semantic node through a spelling collision',
-    () async {
-      const rawHtml = '<p>臺</p><p>台</p>';
-      final semantic = const DiscuzNovelReaderDocumentParser().parse(
-        episodeId: _episode.episodeId,
-        rawHtml: rawHtml,
-        fallbackParagraphs: const <String>[],
-      );
-      final prepared =
-          await const DefaultNovelReaderHtmlPreparationService(
-            preparer: _ConvertedChapterPreparer(),
-          ).prepare(
-            rawHtml: rawHtml,
-            episode: _episode,
-            preferences: adapter
-                .map(NovelReaderPreferences.defaults())
-                .copyWith(conversionMode: TextConversionMode.toSimplified),
-            theme: _theme,
-            sourceId: _episode.episodeId,
-            threadId: _episode.sourceTid,
-            imageCacheOwnerId: _episode.sourceTid,
-            semanticDocument: semantic,
-          );
-      expect(prepared.convertedTextNodeCount, 1);
-      expect(prepared.flowUnits, hasLength(2));
-      expect(
-        prepared.flowUnits[0].startAnchor.nodeId,
-        startsWith('novel-html-'),
-      );
-      expect(
-        prepared.flowUnits[1].startAnchor.nodeId,
-        startsWith('novel-html-'),
-      );
-      expect(
-        prepared.flowUnits[0].startAnchor.nodeId,
-        isNot(prepared.flowUnits[1].startAnchor.nodeId),
-      );
-      expect(
-        prepared.flowUnits.every(
-          (unit) => unit.startAnchor.hasCanonicalTextOffset,
-        ),
-        isTrue,
-      );
-    },
-  );
+  test('converted text cannot acquire a different semantic node through a spelling collision', () async {
+    const rawHtml = '<p>臺</p><p>台</p>';
+    final semantic = const DiscuzNovelReaderDocumentParser().parse(
+      episodeId: _episode.episodeId,
+      rawHtml: rawHtml,
+      fallbackParagraphs: const <String>[],
+    );
+    final prepared =
+        await const DefaultNovelReaderHtmlPreparationService(
+          preparer: _ConvertedChapterPreparer(),
+        ).prepare(
+          rawHtml: rawHtml,
+          episode: _episode,
+          preferences: adapter
+              .map(NovelReaderPreferences.defaults())
+              .copyWith(conversionMode: TextConversionMode.toSimplified),
+          theme: _theme,
+          sourceId: _episode.episodeId,
+          threadId: _episode.sourceTid,
+          imageCacheOwnerId: _episode.sourceTid,
+          semanticDocument: semantic,
+        );
+    expect(prepared.convertedTextNodeCount, 1);
+    expect(prepared.flowUnits, hasLength(2));
+    expect(prepared.flowUnits[0].startAnchor.nodeId, startsWith('novel-html-'));
+    expect(prepared.flowUnits[1].startAnchor.nodeId, startsWith('novel-html-'));
+    expect(
+      prepared.flowUnits[0].startAnchor.nodeId,
+      isNot(prepared.flowUnits[1].startAnchor.nodeId),
+    );
+    expect(
+      prepared.flowUnits.every(
+        (unit) => unit.startAnchor.hasCanonicalTextOffset,
+      ),
+      isTrue,
+    );
+  });
 
   test(
     'matching conversion provenance retains a unique semantic node',
@@ -328,7 +313,10 @@ void main() {
     expect(prepared.flowUnits.last.imageIndices, <int>[0]);
     expect(prepared.imageDimensionRevision, isNonZero);
     expect(prepared.html, rawHtml);
-    expect(prepared.legacyMarkupNormalization.revision, 2);
+    expect(
+      prepared.legacyMarkupNormalization.revision,
+      DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+    );
     expect(prepared.legacyMarkupNormalization.normalizedAttributeCount, 0);
   });
 
@@ -400,7 +388,10 @@ void main() {
       current.renderDocument.preparedHtml,
       legacy.renderDocument.preparedHtml,
     );
-    expect(current.legacyMarkupNormalization.revision, 2);
+    expect(
+      current.legacyMarkupNormalization.revision,
+      DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+    );
     expect(legacy.legacyMarkupNormalization.revision, 0);
     expect(current.contentHash, isNot(legacy.contentHash));
   });
@@ -443,7 +434,10 @@ void main() {
       );
 
       expect(cache.length, 2);
-      expect(current.legacyMarkupNormalization.revision, 2);
+      expect(
+        current.legacyMarkupNormalization.revision,
+        DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+      );
       expect(legacy.legacyMarkupNormalization.revision, 0);
       expect(current.html, isNot(contains('face=')));
       expect(legacy.html, contains('face='));

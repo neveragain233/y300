@@ -8,6 +8,7 @@ import 'package:y300/features/novel/presentation/services/novel_html_image_reade
 import 'package:y300/features/novel/presentation/services/novel_html_reader_preferences_adapter.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_display_resolvers.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_html_preparation_service.dart';
+import 'package:y300/features/novel/presentation/services/novel_reader_paragraph_indent_projection.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_prepared_chapter.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_prepared_chapter_cache.dart';
 import 'package:y300/features/library_shared/presentation/services/library_error_summary.dart';
@@ -80,6 +81,33 @@ class _NovelReaderHtmlDocumentViewState
     if (mounted) widget.onImagesReadyChanged?.call(ready);
   });
   NovelReadingImageHost? _imageHost;
+  static const _indentProjection = NovelReaderParagraphIndentProjection();
+  static const int _projectedHtmlCacheLimit = 8;
+  final _projectedHtmlCache = <String, String>{};
+
+  /// Display-only projection; prepared HTML and its anchors stay untouched.
+  String _projectedHtml(String html) {
+    final mode = widget.preferences.paragraphIndent;
+    if (mode == NovelReaderParagraphIndentMode.keep) {
+      return html;
+    }
+    final key = '${mode.storageValue}\u001f$html';
+    final cached = _projectedHtmlCache.remove(key);
+    if (cached != null) {
+      _projectedHtmlCache[key] = cached;
+      return cached;
+    }
+    final projected = _indentProjection.project(
+      html,
+      mode: mode,
+      startsParagraph: true,
+    );
+    _projectedHtmlCache[key] = projected;
+    while (_projectedHtmlCache.length > _projectedHtmlCacheLimit) {
+      _projectedHtmlCache.remove(_projectedHtmlCache.keys.first);
+    }
+    return projected;
+  }
 
   @override
   void dispose() {
@@ -155,13 +183,14 @@ class _NovelReaderHtmlDocumentViewState
               html: prepared.html,
               imageHost: _imageHost,
               theme: widget.theme,
-              preparedDocument: fragment != null
-                  ? prepared.renderDocument.copyWith(preparedHtml: fragment)
-                  : widget.asSliver && prepared.scrollHtml != null
-                  ? prepared.renderDocument.copyWith(
-                      preparedHtml: prepared.scrollHtml,
-                    )
-                  : prepared.renderDocument,
+              preparedDocument: prepared.renderDocument.copyWith(
+                preparedHtml: _projectedHtml(
+                  fragment ??
+                      (widget.asSliver && prepared.scrollHtml != null
+                          ? prepared.scrollHtml!
+                          : prepared.renderDocument.preparedHtml),
+                ),
+              ),
               renderMode: widget.asSliver && fragment == null
                   ? RenderMode.sliverList
                   : RenderMode.column,

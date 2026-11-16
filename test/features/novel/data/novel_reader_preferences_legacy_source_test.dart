@@ -66,7 +66,10 @@ void main() {
     expect(loaded.pagePadding, NovelReaderSpacing.pagedPagePadding);
     expect(loaded.fontFamily, 'system');
     expect(loaded.contentMaxWidth, 720);
-    expect(loaded.firstLineIndent, 0);
+    expect(loaded.paragraphIndent, NovelReaderParagraphIndentMode.keep);
+    expect(loaded.bodyColorMode, NovelReaderBodyColorMode.followReadingTheme);
+    expect(loaded.backgroundTexture, NovelReaderBackgroundTexture.solid);
+    expect(loaded.bodyBrightness, 1);
     expect(loaded.fontWeight, 400);
     expect(loaded.textAlign, NovelReaderTextAlignMode.start);
     expect(loaded.showProgressIndicator, isTrue);

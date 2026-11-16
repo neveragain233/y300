@@ -53,7 +53,9 @@ class ForumHtmlPreparationPipeline {
         .adapt(
           fragment: fragment,
           theme: theme,
-          policy: ForumHtmlColorAdaptationPolicy.standard,
+          policy: ForumHtmlColorAdaptationPolicy(
+            authorColorMode: options.authorColorMode,
+          ),
         )
         .stats;
     if (options.enablePlainTextLinks) {

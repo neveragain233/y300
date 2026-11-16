@@ -9,12 +9,7 @@ void main() {
   const paletteResolver = NovelReaderThemeResolver();
   const themeFactory = NovelForumHtmlRenderThemeFactory();
 
-  for (final preset in <NovelReaderThemePreset>[
-    NovelReaderThemePreset.followApp,
-    NovelReaderThemePreset.light,
-    NovelReaderThemePreset.sepia,
-    NovelReaderThemePreset.dark,
-  ]) {
+  for (final preset in NovelReaderThemePreset.values) {
     test('maps the resolved ${preset.name} reader palette directly', () {
       final palette = paletteResolver.resolve(
         preferences: NovelReaderPreferences.defaults().copyWith(
@@ -29,7 +24,7 @@ void main() {
       expect(context.foreground, palette.foreground);
       expect(context.link, palette.link);
       expect(context.quoteSurface, palette.quoteBackground);
-      expect(context.quoteForeground, palette.muted);
+      expect(context.quoteForeground, palette.foreground);
       expect(context.codeSurface, palette.surface);
       expect(
         context.brightness,

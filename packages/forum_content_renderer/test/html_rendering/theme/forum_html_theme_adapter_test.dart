@@ -8,6 +8,55 @@ void main() {
   const adapter = DefaultForumHtmlThemeAdapter();
   const colorParser = CsslibAuthorColorParser();
 
+  test('reading theme owns body color and decorative backgrounds', () {
+    final fragment = html_parser.parseFragment(
+      '<p id="body" style="color:#FFFFFF;background-color:#FF00FF">正文'
+      '<font id="red" color="#FF0000">红字</font></p>'
+      '<a id="link" href="https://example.invalid" style="color:#00FF00">'
+      '链接<font id="link-red">红链接字</font></a>'
+      '<p id="hidden" style="color:#FFFFFF;background-color:#FFFFFF">隐藏</p>',
+    );
+    final result = adapter.adapt(
+      fragment: fragment,
+      theme: _lightTheme,
+      policy: const ForumHtmlColorAdaptationPolicy(
+        authorColorMode: ForumHtmlAuthorColorMode.readingTheme,
+      ),
+    );
+
+    final body = colorParser.parseOwn(fragment.querySelector('#body')!);
+    final red = colorParser.parseOwn(fragment.querySelector('#red')!);
+    final link = colorParser.parseOwn(fragment.querySelector('#link')!);
+    final linkRed = colorParser.parseOwn(fragment.querySelector('#link-red')!);
+    final hidden = colorParser.parseOwn(fragment.querySelector('#hidden')!);
+
+    expect(body.foreground?.toARGB32(), _lightTheme.foreground.toARGB32());
+    expect(body.background, isNull);
+    expect(red.foreground?.toARGB32(), _lightTheme.foreground.toARGB32());
+    expect(link.foreground?.toARGB32(), _lightTheme.link.toARGB32());
+    expect(linkRed.foreground?.toARGB32(), _lightTheme.link.toARGB32());
+    // Concealment survives the override: the hidden run stays invisible.
+    expect(hidden.foreground?.toARGB32(), _lightTheme.surface.toARGB32());
+    expect(hidden.background, isNull);
+    expect(result.stats.concealedTextRangeCount, 1);
+    expect(result.stats.minimumResultContrast, atLeast(4.5));
+  });
+
+  test('preserve mode keeps the contrast-adapted author color', () {
+    final fragment = html_parser.parseFragment(
+      '<p><font id="readable" color="#335577">可保留</font></p>',
+    );
+    adapter.adapt(
+      fragment: fragment,
+      theme: _lightTheme,
+      policy: ForumHtmlColorAdaptationPolicy.standard,
+    );
+    expect(
+      colorParser.parseOwn(fragment.querySelector('#readable')!).foreground,
+      isNotNull,
+    );
+  });
+
   test('adapts the Phase 0 fixture without leaking concealed text', () {
     const source =
         '<font id="highlight" '
@@ -266,6 +315,17 @@ const _darkTheme = ForumHtmlThemeContext(
   quoteForeground: Color(0xFFF6E8DD),
   codeSurface: Color(0xFF332622),
   codeForeground: Color(0xFFF6E8DD),
+);
+
+const _lightTheme = ForumHtmlThemeContext(
+  brightness: ForumHtmlBrightness.light,
+  surface: Color(0xFFFFFFFF),
+  foreground: Color(0xFF202020),
+  link: Color(0xFF1565C0),
+  quoteSurface: Color(0xFFF1F1F1),
+  quoteForeground: Color(0xFF202020),
+  codeSurface: Color(0xFFF5F5F5),
+  codeForeground: Color(0xFF202020),
 );
 
 const _blackTheme = ForumHtmlThemeContext(

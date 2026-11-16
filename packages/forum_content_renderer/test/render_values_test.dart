@@ -25,6 +25,29 @@ void main() {
     expect({options, equal}, hasLength(1));
   });
 
+  test('author color mode participates in render option identity', () {
+    final reading = options.copyWith(
+      authorColorMode: ForumHtmlAuthorColorMode.readingTheme,
+    );
+
+    expect(reading.authorColorMode, ForumHtmlAuthorColorMode.readingTheme);
+    expect(reading, isNot(options));
+    expect(
+      reading,
+      const ForumHtmlRenderOptions(
+        fontScale: 1.25,
+        lineHeightScale: 1.8,
+        paragraphSpacing: 18,
+        preserveAuthorFontSize: false,
+        authorColorMode: ForumHtmlAuthorColorMode.readingTheme,
+      ),
+    );
+    expect(
+      options.copyWith().authorColorMode,
+      ForumHtmlAuthorColorMode.preserve,
+    );
+  });
+
   test('copyWith preserves omitted values and includes all five fields', () {
     final updated = options.copyWith(
       fontScale: 1.4,

@@ -37,6 +37,43 @@ void main() {
     },
   );
 
+  test('reading theme body color replaces author colors in prepared html', () async {
+    const rawHtml =
+        '<p style="color:#ffffff;background-color:#ff00ff">正文'
+        '<font color="#ff0000">红字</font></p>'
+        '<p style="color:#ffffff;background-color:#ffffff">隐藏</p>';
+    final follow = await preparer.prepare(
+      rawHtml: rawHtml,
+      preferences: ForumHtmlReaderPreferences.defaults().copyWith(
+        preserveAuthorColors: false,
+      ),
+      theme: _darkTheme,
+      sourceId: 'fixture-episode',
+      threadId: '100',
+      imageCacheOwnerId: '100',
+    );
+    final preserved = await preparer.prepare(
+      rawHtml: rawHtml,
+      preferences: ForumHtmlReaderPreferences.defaults(),
+      theme: _darkTheme,
+      sourceId: 'fixture-episode',
+      threadId: '100',
+      imageCacheOwnerId: '100',
+    );
+    final followHtml = follow.document.preparedHtml;
+
+    final bodyColor =
+        '#${(_darkTheme.foreground.toARGB32() & 0x00FFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+    final surfaceColor =
+        '#${(_darkTheme.surface.toARGB32() & 0x00FFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
+    expect(followHtml, isNot(contains('#FF00FF')));
+    expect(followHtml, isNot(contains('#FF0000')));
+    expect(followHtml, contains(bodyColor));
+    expect(followHtml, contains('style="color: $surfaceColor">隐藏'));
+    expect(preserved.document.preparedHtml, isNot(followHtml));
+  });
+
   test('large chapter projection finishes on the preparation worker', () async {
     final parent = Isolate.current.hashCode;
     final result = await preparer.prepareAndProject(

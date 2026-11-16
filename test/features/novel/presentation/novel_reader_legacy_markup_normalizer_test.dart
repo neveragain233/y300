@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_classified_pagination_atom.dart';
@@ -34,7 +35,10 @@ void main() {
     final result = normalizer.normalize(source);
     final fragment = html_parser.parseFragment(result.html);
 
-    expect(result.summary.revision, 2);
+    expect(
+      result.summary.revision,
+      DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+    );
     expect(result.summary.normalizedAttributeCount, 5);
     expect(result.summary.reasonCounts, {
       NovelReaderLegacyMarkupNormalizationReason.emptyFontFace: 2,
@@ -53,6 +57,43 @@ void main() {
     expect(fragment.querySelectorAll('strong'), hasLength(1));
   });
 
+  test(
+    'hoists blocks out of inline formatting and unwraps layout wrappers',
+    () {
+      const source =
+          '<div align="left"><div align="left">'
+          '<font><font color="#483d8b"><div align="left">&nbsp; &nbsp;第一段'
+          '</div><br></font></font>'
+          '<font><font><div align="left">第二段</div></font></font>'
+          '</div></div>';
+
+      final result = normalizer.normalize(source);
+      final fragment = html_parser.parseFragment(result.html);
+
+      expect(
+        result.summary.reasonCounts[NovelReaderLegacyMarkupNormalizationReason
+            .inlineFormattingBlockSplit],
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        result.summary.reasonCounts[NovelReaderLegacyMarkupNormalizationReason
+            .structuralWrapperUnwrapped],
+        greaterThanOrEqualTo(2),
+      );
+      for (final font in fragment.querySelectorAll('font')) {
+        expect(font.querySelector('div,p,table'), isNull);
+      }
+      final topLevelBlocks = fragment.nodes
+          .whereType<html_dom.Element>()
+          .where((element) => element.localName == 'div')
+          .toList(growable: false);
+      expect(topLevelBlocks, hasLength(2));
+      expect(fragment.text, contains('第一段'));
+      expect(fragment.text, contains('第二段'));
+      expect(normalizer.normalize(result.html).html, result.html);
+    },
+  );
+
   test('drops line breaks that only repeat a block boundary', () {
     const source =
         '<strong>标题</strong><br>'
@@ -62,7 +103,10 @@ void main() {
     final result = normalizer.normalize(source);
     final fragment = html_parser.parseFragment(result.html);
 
-    expect(result.summary.revision, 2);
+    expect(
+      result.summary.revision,
+      DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+    );
     expect(result.summary.reasonCounts, {
       NovelReaderLegacyMarkupNormalizationReason.blockAdjacentLineBreak: 3,
     });
@@ -115,7 +159,10 @@ void main() {
           .readAsStringSync();
       final prepared = await _prepare(source, theme: _sepiaTheme);
 
-      expect(prepared.legacyMarkupNormalization.revision, 2);
+      expect(
+        prepared.legacyMarkupNormalization.revision,
+        DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+      );
       expect(prepared.legacyMarkupNormalization.normalizedAttributeCount, 2);
       expect(prepared.html, isNot(contains('face=')));
       expect(prepared.renderDocument.preparedHtml, isNot(contains('face=')));

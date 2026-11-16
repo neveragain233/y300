@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_classified_pagination_atom.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_complex_block_pagination.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_complex_html_slice.dart';
@@ -63,6 +64,7 @@ final class DefaultNovelReaderHybridPaginationPlanner
     this.layoutPolicyResolver =
         const DefaultNovelReaderPaginationLayoutPolicyResolver(),
     this.textRunExtractor = const NovelReaderPaginationTextRunExtractor(),
+    this.paragraphIndent = NovelReaderParagraphIndentMode.keep,
     this.complexBlockEngine = const NovelReaderComplexBlockPaginationEngine(),
     this.complexSearchBudget = const NovelReaderComplexHtmlSearchBudget(),
     NovelReaderFlowableComplexPaginationEngine? flowableComplexEngine,
@@ -106,6 +108,7 @@ final class DefaultNovelReaderHybridPaginationPlanner
   final NovelReaderPaginationAtomClassifier atomClassifier;
   final NovelReaderPaginationLayoutPolicyResolver layoutPolicyResolver;
   final NovelReaderPaginationTextRunExtractor textRunExtractor;
+  final NovelReaderParagraphIndentMode paragraphIndent;
   final NovelReaderComplexBlockPaginationEngine complexBlockEngine;
   final NovelReaderComplexHtmlSearchBudget complexSearchBudget;
   final NovelReaderFlowableComplexPaginationEngine flowableComplexEngine;
@@ -277,6 +280,8 @@ final class DefaultNovelReaderHybridPaginationPlanner
     final complexMeasurer = NovelReaderSessionComplexBlockMeasurer(session);
     final textEngine = DefaultNovelReaderTextPaginationEngine(
       metricsCache: textMetricsCache,
+      paragraphIndent: paragraphIndent,
+      paragraphIndentStyle: baseStyle,
     );
     final composer = NovelReaderPaginationPageComposer(
       pageHeight: key.viewportHeightPx.toDouble(),
@@ -460,12 +465,19 @@ final class DefaultNovelReaderHybridPaginationPlanner
       if (onProgress != null) {
         demandLease = workDemand?.start(cancellationToken);
       }
+      var nextAtomStartsParagraph = true;
       for (
         var classifiedIndex = 0;
         classifiedIndex < classifiedAtoms.length;
         classifiedIndex += 1
       ) {
         final classified = classifiedAtoms[classifiedIndex];
+        // A block atom always opens its own paragraph. Only inline flow atoms
+        // depend on whether the preceding atom already ended a paragraph.
+        final atomStartsParagraph =
+            _atomOpensParagraph(classified.atom.kind) ||
+            nextAtomStartsParagraph;
+        nextAtomStartsParagraph = _atomEndsParagraph(classified.atom.kind);
         await workSlice.yieldIfNeeded();
         cancellationToken.throwIfCancelled();
         switch (classified.route) {
@@ -511,6 +523,7 @@ final class DefaultNovelReaderHybridPaginationPlanner
                   textDirection: textDirection,
                   textAlign: textAlign,
                   textScaler: textScaler,
+                  startsParagraph: atomStartsParagraph,
                 ),
               );
               textLayoutCount += textResult.layoutCount;
@@ -532,6 +545,7 @@ final class DefaultNovelReaderHybridPaginationPlanner
                     textDirection: textDirection,
                     textAlign: textAlign,
                     textScaler: textScaler,
+                    startsParagraph: atomStartsParagraph,
                   ),
                 );
                 textLayoutCount += textResult.layoutCount;
@@ -1144,6 +1158,41 @@ final class DefaultNovelReaderHybridPaginationPlanner
         ),
       ),
     );
+  }
+
+  /// Block atoms open a paragraph regardless of the inline flow before them.
+  bool _atomOpensParagraph(NovelReaderPaginationAtomKind kind) {
+    switch (kind) {
+      case NovelReaderPaginationAtomKind.inlineText:
+      case NovelReaderPaginationAtomKind.inlineImage:
+        return false;
+      case NovelReaderPaginationAtomKind.text:
+      case NovelReaderPaginationAtomKind.lineBlock:
+      case NovelReaderPaginationAtomKind.heading:
+      case NovelReaderPaginationAtomKind.quote:
+      case NovelReaderPaginationAtomKind.image:
+      case NovelReaderPaginationAtomKind.atomicWidget:
+      case NovelReaderPaginationAtomKind.spacer:
+        return true;
+    }
+  }
+
+  /// Inline flow atoms continue the paragraph opened by the preceding atom.
+  /// Block atoms and explicit line breaks start a new one.
+  bool _atomEndsParagraph(NovelReaderPaginationAtomKind kind) {
+    switch (kind) {
+      case NovelReaderPaginationAtomKind.inlineText:
+      case NovelReaderPaginationAtomKind.inlineImage:
+        return false;
+      case NovelReaderPaginationAtomKind.text:
+      case NovelReaderPaginationAtomKind.lineBlock:
+      case NovelReaderPaginationAtomKind.heading:
+      case NovelReaderPaginationAtomKind.quote:
+      case NovelReaderPaginationAtomKind.image:
+      case NovelReaderPaginationAtomKind.atomicWidget:
+      case NovelReaderPaginationAtomKind.spacer:
+        return true;
+    }
   }
 
   double _minimumLineHeight(List<NovelReaderPaginationTextRun> runs) {

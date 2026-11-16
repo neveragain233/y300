@@ -182,6 +182,63 @@ void main() {
     },
   );
 
+  testWidgets('reading color, texture and indent choices reach the reader', (
+    tester,
+  ) async {
+    final changed = <NovelReaderPreferences>[];
+    await _pump(tester, service: service, onChanged: changed.add);
+    final strings = _strings(tester);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('novel-reader-paragraph-indent-control')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(strings.novelParagraphIndentRemove));
+    await tester.pump();
+    expect(changed.last.paragraphIndent, NovelReaderParagraphIndentMode.remove);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('novel-theme-paper-white')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('novel-theme-paper-white')));
+    await tester.pump();
+    expect(changed.last.themePreset, NovelReaderThemePreset.paperWhite);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('novel-reader-body-brightness-slider')),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('novel-reader-body-brightness-slider')),
+      const Offset(-120, 0),
+    );
+    await tester.pump();
+    expect(
+      changed.last.bodyBrightness,
+      lessThan(NovelReaderPreferences.defaults().bodyBrightness),
+    );
+
+    await tester.ensureVisible(
+      find.byKey(const Key('novel-reader-background-texture-control')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(strings.novelTexturePaper));
+    await tester.pump();
+    expect(changed.last.backgroundTexture, NovelReaderBackgroundTexture.paper);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('novel-reader-body-color-mode-control')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(strings.novelBodyColorPreserveAuthor));
+    await tester.pump();
+    expect(
+      changed.last.bodyColorMode,
+      NovelReaderBodyColorMode.preserveAuthorColors,
+    );
+  });
+
   testWidgets('late picker confirmation is ignored after settings disposal', (
     tester,
   ) async {

@@ -55,6 +55,7 @@ import 'package:y300/features/novel/presentation/services/novel_reader_scroll_co
 import 'package:y300/features/novel/presentation/services/novel_forum_html_render_theme_factory.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_display_settings_sheet.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_delayed_loading_boundary.dart';
+import 'package:y300/features/novel/presentation/widgets/novel_reader_background.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_document_view.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_html_paged_surface.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_page_motion.dart';
@@ -491,9 +492,8 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
                 : 0.0;
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: _readerSystemUiOverlayStyle(palette),
-              child: ColoredBox(
-                key: const Key('novel-reader-background'),
-                color: palette.background,
+              child: NovelReaderBackground(
+                palette: palette,
                 child: Builder(
                   builder: (context) {
                     final isVertical =
@@ -838,7 +838,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     return ReaderReadingStatusBar(
       status: _buildReadingStatus(viewState, verticalMetrics),
       background: palette.background,
-      foreground: palette.muted,
+      foreground: palette.controlMuted,
     );
   }
 

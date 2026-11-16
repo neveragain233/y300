@@ -14,7 +14,8 @@ final class NovelForumHtmlRenderThemeFactory {
       foreground: palette.foreground,
       link: palette.link,
       quoteSurface: palette.quoteBackground,
-      quoteForeground: palette.muted,
+      // Quotes keep body-level readability and are separated by surface/border.
+      quoteForeground: palette.foreground,
       codeSurface: palette.surface,
       codeForeground: palette.foreground,
     );

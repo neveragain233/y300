@@ -17,7 +17,10 @@ void main() {
     expect(defaults.flowMode, NovelReaderFlowMode.pagedLtr);
     expect(defaults.themePreset, NovelReaderThemePreset.followApp);
     expect(defaults.contentMaxWidth, 720);
-    expect(defaults.firstLineIndent, 0);
+    expect(defaults.paragraphIndent, NovelReaderParagraphIndentMode.keep);
+    expect(defaults.bodyBrightness, 1);
+    expect(defaults.backgroundTexture, NovelReaderBackgroundTexture.solid);
+    expect(defaults.bodyColorMode, NovelReaderBodyColorMode.followReadingTheme);
     expect(defaults.fontWeight, 400);
     expect(defaults.textAlign, NovelReaderTextAlignMode.start);
     expect(defaults.showProgressIndicator, isTrue);
@@ -118,6 +121,74 @@ void main() {
     expect(
       NovelReaderConversionModeCodec.fromStorage('future-conversion'),
       NovelReaderConversionMode.none,
+    );
+  });
+
+  test('body reading colors, texture and indent round-trip', () {
+    const codec = NovelReaderPreferencesSnapshotCodec();
+    final preferences = NovelReaderPreferences.defaults().copyWith(
+      themePreset: NovelReaderThemePreset.ink,
+      bodyColorMode: NovelReaderBodyColorMode.preserveAuthorColors,
+      bodyBrightness: 0.7,
+      backgroundTexture: NovelReaderBackgroundTexture.grain,
+      paragraphIndent: NovelReaderParagraphIndentMode.remove,
+    );
+
+    final decoded = codec.decode(codec.encode(preferences));
+
+    expect(decoded.themePreset, NovelReaderThemePreset.ink);
+    expect(
+      decoded.bodyColorMode,
+      NovelReaderBodyColorMode.preserveAuthorColors,
+    );
+    expect(decoded.bodyBrightness, 0.7);
+    expect(decoded.backgroundTexture, NovelReaderBackgroundTexture.grain);
+    expect(decoded.paragraphIndent, NovelReaderParagraphIndentMode.remove);
+    expect(decoded, preferences);
+  });
+
+  test('old snapshots use follow-colors, solid paper and original indents', () {
+    const codec = NovelReaderPreferencesSnapshotCodec();
+    final decoded = codec.decode(
+      '{"schemaVersion":1,"fontSize":18.5,"lineHeight":1.6}',
+    );
+
+    expect(decoded.bodyColorMode, NovelReaderBodyColorMode.followReadingTheme);
+    expect(decoded.bodyBrightness, 1);
+    expect(decoded.backgroundTexture, NovelReaderBackgroundTexture.solid);
+    expect(decoded.paragraphIndent, NovelReaderParagraphIndentMode.keep);
+  });
+
+  test('new reading codecs round-trip and reject unknown tokens', () {
+    for (final value in NovelReaderBodyColorMode.values) {
+      expect(
+        NovelReaderBodyColorModeCodec.fromStorage(value.storageValue),
+        value,
+      );
+    }
+    for (final value in NovelReaderBackgroundTexture.values) {
+      expect(
+        NovelReaderBackgroundTextureCodec.fromStorage(value.storageValue),
+        value,
+      );
+    }
+    for (final value in NovelReaderParagraphIndentMode.values) {
+      expect(
+        NovelReaderParagraphIndentModeCodec.fromStorage(value.storageValue),
+        value,
+      );
+    }
+    expect(
+      NovelReaderBodyColorModeCodec.fromStorage('future'),
+      NovelReaderBodyColorMode.followReadingTheme,
+    );
+    expect(
+      NovelReaderBackgroundTextureCodec.fromStorage('future'),
+      NovelReaderBackgroundTexture.solid,
+    );
+    expect(
+      NovelReaderParagraphIndentModeCodec.fromStorage('future'),
+      NovelReaderParagraphIndentMode.keep,
     );
   });
 

@@ -200,7 +200,10 @@ void main() {
         episodeId: 'phase2-normalized-font',
       );
 
-      expect(normalized.chapter.legacyMarkupNormalization.revision, 2);
+      expect(
+        normalized.chapter.legacyMarkupNormalization.revision,
+        DefaultNovelReaderLegacyMarkupNormalizer.currentRevision,
+      );
       expect(
         normalized.chapter.legacyMarkupNormalization.normalizedAttributeCount,
         2,

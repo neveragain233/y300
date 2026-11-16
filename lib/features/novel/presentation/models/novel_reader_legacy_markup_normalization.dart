@@ -7,6 +7,12 @@ enum NovelReaderLegacyMarkupNormalizationReason {
 
   /// 紧挨块级元素的 `<br>` 在渲染器里不会产生额外行，测量前移除。
   blockAdjacentLineBreak,
+
+  /// 块级元素嵌在行内格式元素内时，把行内格式移入块级元素。
+  inlineFormattingBlockSplit,
+
+  /// 只承载块级子元素的布局 `div` 展开，保留子元素本身。
+  structuralWrapperUnwrapped,
 }
 
 @immutable

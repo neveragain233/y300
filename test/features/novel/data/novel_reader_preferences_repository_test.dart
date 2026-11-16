@@ -69,6 +69,10 @@ void main() {
       'themePreset',
       'conversionMode',
       'safeAreaEnabled',
+      'bodyBrightness',
+      'backgroundTexture',
+      'bodyColorMode',
+      'paragraphIndent',
     });
     expect(snapshot['flowMode'], 'pagedRtl');
     expect(snapshot['safeAreaEnabled'], isTrue);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:y300/features/novel/domain/models/novel_reader_marks.dart';
+import 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_classified_pagination_atom.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_pagination_atom.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_pagination_text_run.dart';
@@ -10,6 +11,7 @@ import 'package:y300/features/novel/presentation/models/novel_reader_text_pagina
 import 'package:y300/features/novel/presentation/services/novel_reader_pagination_atom_classifier.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_html_text_range_slicer.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_pagination_text_run_extractor.dart';
+import 'package:y300/features/novel/presentation/services/novel_reader_paragraph_indent_projection.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_text_pagination_engine.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_dom_source_text.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
@@ -57,6 +59,114 @@ void main() {
         result.chunks[index].startAnchor.textOffset,
       );
     }
+  });
+
+  test('increase indents each paragraph without shifting source offsets', () {
+    final prepared = _safeAtom('<p>第一段<br>第二段</p>');
+    final result =
+        DefaultNovelReaderTextPaginationEngine(
+          paragraphIndent: NovelReaderParagraphIndentMode.increase,
+          paragraphIndentStyle: _baseStyle,
+        ).paginate(
+          atom: prepared.$1,
+          runs: prepared.$2,
+          width: 320,
+          pageHeight: 200,
+          paragraphSpacing: 0,
+          typographySignature: 'indent-increase',
+        );
+    final html = result.chunks.map((chunk) => chunk.html).join();
+
+    expect(
+      RegExp(NovelReaderParagraphIndentProjection.indentText).allMatches(html),
+      hasLength(2),
+    );
+    expect(result.chunks.first.sourceStart, 0);
+    expect(result.chunks.last.sourceEnd, prepared.$1.atom.textLength);
+    expect(
+      (html_parser.parseFragment(html).text ?? '')
+          .replaceAll(NovelReaderParagraphIndentProjection.indentText, '')
+          .replaceAll('\n', ''),
+      '第一段第二段',
+    );
+  });
+
+  test('increase respects a mid-flow atom that continues a paragraph', () {
+    final prepared = _safeAtom('<p>续段<br>新段</p>');
+    final result =
+        DefaultNovelReaderTextPaginationEngine(
+          paragraphIndent: NovelReaderParagraphIndentMode.increase,
+          paragraphIndentStyle: _baseStyle,
+        ).paginate(
+          atom: prepared.$1,
+          runs: prepared.$2,
+          width: 320,
+          pageHeight: 200,
+          paragraphSpacing: 0,
+          typographySignature: 'indent-continuation',
+          startsParagraph: false,
+        );
+    final html = result.chunks.map((chunk) => chunk.html).join();
+
+    expect(
+      RegExp(NovelReaderParagraphIndentProjection.indentText).allMatches(html),
+      hasLength(1),
+    );
+    expect(html, contains('续段<br>'));
+  });
+
+  test('increase replaces author indentation with one normalized indent', () {
+    final prepared = _safeAtom(
+      '<p>\u00a0 \u00a0 \u00a0 \u00a0甲<br>\u3000\u3000乙</p>',
+    );
+    final result =
+        DefaultNovelReaderTextPaginationEngine(
+          paragraphIndent: NovelReaderParagraphIndentMode.increase,
+          paragraphIndentStyle: _baseStyle,
+        ).paginate(
+          atom: prepared.$1,
+          runs: prepared.$2,
+          width: 320,
+          pageHeight: 200,
+          paragraphSpacing: 0,
+          typographySignature: 'indent-normalize',
+        );
+    final html = result.chunks.map((chunk) => chunk.html).join();
+    final visible = (html_parser.parseFragment(html).text ?? '')
+        .replaceAll(NovelReaderParagraphIndentProjection.indentText, '')
+        .replaceAll('\u00a0', '')
+        .replaceAll('\n', '')
+        .trim();
+
+    expect(
+      RegExp(NovelReaderParagraphIndentProjection.indentText).allMatches(html),
+      hasLength(2),
+    );
+    expect(visible, '甲乙');
+  });
+
+  test('remove strips author indentation while keeping source ranges', () {
+    final prepared = _safeAtom('<p>\u3000\u3000去除<br> 半角</p>');
+    final result =
+        DefaultNovelReaderTextPaginationEngine(
+          paragraphIndent: NovelReaderParagraphIndentMode.remove,
+        ).paginate(
+          atom: prepared.$1,
+          runs: prepared.$2,
+          width: 320,
+          pageHeight: 200,
+          paragraphSpacing: 0,
+          typographySignature: 'indent-remove',
+        );
+    final html = result.chunks.map((chunk) => chunk.html).join();
+
+    expect(html, isNot(contains('\u3000')));
+    expect(result.chunks.first.sourceStart, 0);
+    expect(result.chunks.last.sourceEnd, prepared.$1.atom.textLength);
+    expect(
+      (html_parser.parseFragment(html).text ?? '').replaceAll('\n', ''),
+      '去除半角',
+    );
   });
 
   test('preserves nbsp, explicit breaks and styled run boundaries', () {
@@ -172,6 +282,41 @@ void main() {
     expect(changedWidth.layoutCount, 1);
     expect(changedStyle.layoutCount, 1);
     expect(cache.length, 3);
+  });
+
+  test('shared metrics cache separates indent modes and starts', () {
+    final cache = NovelReaderTextMetricsCache(capacity: 8);
+    final prepared = _safeAtom('<p>第一段<br>第二段</p>');
+
+    NovelReaderTextPaginationResult run({
+      required DefaultNovelReaderTextPaginationEngine engine,
+      bool startsParagraph = true,
+    }) => engine.paginate(
+      atom: prepared.$1,
+      runs: prepared.$2,
+      width: 320,
+      pageHeight: 200,
+      paragraphSpacing: 0,
+      typographySignature: 'shared-indent-cache',
+      startsParagraph: startsParagraph,
+    );
+
+    final increase = DefaultNovelReaderTextPaginationEngine(
+      metricsCache: cache,
+      paragraphIndent: NovelReaderParagraphIndentMode.increase,
+      paragraphIndentStyle: _baseStyle,
+    );
+    final remove = DefaultNovelReaderTextPaginationEngine(
+      metricsCache: cache,
+      paragraphIndent: NovelReaderParagraphIndentMode.remove,
+    );
+    final keep = DefaultNovelReaderTextPaginationEngine(metricsCache: cache);
+
+    expect(run(engine: increase).layoutCount, 1);
+    expect(run(engine: increase).metricsCacheHit, isTrue);
+    expect(run(engine: remove).layoutCount, 1);
+    expect(run(engine: keep).layoutCount, 1);
+    expect(run(engine: increase, startsParagraph: false).layoutCount, 1);
   });
 
   test('keeps headings whole even when their measured height is oversized', () {
@@ -343,9 +488,9 @@ NovelReaderPaginationAtom _atom(
   String html, {
   NovelReaderPaginationAtomKind kind = NovelReaderPaginationAtomKind.text,
 }) {
-  final length = NovelReaderDomSourceText.read(
-    html_parser.parseFragment(html),
-  ).runes.length;
+  final length = NovelReaderDomSourceText.read(html_parser.parseFragment(html))
+      .runes
+      .length;
   return NovelReaderPaginationAtom(
     atomId: 'text-engine:atom',
     kind: kind,

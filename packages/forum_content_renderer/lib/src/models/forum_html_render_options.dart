@@ -1,3 +1,5 @@
+import '../html_rendering/theme/forum_html_color_adaptation_policy.dart';
+
 /// Rendering values projected from Host preferences, without persistence or
 /// text conversion policy.
 final class ForumHtmlRenderOptions {
@@ -8,6 +10,7 @@ final class ForumHtmlRenderOptions {
     required this.preserveAuthorFontSize,
     this.preserveAuthorFontFamily = true,
     this.enablePlainTextLinks = false,
+    this.authorColorMode = ForumHtmlAuthorColorMode.preserve,
   });
 
   final double fontScale;
@@ -23,6 +26,9 @@ final class ForumHtmlRenderOptions {
   /// content keep the default to preserve their document and anchor identity.
   final bool enablePlainTextLinks;
 
+  /// Reading-theme consumers such as the novel reader may own body color.
+  final ForumHtmlAuthorColorMode authorColorMode;
+
   ForumHtmlRenderOptions copyWith({
     double? fontScale,
     double? lineHeightScale,
@@ -30,6 +36,7 @@ final class ForumHtmlRenderOptions {
     bool? preserveAuthorFontSize,
     bool? preserveAuthorFontFamily,
     bool? enablePlainTextLinks,
+    ForumHtmlAuthorColorMode? authorColorMode,
   }) {
     return ForumHtmlRenderOptions(
       fontScale: fontScale ?? this.fontScale,
@@ -40,6 +47,7 @@ final class ForumHtmlRenderOptions {
       preserveAuthorFontFamily:
           preserveAuthorFontFamily ?? this.preserveAuthorFontFamily,
       enablePlainTextLinks: enablePlainTextLinks ?? this.enablePlainTextLinks,
+      authorColorMode: authorColorMode ?? this.authorColorMode,
     );
   }
 
@@ -51,7 +59,8 @@ final class ForumHtmlRenderOptions {
         paragraphSpacing == other.paragraphSpacing &&
         preserveAuthorFontSize == other.preserveAuthorFontSize &&
         preserveAuthorFontFamily == other.preserveAuthorFontFamily &&
-        enablePlainTextLinks == other.enablePlainTextLinks;
+        enablePlainTextLinks == other.enablePlainTextLinks &&
+        authorColorMode == other.authorColorMode;
   }
 
   @override
@@ -62,5 +71,6 @@ final class ForumHtmlRenderOptions {
     preserveAuthorFontSize,
     preserveAuthorFontFamily,
     enablePlainTextLinks,
+    authorColorMode,
   );
 }

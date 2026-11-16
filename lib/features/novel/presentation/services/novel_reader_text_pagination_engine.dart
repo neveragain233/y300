@@ -5,7 +5,9 @@ import 'package:y300/features/novel/presentation/models/novel_reader_classified_
 import 'package:y300/features/novel/presentation/models/novel_reader_pagination_atom.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_pagination_text_run.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_text_pagination.dart';
+import 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_html_text_range_slicer.dart';
+import 'package:y300/features/novel/presentation/services/novel_reader_paragraph_indent_projection.dart';
 
 abstract interface class NovelReaderTextPaginationEngine {
   NovelReaderTextPaginationResult paginate({
@@ -76,10 +78,19 @@ final class DefaultNovelReaderTextPaginationEngine
   DefaultNovelReaderTextPaginationEngine({
     NovelReaderTextMetricsCache? metricsCache,
     this.rangeSlicer = const NovelReaderHtmlTextRangeSlicer(),
+    this.paragraphIndent = NovelReaderParagraphIndentMode.keep,
+    this.paragraphIndentStyle,
+    this.indentProjection = const NovelReaderParagraphIndentProjection(),
   }) : metricsCache = metricsCache ?? NovelReaderTextMetricsCache();
 
   final NovelReaderTextMetricsCache metricsCache;
   final NovelReaderHtmlTextRangeSlicer rangeSlicer;
+  final NovelReaderParagraphIndentMode paragraphIndent;
+
+  /// Body style used for synthetic indent glyphs so the HTML render and
+  /// TextPainter measurement share the same em width.
+  final TextStyle? paragraphIndentStyle;
+  final NovelReaderParagraphIndentProjection indentProjection;
 
   @override
   NovelReaderTextPaginationResult paginate({
@@ -93,6 +104,7 @@ final class DefaultNovelReaderTextPaginationEngine
     TextDirection textDirection = TextDirection.ltr,
     TextAlign textAlign = TextAlign.start,
     TextScaler textScaler = TextScaler.noScaling,
+    bool startsParagraph = true,
   }) {
     if (atom.route != NovelReaderPaginationRoute.safeText) {
       throw ArgumentError.value(
@@ -148,6 +160,8 @@ final class DefaultNovelReaderTextPaginationEngine
       direction: textDirection,
       textAlign: textAlign,
       textScaleMilli: (textScaler.scale(1000)).round(),
+      paragraphIndent: _indentAppliesToAtom(atom) ? paragraphIndent : null,
+      startsParagraph: startsParagraph,
     );
     var metrics = metricsCache._get(key);
     final cacheHit = metrics != null;
@@ -160,6 +174,7 @@ final class DefaultNovelReaderTextPaginationEngine
       textDirection: textDirection,
       textAlign: textAlign,
       textScaler: textScaler,
+      startsParagraph: startsParagraph,
     );
     if (!cacheHit) {
       layoutCount = 1;
@@ -171,6 +186,7 @@ final class DefaultNovelReaderTextPaginationEngine
       pageHeight: pageHeight,
       firstPageHeight: resolvedFirstPageHeight,
       paragraphSpacing: paragraphSpacing,
+      startsParagraph: startsParagraph,
     );
     return NovelReaderTextPaginationResult(
       chunks: chunks,
@@ -188,8 +204,9 @@ final class DefaultNovelReaderTextPaginationEngine
     required TextDirection textDirection,
     required TextAlign textAlign,
     required TextScaler textScaler,
+    required bool startsParagraph,
   }) {
-    final flattened = _flattenRuns(atom, runs);
+    final flattened = _flattenRuns(atom, runs, startsParagraph);
     final graphemeBoundaries = <int>[0];
     for (final character in flattened.text.characters) {
       graphemeBoundaries.add(graphemeBoundaries.last + character.length);
@@ -273,8 +290,12 @@ final class DefaultNovelReaderTextPaginationEngine
     required double pageHeight,
     required double firstPageHeight,
     required double paragraphSpacing,
+    required bool startsParagraph,
   }) {
     final sliceSession = rangeSlicer.prepare(atom.atom.html);
+    bool startsParagraphAt(int lineIndex) => lineIndex == 0
+        ? startsParagraph && _indentAppliesToAtom(atom)
+        : metrics.lineRanges[lineIndex - 1].hardBreak;
     if (metrics.lineRanges.isEmpty || atom.atom.textLength == 0) {
       return <NovelReaderTextPageChunk>[
         _chunk(
@@ -287,6 +308,8 @@ final class DefaultNovelReaderTextPaginationEngine
           hasRenderableContent: metrics.lineRanges.any(
             (line) => line.hasRenderableContent,
           ),
+          startsParagraph: startsParagraphAt(0),
+          applyIndent: _indentAppliesToAtom(atom),
         ),
       ];
     }
@@ -303,6 +326,8 @@ final class DefaultNovelReaderTextPaginationEngine
           hasRenderableContent: metrics.lineRanges.any(
             (line) => line.hasRenderableContent,
           ),
+          startsParagraph: true,
+          applyIndent: false,
         ),
       ];
     }
@@ -327,6 +352,7 @@ final class DefaultNovelReaderTextPaginationEngine
             usedHeight: usedHeight,
             isOversized: false,
             hasRenderableContent: hasRenderableContent,
+            startsParagraph: startsParagraphAt(firstLine),
           ),
         );
         firstLine = index;
@@ -346,6 +372,7 @@ final class DefaultNovelReaderTextPaginationEngine
             usedHeight: usedHeight,
             isOversized: true,
             hasRenderableContent: hasRenderableContent,
+            startsParagraph: startsParagraphAt(index),
           ),
         );
         firstLine = index + 1;
@@ -363,6 +390,7 @@ final class DefaultNovelReaderTextPaginationEngine
           usedHeight: usedHeight,
           isOversized: usedHeight > pageHeight,
           hasRenderableContent: hasRenderableContent,
+          startsParagraph: startsParagraphAt(firstLine),
         ),
       );
     }
@@ -377,13 +405,22 @@ final class DefaultNovelReaderTextPaginationEngine
     required double usedHeight,
     required bool isOversized,
     required bool hasRenderableContent,
+    required bool startsParagraph,
+    bool applyIndent = true,
   }) {
     final safeStart = start.clamp(0, atom.atom.textLength);
     final safeEnd = end.clamp(safeStart, atom.atom.textLength);
     final baseOffset = atom.atom.startAnchor.textOffset;
     final projection = atom.atom.sourceAnchorProjection;
+    final sliced = sliceSession.slice(start: safeStart, end: safeEnd);
     return NovelReaderTextPageChunk(
-      html: sliceSession.slice(start: safeStart, end: safeEnd),
+      html: applyIndent
+          ? indentProjection.project(
+              sliced,
+              mode: paragraphIndent,
+              startsParagraph: startsParagraph,
+            )
+          : sliced,
       startAnchor:
           projection?.anchorAtSourceRune(safeStart) ??
           atom.atom.startAnchor.copyWith(textOffset: baseOffset + safeStart),
@@ -449,11 +486,18 @@ final class DefaultNovelReaderTextPaginationEngine
   _FlattenedText _flattenRuns(
     NovelReaderClassifiedPaginationAtom atom,
     List<NovelReaderPaginationTextRun> runs,
+    bool startsParagraph,
   ) {
     final buffer = StringBuffer();
     final spans = <InlineSpan>[];
     final sourceOffsets = <int>[0];
     final atomBase = atom.atom.startAnchor.textOffset;
+    final indentMode = _indentAppliesToAtom(atom)
+        ? paragraphIndent
+        : NovelReaderParagraphIndentMode.keep;
+    var atParagraphStart =
+        startsParagraph && indentMode != NovelReaderParagraphIndentMode.keep;
+    var indentInsertedForParagraph = false;
     var currentSource = 0;
     for (final run in runs) {
       currentSource =
@@ -475,7 +519,32 @@ final class DefaultNovelReaderTextPaginationEngine
             spanBuffer: spanText,
             sourceOffsets: sourceOffsets,
           );
+          atParagraphStart = indentMode != NovelReaderParagraphIndentMode.keep;
           continue;
+        }
+        if (atParagraphStart) {
+          final rune = runes[index];
+          if (indentMode == NovelReaderParagraphIndentMode.increase &&
+              !indentInsertedForParagraph) {
+            // Normalize the first line: existing author indentation is
+            // replaced by one two-character indent, never stacked.
+            _appendParagraphIndent(
+              spans: spans,
+              spanText: spanText,
+              fallbackStyle: run.style,
+              documentBuffer: buffer,
+              sourceOffsets: sourceOffsets,
+              sourceOffset: currentSource,
+            );
+            indentInsertedForParagraph = true;
+          }
+          if (_isIndentWhitespace(rune)) {
+            // Display-only suppression of author indentation; source
+            // coordinates still advance.
+            currentSource = (currentSource + 1).clamp(0, atom.atom.textLength);
+            continue;
+          }
+          atParagraphStart = false;
         }
         if (_isCollapsibleHtmlWhitespace(runes[index])) {
           do {
@@ -513,6 +582,53 @@ final class DefaultNovelReaderTextPaginationEngine
       List<int>.unmodifiable(sourceOffsets),
       List<InlineSpan>.unmodifiable(spans),
     );
+  }
+
+  void _appendParagraphIndent({
+    required List<InlineSpan> spans,
+    required StringBuffer spanText,
+    required TextStyle? fallbackStyle,
+    required StringBuffer documentBuffer,
+    required List<int> sourceOffsets,
+    required int sourceOffset,
+  }) {
+    if (spanText.isNotEmpty) {
+      spans.add(TextSpan(text: spanText.toString(), style: fallbackStyle));
+      spanText.clear();
+    }
+    spans.add(
+      TextSpan(
+        text: NovelReaderParagraphIndentProjection.indentText,
+        style: paragraphIndentStyle ?? fallbackStyle,
+      ),
+    );
+    documentBuffer.write(NovelReaderParagraphIndentProjection.indentText);
+    for (
+      var unit = 0;
+      unit < NovelReaderParagraphIndentProjection.indentText.length;
+      unit += 1
+    ) {
+      sourceOffsets.add(sourceOffset);
+    }
+  }
+
+  bool _indentAppliesToAtom(NovelReaderClassifiedPaginationAtom atom) {
+    final kind = atom.atom.kind;
+    return kind == NovelReaderPaginationAtomKind.text ||
+        kind == NovelReaderPaginationAtomKind.lineBlock ||
+        kind == NovelReaderPaginationAtomKind.inlineText ||
+        kind == NovelReaderPaginationAtomKind.inlineImage;
+  }
+
+  bool _isIndentWhitespace(int rune) {
+    return rune == 0x09 ||
+        rune == 0x20 ||
+        rune == 0x00A0 ||
+        rune == 0x1680 ||
+        (rune >= 0x2000 && rune <= 0x200A) ||
+        rune == 0x202F ||
+        rune == 0x205F ||
+        rune == 0x3000;
   }
 
   void _appendLayoutText({
@@ -587,6 +703,8 @@ final class _TextMetricsKey {
     required this.direction,
     required this.textAlign,
     required this.textScaleMilli,
+    required this.paragraphIndent,
+    required this.startsParagraph,
   });
 
   final String atomId;
@@ -597,6 +715,10 @@ final class _TextMetricsKey {
   final TextAlign textAlign;
   final int textScaleMilli;
 
+  /// Null when this atom keeps its original paragraph indentation.
+  final NovelReaderParagraphIndentMode? paragraphIndent;
+  final bool startsParagraph;
+
   @override
   bool operator ==(Object other) {
     return other is _TextMetricsKey &&
@@ -606,7 +728,9 @@ final class _TextMetricsKey {
         other.typographySignature == typographySignature &&
         other.direction == direction &&
         other.textAlign == textAlign &&
-        other.textScaleMilli == textScaleMilli;
+        other.textScaleMilli == textScaleMilli &&
+        other.paragraphIndent == paragraphIndent &&
+        other.startsParagraph == startsParagraph;
   }
 
   @override
@@ -618,5 +742,7 @@ final class _TextMetricsKey {
     direction,
     textAlign,
     textScaleMilli,
+    paragraphIndent,
+    startsParagraph,
   );
 }

@@ -9,6 +9,7 @@ class ForumHtmlReaderPreferences {
     required this.conversionMode,
     this.preserveAuthorFontSize = true,
     this.fontFamily = 'system',
+    this.preserveAuthorColors = true,
   });
 
   factory ForumHtmlReaderPreferences.defaults() =>
@@ -34,11 +35,16 @@ class ForumHtmlReaderPreferences {
   /// Stable local font choice, never an external path or engine family name.
   final String fontFamily;
 
+  /// False lets a reading-theme consumer own body color. Forum posts keep
+  /// author colors, so this defaults to preserving them.
+  final bool preserveAuthorColors;
+
   ForumHtmlReaderPreferences copyWith({
     RichTextTypography? typography,
     TextConversionMode? conversionMode,
     bool? preserveAuthorFontSize,
     String? fontFamily,
+    bool? preserveAuthorColors,
   }) {
     return ForumHtmlReaderPreferences(
       typography: typography ?? this.typography,
@@ -46,6 +52,7 @@ class ForumHtmlReaderPreferences {
       preserveAuthorFontSize:
           preserveAuthorFontSize ?? this.preserveAuthorFontSize,
       fontFamily: fontFamily ?? this.fontFamily,
+      preserveAuthorColors: preserveAuthorColors ?? this.preserveAuthorColors,
     );
   }
 
@@ -55,7 +62,8 @@ class ForumHtmlReaderPreferences {
         typography == other.typography &&
         conversionMode == other.conversionMode &&
         preserveAuthorFontSize == other.preserveAuthorFontSize &&
-        fontFamily == other.fontFamily;
+        fontFamily == other.fontFamily &&
+        preserveAuthorColors == other.preserveAuthorColors;
   }
 
   @override
@@ -64,5 +72,6 @@ class ForumHtmlReaderPreferences {
     conversionMode,
     preserveAuthorFontSize,
     fontFamily,
+    preserveAuthorColors,
   );
 }
