@@ -19,6 +19,7 @@ import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_s
 import 'package:y300/features/comic/domain/services/comic_reader_feature_flags.dart';
 import 'package:y300/features/comic/domain/services/comic_episode_refresh_service.dart';
 import 'package:y300/features/comic/domain/services/comic_thread_discovery_cache.dart';
+import 'package:y300/features/comic/domain/services/comic_first_episode_cover_service.dart';
 import 'package:y300/features/favorites/domain/services/favorite_sync_request_governor.dart';
 import 'package:y300/features/comic/presentation/adapters/comic_detail_adapter.dart';
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
@@ -62,6 +63,39 @@ void main() {
     expect(tags.first.label, '漫画');
     expect(threadRepository.requestedTids, <String>['100']);
   });
+
+  test('cover candidates come from the lowest tid first episode', () async {
+    final repository = _FakeComicRepository(
+      imageCountByEpisodeId: const <String, int>{'comic:1:90': 2},
+    );
+    final adapter = ComicDetailAdapter(
+      repository,
+      stateRepository: _FakeLibraryStateRepository(),
+      firstEpisodeCoverService: ComicFirstEpisodeCoverService(
+        repository: repository,
+      ),
+    );
+
+    final candidates = await adapter.loadCoverCandidates(workId: 'comic:1');
+
+    expect(adapter, isA<DetailCoverCandidateSource>());
+    expect(candidates.map((candidate) => candidate.imageUrl), <String>[
+      'https://img.test/90-1.jpg',
+      'https://img.test/90-2.jpg',
+    ]);
+  });
+
+  test(
+    'cover candidates stay empty without the first episode service',
+    () async {
+      final adapter = ComicDetailAdapter(
+        _FakeComicRepository(),
+        stateRepository: _FakeLibraryStateRepository(),
+      );
+
+      expect(await adapter.loadCoverCandidates(workId: 'comic:1'), isEmpty);
+    },
+  );
 
   test(
     'catalog configuration keeps source and custom values separate',

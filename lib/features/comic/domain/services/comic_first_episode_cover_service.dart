@@ -96,6 +96,49 @@ class ComicFirstEpisodeCoverService implements ComicFirstEpisodeCoverPromoter {
     return true;
   }
 
+  /// 读取首话图片作为“从帖子图片选择封面”的候选。
+  ///
+  /// 与 [promoteIfPossible] 共用首话定位、已存图片、discovery 缓存和补取顺序，
+  /// 但只读：不写章节图片，也不改来源封面。
+  Future<List<String>> loadCoverCandidates({
+    required String comicId,
+    ComicThreadDiscoveryCache? threadCache,
+    FavoriteSyncRequestGovernor? governor,
+  }) async {
+    final episode = await _firstEpisodeByTid(comicId);
+    if (episode == null) {
+      return const <String>[];
+    }
+    final existingImages = await _repository.getEpisodeImages(
+      episodeId: episode.episodeId,
+    );
+    final existing = _dedupeNonEmpty(
+      existingImages.map((image) => image.imageUrl),
+    );
+    if (existing.isNotEmpty) {
+      return existing;
+    }
+    final cached = threadCache?.get(episode.sourceTid);
+    if (cached != null) {
+      final cachedImages = _dedupeNonEmpty(_extractFirstPostImages(cached));
+      if (cachedImages.isNotEmpty) {
+        return cachedImages;
+      }
+    }
+    final fetcher = _fetchEpisodeImages;
+    if (fetcher == null) {
+      return const <String>[];
+    }
+    final fetchResult = await _runFetch(
+      governor,
+      () => fetcher(episode.sourceTid),
+    );
+    return switch (fetchResult) {
+      ComicEpisodeImagesFetched(:final imageUrls) => _dedupeNonEmpty(imageUrls),
+      ComicEpisodeImagesFetchFailed() => const <String>[],
+    };
+  }
+
   Future<ComicEpisodeImagesFetchResult> _runFetch(
     FavoriteSyncRequestGovernor? governor,
     Future<ComicEpisodeImagesFetchResult> Function() action,

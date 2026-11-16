@@ -11,7 +11,9 @@ import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_detail_page.dart';
+import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
+import 'package:y300/features/library_shared/presentation/widgets/cover_focal_point_picker.dart';
 import 'package:y300/l10n/app_localizations_zh.dart';
 
 void main() {
@@ -633,9 +635,147 @@ void main() {
     );
   });
 
-  testWidgets('UnifiedDetailPage header gradient follows scaffold background', (
+  testWidgets('cover mutation publishes shelf and favorite refresh signals', (
     tester,
   ) async {
+    final bus = LibraryShelfRefreshBus();
+    final adapter = _CoverEditableDetailAdapter(hasCustomCover: true);
+    await tester.pumpWidget(
+      _scopedApp(
+        home: UnifiedDetailPage(
+          adapter: adapter,
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
+          pickCoverImage: () async => null,
+          shelfRefreshBus: bus,
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('unified-detail-remove-cover')));
+    await tester.pumpAndSettle();
+
+    final signal = bus.signal.value;
+    expect(signal, isNotNull);
+    expect(signal!.modules, <LibraryModuleKey>{
+      LibraryModuleKey.comic,
+      LibraryModuleKey.favorite,
+    });
+    expect(signal.source, LibraryMutationSource.coverEdit);
+    expect(signal.workId, 'work-1');
+  });
+
+  testWidgets('post-image cover entry requires both candidates and importer', (
+    tester,
+  ) async {
+    final adapter = _CoverCandidateDetailAdapter();
+    await tester.pumpWidget(
+      _scopedApp(
+        home: UnifiedDetailPage(
+          adapter: adapter,
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
+          pickCoverImage: () async => null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('unified-detail-set-cover-from-post')),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+    'post-image cover entry does not require the local image picker',
+    (tester) async {
+      final adapter = _CoverCandidateDetailAdapter();
+      await tester.pumpWidget(
+        _scopedApp(
+          home: UnifiedDetailPage(
+            adapter: adapter,
+            workId: 'work-1',
+            onOpenReader: (context, target) async {},
+            onOpenThread: (context, target) async {},
+            importCoverImage: (imageUrl) async => '/tmp/cover.jpg',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('unified-detail-set-cover-from-post')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('unified-detail-set-cover')), findsNothing);
+    },
+  );
+
+  testWidgets('sets a custom cover from a post image candidate', (
+    tester,
+  ) async {
+    final adapter = _CoverCandidateDetailAdapter();
+    String? importedImageUrl;
+    await tester.pumpWidget(
+      _scopedApp(
+        home: UnifiedDetailPage(
+          adapter: adapter,
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
+          pickCoverImage: () async => null,
+          importCoverImage: (imageUrl) async {
+            importedImageUrl = imageUrl;
+            return '/tmp/y300-imported-cover.jpg';
+          },
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('unified-detail-set-cover-from-post')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(
+      find.byKey(const Key('unified-detail-cover-candidates-sheet')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('unified-detail-cover-candidate-0')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('unified-detail-cover-candidate-0')));
+    // 焦点选区会持续尝试读取本地临时图；用有界 pump 推进弹层与后续流程。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(importedImageUrl, 'https://img.test/candidate-1.jpg');
+    expect(find.byType(CoverFocalPointPicker), findsOneWidget);
+    await tester.tap(find.text('确定'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(adapter.lastSourcePath, '/tmp/y300-imported-cover.jpg');
+    expect(find.text('封面已更新'), findsOneWidget);
+  });
+
+  testWidgets('header gradient follows scaffold background', (tester) async {
     const pageBackground = Color(0xFF123456);
     final adapter = _FakeDetailAdapter(
       coverLocalPath: 'missing-y300-detail-cover.png',
@@ -743,96 +883,89 @@ void main() {
     },
   );
 
-  testWidgets(
-    'UnifiedDetailPage no-cover header remains available with custom theme',
-    (tester) async {
-      const pageBackground = Color(0xFFF1F3F5);
-      final adapter = _FakeDetailAdapter();
+  testWidgets('UnifiedDetailPage no-cover header shows typographic cover', (
+    tester,
+  ) async {
+    const pageBackground = Color(0xFFF1F3F5);
+    final adapter = _FakeDetailAdapter();
 
-      await tester.pumpWidget(
-        _scopedApp(
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-            scaffoldBackgroundColor: pageBackground,
-          ),
-          home: UnifiedDetailPage(
-            adapter: adapter,
-            workId: 'work-1',
-            onOpenReader: (context, target) async {},
-            onOpenThread: (context, target) async {},
-          ),
+    await tester.pumpWidget(
+      _scopedApp(
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+          scaffoldBackgroundColor: pageBackground,
         ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const Key('unified-detail-header-section')),
-        findsOneWidget,
-      );
-      final plainHeaderHeight = tester
-          .getSize(find.byKey(const Key('unified-detail-plain-header')))
-          .height;
-      expect(
-        find.byKey(const Key('unified-detail-hero-title')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('unified-detail-plain-header')),
-        findsOneWidget,
-      );
-      expect(
-        tester
-            .widget<Align>(
-              find.byKey(const Key('unified-detail-plain-header-content')),
-            )
-            .alignment,
-        Alignment.centerLeft,
-      );
-      expect(
-        find.byKey(const Key('unified-detail-header-gradient')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const Key('unified-detail-header-seam-bridge')),
-        findsNothing,
-      );
-      expect(find.byType(ImageFiltered), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('unified-detail-header-section')),
-          matching: find.byKey(const Key('unified-detail-header-actions-row')),
+        home: UnifiedDetailPage(
+          adapter: adapter,
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
         ),
-        findsOneWidget,
-      );
+      ),
+    );
 
-      await tester.pumpWidget(
-        _scopedApp(
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-            scaffoldBackgroundColor: pageBackground,
-          ),
-          home: UnifiedDetailPage(
-            key: const ValueKey('covered-detail-page'),
-            adapter: _FakeDetailAdapter(
-              coverLocalPath: 'missing-y300-detail-cover.png',
-            ),
-            workId: 'work-1',
-            onOpenReader: (context, target) async {},
-            onOpenThread: (context, target) async {},
-          ),
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('unified-detail-header-section')),
+      findsOneWidget,
+    );
+    final plainHeaderHeight = tester
+        .getSize(find.byKey(const Key('unified-detail-plain-header')))
+        .height;
+    expect(find.byKey(const Key('unified-detail-hero-title')), findsOneWidget);
+    expect(
+      find.byKey(const Key('unified-detail-plain-header')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('unified-detail-typographic-cover')),
+      findsOneWidget,
+    );
+    expect(find.byType(TypographicLibraryCover), findsOneWidget);
+    expect(
+      find.byKey(const Key('unified-detail-header-gradient')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('unified-detail-header-seam-bridge')),
+      findsNothing,
+    );
+    expect(find.byType(ImageFiltered), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('unified-detail-header-section')),
+        matching: find.byKey(const Key('unified-detail-header-actions-row')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(
+      _scopedApp(
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+          scaffoldBackgroundColor: pageBackground,
         ),
-      );
-      await tester.pumpAndSettle();
+        home: UnifiedDetailPage(
+          key: const ValueKey('covered-detail-page'),
+          adapter: _FakeDetailAdapter(
+            coverLocalPath: 'missing-y300-detail-cover.png',
+          ),
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        tester
-            .getSize(find.byKey(const Key('unified-detail-cover-header')))
-            .height,
-        plainHeaderHeight,
-      );
-    },
-  );
+    expect(
+      tester
+          .getSize(find.byKey(const Key('unified-detail-cover-header')))
+          .height,
+      plainHeaderHeight,
+    );
+  });
 
   testWidgets('UnifiedDetailPage builds dark theme chrome and sheets', (
     tester,
@@ -1760,37 +1893,36 @@ void main() {
     },
   );
 
-  testWidgets(
-    'UnifiedDetailPage reports a removed target for mark through',
-    (tester) async {
-      final adapter = _ReadThroughDetailAdapter()..removeTargetAtCommit = true;
-      await tester.pumpWidget(
-        _scopedApp(
-          home: UnifiedDetailPage(
-            adapter: adapter,
-            workId: 'work-1',
-            onOpenReader: (context, target) async {},
-            onOpenThread: (context, target) async {},
-          ),
+  testWidgets('UnifiedDetailPage reports a removed target for mark through', (
+    tester,
+  ) async {
+    final adapter = _ReadThroughDetailAdapter()..removeTargetAtCommit = true;
+    await tester.pumpWidget(
+      _scopedApp(
+        home: UnifiedDetailPage(
+          adapter: adapter,
+          workId: 'work-1',
+          onOpenReader: (context, target) async {},
+          onOpenThread: (context, target) async {},
         ),
-      );
-      await tester.pumpAndSettle();
-      final chapter = find.byKey(
-        const ValueKey<String>('unified-detail-chapter-e3'),
-      );
-      await tester.scrollUntilVisible(
-        chapter,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
+      ),
+    );
+    await tester.pumpAndSettle();
+    final chapter = find.byKey(
+      const ValueKey<String>('unified-detail-chapter-e3'),
+    );
+    await tester.scrollUntilVisible(
+      chapter,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
 
-      await tester.drag(chapter, const Offset(500, 0));
-      await tester.pumpAndSettle();
+    await tester.drag(chapter, const Offset(500, 0));
+    await tester.pumpAndSettle();
 
-      expect(find.text('阅读状态更新失败'), findsOneWidget);
-      expect(find.text('已将本章及之前的章节标为已读'), findsNothing);
-    },
-  );
+    expect(find.text('阅读状态更新失败'), findsOneWidget);
+    expect(find.text('已将本章及之前的章节标为已读'), findsNothing);
+  });
 
   testWidgets('UnifiedDetailPage reports chapter read mutation failure', (
     tester,
@@ -3165,6 +3297,19 @@ class _CoverEditableDetailAdapter extends _FakeDetailAdapter
     coverRemoved = true;
     hasCustomCover = false;
     coverHidden = true;
+  }
+}
+
+class _CoverCandidateDetailAdapter extends _CoverEditableDetailAdapter
+    implements DetailCoverCandidateSource {
+  @override
+  Future<List<DetailCoverCandidate>> loadCoverCandidates({
+    required String workId,
+  }) async {
+    return const <DetailCoverCandidate>[
+      DetailCoverCandidate(imageUrl: 'https://img.test/candidate-1.jpg'),
+      DetailCoverCandidate(imageUrl: 'https://img.test/candidate-2.jpg'),
+    ];
   }
 }
 

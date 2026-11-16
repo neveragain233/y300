@@ -3,6 +3,8 @@ import 'package:y300/features/comic/domain/repositories/comic_repository.dart';
 import 'package:y300/features/comic/domain/models/comic_detail_models.dart';
 import 'package:y300/features/comic/domain/services/comic_episode_images_fetch_result.dart';
 import 'package:y300/features/comic/domain/services/comic_first_episode_cover_service.dart';
+import 'package:y300/features/comic/domain/services/comic_thread_discovery_cache.dart';
+import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 void main() {
   group('ComicFirstEpisodeCoverService', () {
@@ -57,9 +59,120 @@ void main() {
       },
     );
 
+    test('fetches first episode images and saves them when local image rows are missing', () async {
+      final repository = _FakeComicRepository(
+        episodes: const <ComicEpisodeItem>[
+          ComicEpisodeItem(
+            episodeId: 'comic:1:100',
+            comicId: 'comic:1',
+            episodeTitle: '第1话',
+            sourceTid: '100',
+            sourceUrl: 'thread-100-1-1.html',
+            orderIndex: 0,
+            publishTimeText: null,
+          ),
+        ],
+      );
+      final service = ComicFirstEpisodeCoverService(
+        repository: repository,
+        fetchEpisodeImages: (tid) async {
+          expect(tid, '100');
+          return const ComicEpisodeImagesFetched(<String>[
+            'https://img.test/first.jpg',
+            'https://img.test/first.jpg',
+            '   ',
+            'https://img.test/second.jpg',
+          ]);
+        },
+      );
+
+      final promoted = await service.promoteIfPossible(comicId: 'comic:1');
+
+      expect(promoted, isTrue);
+      expect(repository.savedEpisodeId, 'comic:1:100');
+      expect(repository.savedImageUrls, <String>[
+        'https://img.test/first.jpg',
+        'https://img.test/second.jpg',
+      ]);
+    });
+
     test(
-      'fetches first episode images and saves them when local image rows are missing',
+      'lists stored first episode images as cover candidates without writing',
       () async {
+        final repository = _FakeComicRepository(
+          episodes: const <ComicEpisodeItem>[
+            ComicEpisodeItem(
+              episodeId: 'comic:1:100',
+              comicId: 'comic:1',
+              episodeTitle: '第1话',
+              sourceTid: '100',
+              sourceUrl: 'thread-100-1-1.html',
+              orderIndex: 0,
+              publishTimeText: null,
+            ),
+          ],
+          imagesByEpisode: const <String, List<ComicEpisodeImageItem>>{
+            'comic:1:100': <ComicEpisodeImageItem>[
+              ComicEpisodeImageItem(
+                episodeId: 'comic:1:100',
+                imageUrl: 'https://img.test/first.jpg',
+                imageIndex: 0,
+                cacheStatus: 'none',
+              ),
+              ComicEpisodeImageItem(
+                episodeId: 'comic:1:100',
+                imageUrl: 'https://img.test/second.jpg',
+                imageIndex: 1,
+                cacheStatus: 'none',
+              ),
+            ],
+          },
+        );
+        final service = ComicFirstEpisodeCoverService(
+          repository: repository,
+          fetchEpisodeImages: (_) async {
+            throw StateError('existing images should not fetch again');
+          },
+        );
+
+        final urls = await service.loadCoverCandidates(comicId: 'comic:1');
+
+        expect(urls, <String>[
+          'https://img.test/first.jpg',
+          'https://img.test/second.jpg',
+        ]);
+        expect(repository.promotedEpisodeId, isNull);
+        expect(repository.savedEpisodeId, isNull);
+      },
+    );
+
+    test(
+      'reuses discovery cache images as candidates before fetching again',
+      () async {
+        final cache = ComicThreadDiscoveryCache()
+          ..store(
+            const ComicThreadDiscoveryDocument(
+              tid: '100',
+              fid: '30',
+              typeId: '1',
+              subject: 'Comic',
+              posts: <ComicThreadDiscoveryPost>[
+                ComicThreadDiscoveryPost(
+                  pid: '900',
+                  authorId: '1',
+                  floorNumber: 1,
+                  isFirst: true,
+                  messageHtml: '',
+                  imageReferences: <ComicThreadDiscoveryImageReference>[
+                    ComicThreadDiscoveryImageReference(
+                      url: 'https://img.test/cached.jpg',
+                      origin: ComicEpisodeImageOrigin.dom,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
         final repository = _FakeComicRepository(
           episodes: const <ComicEpisodeItem>[
             ComicEpisodeItem(
@@ -75,27 +188,58 @@ void main() {
         );
         final service = ComicFirstEpisodeCoverService(
           repository: repository,
-          fetchEpisodeImages: (tid) async {
-            expect(tid, '100');
-            return const ComicEpisodeImagesFetched(<String>[
-              'https://img.test/first.jpg',
-              'https://img.test/first.jpg',
-              '   ',
-              'https://img.test/second.jpg',
-            ]);
+          fetchEpisodeImages: (_) async {
+            throw StateError('discovery cache should be reused');
           },
         );
 
-        final promoted = await service.promoteIfPossible(comicId: 'comic:1');
+        final urls = await service.loadCoverCandidates(
+          comicId: 'comic:1',
+          threadCache: cache,
+        );
 
-        expect(promoted, isTrue);
-        expect(repository.savedEpisodeId, 'comic:1:100');
-        expect(repository.savedImageUrls, <String>[
-          'https://img.test/first.jpg',
-          'https://img.test/second.jpg',
-        ]);
+        expect(urls, <String>['https://img.test/cached.jpg']);
+        expect(repository.savedEpisodeId, isNull);
+        expect(repository.promotedEpisodeId, isNull);
       },
     );
+
+    test('fetches first episode candidates without saving them', () async {
+      final repository = _FakeComicRepository(
+        episodes: const <ComicEpisodeItem>[
+          ComicEpisodeItem(
+            episodeId: 'comic:1:100',
+            comicId: 'comic:1',
+            episodeTitle: '第1话',
+            sourceTid: '100',
+            sourceUrl: 'thread-100-1-1.html',
+            orderIndex: 0,
+            publishTimeText: null,
+          ),
+        ],
+      );
+      final service = ComicFirstEpisodeCoverService(
+        repository: repository,
+        fetchEpisodeImages: (tid) async {
+          expect(tid, '100');
+          return const ComicEpisodeImagesFetched(<String>[
+            'https://img.test/first.jpg',
+            'https://img.test/first.jpg',
+            '   ',
+            'https://img.test/second.jpg',
+          ]);
+        },
+      );
+
+      final urls = await service.loadCoverCandidates(comicId: 'comic:1');
+
+      expect(urls, <String>[
+        'https://img.test/first.jpg',
+        'https://img.test/second.jpg',
+      ]);
+      expect(repository.savedEpisodeId, isNull);
+      expect(repository.promotedEpisodeId, isNull);
+    });
 
     test('skips automatic cover promotion when custom cover exists', () async {
       final repository = _FakeComicRepository(

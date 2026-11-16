@@ -41,6 +41,8 @@ import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
 import 'package:y300/shared/widgets/shelf/shelf_grid_geometry.dart';
 import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
+import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
+import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 import 'package:y300/features/library_shared/presentation/widgets/shelf_page_title_scope.dart';
@@ -1555,17 +1557,24 @@ class _WorkGrid extends StatelessWidget {
             itemBuilder: (context, index) {
               final item = items[index];
               final l10n = AppLocalizations.of(context);
+              final source = item.source ?? moduleKey;
               return ShelfCoverCard(
                 key: ValueKey<String>(
                   'unified-shelf-grid-item-${item.identityKey}',
                 ),
                 coverKey: item.identityKey,
+                identity: LibraryCoverIdentity.resolve(
+                  moduleKey: source,
+                  workId: item.workId,
+                  coverAsset: item.coverAsset,
+                ),
                 title: LibraryShelfTextResolver.workTitle(
                   l10n,
-                  item.source ?? moduleKey,
+                  source,
                   item.title,
                   item.workId,
                 ),
+                author: item.secondaryName,
                 coverImageUrl: item.coverImageUrl,
                 coverLocalPath: item.coverLocalPath,
                 customCoverLocalPath: item.customCoverLocalPath,
@@ -1750,16 +1759,14 @@ class _WorkList extends StatelessWidget {
           final shelfPalette = const ShelfThemePaletteResolver().resolve(
             Theme.of(context),
           );
-          final leading = _hasCoverSource(item)
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 52,
-                    height: 52,
-                    child: _buildLeadingCover(context, item),
-                  ),
-                )
-              : null;
+          final leading = ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 52,
+              height: 52,
+              child: _buildLeadingCover(context, item, moduleKey),
+            ),
+          );
           return AnimatedContainer(
             key: ValueKey<String>(
               'unified-shelf-list-item-${item.identityKey}',
@@ -1833,7 +1840,35 @@ class _WorkList extends StatelessWidget {
     );
   }
 
-  Widget _buildLeadingCover(BuildContext context, LibraryWorkItem item) {
+  Widget _buildLeadingCover(
+    BuildContext context,
+    LibraryWorkItem item,
+    LibraryModuleKey moduleKey,
+  ) {
+    final source = item.source ?? moduleKey;
+    final hasCover = LibraryCoverSources.hasAny(
+      asset: item.coverAsset,
+      customLocalPath: item.customCoverLocalPath,
+      customImageUrl: item.customCoverImageUrl,
+      coverLocalPath: item.coverLocalPath,
+      coverImageUrl: item.coverImageUrl,
+    );
+    if (!hasCover) {
+      return TypographicLibraryCover(
+        identity: LibraryCoverIdentity.resolve(
+          moduleKey: source,
+          workId: item.workId,
+          coverAsset: item.coverAsset,
+        ),
+        title: LibraryShelfTextResolver.workTitle(
+          AppLocalizations.of(context),
+          source,
+          item.title,
+          item.workId,
+        ),
+        layout: LibraryCoverLayout.list,
+      );
+    }
     final shelfPalette = const ShelfThemePaletteResolver().resolve(
       Theme.of(context),
     );
@@ -1867,6 +1902,8 @@ class _WorkList extends StatelessWidget {
       fit: BoxFit.cover,
       alignment: alignment,
       placeholder: placeholder,
+      failureColor: shelfPalette.coverPlaceholderBackground,
+      compactFailure: true,
     );
   }
 
@@ -1876,14 +1913,6 @@ class _WorkList extends StatelessWidget {
     }
     final custom = item.customCoverLocalPath?.trim();
     return custom != null && custom.isNotEmpty;
-  }
-
-  bool _hasCoverSource(LibraryWorkItem item) {
-    // 区分“作品没有配置封面”和“封面配置存在但加载失败”：
-    // 前者在列表模式不占 leading，后者仍交给图片组件显示兜底。
-    return item.coverAsset != null ||
-        _preferredLocalPath(item) != null ||
-        _preferredRemoteUrl(item) != null;
   }
 
   String? _preferredLocalPath(LibraryWorkItem item) {

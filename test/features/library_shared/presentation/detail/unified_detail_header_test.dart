@@ -11,6 +11,9 @@ import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_header.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_palette.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_original_page.dart';
+import 'package:y300/shared/widgets/library_cover_failure_placeholder.dart';
+import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
+import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 
 import '../../../../test_support/localized_test_app.dart';
@@ -57,29 +60,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Hero), findsNothing);
-    expect(
-      find.byKey(const Key('unified-detail-cover-placeholder')),
-      findsOneWidget,
-    );
+    // 封面资源不可用：前景进入可重试失败态，背景只保留中性色。
+    expect(find.byType(LibraryCoverFailurePlaceholder), findsOneWidget);
     expect(
       find.byKey(const Key('unified-detail-background-placeholder')),
       findsOneWidget,
     );
     expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
     expect(find.byIcon(Icons.image_not_supported_outlined), findsNothing);
-    final placeholders = tester.widgetList<LibraryCoverPlaceholder>(
-      find.byType(LibraryCoverPlaceholder),
+    final backgroundPlaceholder = tester.widget<LibraryCoverPlaceholder>(
+      find.byKey(const Key('unified-detail-background-placeholder')),
     );
-    expect(
-      placeholders.every(
-        (placeholder) =>
-            placeholder.color == _palette.headerPlaceholderBackground,
-      ),
-      isTrue,
+    expect(backgroundPlaceholder.color, _palette.headerPlaceholderBackground);
+
+    // 点按失败态之外的位置仍然打开原图。
+    final coverFinder = find.byKey(
+      const Key('unified-detail-cover-open-original'),
     );
-    await tester.tap(
-      find.byKey(const Key('unified-detail-cover-open-original')),
-    );
+    await tester.tapAt(tester.getTopLeft(coverFinder) + const Offset(6, 6));
     await tester.pumpAndSettle();
 
     expect(find.byType(LibraryCoverOriginalPage), findsOneWidget);
@@ -89,6 +87,50 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
+  });
+
+  testWidgets('no-cover header uses the identity color typographic cover', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const LocalizedTestApp(
+        home: Scaffold(
+          body: UnifiedDetailHeaderSection(
+            header: LibraryDetailHeader(
+              workId: 'yamibo:1',
+              title: '无封面作品',
+              inShelf: true,
+            ),
+            moduleKey: LibraryModuleKey.comic,
+            topInset: 0,
+            palette: _palette,
+            imageReferer: null,
+            onToggleShelf: _noop,
+            onRefresh: _noop,
+            onOpenThread: _noop,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TypographicLibraryCover), findsOneWidget);
+    expect(
+      find.byKey(const Key('unified-detail-typographic-cover')),
+      findsOneWidget,
+    );
+    final background = tester.widget<ColoredBox>(
+      find.byKey(const Key('typographic-cover-background')),
+    );
+    final expected = const LibraryCoverPaletteResolver().resolve(
+      theme: Theme.of(tester.element(find.byType(TypographicLibraryCover))),
+      identity: const LibraryCoverIdentity(source: 'comic', workId: 'yamibo:1'),
+    );
+    expect(background.color, expected.background);
+    expect(
+      find.byKey(const Key('unified-detail-header-gradient')),
+      findsNothing,
+    );
   });
 }
 

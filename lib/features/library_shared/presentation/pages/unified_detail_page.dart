@@ -23,6 +23,7 @@ import 'package:y300/features/library_shared/domain/services/library_shelf_refre
 import 'package:y300/features/library_shared/presentation/controllers/unified_detail_controller.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_catalog_sheet.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_chapter_management_sheet.dart';
+import 'package:y300/features/library_shared/presentation/detail/unified_detail_cover_candidates_sheet.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_chapter_tile.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_filter_sheet.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_header.dart';
@@ -54,6 +55,7 @@ class UnifiedDetailPage extends StatefulWidget {
     required this.onOpenThread,
     this.imageReferer,
     this.pickCoverImage,
+    this.importCoverImage,
     this.shelfRefreshBus,
     this.chapterStatus,
     this.chapterModeControl,
@@ -77,6 +79,11 @@ class UnifiedDetailPage extends StatefulWidget {
   /// 由具体模块外壳（如漫画详情页）用各自的图片选择器注入，使本共享页不直接
   /// 依赖 image_picker。仅当 adapter 实现 [DetailCoverEditor] 时才会被调用。
   final Future<String?> Function()? pickCoverImage;
+
+  /// 把帖子候选图片取到本地临时文件，返回路径；失败时抛出异常。
+  ///
+  /// 与 [pickCoverImage] 一样由模块外壳注入，共享页不直接持有图片传输。
+  final Future<String> Function(String imageUrl)? importCoverImage;
   final LibraryShelfRefreshBus? shelfRefreshBus;
   final Widget? chapterStatus;
   final Widget? chapterModeControl;
@@ -112,6 +119,7 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
   final Set<String> _readingStateMutationEpisodeIds = <String>{};
   bool _isResettingWorkReading = false;
   bool _isMarkingReadThrough = false;
+  bool _coverMutationInFlight = false;
   Future<void>? _refreshInFlight;
   Listenable? _chapterDownloadActivityListenable;
   final RouteContentPresentationGuard _contentPresentationGuard =
@@ -569,19 +577,26 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                               value: 'manage-chapters',
                               label: l10n.libraryDetailManageChapters,
                             ),
-                          if (_supportsCoverEditing) ...[
+                          if (_supportsCoverEditing)
                             AppPopupMenuItem<String>(
                               key: const Key('unified-detail-set-cover'),
                               value: 'set-custom-cover',
                               label: l10n.libraryDetailSetCustomCover,
                             ),
-                            if (_canRemoveCover)
-                              AppPopupMenuItem<String>(
-                                key: const Key('unified-detail-remove-cover'),
-                                value: 'remove-custom-cover',
-                                label: l10n.libraryDetailRemoveCustomCover,
+                          if (_supportsCoverCandidates)
+                            AppPopupMenuItem<String>(
+                              key: const Key(
+                                'unified-detail-set-cover-from-post',
                               ),
-                          ],
+                              value: 'set-cover-from-post',
+                              label: l10n.libraryDetailSetCoverFromPost,
+                            ),
+                          if (_supportsCoverEditing && _canRemoveCover)
+                            AppPopupMenuItem<String>(
+                              key: const Key('unified-detail-remove-cover'),
+                              value: 'remove-custom-cover',
+                              label: l10n.libraryDetailRemoveCustomCover,
+                            ),
                           AppPopupMenuItem<String>(
                             value: 'edit-intro',
                             label: l10n.libraryDetailEditIntro,
@@ -1276,6 +1291,10 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       await _handleSetCustomCover();
       return;
     }
+    if (value == 'set-cover-from-post') {
+      await _handleSetCoverFromPostImages();
+      return;
+    }
     if (value == 'remove-custom-cover') {
       await _handleRemoveCustomCover();
       return;
@@ -1650,6 +1669,18 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
   bool get _supportsCoverEditing =>
       widget.adapter is DetailCoverEditor && widget.pickCoverImage != null;
 
+  /// 是否支持从帖子图片选封面：模块能给出候选且外壳能取回图片文件。
+  bool get _supportsCoverCandidates =>
+      widget.adapter is DetailCoverCandidateSource &&
+      widget.importCoverImage != null;
+
+  DetailCoverCandidateSource? get _coverCandidateSource {
+    final adapter = widget.adapter;
+    return adapter is DetailCoverCandidateSource
+        ? adapter as DetailCoverCandidateSource
+        : null;
+  }
+
   bool get _canRemoveCover {
     final editor = _coverEditor;
     final header = _controller.state.header;
@@ -1664,13 +1695,63 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
   Future<void> _handleSetCustomCover() async {
     final editor = _coverEditor;
     final pick = widget.pickCoverImage;
-    if (editor == null || pick == null) {
+    if (editor == null || pick == null || _coverMutationInFlight) {
       return;
     }
     final sourcePath = await pick();
     if (sourcePath == null || sourcePath.trim().isEmpty || !mounted) {
       return;
     }
+    await _applyCustomCoverFromLocalPath(editor, sourcePath);
+  }
+
+  /// 帖子图片封面：候选 → 取回本地文件 → 焦点选区 → 既有自定义封面链。
+  Future<void> _handleSetCoverFromPostImages() async {
+    final source = _coverCandidateSource;
+    final importer = widget.importCoverImage;
+    if (source == null || importer == null || _coverMutationInFlight) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    // 面板 builder 会随动画重建；候选请求只发起一次。
+    final candidates = source.loadCoverCandidates(workId: widget.workId);
+    final selectedImageUrl = await showAdaptivePanel<String>(
+      context: context,
+      builder: (sheetContext) => UnifiedDetailCoverCandidatesSheet(
+        candidates: candidates,
+        imageReferer: widget.imageReferer,
+      ),
+    );
+    if (selectedImageUrl == null || selectedImageUrl.isEmpty || !mounted) {
+      return;
+    }
+    final editor = _coverEditor;
+    if (editor == null) {
+      return;
+    }
+    final String localPath;
+    try {
+      localPath = await importer(selectedImageUrl);
+    } catch (error) {
+      if (mounted) {
+        _showDetailSnackBar(
+          l10n.libraryDetailCoverCandidateImportFailed(
+            LibraryDetailTextResolver.safeError(l10n, error),
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    await _applyCustomCoverFromLocalPath(editor, localPath);
+  }
+
+  Future<void> _applyCustomCoverFromLocalPath(
+    DetailCoverEditor editor,
+    String sourcePath,
+  ) async {
     final focus = await CoverFocalPointPicker.show(
       context,
       image: FileImage(io.File(sourcePath)),
@@ -1678,58 +1759,82 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     if (focus == null || !mounted) {
       return;
     }
-    try {
-      await editor.setCustomCoverFromLocalFile(
+    await _runCoverMutation(
+      () => editor.setCustomCoverFromLocalFile(
         workId: widget.workId,
         sourceLocalPath: sourcePath,
         focusX: focus.x,
         focusY: focus.y,
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      final l10n = AppLocalizations.of(context);
-      _showDetailSnackBar(
-        l10n.libraryDetailCoverUpdateFailed(
-          LibraryDetailTextResolver.safeError(l10n, error),
-        ),
-      );
-      return;
-    }
-    await _controller.reload();
-    if (!mounted) {
-      return;
-    }
-    _showDetailSnackBar(AppLocalizations.of(context).libraryDetailCoverUpdated);
-    setState(() {});
+      ),
+      failureBuilder: AppLocalizations.of(context)
+          .libraryDetailCoverUpdateFailed,
+      successMessage: AppLocalizations.of(context).libraryDetailCoverUpdated,
+    );
   }
 
   Future<void> _handleRemoveCustomCover() async {
     final editor = _coverEditor;
-    if (editor == null || !_canRemoveCover) {
+    if (editor == null || !_canRemoveCover || _coverMutationInFlight) {
       return;
     }
+    await _runCoverMutation(
+      () => editor.removeCustomCover(workId: widget.workId),
+      failureBuilder: AppLocalizations.of(context)
+          .libraryDetailCoverRemoveFailed,
+      successMessage: AppLocalizations.of(context).libraryDetailCoverRemoved,
+    );
+  }
+
+  Future<void> _runCoverMutation(
+    Future<void> Function() action, {
+    required String Function(String error) failureBuilder,
+    required String successMessage,
+  }) async {
+    _coverMutationInFlight = true;
     try {
-      await editor.removeCustomCover(workId: widget.workId);
+      await action();
     } catch (error) {
       if (!mounted) {
         return;
       }
       final l10n = AppLocalizations.of(context);
       _showDetailSnackBar(
-        l10n.libraryDetailCoverRemoveFailed(
-          LibraryDetailTextResolver.safeError(l10n, error),
-        ),
+        failureBuilder(LibraryDetailTextResolver.safeError(l10n, error)),
       );
+      return;
+    } finally {
+      _coverMutationInFlight = false;
+    }
+    if (!mounted) {
       return;
     }
     await _controller.reload();
     if (!mounted) {
       return;
     }
-    _showDetailSnackBar(AppLocalizations.of(context).libraryDetailCoverRemoved);
+    _showDetailSnackBar(successMessage);
+    _notifyCoverChanged();
     setState(() {});
+  }
+
+  /// 封面保存在作品表中，书架与收藏页读的是同一份模块封面列；主动发布
+  /// 信号避免返回已打开的列表后仍显示旧封面。
+  void _notifyCoverChanged() {
+    final bus = widget.shelfRefreshBus;
+    if (bus == null) {
+      return;
+    }
+    bus.notify(
+      modules: <LibraryModuleKey>{
+        widget.adapter.moduleKey,
+        LibraryModuleKey.favorite,
+      },
+      reason: 'cover_updated',
+      source: LibraryMutationSource.coverEdit,
+      workId: widget.workId,
+    );
+    // 本页已用最新数据重载，跳过自己发出的这条信号。
+    _lastHandledRefreshSignalSequence = bus.signal.value?.sequence ?? 0;
   }
 
   Future<void> _showMoveCategorySheet() async {

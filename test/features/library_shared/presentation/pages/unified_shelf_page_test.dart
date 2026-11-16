@@ -205,10 +205,7 @@ void main() {
     final l10n = AppLocalizationsZh();
     expect(
       find.text(
-        l10n.libraryShelfCategoryMatchCount(
-          l10n.libraryShelfTitle('comic'),
-          2,
-        ),
+        l10n.libraryShelfCategoryMatchCount(l10n.libraryShelfTitle('comic'), 2),
       ),
       findsOneWidget,
     );
@@ -629,6 +626,15 @@ void main() {
         home: UnifiedShelfPage(
           adapter: _FakeShelfAdapter(
             initialDisplayMode: LibraryDisplayMode.grid,
+            itemsByCategory: {
+              'default': [
+                _item(
+                  workId: '1',
+                  title: 'Comic A',
+                  coverImageUrl: 'https://example.com/comic-a.jpg',
+                ),
+              ],
+            },
           ),
           featureFlags: ShelfFeatureFlags.defaults.copyWith(
             useShelfCoverImage: false,

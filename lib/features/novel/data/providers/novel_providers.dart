@@ -29,6 +29,7 @@ import 'package:y300/features/novel/domain/services/novel_author_post_episode_bu
 import 'package:y300/features/novel/domain/services/novel_chapter_sync_service.dart';
 import 'package:y300/features/novel/domain/services/novel_chapter_update_service.dart';
 import 'package:y300/features/novel/domain/services/novel_first_post_catalog_extractor.dart';
+import 'package:y300/features/novel/domain/services/novel_first_post_cover_candidates.dart';
 import 'package:y300/features/novel/domain/services/novel_intro_section_extractor.dart';
 import 'package:y300/features/novel/domain/services/novel_reader_document_parser.dart';
 import 'package:y300/features/novel/domain/services/novel_reader_search_service.dart';
@@ -167,6 +168,16 @@ final novelSourceMetadataRecoveryServiceProvider =
         gateway: ref.watch(novelSourceMetadataRecoveryGatewayProvider),
         parser: ref.watch(novelSourceMetadataParserProvider),
         repository: ref.watch(novelSourceMetadataRepositoryProvider),
+      );
+    });
+
+final novelFirstPostCoverCandidatesProvider =
+    Provider<NovelFirstPostCoverCandidates>((ref) {
+      return NovelFirstPostCoverCandidates(
+        gateway: ref.watch(novelSourceMetadataRecoveryGatewayProvider),
+        imageSourceCollector: ForumPostImageSourceCollector(
+          imageSourcePipeline: ref.watch(forumImageSourcePipelineProvider),
+        ),
       );
     });
 

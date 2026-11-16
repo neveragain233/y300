@@ -52,6 +52,7 @@ class ComicDetailAdapter
         DetailCatalogEditor,
         DetailChapterManagementAdapter,
         DetailCoverEditor,
+        DetailCoverCandidateSource,
         DetailSourceTagsAdapter {
   ComicDetailAdapter(
     this._repository, {
@@ -1186,6 +1187,20 @@ class ComicDetailAdapter
       );
     }
     return repository as ComicEpisodeManagementRepository;
+  }
+
+  @override
+  Future<List<DetailCoverCandidate>> loadCoverCandidates({
+    required String workId,
+  }) async {
+    final service = _firstEpisodeCoverService;
+    if (service == null) {
+      return const <DetailCoverCandidate>[];
+    }
+    final urls = await service.loadCoverCandidates(comicId: workId);
+    return <DetailCoverCandidate>[
+      for (final url in urls) DetailCoverCandidate(imageUrl: url),
+    ];
   }
 
   @override

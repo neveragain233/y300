@@ -100,6 +100,7 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
       sourceStateRepository: ref.watch(novelSourceStateRepositoryProvider),
       chapterUpdateServiceFactory: () =>
           ref.read(novelChapterUpdateServiceProvider),
+      coverCandidates: ref.watch(novelFirstPostCoverCandidatesProvider),
     );
     final hydrationPanel = hydration.when<Widget?>(
       data: (value) => value.isReady
@@ -142,6 +143,9 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
         final path = picked.first.path.trim();
         return path.isEmpty ? null : path;
       },
+      importCoverImage: (imageUrl) => ref
+          .read(libraryCoverImageImporterProvider)
+          .import(imageUrl: imageUrl),
       chapterStatus: hydrationPanel,
       onFirstContentPresented: (header, chapters) async {
         final draft = const LibraryDetailHistoryVisitMapper().map(

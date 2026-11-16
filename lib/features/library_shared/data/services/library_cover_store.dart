@@ -41,6 +41,16 @@ class LibraryCoverDirectoryResolver {
     }
     return root.path;
   }
+
+  /// 候选封面临时文件目录：只供“从帖子图片选择”下载后立即复制进封面存储。
+  Future<String> resolveImportRoot() async {
+    final temporary = await getTemporaryDirectory();
+    final root = io.Directory(
+      p.join(temporary.path, 'library_cover_imports', 'v1'),
+    );
+    await root.create(recursive: true);
+    return root.path;
+  }
 }
 
 abstract interface class LibraryCoverDownloader {

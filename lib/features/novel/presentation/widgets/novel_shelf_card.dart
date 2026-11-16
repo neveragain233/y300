@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/presentation/novel_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
 
 class NovelShelfCard extends StatelessWidget {
@@ -15,7 +17,12 @@ class NovelShelfCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return ShelfCoverCard(
       key: ValueKey<String>('novel-card-${item.novelId}'),
+      identity: LibraryCoverIdentity(
+        source: LibraryModuleKey.novel.name,
+        workId: item.novelId,
+      ),
       title: NovelTextResolver.workTitle(l10n, item.title, item.novelId),
+      author: item.publisherName,
       coverImageUrl: item.coverImageUrl,
       onTap: onTap,
       topLeftBadge: Container(

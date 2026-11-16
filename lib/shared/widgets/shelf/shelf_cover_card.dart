@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
+import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
+import 'package:y300/shared/widgets/library_cover_placeholder.dart';
+import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
 import 'package:y300/shared/widgets/shelf/shelf_grid_geometry.dart';
 import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
-import 'package:y300/shared/widgets/library_cover_placeholder.dart';
-import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
+import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 
-typedef ShelfCoverLayerBuilder =
-    Widget Function(BuildContext context, ShelfCoverLayerConfig config);
+typedef ShelfCoverLayerBuilder = Widget Function(
+  BuildContext context,
+  ShelfCoverLayerConfig config,
+);
 
 class ShelfCoverLayerConfig {
   const ShelfCoverLayerConfig({
@@ -34,11 +38,14 @@ class ShelfCoverLayerConfig {
 /// 设计目标：
 /// 1. 统一漫画/小说卡片基础结构（封面、兜底底图、底部标题遮罩）。
 /// 2. 将“视觉骨架”沉淀到 shared，业务模块只传入数据与行为。
+/// 3. 没有封面资源时改用排版封面，标题画在封面内，不再叠加底部遮罩。
 class ShelfCoverCard extends StatelessWidget {
   const ShelfCoverCard({
     super.key,
     this.coverKey,
+    required this.identity,
     required this.title,
+    this.author,
     required this.coverImageUrl,
     required this.onTap,
     this.coverLocalPath,
@@ -56,7 +63,9 @@ class ShelfCoverCard extends StatelessWidget {
   });
 
   final String? coverKey;
+  final LibraryCoverIdentity identity;
   final String title;
+  final String? author;
   final String? coverImageUrl;
   final String? coverLocalPath;
   final String? customCoverLocalPath;
@@ -76,12 +85,22 @@ class ShelfCoverCard extends StatelessWidget {
   final bool selected;
   final LibraryCoverAssetRef? coverAsset;
 
+  bool get _hasCoverSource {
+    return LibraryCoverSources.hasAny(
+      asset: coverAsset,
+      customLocalPath: customCoverLocalPath,
+      coverLocalPath: coverLocalPath,
+      coverImageUrl: coverImageUrl,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = const ShelfThemePaletteResolver().resolve(
       Theme.of(context),
     );
     final borderColor = selected ? palette.selectedBorder : Colors.transparent;
+    final hasCover = _hasCoverSource;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -104,7 +123,7 @@ class ShelfCoverCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _buildCoverLayer(context),
+              _buildCoverLayer(context, hasCover: hasCover, palette: palette),
               if (topLeftBadge != null)
                 Align(
                   alignment: Alignment.topLeft,
@@ -113,10 +132,11 @@ class ShelfCoverCard extends StatelessWidget {
                     child: topLeftBadge,
                   ),
                 ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: _buildTitleOverlay(context),
-              ),
+              if (hasCover)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _buildTitleOverlay(context),
+                ),
             ],
           ),
         ),
@@ -124,8 +144,21 @@ class ShelfCoverCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCoverLayer(BuildContext context) {
-    final placeholder = _buildFallback(context);
+  Widget _buildCoverLayer(
+    BuildContext context, {
+    required bool hasCover,
+    required ShelfThemePalette palette,
+  }) {
+    if (!hasCover) {
+      return TypographicLibraryCover(
+        identity: identity,
+        title: title,
+        author: author,
+        trailingBadge: trailingBadge,
+        reserveTopBadgeSpace: topLeftBadge != null,
+      );
+    }
+    final placeholder = _buildFallback(palette);
     // 焦点仅作用于自定义封面：当前展示的若不是自定义封面，保持居中。
     final alignment = _isShowingCustomCover
         ? coverAlignmentFromFocus(customCoverFocusX, customCoverFocusY)
@@ -153,6 +186,7 @@ class ShelfCoverCard extends StatelessWidget {
       alignment: alignment,
       coverAsset: coverAsset,
       placeholder: placeholder,
+      failureColor: palette.coverPlaceholderBackground,
     );
   }
 
@@ -174,10 +208,7 @@ class ShelfCoverCard extends StatelessWidget {
     return cover == null || cover.isEmpty ? null : cover;
   }
 
-  Widget _buildFallback(BuildContext context) {
-    final palette = const ShelfThemePaletteResolver().resolve(
-      Theme.of(context),
-    );
+  Widget _buildFallback(ShelfThemePalette palette) {
     return LibraryCoverPlaceholder(
       key: const Key('shelf-cover-placeholder'),
       color: palette.coverPlaceholderBackground,
@@ -185,10 +216,8 @@ class ShelfCoverCard extends StatelessWidget {
   }
 
   Widget _buildTitleOverlay(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: Colors.white,
-      fontWeight: FontWeight.w500,
-    );
+    final style = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: Colors.white, fontWeight: FontWeight.w500);
 
     final titleText = showTwoLineCustomEllipsis
         ? _TwoLineEllipsisText(title, style: style)

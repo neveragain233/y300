@@ -12,6 +12,7 @@ enum LibraryMutationSource {
   duplicateMerge,
   readingStateBatch,
   bulkDownload,
+  coverEdit,
 }
 
 class LibraryShelfRefreshSignal {

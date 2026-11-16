@@ -8,6 +8,9 @@ import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 import 'package:y300/features/library_shared/data/providers/library_cover_providers.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_palette.dart';
+import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
+import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
+import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_image.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_image_provider.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_original_page.dart';
@@ -16,15 +19,13 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 
 bool hasUnifiedDetailCover(LibraryDetailHeader header) {
-  if (header.coverAsset != null) {
-    return true;
-  }
-  return <String?>[
-    header.customCoverLocalPath,
-    header.coverLocalPath,
-    header.customCoverImageUrl,
-    header.coverImageUrl,
-  ].any((value) => value?.trim().isNotEmpty == true);
+  return LibraryCoverSources.hasAny(
+    asset: header.coverAsset,
+    customLocalPath: header.customCoverLocalPath,
+    customImageUrl: header.customCoverImageUrl,
+    coverLocalPath: header.coverLocalPath,
+    coverImageUrl: header.coverImageUrl,
+  );
 }
 
 /// 顶部视觉区与动作区作为一个滚动单元，避免 RefreshIndicator 下拉拉伸时
@@ -57,29 +58,9 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!hasUnifiedDetailCover(header)) {
-      return Column(
-        key: const Key('unified-detail-header-section'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _PlainHeroInfoSection(
-            header: header,
-            moduleKey: moduleKey,
-            topInset: topInset,
-            palette: palette,
-          ),
-          _HeaderActionsRow(
-            header: header,
-            onToggleShelf: onToggleShelf,
-            onRefresh: onRefresh,
-            onRefreshLongPress: onRefreshLongPress,
-            onOpenThread: onOpenThread,
-          ),
-        ],
-      );
-    }
+    final hasCover = hasUnifiedDetailCover(header);
     final asset = header.coverAsset;
-    final coverProvider = asset == null
+    final coverProvider = !hasCover || asset == null
         ? null
         : LibraryCoverProviderResolver.resolve(
             asset: asset,
@@ -103,6 +84,7 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
               palette: palette,
               imageReferer: imageReferer,
               coverProvider: coverProvider,
+              hasCover: hasCover,
             ),
             _HeaderActionsRow(
               header: header,
@@ -113,25 +95,25 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
             ),
           ],
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: _HeroInfoSection.heightFor(topInset) - _seamBridgeHeight / 2,
-          height: _seamBridgeHeight,
-          child: IgnorePointer(
-            child: ColoredBox(
-              key: const Key('unified-detail-header-seam-bridge'),
-              color: palette.headerGradientEnd,
-              child: const SizedBox.expand(),
+        if (hasCover)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: _HeroInfoSection.heightFor(topInset) - _seamBridgeHeight / 2,
+            height: _seamBridgeHeight,
+            child: IgnorePointer(
+              child: ColoredBox(
+                key: const Key('unified-detail-header-seam-bridge'),
+                color: palette.headerGradientEnd,
+                child: const SizedBox.expand(),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 }
 
-/// 可随列表滚动消失的封面+元信息区。
 class _HeroInfoSection extends StatelessWidget {
   const _HeroInfoSection({
     required this.header,
@@ -140,6 +122,7 @@ class _HeroInfoSection extends StatelessWidget {
     required this.palette,
     required this.imageReferer,
     required this.coverProvider,
+    required this.hasCover,
   });
 
   // Hero 区高度（含状态栏与 AppBar 覆盖区）
@@ -157,6 +140,7 @@ class _HeroInfoSection extends StatelessWidget {
   final UnifiedDetailPalette palette;
   final String? imageReferer;
   final LibraryCoverImageProvider? coverProvider;
+  final bool hasCover;
 
   @override
   Widget build(BuildContext context) {
@@ -175,15 +159,21 @@ class _HeroInfoSection extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _DetailHeaderBackground(
-            coverImageUrl: header.coverImageUrl,
-            customCoverImageUrl: header.customCoverImageUrl,
-            coverLocalPath: header.coverLocalPath,
-            customCoverLocalPath: header.customCoverLocalPath,
-            palette: palette,
-            imageReferer: imageReferer,
-            coverProvider: coverProvider,
-          ),
+          if (hasCover)
+            _DetailHeaderBackground(
+              coverImageUrl: header.coverImageUrl,
+              customCoverImageUrl: header.customCoverImageUrl,
+              coverLocalPath: header.coverLocalPath,
+              customCoverLocalPath: header.customCoverLocalPath,
+              palette: palette,
+              imageReferer: imageReferer,
+              coverProvider: coverProvider,
+            )
+          else
+            ColoredBox(
+              key: const Key('unified-detail-plain-header'),
+              color: palette.pageBackground,
+            ),
           Padding(
             padding: _contentPadding.copyWith(
               top: topInset + kToolbarHeight + 4,
@@ -191,20 +181,38 @@ class _HeroInfoSection extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _CoverImage(
-                  url: _preferredRemoteUrl(header),
-                  localPath: _preferredLocalPath(header),
-                  alignment: _isShowingCustomCover(header)
-                      ? coverAlignmentFromFocus(
-                          header.customCoverFocusX,
-                          header.customCoverFocusY,
-                        )
-                      : Alignment.center,
-                  palette: palette,
-                  imageReferer: imageReferer,
-                  coverProvider: coverProvider,
-                  coverAsset: header.coverAsset,
-                ),
+                if (hasCover)
+                  _CoverImage(
+                    header: header,
+                    url: _preferredRemoteUrl(header),
+                    localPath: _preferredLocalPath(header),
+                    alignment: _isShowingCustomCover(header)
+                        ? coverAlignmentFromFocus(
+                            header.customCoverFocusX,
+                            header.customCoverFocusY,
+                          )
+                        : Alignment.center,
+                    palette: palette,
+                    imageReferer: imageReferer,
+                  )
+                else
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 120,
+                      height: 168,
+                      child: TypographicLibraryCover(
+                        key: const Key('unified-detail-typographic-cover'),
+                        identity: LibraryCoverIdentity(
+                          source: moduleKey.name,
+                          workId: header.workId,
+                        ),
+                        title: title,
+                        // 作者信息已由右侧元信息列展示，封面内不重复。
+                        layout: LibraryCoverLayout.detail,
+                      ),
+                    ),
+                  ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Padding(
@@ -223,22 +231,25 @@ class _HeroInfoSection extends StatelessWidget {
                       translationGroup: group,
                       publisherName: _nonEmpty(header.publisherName),
                       publisherId: _nonEmpty(header.publisherId),
-                      foregroundColor: palette.heroInfoForeground,
+                      foregroundColor: hasCover
+                          ? palette.heroInfoForeground
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          // 最终的边界覆盖由父级 seam bridge 完成；这里仅保证 hero
-          // 底部最后一行像素已经落到页面背景色。
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SizedBox(
-              height: 1,
-              child: ColoredBox(color: palette.headerGradientEnd),
+          if (hasCover)
+            // 最终的边界覆盖由父级 seam bridge 完成；这里仅保证 hero
+            // 底部最后一行像素已经落到页面背景色。
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                height: 1,
+                child: ColoredBox(color: palette.headerGradientEnd),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -272,58 +283,6 @@ class _HeroInfoSection extends StatelessWidget {
   }
 }
 
-class _PlainHeroInfoSection extends StatelessWidget {
-  const _PlainHeroInfoSection({
-    required this.header,
-    required this.moduleKey,
-    required this.topInset,
-    required this.palette,
-  });
-
-  final LibraryDetailHeader header;
-  final LibraryModuleKey moduleKey;
-  final double topInset;
-  final UnifiedDetailPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: _HeroInfoSection.heightFor(topInset),
-      child: ColoredBox(
-        key: const Key('unified-detail-plain-header'),
-        color: palette.pageBackground,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            topInset + kToolbarHeight + 20,
-            24,
-            30,
-          ),
-          child: Align(
-            key: const Key('unified-detail-plain-header-content'),
-            alignment: Alignment.centerLeft,
-            child: _HeroMetaColumn(
-              moduleKey: moduleKey,
-              title: LibraryShelfTextResolver.workTitle(
-                AppLocalizations.of(context),
-                moduleKey,
-                header.title,
-                header.workId,
-              ),
-              author: _nonEmpty(header.author),
-              sourceAuthorId: _nonEmpty(header.sourceAuthorId),
-              translationGroup: _nonEmpty(header.translationGroup),
-              publisherName: _nonEmpty(header.publisherName),
-              publisherId: _nonEmpty(header.publisherId),
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _HeroMetaColumn extends StatelessWidget {
   const _HeroMetaColumn({
     required this.moduleKey,
@@ -354,9 +313,8 @@ class _HeroMetaColumn extends StatelessWidget {
     final showContributorMetadata = moduleKey != LibraryModuleKey.novel;
 
     return DefaultTextStyle(
-      style: Theme.of(
-        context,
-      ).textTheme.bodyMedium!.copyWith(color: foregroundColor),
+      style: Theme.of(context).textTheme.bodyMedium!
+          .copyWith(color: foregroundColor),
       child: Column(
         key: const Key('unified-detail-hero-meta'),
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,9 +349,8 @@ class _HeroMetaColumn extends StatelessWidget {
               key: const Key('unified-detail-source-author-id'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: foregroundColor.withValues(alpha: 0.82),
-              ),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: foregroundColor.withValues(alpha: 0.82)),
             ),
           ],
           if (showContributorMetadata && translationGroup != null) ...[
@@ -423,9 +380,8 @@ class _HeroMetaColumn extends StatelessWidget {
               key: const Key('unified-detail-publisher-id'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: foregroundColor.withValues(alpha: 0.72),
-              ),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: foregroundColor.withValues(alpha: 0.72)),
             ),
           ],
         ],
@@ -452,9 +408,8 @@ class _HeroMetadataRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: AppLocalizations.of(
-        context,
-      ).libraryDetailMetadataSemantics(semanticLabel, value),
+      label: AppLocalizations.of(context)
+          .libraryDetailMetadataSemantics(semanticLabel, value),
       excludeSemantics: true,
       child: Row(
         key: rowKey,
@@ -631,62 +586,48 @@ class _HeaderActionsRow extends StatelessWidget {
 
 class _CoverImage extends StatelessWidget {
   const _CoverImage({
+    required this.header,
     required this.url,
     required this.localPath,
     required this.palette,
     required this.imageReferer,
-    required this.coverProvider,
-    required this.coverAsset,
     this.alignment = Alignment.center,
   });
 
+  final LibraryDetailHeader header;
   final String? url;
   final String? localPath;
   final UnifiedDetailPalette palette;
   final String? imageReferer;
-  final LibraryCoverImageProvider? coverProvider;
-  final LibraryCoverAssetRef? coverAsset;
 
   /// `BoxFit.cover` 下的对齐点（自定义封面焦点）。默认居中。
   final AlignmentGeometry alignment;
 
   @override
   Widget build(BuildContext context) {
+    final asset = header.coverAsset;
     final cover = ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SizedBox(
         width: 120,
         height: 168,
-        child: coverProvider != null
-            ? LibraryCoverProviderImage(
-                provider: coverProvider!,
-                fit: BoxFit.cover,
-                alignment: alignment,
-                placeholder: LibraryCoverPlaceholder(
-                  key: const Key('unified-detail-cover-placeholder'),
-                  color: palette.headerPlaceholderBackground,
-                ),
-              )
-            : (url == null || url!.trim().isEmpty) &&
-                  (localPath == null || localPath!.trim().isEmpty)
-            ? LibraryCoverPlaceholder(
-                key: const Key('unified-detail-cover-placeholder'),
-                color: palette.headerPlaceholderBackground,
-              )
-            : LibraryCachedImage(
-                localPath: localPath,
-                imageUrl: url,
-                fit: BoxFit.cover,
-                alignment: alignment,
-                placeholder: LibraryCoverPlaceholder(
-                  key: const Key('unified-detail-cover-placeholder'),
-                  color: palette.headerPlaceholderBackground,
-                ),
-                referer: imageReferer,
-              ),
+        child: ShelfCoverImage(
+          coverKey: header.workId,
+          coverAsset: asset,
+          localPath: localPath,
+          remoteUrl: url,
+          imageReferer: imageReferer,
+          fit: BoxFit.cover,
+          alignment: alignment,
+          usage: LibraryCoverUsage.detail,
+          failureColor: palette.headerPlaceholderBackground,
+          placeholder: LibraryCoverPlaceholder(
+            key: const Key('unified-detail-cover-placeholder'),
+            color: palette.headerPlaceholderBackground,
+          ),
+        ),
       ),
     );
-    final asset = coverAsset;
     if (asset == null) {
       return cover;
     }

@@ -26,4 +26,39 @@ void main() {
 
     expect(asset, isNull);
   });
+
+  test('cover asset ids expose their owner for stable identity colors', () {
+    final owner = LibraryCoverAssetIds.ownerOf('comic/yamibo:9/custom');
+
+    expect(owner, isNotNull);
+    expect(owner!.ownerType, 'comic');
+    expect(owner.ownerId, 'yamibo:9');
+    expect(LibraryCoverAssetIds.ownerOf('comic'), isNull);
+    expect(LibraryCoverAssetIds.ownerOf('/id/source'), isNull);
+  });
+
+  test('cover source detection distinguishes empty and configured covers', () {
+    expect(LibraryCoverSources.hasAny(asset: null), isFalse);
+    expect(
+      LibraryCoverSources.hasAny(asset: null, coverImageUrl: '  '),
+      isFalse,
+    );
+    expect(
+      LibraryCoverSources.hasAny(
+        asset: null,
+        customLocalPath: 'covers/custom.img',
+      ),
+      isTrue,
+    );
+    expect(
+      LibraryCoverSources.hasAny(
+        asset: const LibraryCoverAssetRef(
+          assetId: 'novel/1/source',
+          revision: 1,
+          kind: LibraryCoverAssetKind.source,
+        ),
+      ),
+      isTrue,
+    );
+  });
 }

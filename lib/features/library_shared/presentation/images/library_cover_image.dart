@@ -45,6 +45,8 @@ class LibraryCoverImage extends ConsumerWidget {
     this.height,
     this.alignment = Alignment.center,
     this.filterQuality = FilterQuality.medium,
+    this.usage = LibraryCoverUsage.shelf,
+    this.onError,
   });
 
   final LibraryCoverAssetRef asset;
@@ -54,6 +56,8 @@ class LibraryCoverImage extends ConsumerWidget {
   final double? height;
   final AlignmentGeometry alignment;
   final FilterQuality filterQuality;
+  final LibraryCoverUsage usage;
+  final void Function(LibraryCoverImageProvider provider)? onError;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,6 +73,7 @@ class LibraryCoverImage extends ConsumerWidget {
           devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
           store: ref.watch(libraryCoverStoreProvider),
           scheduler: ref.watch(libraryCoverDecodeSchedulerProvider),
+          usage: usage,
           thumbnails: ref.watch(libraryCoverThumbnailStoreProvider),
           thumbnailWriter: ref.watch(libraryCoverThumbnailWriterProvider),
         );
@@ -80,6 +85,7 @@ class LibraryCoverImage extends ConsumerWidget {
           alignment: alignment,
           filterQuality: filterQuality,
           placeholder: placeholder,
+          onError: onError,
         );
         return image;
       },
@@ -104,6 +110,7 @@ class LibraryCoverProviderImage extends StatelessWidget {
     this.height,
     this.alignment = Alignment.center,
     this.filterQuality = FilterQuality.medium,
+    this.onError,
   });
 
   final LibraryCoverImageProvider provider;
@@ -113,6 +120,7 @@ class LibraryCoverProviderImage extends StatelessWidget {
   final double? height;
   final AlignmentGeometry alignment;
   final FilterQuality filterQuality;
+  final void Function(LibraryCoverImageProvider provider)? onError;
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +138,15 @@ class LibraryCoverProviderImage extends StatelessWidget {
         }
         return placeholder;
       },
-      errorBuilder: (context, error, stackTrace) => placeholder,
+      errorBuilder: (context, error, stackTrace) {
+        final callback = onError;
+        if (callback != null) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => callback(provider),
+          );
+        }
+        return placeholder;
+      },
     );
   }
 }

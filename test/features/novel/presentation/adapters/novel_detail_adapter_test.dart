@@ -14,10 +14,13 @@ import 'package:y300/features/novel/data/repositories/novel_repository.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_marks.dart';
 import 'package:y300/features/novel/domain/models/novel_chapter_sync_models.dart';
 import 'package:y300/features/novel/domain/models/novel_source_models.dart';
+import 'package:y300/features/novel/domain/models/novel_thread_models.dart';
 import 'package:y300/features/novel/domain/repositories/novel_source_state_repository.dart';
 import 'package:y300/features/novel/domain/repositories/novel_reading_state_repository.dart';
 import 'package:y300/features/novel/application/novel_reading_mutation_barrier.dart';
 import 'package:y300/features/novel/domain/services/novel_chapter_update_service.dart';
+import 'package:y300/features/novel/domain/services/novel_first_post_cover_candidates.dart';
+import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/novel/presentation/adapters/novel_detail_adapter.dart';
 
 void main() {
@@ -32,6 +35,41 @@ void main() {
       expect(adapter, isA<DetailChapterReadStateAdapter>());
       expect(adapter, isA<DetailChapterReadThroughAdapter>());
       expect(adapter, isA<DetailWorkReadingResetAdapter>());
+    },
+  );
+
+  test(
+    'cover candidates read the novel first post through the gateway',
+    () async {
+      final gateway = _FakeRecoveryGateway(
+        posts: <ThreadPost>[
+          ThreadPost(
+            pid: '900',
+            author: 'Novel Author',
+            authorId: '1',
+            message:
+                '<div class="message">'
+                '<img src="https://bbs.yamibo.com/data/attachment/forum/cover.jpg">'
+                '</div>',
+            number: 1,
+            isFirst: true,
+            dateline: '2026-01-01',
+          ),
+        ],
+      );
+      final adapter = NovelDetailAdapter(
+        _FakeNovelRepository(),
+        stateRepository: _RecordingLibraryStateRepository(),
+        coverCandidates: NovelFirstPostCoverCandidates(gateway: gateway),
+      );
+
+      final candidates = await adapter.loadCoverCandidates(workId: 'novel:1');
+
+      expect(adapter, isA<DetailCoverCandidateSource>());
+      expect(gateway.loadedTids, <String>['100']);
+      expect(candidates.map((candidate) => candidate.imageUrl), <String>[
+        'https://bbs.yamibo.com/data/attachment/forum/cover.jpg',
+      ]);
     },
   );
 
@@ -1327,4 +1365,27 @@ class _FakeNovelReadingStateRepository
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeRecoveryGateway implements NovelSourceMetadataRecoveryGateway {
+  _FakeRecoveryGateway({required this.posts});
+
+  final List<ThreadPost> posts;
+  final List<String> loadedTids = <String>[];
+
+  @override
+  Future<ThreadDetailData> loadFirstPage({required String tid}) async {
+    loadedTids.add(tid);
+    return ThreadDetailData(
+      tid: tid,
+      fid: '75',
+      subject: 'Novel',
+      author: 'Novel Author',
+      replies: 0,
+      views: 0,
+      currentPage: 1,
+      perPage: 20,
+      posts: posts,
+    );
+  }
 }

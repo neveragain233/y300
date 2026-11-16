@@ -68,4 +68,62 @@ abstract final class LibraryCoverAssetIds {
   static String custom({required String ownerType, required String ownerId}) {
     return '${ownerType.trim()}/${ownerId.trim()}/custom';
   }
+
+  /// 读回资产编号中的归属（`<ownerType>/<ownerId>/<kind>`）。
+  ///
+  /// 书架卡片需要按“来源类型＋作品编号”取稳定身份色，而收藏页只缓存线程
+  /// 信息，作品编号可能与模块内编号不同。资产编号由本类生成，这里按同一
+  /// 格式解析，避免为配色再复制一份归属字段。
+  static LibraryCoverAssetOwner? ownerOf(String assetId) {
+    final parts = assetId.split('/');
+    if (parts.length < 3) {
+      return null;
+    }
+    final ownerType = parts.first.trim();
+    final ownerId = parts[parts.length - 2].trim();
+    if (ownerType.isEmpty || ownerId.isEmpty) {
+      return null;
+    }
+    return LibraryCoverAssetOwner(ownerType: ownerType, ownerId: ownerId);
+  }
+}
+
+/// 封面资源是否存在的统一判断。
+///
+/// 没有任何来源封面、自定义封面或已在路径的封面时展示排版封面；只要存在一种
+/// 资源就交给图片控件处理加载与失败态。
+abstract final class LibraryCoverSources {
+  static bool hasAny({
+    required LibraryCoverAssetRef? asset,
+    String? customLocalPath,
+    String? customImageUrl,
+    String? coverLocalPath,
+    String? coverImageUrl,
+  }) {
+    if (asset != null) {
+      return true;
+    }
+    for (final value in <String?>[
+      customLocalPath,
+      customImageUrl,
+      coverLocalPath,
+      coverImageUrl,
+    ]) {
+      if (value != null && value.trim().isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+/// 封面资产的业务归属。
+class LibraryCoverAssetOwner {
+  const LibraryCoverAssetOwner({
+    required this.ownerType,
+    required this.ownerId,
+  });
+
+  final String ownerType;
+  final String ownerId;
 }

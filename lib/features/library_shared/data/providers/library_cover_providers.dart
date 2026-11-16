@@ -3,6 +3,7 @@ import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/core/network/yamibo_forum_client_provider.dart';
 import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:y300/features/library_shared/data/services/library_cover_store.dart';
+import 'package:y300/features/library_shared/data/services/library_cover_image_importer.dart';
 import 'package:y300/features/library_shared/data/services/library_cover_decode_scheduler.dart';
 import 'package:y300/features/library_shared/data/providers/library_cover_thumbnail_providers.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_thumbnail_writer.dart';
@@ -28,6 +29,17 @@ final libraryCoverStoreProvider = Provider<LibraryCoverStore>((ref) {
     rootPath: resolver.resolveRoot(),
     downloader: ref.watch(libraryCoverDownloaderProvider),
     thumbnails: ref.watch(libraryCoverThumbnailStoreProvider),
+  );
+});
+
+final libraryCoverImageImporterProvider = Provider<LibraryCoverImageImporter>((
+  ref,
+) {
+  return LibraryCoverImageImporter(
+    downloader: ref.watch(libraryCoverDownloaderProvider),
+    rootPath: ref
+        .watch(libraryCoverDirectoryResolverProvider)
+        .resolveImportRoot(),
   );
 });
 

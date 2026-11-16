@@ -15,6 +15,7 @@ import 'package:y300/features/novel/application/novel_reading_mutation_barrier.d
 import 'package:y300/features/novel/domain/repositories/novel_reading_state_repository.dart';
 import 'package:y300/features/novel/domain/repositories/novel_source_state_repository.dart';
 import 'package:y300/features/novel/domain/services/novel_chapter_update_service.dart';
+import 'package:y300/features/novel/domain/services/novel_first_post_cover_candidates.dart';
 import 'package:y300/features/novel/presentation/services/novel_chapter_progress_projector.dart';
 
 /// 小说详情适配器（Phase 6）。
@@ -26,7 +27,8 @@ class NovelDetailAdapter
         DetailChapterReadThroughAdapter,
         DetailWorkReadingResetAdapter,
         DetailMetadataEditor,
-        DetailCoverEditor {
+        DetailCoverEditor,
+        DetailCoverCandidateSource {
   NovelDetailAdapter(
     this._repository, {
     LibraryCoverStore? coverStore,
@@ -35,12 +37,14 @@ class NovelDetailAdapter
     NovelReadingMutationBarrier? mutationBarrier,
     NovelSourceStateRepository? sourceStateRepository,
     NovelChapterUpdateService Function()? chapterUpdateServiceFactory,
+    NovelFirstPostCoverCandidates? coverCandidates,
   }) : _coverStore = coverStore,
        _stateRepository = stateRepository,
        _readingStateRepository = readingStateRepository,
        _mutationBarrier = mutationBarrier,
        _sourceStateRepository = sourceStateRepository,
-       _chapterUpdateServiceFactory = chapterUpdateServiceFactory;
+       _chapterUpdateServiceFactory = chapterUpdateServiceFactory,
+       _coverCandidates = coverCandidates;
 
   final NovelRepository _repository;
   final LibraryCoverStore? _coverStore;
@@ -49,6 +53,7 @@ class NovelDetailAdapter
   final NovelReadingMutationBarrier? _mutationBarrier;
   final NovelSourceStateRepository? _sourceStateRepository;
   final NovelChapterUpdateService Function()? _chapterUpdateServiceFactory;
+  final NovelFirstPostCoverCandidates? _coverCandidates;
 
   @override
   LibraryModuleKey get moduleKey => LibraryModuleKey.novel;
@@ -338,10 +343,7 @@ class NovelDetailAdapter
     );
   }
 
-  bool Function() _rangeMutationGuard(
-    String workId,
-    List<String> episodeIds,
-  ) {
+  bool Function() _rangeMutationGuard(String workId, List<String> episodeIds) {
     final barrier = _mutationBarrier;
     if (barrier == null) return () => true;
     final revisions = <String, int>{
@@ -509,6 +511,25 @@ class NovelDetailAdapter
       rethrow;
     }
     await store.deleteOlderRevisions(asset);
+  }
+
+  @override
+  Future<List<DetailCoverCandidate>> loadCoverCandidates({
+    required String workId,
+  }) async {
+    final candidates = _coverCandidates;
+    if (candidates == null) {
+      return const <DetailCoverCandidate>[];
+    }
+    final detail = await _repository.getDetail(novelId: workId);
+    final tid = detail?.sourceTid.trim();
+    if (tid == null || tid.isEmpty) {
+      return const <DetailCoverCandidate>[];
+    }
+    final urls = await candidates.load(tid: tid);
+    return <DetailCoverCandidate>[
+      for (final url in urls) DetailCoverCandidate(imageUrl: url),
+    ];
   }
 
   @override

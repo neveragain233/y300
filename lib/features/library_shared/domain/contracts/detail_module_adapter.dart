@@ -474,6 +474,23 @@ abstract class DetailCoverEditor {
   Future<void> removeCustomCover({required String workId});
 }
 
+/// 帖子内可作为封面的候选图片。
+class DetailCoverCandidate {
+  const DetailCoverCandidate({required this.imageUrl});
+
+  final String imageUrl;
+}
+
+/// 可选合同：从原帖首楼或首话图片中读取封面候选。
+///
+/// 实现负责复用模块已有读取路径（漫画首话图片、小说首楼元数据），统一详情页
+/// 只展示候选并把用户选择交回既有自定义封面链。
+abstract interface class DetailCoverCandidateSource {
+  Future<List<DetailCoverCandidate>> loadCoverCandidates({
+    required String workId,
+  });
+}
+
 /// 来源原帖的主题标签。
 class DetailSourceTag {
   const DetailSourceTag({required this.label, required this.tagId});

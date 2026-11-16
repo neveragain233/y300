@@ -70,6 +70,9 @@ class ComicDetailPage extends ConsumerWidget {
         final path = picked.first.path.trim();
         return path.isEmpty ? null : path;
       },
+      importCoverImage: (imageUrl) => ref
+          .read(libraryCoverImageImporterProvider)
+          .import(imageUrl: imageUrl),
       onFirstContentPresented: (header, chapters) async {
         ref.read(comicDownloadCoverMaintenanceProvider).schedule(comicId);
         final draft = const LibraryDetailHistoryVisitMapper().map(

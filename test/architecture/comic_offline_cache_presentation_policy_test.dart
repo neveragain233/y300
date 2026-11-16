@@ -14,7 +14,9 @@ void main() {
     expect(detailPage, contains('_showsBulkDownloadActions => false'));
     expect(
       detailPage,
-      contains('_supportsChapterDownloads && _showsBulkDownloadActions'),
+      matches(
+        RegExp(r'_supportsChapterDownloads\s*&&\s*_showsBulkDownloadActions'),
+      ),
     );
     expect(detailPage, contains('_downloadMenuItems(BuildContext context)'));
     expect(detailPage, contains('_handleDownloadMenuAction(String value)'));
@@ -34,15 +36,13 @@ void main() {
     expect(shelfAdapter, contains('_bulkDownloadUseCaseResolver'));
 
     expect(
-      File(
-        'lib/features/comic/domain/services/bulk_download_use_case.dart',
-      ).existsSync(),
+      File('lib/features/comic/domain/services/bulk_download_use_case.dart')
+          .existsSync(),
       isTrue,
     );
     expect(
-      File(
-        'lib/features/comic/data/use_cases/bulk_download_use_case_impl.dart',
-      ).existsSync(),
+      File('lib/features/comic/data/use_cases/bulk_download_use_case_impl.dart')
+          .existsSync(),
       isTrue,
     );
     expect(
