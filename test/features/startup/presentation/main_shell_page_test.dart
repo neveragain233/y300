@@ -21,6 +21,7 @@ import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/history_entry_router.dart';
@@ -468,6 +469,9 @@ void main() {
   testWidgets('legacy navigation switches without losing page state', (
     tester,
   ) async {
+    // More 收敛为单个设置入口后内容变短，用更矮的窗口保证列表仍可滚动。
+    tester.view.physicalSize = const Size(400, 560);
+    addTearDown(tester.view.resetPhysicalSize);
     final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
       ComicSearchRefreshQueueSnapshot.empty,
     );
@@ -546,7 +550,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('immersive capsule swipe switches groups on release', (
+  testWidgets('immersive capsule drag from the selection switches groups', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MainShellPage)),
+    );
+    await container
+        .read(appAppearanceControllerProvider.notifier)
+        .setNavigationLensMotion(AppNavigationLensMotion.fromSelection);
+    await tester.pumpAndSettle();
+
+    final capsuleFinder = find.byType(MainNavigationCapsule);
+    final capsule = tester.widget<MainNavigationCapsule>(capsuleFinder);
+    expect(capsule.selectedIndex, 0);
+    expect(capsule.dragFromSelection, isTrue);
+    await tester.drag(capsuleFinder, const Offset(100, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
+      1,
+    );
+    expect(find.byKey(const Key('main-shell-page-favorites')), findsOneWidget);
+
+    await tester.drag(capsuleFinder, const Offset(-100, 0));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
+      0,
+    );
+    expect(find.byKey(const Key('main-shell-page-forum')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('immersive capsule follow press starts from the pressed entry', (
     tester,
   ) async {
     final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
@@ -563,25 +612,20 @@ void main() {
     );
 
     final capsuleFinder = find.byType(MainNavigationCapsule);
-    expect(
-      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
-      0,
-    );
-    await tester.drag(capsuleFinder, const Offset(100, 0));
+    final capsule = tester.widget<MainNavigationCapsule>(capsuleFinder);
+    // 默认按下即跟随：透镜先落到按下的入口，再从按压点跟手。
+    expect(capsule.selectedIndex, 0);
+    expect(capsule.dragFromSelection, isFalse);
+    final pitch =
+        tester.getCenter(find.byKey(const ValueKey('favorites'))).dx -
+        tester.getCenter(find.byKey(const ValueKey('forum'))).dx;
+    await tester.drag(find.byKey(const ValueKey('forum')), Offset(pitch, 0));
     await tester.pumpAndSettle();
     expect(
       tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
       1,
     );
     expect(find.byKey(const Key('main-shell-page-favorites')), findsOneWidget);
-
-    await tester.drag(capsuleFinder, const Offset(-100, 0));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<MainNavigationCapsule>(capsuleFinder).selectedIndex,
-      0,
-    );
-    expect(find.byKey(const Key('main-shell-page-forum')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -972,13 +1016,15 @@ void main() {
       );
       await _tapNavigationGroup(tester, l10n.appNavigationMy);
       await tester.scrollUntilVisible(
-        find.byKey(const Key('more-navigation-management-entry')),
+        find.byKey(const Key('more-settings-entry')),
         200,
         scrollable: find.descendant(
           of: find.byKey(const Key('more-page-list')),
           matching: find.byType(Scrollable),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('more-settings-entry')));
       await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const Key('more-navigation-management-entry')),
@@ -1451,9 +1497,26 @@ void main() {
     expect(capsuleIcon(Icons.auto_stories), findsNothing);
 
     await _tapNavigationGroup(tester, '书架');
+    // 松开后仍有抬起与 400ms 落位弹簧，透镜内容副本在落位期与真实入口
+    // 同时存在；等弹簧收敛后再统计图标，避免把副本当成第二个选中图标。
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
 
+    final capsule = tester.widget<MainNavigationCapsule>(
+      find.byType(MainNavigationCapsule),
+    );
+    final bookshelf = capsule.items.indexWhere((item) => item.label == '书架');
+    expect(bookshelf, isNonNegative);
+    expect(capsule.selectedIndex, bookshelf);
     expect(capsuleIcon(Icons.auto_stories_outlined), findsNothing);
     expect(capsuleIcon(Icons.auto_stories), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(ValueKey(capsule.items[bookshelf].id)),
+        matching: find.byIcon(Icons.auto_stories),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('mixed shelf keeps one search state across group switching', (

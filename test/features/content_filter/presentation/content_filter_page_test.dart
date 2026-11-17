@@ -13,6 +13,7 @@ import 'package:y300/features/content_filter/data/providers/content_filter_provi
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/repositories/blocked_thread_repository.dart';
 import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -99,11 +100,11 @@ void main() {
       const Key('content-filter-hide-blacklisted-threads'),
     );
     expect(tile, findsOneWidget);
-    expect(tester.widget<SwitchListTile>(tile).value, isFalse);
+    expect(tester.widget<AppSwitchRow>(tile).value, isFalse);
 
     await tester.tap(tile);
     await tester.pumpAndSettle();
-    expect(tester.widget<SwitchListTile>(tile).value, isTrue);
+    expect(tester.widget<AppSwitchRow>(tile).value, isTrue);
 
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getBool('blacklist.hide_initiated_threads.v1'), isTrue);

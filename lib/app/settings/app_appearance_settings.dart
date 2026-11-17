@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 
@@ -26,6 +27,7 @@ class AppAppearanceSettings {
     this.themeFamily = AppThemeFamily.warmPaper,
     this.navigationBarStyle = AppNavigationBarStyle.immersive,
     this.navigationSwipeEnabled = true,
+    this.navigationLensMotion = AppNavigationLensMotion.followPress,
     this.glassLevel = AppGlassLevel.standard,
     this.brightnessPreference = AppBrightnessPreference.light,
     required this.languagePreference,
@@ -36,6 +38,7 @@ class AppAppearanceSettings {
       themeFamily: AppThemeFamily.warmPaper,
       navigationBarStyle: AppNavigationBarStyle.immersive,
       navigationSwipeEnabled: true,
+      navigationLensMotion: AppNavigationLensMotion.followPress,
       glassLevel: AppGlassLevel.standard,
       brightnessPreference: AppBrightnessPreference.light,
       languagePreference: AppLanguage.system,
@@ -46,6 +49,9 @@ class AppAppearanceSettings {
   final AppThemeColorSource colorSource;
   final AppNavigationBarStyle navigationBarStyle;
   final bool navigationSwipeEnabled;
+
+  /// 底栏透镜的跟随方式；默认按下即跟随，对齐 FlClash。
+  final AppNavigationLensMotion navigationLensMotion;
   final AppGlassLevel glassLevel;
   final AppBrightnessPreference brightnessPreference;
   final AppLanguage languagePreference;
@@ -57,6 +63,7 @@ class AppAppearanceSettings {
     AppThemeFamily? themeFamily,
     AppNavigationBarStyle? navigationBarStyle,
     bool? navigationSwipeEnabled,
+    AppNavigationLensMotion? navigationLensMotion,
     AppGlassLevel? glassLevel,
     AppBrightnessPreference? brightnessPreference,
     AppLanguage? languagePreference,
@@ -67,6 +74,7 @@ class AppAppearanceSettings {
       navigationBarStyle: navigationBarStyle ?? this.navigationBarStyle,
       navigationSwipeEnabled:
           navigationSwipeEnabled ?? this.navigationSwipeEnabled,
+      navigationLensMotion: navigationLensMotion ?? this.navigationLensMotion,
       glassLevel: glassLevel ?? this.glassLevel,
       brightnessPreference: brightnessPreference ?? this.brightnessPreference,
       languagePreference: languagePreference ?? this.languagePreference,

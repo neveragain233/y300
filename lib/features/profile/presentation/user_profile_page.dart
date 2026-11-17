@@ -16,6 +16,7 @@ import 'package:y300/features/profile/presentation/widgets/profile_identity_card
 import 'package:y300/features/profile/presentation/widgets/profile_page_body.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 export 'user_profile_controller.dart';
@@ -205,8 +206,8 @@ class _ProfilePageState extends ConsumerState<_ProfilePage> {
         : l10n.profileTitle;
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        title: Text(title),
+      appBar: AppPageAppBar(
+        title: title,
         actions: [
           if (widget.userId != null)
             IconButton(

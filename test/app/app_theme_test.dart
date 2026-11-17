@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import '../test_support/localized_test_app.dart';
+
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,7 @@ import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
 import 'package:y300/app/localization/app_locale_resolution.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';
@@ -20,31 +23,27 @@ import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.da
 import 'package:y300/l10n/app_localizations.dart';
 
 void main() {
-  test(
-    'AppTheme.light exposes the expected scaffold, app bar, and navigation bar colors',
-    () {
-      final theme = AppTheme.light();
-      final palette = AppThemePalette.light();
+  test('AppTheme.light exposes the expected scaffold, app bar, and navigation bar colors', () {
+    final theme = AppTheme.light();
+    final palette = AppThemePalette.light();
 
-      expect(theme.useMaterial3, isTrue);
-      expect(theme.scaffoldBackgroundColor, AppThemeTokens.scaffoldBackground);
-      expect(
-        theme.appBarTheme.backgroundColor,
-        AppThemeTokens.appBarBackground,
-      );
-      expect(
-        theme.appBarTheme.foregroundColor,
-        AppThemeTokens.appBarForeground,
-      );
-      expect(
-        theme.navigationBarTheme.backgroundColor,
-        AppThemeTokens.navigationBarBackground,
-      );
-      _expectColorSchemeMatchesPalette(theme.colorScheme, palette);
-      _expectComponentThemesMatchScheme(theme);
-      expect(theme.extension<Y300ThemeExtension>(), isNotNull);
-    },
-  );
+    expect(theme.useMaterial3, isTrue);
+    expect(theme.scaffoldBackgroundColor, AppThemeTokens.scaffoldBackground);
+    expect(
+      theme.appBarTheme.backgroundColor,
+      AppThemeTokens.scaffoldBackground,
+    );
+    expect(theme.appBarTheme.foregroundColor, palette.onSurface);
+    expect(theme.y300BrandColors.accent, AppThemeTokens.appBarBackground);
+    expect(theme.y300BrandColors.onAccent, AppThemeTokens.appBarForeground);
+    expect(
+      theme.navigationBarTheme.backgroundColor,
+      AppThemeTokens.navigationBarBackground,
+    );
+    _expectColorSchemeMatchesPalette(theme.colorScheme, palette);
+    _expectComponentThemesMatchScheme(theme);
+    expect(theme.extension<Y300ThemeExtension>(), isNotNull);
+  });
 
   test('AppTheme.dark exposes a valid dark Material theme', () {
     final theme = AppTheme.dark();
@@ -237,19 +236,16 @@ void main() {
     );
   });
 
-  test(
-    'Y300ThemeExtension exposes shelf semantic colors for light and dark themes',
-    () {
-      final light = Y300ThemeExtension.light(AppThemePalette.light());
-      final dark = Y300ThemeExtension.dark(AppThemePalette.dark());
+  test('Y300ThemeExtension exposes shelf semantic colors for light and dark themes', () {
+    final light = Y300ThemeExtension.light(AppThemePalette.light());
+    final dark = Y300ThemeExtension.dark(AppThemePalette.dark());
 
-      expect(light.shelfCategoryBarBackground, isNot(Colors.transparent));
-      expect(light.shelfCategorySelectedBackground, isNot(Colors.transparent));
-      expect(light.coverPlaceholderBackground, isNot(Colors.transparent));
-      expect(dark.shelfCategoryBarBackground, isNot(Colors.white));
-      expect(dark.coverPlaceholderBackground, isNot(Colors.white));
-    },
-  );
+    expect(light.shelfCategoryBarBackground, isNot(Colors.transparent));
+    expect(light.shelfCategorySelectedBackground, isNot(Colors.transparent));
+    expect(light.coverPlaceholderBackground, isNot(Colors.transparent));
+    expect(dark.shelfCategoryBarBackground, isNot(Colors.white));
+    expect(dark.coverPlaceholderBackground, isNot(Colors.white));
+  });
 
   test('AppTheme.dark component themes avoid light default surfaces', () {
     final theme = AppTheme.dark();
@@ -314,7 +310,10 @@ void main() {
       contains(FlutterQuillLocalizations.delegate),
     );
     expect(theme.scaffoldBackgroundColor, AppThemeTokens.scaffoldBackground);
-    expect(theme.appBarTheme.backgroundColor, AppThemeTokens.appBarBackground);
+    expect(
+      theme.appBarTheme.backgroundColor,
+      AppThemeTokens.scaffoldBackground,
+    );
     expect(
       theme.navigationBarTheme.backgroundColor,
       AppThemeTokens.navigationBarBackground,
@@ -378,10 +377,15 @@ void main() {
     expect(materialApp.themeMode, ThemeMode.system);
     expect(
       materialApp.theme!.appBarTheme.backgroundColor,
-      const Color(0xFF67404F),
+      const Color(0xFFF8F1F4),
     );
     expect(
       materialApp.darkTheme!.appBarTheme.backgroundColor,
+      const Color(0xFF1A1216),
+    );
+    expect(materialApp.theme!.y300BrandColors.accent, const Color(0xFF67404F));
+    expect(
+      materialApp.darkTheme!.y300BrandColors.accent,
       const Color(0xFF3A2430),
     );
     expect(

@@ -445,6 +445,34 @@ void main() {
     expect(fixture.controller.hasDetail, isFalse);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('expand action defers its surface to the toolbar capsule', (
+    tester,
+  ) async {
+    final fixture = _Fixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    fixture.source.currentState!.show('thread');
+    await tester.pumpAndSettle();
+
+    final expand = tester.widget<IconButton>(
+      find.byKey(const Key('adaptive-detail-expand')),
+    );
+    // 分栏展开／恢复不再自绘前景与圆底，由动作胶囊统一着色。
+    expect(expand.style?.backgroundColor, isNull);
+    expect(expand.style?.foregroundColor, isNull);
+    expect(
+      tester
+          .getSize(find.byKey(const Key('adaptive-detail-expand')))
+          .shortestSide,
+      greaterThanOrEqualTo(48),
+    );
+
+    await tester.tap(find.byKey(const Key('adaptive-detail-expand')));
+    await tester.pumpAndSettle();
+    expect(fixture.controller.expanded, isTrue);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _predictiveBack(

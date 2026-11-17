@@ -2,13 +2,17 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/image_cache_keys.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
@@ -49,6 +53,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(Scaffold), findsOneWidget);
+    expect(find.byType(AppPageAppBar), findsOneWidget);
     expect(
       find.byKey(const Key('reply-composer-quill-editor')),
       findsOneWidget,
@@ -294,7 +299,7 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('reply-composer-more-button')));
     await tester.pumpAndSettle();
-    final switchTile = tester.widget<SwitchListTile>(
+    final switchTile = tester.widget<prism.Switch>(
       find.byKey(const Key('reply-composer-use-signature-switch')),
     );
     expect(switchTile.value, isFalse);
@@ -302,7 +307,7 @@ void main() {
       find.byKey(const Key('reply-composer-use-signature-switch')),
     );
     await tester.pumpAndSettle();
-    final toggledSwitchTile = tester.widget<SwitchListTile>(
+    final toggledSwitchTile = tester.widget<prism.Switch>(
       find.byKey(const Key('reply-composer-use-signature-switch')),
     );
     expect(toggledSwitchTile.value, isTrue);
@@ -411,7 +416,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('reply-composer-more-button')));
     await tester.pumpAndSettle();
-    final signatureSwitch = tester.widget<SwitchListTile>(
+    final signatureSwitch = tester.widget<prism.Switch>(
       find.byKey(const Key('reply-composer-use-signature-switch')),
     );
     expect(signatureSwitch.value, isFalse);

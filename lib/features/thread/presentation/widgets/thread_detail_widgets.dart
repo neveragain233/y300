@@ -39,10 +39,13 @@ import 'package:y300/features/thread/presentation/widgets/thread_replies_header.
 import 'package:y300/features/thread/presentation/widgets/thread_poll_option_image.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_post_render_context.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/forum_metric_pill.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
+import 'package:y300/shared/widgets/native_pagination_bar.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 // File split (Phase 5b): cohesive widget groups live in part files under the
@@ -109,6 +112,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.floorNavigation,
     this.bottomInset = 0,
     this.onRepliesHeaderHeightChanged,
+    this.firstPostTitleKey,
   });
 
   final ThreadDetailPageState state;
@@ -118,6 +122,9 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
   final ThreadFloorNavigationCoordinator? floorNavigation;
   final double bottomInset;
   final ValueChanged<double>? onRepliesHeaderHeightChanged;
+
+  /// 首楼标题测点，同时覆盖整卡与分块 header 两条渲染路径。
+  final GlobalKey? firstPostTitleKey;
   final bool enableBodyChunking;
 
   /// Blocked replies collected for the end of the last page.
@@ -1287,6 +1294,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                 widget.landing == ThreadPostLanding.bodyEnd &&
                 widget.targetPid == entry.sourcePost!.pid,
             onPostBuilt: _handlePostBuilt,
+            firstPostTitleKey: widget.firstPostTitleKey,
           ),
         );
       case ThreadDetailRenderEntryKind.postHeader:
@@ -1304,6 +1312,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           imageReferer: widget.imageReferer,
           onOpenAuthorProfile: widget.onOpenAuthorProfile,
           onOpenPostActions: widget.onOpenPostActions,
+          firstPostTitleKey: widget.firstPostTitleKey,
         );
         return KeyedSubtree(
           key: _preparedBodies[entry.sourcePost!.pid] == null

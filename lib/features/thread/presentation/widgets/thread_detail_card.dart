@@ -15,6 +15,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
     required this.imageReferer,
     required this.onOpenAuthorProfile,
     required this.onOpenPostActions,
+    this.firstPostTitleKey,
   });
 
   final ThreadPost sourcePost;
@@ -26,6 +27,9 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
   final String? imageReferer;
   final ValueChanged<ThreadPost> onOpenAuthorProfile;
   final ValueChanged<ThreadPost> onOpenPostActions;
+
+  /// 首楼标题测点；页面据此换算标题在正文可读区中的可见性。
+  final GlobalKey? firstPostTitleKey;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +55,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
           children: [
             if (post.isFirst) ...[
               _FirstPostThreadSummary(
+                key: firstPostTitleKey,
                 subject: displaySubject,
                 palette: palette,
               ),
@@ -497,6 +502,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
     this.onPreparedBody,
     this.preparerSelector,
     this.enableSafeDisplayPlanning = false,
+    this.firstPostTitleKey,
   });
 
   final ThreadPost sourcePost;
@@ -549,6 +555,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
   final ThreadPreparedBodyHandoff? onPreparedBody;
   final ThreadPreparedBodyPreparerSelector? preparerSelector;
   final bool enableSafeDisplayPlanning;
+  final GlobalKey? firstPostTitleKey;
 
   @override
   State<_ThreadPostCardEntry> createState() => _ThreadPostCardEntryState();
@@ -590,6 +597,7 @@ class _ThreadPostCardEntryState extends State<_ThreadPostCardEntry>
           imageReferer: widget.imageReferer,
           onOpenAuthorProfile: widget.onOpenAuthorProfile,
           onOpenPostActions: widget.onOpenPostActions,
+          firstPostTitleKey: widget.firstPostTitleKey,
         ),
         _ThreadPostCardBodyEntry(
           key: Key('thread-post-body-${widget.sourcePost.pid}'),
@@ -977,7 +985,11 @@ class ThreadPostCard extends StatelessWidget {
 }
 
 class _FirstPostThreadSummary extends StatelessWidget {
-  const _FirstPostThreadSummary({required this.subject, required this.palette});
+  const _FirstPostThreadSummary({
+    super.key,
+    required this.subject,
+    required this.palette,
+  });
 
   final String subject;
   final ThreadDetailNativePalette palette;

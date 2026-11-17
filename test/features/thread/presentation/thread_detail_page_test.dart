@@ -96,11 +96,11 @@ import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.da
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_default_avatar.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/features/thread/domain/contracts/thread_body_reading_observer.dart';
 
 void main() {
@@ -768,7 +768,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(ThreadDetailLoading), findsOneWidget);
+      expect(find.byType(AppLoadingState), findsOneWidget);
       expect(find.text('fixture-forum'), findsOneWidget);
       expect(find.text('测试主题'), findsOneWidget);
       expect(find.byType(ThreadPostHtmlFirstBody), findsNothing);
@@ -776,29 +776,24 @@ void main() {
       expect(history.drafts, isEmpty);
       final titleRect = tester.getRect(find.text('测试主题'));
       final titleStyle = tester.widget<Text>(find.text('测试主题')).style;
-      final statusFinder = find.byKey(const Key('thread-detail-loading-label'));
+      final statusFinder = find.byKey(AppLoadingState.labelKey);
       final statusRect = tester.getRect(statusFinder);
       expect(
         find.descendant(
-          of: find.byType(ThreadDetailLoading),
+          of: find.byType(AppLoadingState),
           matching: find.byType(DecoratedBox),
         ),
         findsNothing,
       );
 
       await tester.pump(const Duration(milliseconds: 299));
-      expect(find.byType(LinearProgressIndicator), findsNothing);
+      expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
       await tester.pump(const Duration(milliseconds: 1));
-      expect(
-        find.byKey(const Key('thread-detail-loading-progress')),
-        findsOneWidget,
-      );
+      expect(find.byKey(AppLoadingState.indicatorKey), findsOneWidget);
       final l10n = AppLocalizations.of(
-        tester.element(find.byType(ThreadDetailLoading)),
+        tester.element(find.byType(AppLoadingState)),
       );
-      final status = tester.widget<Text>(
-        find.byKey(const Key('thread-detail-loading-label')),
-      );
+      final status = tester.widget<Text>(find.byKey(AppLoadingState.labelKey));
       expect(status.data, l10n.threadDetailLoading);
       expect(status.style!.color!.a, greaterThan(0));
       expect(tester.getRect(find.text('测试主题')), titleRect);
@@ -823,7 +818,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(ThreadDetailLoading), findsNothing);
+      expect(find.byType(AppLoadingState), findsNothing);
       expect(
         find.byKey(const Key('thread-post-card-entry-p1')),
         findsOneWidget,
@@ -892,7 +887,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
-          expect(find.byType(ThreadDetailLoading), findsNothing);
+          expect(find.byType(AppLoadingState), findsNothing);
           expect(tester.getRect(titleFinder), titleRect);
           expect(tester.widget<Text>(titleFinder).style, titleStyle);
           expect(lineBoxes(), linesBefore);
@@ -943,7 +938,7 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(find.text('fixture-current-title'), findsOneWidget);
-          expect(find.byType(ThreadDetailLoading), findsNothing);
+          expect(find.byType(AppLoadingState), findsNothing);
           if (initialSubject.isNotEmpty) {
             expect(find.text(initialSubject), findsNothing);
           }
@@ -978,14 +973,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
-      expect(find.byType(ThreadDetailLoading), findsNothing);
+      expect(find.byType(AppLoadingState), findsNothing);
       expect(find.byKey(const Key('thread-post-card-fast-p1')), findsOneWidget);
-      expect(find.byType(LinearProgressIndicator), findsNothing);
+      expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
       await tester.pump(const Duration(milliseconds: 400));
-      expect(
-        find.byKey(const Key('thread-detail-loading-progress')),
-        findsNothing,
-      );
+      expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -1018,7 +1010,7 @@ void main() {
         await tester.tap(find.byKey(const Key('fixture-open-thread')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
-        expect(find.byType(ThreadDetailLoading), findsOneWidget);
+        expect(find.byType(AppLoadingState), findsOneWidget);
         await tester.tap(find.byType(BackButton));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 600));
@@ -1042,7 +1034,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(ThreadDetailLoading), findsNothing);
+        expect(find.byType(AppLoadingState), findsNothing);
         expect(history.drafts, isEmpty);
         expect(tester.takeException(), isNull);
       },
@@ -1060,15 +1052,15 @@ void main() {
         await tester.pumpWidget(_buildTestApp(repository));
         final titleRect = tester.getRect(find.text('测试主题'));
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+        expect(find.byKey(AppLoadingState.indicatorKey), findsOneWidget);
         first.complete(
           const ApiFailure(
             ApiError(type: ApiErrorType.network, message: 'fixture-failure'),
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(ThreadDetailLoading), findsNothing);
-        expect(find.byType(LinearProgressIndicator), findsNothing);
+        expect(find.byType(AppLoadingState), findsNothing);
+        expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
         expect(tester.getRect(find.text('测试主题')), titleRect);
         expect(
           tester
@@ -1078,13 +1070,13 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('thread-detail-retry-button')));
         await tester.pump();
-        expect(find.byType(ThreadDetailLoading), findsOneWidget);
+        expect(find.byType(AppLoadingState), findsOneWidget);
         expect(tester.getRect(find.text('测试主题')), titleRect);
-        expect(find.byType(LinearProgressIndicator), findsNothing);
+        expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
         await tester.pump(const Duration(milliseconds: 299));
-        expect(find.byType(LinearProgressIndicator), findsNothing);
+        expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
         await tester.pump(const Duration(milliseconds: 1));
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+        expect(find.byKey(AppLoadingState.indicatorKey), findsOneWidget);
         retry.complete(
           ApiSuccess(
             _threadDetailData(
@@ -1103,7 +1095,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(ThreadDetailLoading), findsNothing);
+        expect(find.byType(AppLoadingState), findsNothing);
         expect(
           find.byKey(const Key('thread-post-card-retry-p1')),
           findsOneWidget,
@@ -1123,7 +1115,7 @@ void main() {
       final repository = _FakeThreadRepository(load);
       await tester.pumpWidget(_buildTestApp(repository));
       await tester.pumpAndSettle();
-      expect(find.byType(ThreadDetailLoading), findsNothing);
+      expect(find.byType(AppLoadingState), findsNothing);
       expect(
         find.byKey(const Key('thread-detail-retry-button')),
         findsOneWidget,
@@ -1253,7 +1245,8 @@ void main() {
           tester
               .getTopLeft(find.byKey(const Key('thread-post-card-floor-2')))
               .dy,
-          lessThan(120),
+          // 顶栏改为两行 64 后，近顶端判定随之下移 8 逻辑像素。
+          lessThan(128),
         );
         expect(pages, [1]);
         await tester.tap(forward);
@@ -2086,6 +2079,11 @@ void main() {
         findsOneWidget,
       );
 
+      await Scrollable.ensureVisible(
+        tester.element(find.byKey(const Key('thread-post-rating-header'))),
+        alignment: .5,
+      );
+      await tester.pump();
       await tester.tap(find.byKey(const Key('thread-post-rating-header')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 220));
@@ -4013,12 +4011,12 @@ void main() {
         expect(repository.queryHistory.last.containsKey('ordertype'), isFalse);
         await tester.tap(find.byKey(const Key('thread-detail-more-menu')));
         await tester.pumpAndSettle();
-        expect(_popupMenuText(l10n.threadDetailAllPosts), findsOneWidget);
-        expect(_popupMenuText(l10n.threadDetailReverseOrder), findsOneWidget);
+        expect(find.text(l10n.threadDetailAllPosts), findsOneWidget);
+        expect(find.text(l10n.threadDetailReverseOrder), findsOneWidget);
 
-        await tester.tap(_popupMenuText(l10n.threadDetailReverseOrder));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 120));
+        await tester.tap(find.text(l10n.threadDetailReverseOrder));
+        // 菜单收回期间浮层仍拦截页面点击，等关闭完成再继续操作页面。
+        await tester.pumpAndSettle();
 
         expect(repository.queryHistory.last['authorid'], '1');
         expect(repository.queryHistory.last['ordertype'], '1');
@@ -4350,7 +4348,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_appBarTitleText('目标帖子'), findsNothing);
+      // 目标居中列表不在首楼，顶栏直接显示帖子标题。
+      expect(_appBarTitleText('目标帖子'), findsOneWidget);
       expect(
         find.byKey(const Key('thread-post-card-41560047')),
         findsOneWidget,
@@ -6420,8 +6419,17 @@ void main() {
         find.byKey(const Key('thread-detail-display-settings-sheet')),
         findsOneWidget,
       );
-      final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
-      expect(bottomSheet.showDragHandle, isFalse);
+      // 显示设置统一由自适应面板承载：宽屏为侧面板、窄屏为底部抽屉，
+      // 两者都不使用 Material 拖拽手柄，这里不再断言 BottomSheet 形态。
+      final sidePanel = find.byKey(const Key('adaptive-side-panel'));
+      if (sidePanel.evaluate().isNotEmpty) {
+        expect(find.byKey(const Key('adaptive-panel-close')), findsOneWidget);
+      } else {
+        expect(
+          tester.widget<BottomSheet>(find.byType(BottomSheet)).showDragHandle,
+          isNull,
+        );
+      }
       expect(
         find.byKey(const Key('forum-html-reader-conversion-mode-control')),
         findsNothing,
@@ -6484,6 +6492,18 @@ void main() {
         find.byKey(const Key('forum-html-reader-reset-button')),
         findsNothing,
       );
+      // 关闭面板后仍停留在帖子详情，关闭动作不吞掉详情路由。
+      if (sidePanel.evaluate().isNotEmpty) {
+        await tester.tap(find.byKey(const Key('adaptive-panel-close')));
+      } else {
+        await tester.binding.handlePopRoute();
+      }
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-detail-display-settings-sheet')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('thread-detail-more-menu')), findsOneWidget);
     });
 
     testWidgets(
@@ -8951,13 +8971,6 @@ ThreadPost _post({
     isFirst: isFirst,
     dateline: 'today',
     ratingSummary: ratingSummary,
-  );
-}
-
-Finder _popupMenuText(String text) {
-  return find.descendant(
-    of: find.byType(AppPopupMenuItem<String>),
-    matching: find.text(text),
   );
 }
 

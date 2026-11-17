@@ -5,6 +5,8 @@ import 'package:y300/features/comic/domain/models/comic_download_queue_models.da
 import 'package:y300/features/comic/presentation/comic_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/services/library_error_summary.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 class ComicDownloadQueuePage extends ConsumerWidget {
   const ComicDownloadQueuePage({super.key});
@@ -15,7 +17,7 @@ class ComicDownloadQueuePage extends ConsumerWidget {
     final queue = ref.watch(comicDownloadQueueProvider);
     final snapshot = ref.watch(comicDownloadQueueSnapshotProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.comicDownloadQueue)),
+      appBar: AppPageAppBar(title: l10n.comicDownloadQueue),
       body: ValueListenableBuilder<ComicDownloadQueueSnapshot>(
         valueListenable: snapshot,
         builder: (context, value, _) {
@@ -36,57 +38,70 @@ class ComicDownloadQueuePage extends ConsumerWidget {
               .toList(growable: false);
           return ListView(
             key: const Key('comic-download-queue-list'),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              if (active != null) ...[
-                _QueueSectionTitle(l10n.comicDownloadActive),
-                _ActiveDownloadTile(
-                  entry: active,
-                  onCancel: () => _runAction(
-                    context,
-                    action: () => queue.cancel(active.id),
-                    failureMessage: (error) => l10n.comicDownloadCancelFailed(
-                      LibraryErrorSummary.resolve(l10n, error),
+              if (active != null)
+                AppGroupedSection(
+                  title: l10n.comicDownloadActive,
+                  children: [
+                    _ActiveDownloadRow(
+                      entry: active,
+                      onCancel: () => _runAction(
+                        context,
+                        action: () => queue.cancel(active.id),
+                        failureMessage: (error) =>
+                            l10n.comicDownloadCancelFailed(
+                              LibraryErrorSummary.resolve(l10n, error),
+                            ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-              if (pending.isNotEmpty) ...[
-                _QueueSectionTitle(l10n.comicDownloadPending),
-                for (var index = 0; index < pending.length; index++)
-                  _PendingDownloadTile(
-                    entry: pending[index],
-                    position: index + 1,
-                    onRemove: () => _runAction(
-                      context,
-                      action: () => queue.remove(pending[index].id),
-                      failureMessage: (error) => l10n.comicDownloadRemoveFailed(
-                        LibraryErrorSummary.resolve(l10n, error),
+              if (pending.isNotEmpty)
+                AppGroupedSection(
+                  title: l10n.comicDownloadPending,
+                  children: [
+                    for (var index = 0; index < pending.length; index++)
+                      _PendingDownloadRow(
+                        entry: pending[index],
+                        position: index + 1,
+                        onRemove: () => _runAction(
+                          context,
+                          action: () => queue.remove(pending[index].id),
+                          failureMessage: (error) =>
+                              l10n.comicDownloadRemoveFailed(
+                                LibraryErrorSummary.resolve(l10n, error),
+                              ),
+                        ),
                       ),
-                    ),
-                  ),
-              ],
-              if (failed.isNotEmpty) ...[
-                _QueueSectionTitle(l10n.comicDownloadFailedSection),
-                for (final entry in failed)
-                  _FailedDownloadTile(
-                    entry: entry,
-                    onRetry: () => _runAction(
-                      context,
-                      action: () => queue.retry(entry.id),
-                      failureMessage: (error) => l10n.comicDownloadRetryFailed(
-                        LibraryErrorSummary.resolve(l10n, error),
+                  ],
+                ),
+              if (failed.isNotEmpty)
+                AppGroupedSection(
+                  title: l10n.comicDownloadFailedSection,
+                  children: [
+                    for (final entry in failed)
+                      _FailedDownloadRow(
+                        entry: entry,
+                        onRetry: () => _runAction(
+                          context,
+                          action: () => queue.retry(entry.id),
+                          failureMessage: (error) =>
+                              l10n.comicDownloadRetryFailed(
+                                LibraryErrorSummary.resolve(l10n, error),
+                              ),
+                        ),
+                        onRemove: () => _runAction(
+                          context,
+                          action: () => queue.remove(entry.id),
+                          failureMessage: (error) =>
+                              l10n.comicDownloadRemoveFailed(
+                                LibraryErrorSummary.resolve(l10n, error),
+                              ),
+                        ),
                       ),
-                    ),
-                    onRemove: () => _runAction(
-                      context,
-                      action: () => queue.remove(entry.id),
-                      failureMessage: (error) => l10n.comicDownloadRemoveFailed(
-                        LibraryErrorSummary.resolve(l10n, error),
-                      ),
-                    ),
-                  ),
-              ],
-              const SizedBox(height: 24),
+                  ],
+                ),
             ],
           );
         },
@@ -112,22 +127,9 @@ class ComicDownloadQueuePage extends ConsumerWidget {
   }
 }
 
-class _QueueSectionTitle extends StatelessWidget {
-  const _QueueSectionTitle(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
-      child: Text(label, style: Theme.of(context).textTheme.titleSmall),
-    );
-  }
-}
-
-class _ActiveDownloadTile extends StatelessWidget {
-  const _ActiveDownloadTile({required this.entry, required this.onCancel});
+/// 正在下载的任务不能共用单行槽位：标题、进度和取消键在同一分组表面内纵向排列。
+class _ActiveDownloadRow extends StatelessWidget {
+  const _ActiveDownloadRow({required this.entry, required this.onCancel});
 
   final ComicDownloadQueueEntry entry;
   final VoidCallback onCancel;
@@ -138,7 +140,7 @@ class _ActiveDownloadTile extends StatelessWidget {
     final canceling = entry.status == ComicDownloadQueueStatus.cancelRequested;
     return Padding(
       key: ValueKey<String>('comic-download-active-${entry.id}'),
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 8, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -177,9 +179,12 @@ class _ActiveDownloadTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            key: ValueKey<String>('comic-download-progress-${entry.id}'),
-            value: _progressValue(entry),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: LinearProgressIndicator(
+              key: ValueKey<String>('comic-download-progress-${entry.id}'),
+              value: _progressValue(entry),
+            ),
           ),
         ],
       ),
@@ -187,8 +192,8 @@ class _ActiveDownloadTile extends StatelessWidget {
   }
 }
 
-class _PendingDownloadTile extends StatelessWidget {
-  const _PendingDownloadTile({
+class _PendingDownloadRow extends StatelessWidget {
+  const _PendingDownloadRow({
     required this.entry,
     required this.position,
     required this.onRemove,
@@ -201,22 +206,17 @@ class _PendingDownloadTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ListTile(
+    return AppGroupedRow(
       key: ValueKey<String>('comic-download-pending-${entry.id}'),
-      title: Text(
-        ComicTextResolver.workTitle(l10n, entry.comicTitle, entry.comicId),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        l10n.comicDownloadQueuePosition(
-          ComicTextResolver.chapterTitle(
-            l10n,
-            entry.episodeTitle,
-            entry.sourceTid,
-          ),
-          position,
+      leading: const Icon(Icons.schedule),
+      title: ComicTextResolver.workTitle(l10n, entry.comicTitle, entry.comicId),
+      subtitle: l10n.comicDownloadQueuePosition(
+        ComicTextResolver.chapterTitle(
+          l10n,
+          entry.episodeTitle,
+          entry.sourceTid,
         ),
+        position,
       ),
       trailing: IconButton(
         key: ValueKey<String>('comic-download-remove-${entry.id}'),
@@ -228,8 +228,8 @@ class _PendingDownloadTile extends StatelessWidget {
   }
 }
 
-class _FailedDownloadTile extends StatelessWidget {
-  const _FailedDownloadTile({
+class _FailedDownloadRow extends StatelessWidget {
+  const _FailedDownloadRow({
     required this.entry,
     required this.onRetry,
     required this.onRemove,
@@ -242,24 +242,17 @@ class _FailedDownloadTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ListTile(
+    return AppGroupedRow(
       key: ValueKey<String>('comic-download-failed-${entry.id}'),
-      title: Text(
-        ComicTextResolver.workTitle(l10n, entry.comicTitle, entry.comicId),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        l10n.comicDownloadFailureDetail(
-          ComicTextResolver.chapterTitle(
-            l10n,
-            entry.episodeTitle,
-            entry.sourceTid,
-          ),
-          ComicTextResolver.downloadFailure(l10n, entry.failureCode),
+      leading: const Icon(Icons.error_outline),
+      title: ComicTextResolver.workTitle(l10n, entry.comicTitle, entry.comicId),
+      subtitle: l10n.comicDownloadFailureDetail(
+        ComicTextResolver.chapterTitle(
+          l10n,
+          entry.episodeTitle,
+          entry.sourceTid,
         ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+        ComicTextResolver.downloadFailure(l10n, entry.failureCode),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

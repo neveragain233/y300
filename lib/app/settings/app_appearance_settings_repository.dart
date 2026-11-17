@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
@@ -36,6 +37,9 @@ class SharedPrefsAppAppearanceSettingsRepository
             themeFamily: _parseThemeFamily(json['family']),
             navigationBarStyle: _parseNavigationBarStyle(json['navigation']),
             navigationSwipeEnabled: _parseNavigationSwipe(json['swipe']),
+            navigationLensMotion: _parseNavigationLensMotion(
+              json['lensMotion'],
+            ),
             glassLevel: _parseGlassLevel(json['glass']),
             brightnessPreference: _parseBrightnessPreference(
               json['brightness'],
@@ -112,6 +116,7 @@ class SharedPrefsAppAppearanceSettingsRepository
     'family': settings.themeFamily.name,
     'navigation': settings.navigationBarStyle.name,
     'swipe': settings.navigationSwipeEnabled,
+    'lensMotion': settings.navigationLensMotion.name,
     'glass': settings.glassLevel.name,
     'brightness': settings.brightnessPreference.name,
     'language': settings.languagePreference.name,
@@ -144,6 +149,16 @@ class SharedPrefsAppAppearanceSettingsRepository
   /// 旧快照没有该字段，缺省保留新的默认值。
   bool _parseNavigationSwipe(Object? raw) {
     return raw is bool ? raw : true;
+  }
+
+  /// 旧快照没有透镜方式，未知值或损坏值都回退到“按下即跟随”。
+  AppNavigationLensMotion _parseNavigationLensMotion(Object? raw) {
+    for (final motion in AppNavigationLensMotion.values) {
+      if (motion.name == raw) {
+        return motion;
+      }
+    }
+    return AppNavigationLensMotion.followPress;
   }
 
   AppThemeFamily _parseThemeFamily(Object? raw) {

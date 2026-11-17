@@ -1,4 +1,4 @@
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 import 'dart:async';
 
@@ -34,6 +34,8 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
@@ -110,8 +112,8 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
     final imageReferer = ref.watch(forumImageRefererProvider);
 
     return Y300PageScaffold(
-      appBar: AppBar(
-        title: Text(l10n.forumHomeTitle),
+      appBar: AppRootPageAppBar(
+        title: l10n.forumHomeTitle,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(72),
           child: ColoredBox(
@@ -136,51 +138,49 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
           ),
         ),
         actions: [
-          AppToolbarActions(
-            children: [
-              IconButton(
-                key: const Key('forum-home-messages-button'),
-                tooltip: l10n.moreMyMessages,
-                icon: MessageAttentionIcon(
-                  icon: Icons.mail_outline,
-                  showAttention: ref
-                      .watch(messageAttentionStateProvider)
-                      .hasAttention,
-                ),
-                onPressed: () => Navigator.of(context).push(
-                  ref.read(mainDestinationRouteFactoryProvider)(
-                    MainShellDestination.messages,
-                  ),
-                ),
+          IconButton(
+            key: const Key('forum-home-messages-button'),
+            tooltip: l10n.moreMyMessages,
+            icon: MessageAttentionIcon(
+              icon: Icons.mail_outline,
+              showAttention: ref
+                  .watch(messageAttentionStateProvider)
+                  .hasAttention,
+            ),
+            onPressed: () => Navigator.of(context).push(
+              ref.read(mainDestinationRouteFactoryProvider)(
+                MainShellDestination.messages,
               ),
-              IconButton(
-                key: const Key('forum-home-history-button'),
-                tooltip: l10n.appNavigationHistory,
-                icon: const Icon(Icons.history),
-                onPressed: () => Navigator.of(context).push(
-                  ref.read(mainDestinationRouteFactoryProvider)(
-                    MainShellDestination.history,
-                  ),
-                ),
+            ),
+          ),
+          IconButton(
+            key: const Key('forum-home-history-button'),
+            tooltip: l10n.appNavigationHistory,
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.of(context).push(
+              ref.read(mainDestinationRouteFactoryProvider)(
+                MainShellDestination.history,
               ),
-              AppPopupMenuButton<String>(
-                key: const Key('forum-home-more-button'),
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  unawaited(_handleMoreMenuSelected(context, value));
-                },
-                itemBuilder: (context) => [
-                  AppPopupMenuItem<String>(
-                    key: const Key('forum-home-refresh-action'),
-                    value: _refreshPageAction,
-                    label: l10n.forumRefreshPage,
-                  ),
-                  AppPopupMenuItem<String>(
-                    key: const Key('forum-home-unfavorite-action'),
-                    value: _unfavoriteAction,
-                    label: l10n.forumUnfavoriteForum,
-                  ),
-                ],
+            ),
+          ),
+          AppPopupMenuButton<String>(
+            key: const Key('forum-home-more-button'),
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              unawaited(_handleMoreMenuSelected(context, value));
+            },
+            itemBuilder: (context) => [
+              AppPopupMenuItem<String>(
+                key: const Key('forum-home-refresh-action'),
+                value: _refreshPageAction,
+                label: l10n.forumRefreshPage,
+                icon: const Icon(Icons.refresh),
+              ),
+              AppPopupMenuItem<String>(
+                key: const Key('forum-home-unfavorite-action'),
+                value: _unfavoriteAction,
+                label: l10n.forumUnfavoriteForum,
+                icon: const Icon(Icons.star_border),
               ),
             ],
           ),
@@ -314,7 +314,6 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
       favoriteForumDirectoryRepositoryProvider,
     );
     final favoriteCommand = ref.read(favoriteForumCommandProvider);
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     return showModalBottomSheet<void>(
       context: context,
@@ -330,14 +329,10 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
           ),
         ),
         onSuccess: (_, _) async {
-          if (!mounted || !messenger.mounted) {
+          if (!mounted) {
             return;
           }
-          messenger
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(content: Text(l10n.forumUnfavoriteSuccess)),
-            );
+          showTransientSnackBar(context, l10n.forumUnfavoriteSuccess);
           await ref
               .read(forumHomeControllerProvider.notifier)
               .refresh(forceNetwork: true);
@@ -396,22 +391,24 @@ class _ResolvedForumHomeBody extends ConsumerWidget {
               nextNotice.detail == previousNotice?.detail)) {
         return;
       }
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(ForumTextResolver.homeNotice(l10n, nextNotice)),
-          ),
-        );
+      showTransientSnackBar(
+        context,
+        ForumTextResolver.homeNotice(l10n, nextNotice),
+      );
     });
 
     final state = ref.watch(forumHomeControllerProvider);
     final mode = ref.watch(appServerContentConversionModeProvider);
     final projectionAsync = ref.watch(forumHomeContentProjectionProvider);
     return state.when(
-      loading: () => const _ForumHomeBlankBody(),
-      error: (error, _) => _ForumHomeErrorView(
+      loading: () => AppLoadingState(
+        key: const Key('forum-home-loading'),
+        label: l10n.commonLoading,
+      ),
+      error: (error, _) => AppErrorState(
         message: ForumTextResolver.homeLoadFailure(l10n, error),
+        retryLabel: l10n.commonRetry,
+        retryKey: const Key('forum-home-retry-button'),
         onRetry: () => ref
             .read(forumHomeControllerProvider.notifier)
             .refresh(forceNetwork: true),
@@ -501,45 +498,54 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
       for (final item in widget.state.viewData.carouselItems)
         if (!_isBlockedCarouselItem(item, blockedThreadIds)) item,
     ];
-    return RefreshIndicator(
-      onRefresh: () => ref
-          .read(forumHomeControllerProvider.notifier)
-          .refresh(forceNetwork: true),
-      child: Stack(
-        children: [
-          ColoredBox(
-            color: palette.background,
-            child: ListView(
-              key: const Key('forum-home-list'),
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.only(
-                bottom: 10 + mainShellBottomScrollInset(context),
-              ),
-              children: [
-                for (final section in widget.projection.sections.where(
-                  (section) => section.source.type == ForumSectionType.favorite,
-                ))
-                  _buildSection(context, section, l10n),
-                ForumHomeCarousel(
-                  items: carouselItems,
-                  imageReferer: widget.imageReferer,
-                  onOpen: (item) => _openCarouselTarget(context, ref, item),
-                  isActive: widget.isActive,
+    final isEmpty =
+        widget.state.viewData.sections.isEmpty && carouselItems.isEmpty;
+    // 空态要占满可视区又保留下拉刷新，因此按视口高度放在列表里滚动。
+    return LayoutBuilder(
+      builder: (context, constraints) => RefreshIndicator(
+        onRefresh: () => ref
+            .read(forumHomeControllerProvider.notifier)
+            .refresh(forceNetwork: true),
+        child: Stack(
+          children: [
+            ColoredBox(
+              color: palette.background,
+              child: ListView(
+                key: const Key('forum-home-list'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(
+                  bottom: 10 + mainShellBottomScrollInset(context),
                 ),
-                if (widget.state.viewData.sections.isEmpty &&
-                    carouselItems.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(child: Text(l10n.forumHomeEmpty)),
+                children: [
+                  for (final section in widget.projection.sections.where(
+                    (section) =>
+                        section.source.type == ForumSectionType.favorite,
+                  ))
+                    _buildSection(context, section, l10n),
+                  ForumHomeCarousel(
+                    items: carouselItems,
+                    imageReferer: widget.imageReferer,
+                    onOpen: (item) => _openCarouselTarget(context, ref, item),
+                    isActive: widget.isActive,
                   ),
-                for (final section in widget.projection.sections.where(
-                  (section) => section.source.type != ForumSectionType.favorite,
-                ))
-                  _buildSection(context, section, l10n),
-              ],
+                  if (isEmpty)
+                    SizedBox(
+                      height: constraints.maxHeight,
+                      child: AppEmptyState(
+                        key: const Key('forum-home-empty-state'),
+                        title: l10n.forumHomeEmpty,
+                      ),
+                    ),
+                  for (final section in widget.projection.sections.where(
+                    (section) =>
+                        section.source.type != ForumSectionType.favorite,
+                  ))
+                    _buildSection(context, section, l10n),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -677,32 +683,4 @@ class _ForumHomeRowData {
   final String description;
   final int? todayPosts;
   final VoidCallback onTap;
-}
-
-class _ForumHomeErrorView extends StatelessWidget {
-  const _ForumHomeErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton(
-              key: const Key('forum-home-retry-button'),
-              onPressed: onRetry,
-              child: Text(AppLocalizations.of(context).commonRetry),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

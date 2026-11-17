@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:prism_ui/liquid_glass.dart';
+import 'package:prism_ui/navigation_dock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
@@ -125,16 +126,9 @@ void main() {
         await tester.pump();
         expect(selected, i);
       }
-      final indicator = find.byWidgetPredicate(
-        (widget) =>
-            widget is DecoratedBox &&
-            widget.decoration is BoxDecoration &&
-            (widget.decoration as BoxDecoration).color ==
-                Theme.of(tester.element(find.byType(MainNavigationCapsule)))
-                    .colorScheme
-                    .primary,
-      );
-      expect(tester.getSize(indicator).height, greaterThanOrEqualTo(48));
+      final bar = find.byType(FloatingNavigationBar);
+      expect(tester.getSize(bar).height, greaterThanOrEqualTo(48));
+      expect(tester.widget<FloatingNavigationBar>(bar).selectedIndex, 4);
       expect(tester.takeException(), isNull);
     },
   );

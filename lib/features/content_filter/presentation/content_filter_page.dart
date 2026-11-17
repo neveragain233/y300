@@ -10,6 +10,9 @@ import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 /// Management page for local blocked threads and the synced web blacklist.
 class ContentFilterPage extends ConsumerStatefulWidget {
@@ -91,21 +94,52 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
         .isLoading;
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final asyncRules = ref.watch(blockedThreadsControllerProvider);
+    final syncing = _syncing || (blacklistLoading && account == null);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.contentFilterTitle)),
+      appBar: AppPageAppBar(title: l10n.contentFilterTitle),
       body: ListView(
         key: const Key('content-filter-list'),
-        padding: const EdgeInsets.only(bottom: 28),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
           ..._buildThreadSection(asyncRules),
-          const Divider(height: 28),
-          _BlacklistHeader(
-            title: l10n.contentFilterWebBlacklistSection,
-            countLabel: account == null
-                ? null
-                : l10n.contentFilterWebBlacklistCount(account.members.length),
-            syncing: _syncing || (blacklistLoading && account == null),
-            onRefresh: owner == null ? null : _refreshBlacklist,
+          AppGroupedSection(
+            title: account == null
+                ? l10n.contentFilterWebBlacklistSection
+                : '${l10n.contentFilterWebBlacklistSection} · '
+                      '${l10n.contentFilterWebBlacklistCount(account.members.length)}',
+            children: [
+              AppGroupedRow(
+                key: const Key('content-filter-blacklist-refresh'),
+                leading: const Icon(Icons.sync),
+                title: l10n.contentFilterWebBlacklistRefresh,
+                trailing: syncing
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : null,
+                enabled: owner != null && !syncing,
+                onTap: _refreshBlacklist,
+              ),
+              for (final member in account?.members ?? const [])
+                AppGroupedRow(
+                  key: Key('content-filter-blacklist-member-${member.userId}'),
+                  leading: const Icon(Icons.person_off_outlined),
+                  title: member.username,
+                  subtitle: l10n.contentFilterWebBlacklistMemberUid(
+                    member.userId,
+                  ),
+                ),
+              if (owner != null && widget.managedBlacklistRouteBuilder != null)
+                AppGroupedRow(
+                  key: const Key('content-filter-open-blacklist-web'),
+                  leading: const Icon(Icons.open_in_new, size: 20),
+                  title: l10n.contentFilterWebBlacklistOpen,
+                  showChevron: true,
+                  enabled: !_syncing,
+                  onTap: _openManagedBlacklist,
+                ),
+            ],
           ),
           _BlacklistStatus(
             owner: owner,
@@ -113,44 +147,28 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
             loading: blacklistLoading,
             l10n: l10n,
           ),
-          if (owner != null && account != null && account.members.isNotEmpty)
-            for (final member in account.members)
-              ListTile(
-                key: Key('content-filter-blacklist-member-${member.userId}'),
-                dense: true,
-                leading: const Icon(Icons.person_off_outlined),
-                title: Text(member.username),
-                subtitle: Text(
-                  l10n.contentFilterWebBlacklistMemberUid(member.userId),
-                ),
-              ),
-          if (owner != null && widget.managedBlacklistRouteBuilder != null) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: OutlinedButton.icon(
-                key: const Key('content-filter-open-blacklist-web'),
-                onPressed: _syncing ? null : _openManagedBlacklist,
-                icon: const Icon(Icons.open_in_new, size: 18),
-                label: Text(l10n.contentFilterWebBlacklistOpen),
-              ),
-            ),
-          ],
           if (account != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
               child: Text(
                 l10n.contentFilterWebBlacklistNote,
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: Theme.of(context).hintColor),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          SwitchListTile(
-            key: const Key('content-filter-hide-blacklisted-threads'),
-            value: hideBlacklistedThreads,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            title: Text(l10n.contentFilterHideBlacklistedThreads),
-            subtitle: Text(l10n.contentFilterHideBlacklistedThreadsDetail),
-            onChanged: (value) => unawaited(_setHideBlacklistedThreads(value)),
+          AppGroupedSection(
+            children: [
+              AppSwitchRow(
+                key: const Key('content-filter-hide-blacklisted-threads'),
+                leading: const Icon(Icons.filter_alt_outlined),
+                title: l10n.contentFilterHideBlacklistedThreads,
+                subtitle: l10n.contentFilterHideBlacklistedThreadsDetail,
+                value: hideBlacklistedThreads,
+                onChanged: (value) =>
+                    unawaited(_setHideBlacklistedThreads(value)),
+              ),
+            ],
           ),
         ],
       ),
@@ -190,38 +208,41 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
         ),
       ],
       data: (rules) => [
-        _SectionHeader(
-          title: l10n.contentFilterThreadsSection,
-          trailing: l10n.contentFilterCount(rules.length),
+        AppGroupedSection(
+          title:
+              '${l10n.contentFilterThreadsSection} · '
+              '${l10n.contentFilterCount(rules.length)}',
+          children: [
+            if (rules.isEmpty)
+              Padding(
+                key: const Key('content-filter-blocked-thread-empty'),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                child: Text(
+                  l10n.contentFilterThreadsEmpty,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else
+              for (final rule in rules)
+                AppGroupedRow(
+                  key: Key('content-filter-blocked-thread-${rule.tid}'),
+                  leading: const Icon(Icons.visibility_off_outlined),
+                  title: rule.subject,
+                  subtitle: l10n.searchResultTid(rule.tid),
+                  trailing: TextButton(
+                    key: Key('content-filter-unblock-${rule.tid}'),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(64, 48),
+                    ),
+                    onPressed: () => _unblockThread(rule),
+                    child: Text(l10n.contentFilterUnblock),
+                  ),
+                ),
+          ],
         ),
-        if (rules.isEmpty)
-          Padding(
-            key: const Key('content-filter-blocked-thread-empty'),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Text(
-              l10n.contentFilterThreadsEmpty,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: Theme.of(context).hintColor),
-            ),
-          )
-        else
-          for (final rule in rules)
-            ListTile(
-              key: Key('content-filter-blocked-thread-${rule.tid}'),
-              leading: const Icon(Icons.visibility_off_outlined),
-              title: Text(
-                rule.subject,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(l10n.searchResultTid(rule.tid)),
-              trailing: TextButton(
-                key: Key('content-filter-unblock-${rule.tid}'),
-                onPressed: () => _unblockThread(rule),
-                child: Text(l10n.contentFilterUnblock),
-              ),
-            ),
       ],
     );
   }
@@ -246,65 +267,6 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
           ),
         ),
       );
-  }
-}
-
-class _BlacklistHeader extends StatelessWidget {
-  const _BlacklistHeader({
-    required this.title,
-    required this.countLabel,
-    required this.syncing,
-    required this.onRefresh,
-  });
-
-  final String title;
-  final String? countLabel;
-  final bool syncing;
-  final VoidCallback? onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                if (countLabel != null)
-                  Text(
-                    countLabel!,
-                    style: Theme.of(context).textTheme.labelSmall
-                        ?.copyWith(color: Theme.of(context).hintColor),
-                  ),
-              ],
-            ),
-          ),
-          if (syncing)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              key: const Key('content-filter-blacklist-refresh'),
-              tooltip: l10n.contentFilterWebBlacklistRefresh,
-              onPressed: onRefresh,
-              icon: const Icon(Icons.sync),
-            ),
-        ],
-      ),
-    );
   }
 }
 
@@ -340,45 +302,11 @@ class _BlacklistStatus extends StatelessWidget {
     }
     return Padding(
       key: const Key('content-filter-blacklist-status'),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
       child: Text(
         message,
         style: Theme.of(context).textTheme.bodySmall
-            ?.copyWith(color: Theme.of(context).hintColor),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.trailing});
-
-  final String title;
-  final String trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Text(
-            trailing,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
+            ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }

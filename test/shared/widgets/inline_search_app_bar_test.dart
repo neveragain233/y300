@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 
 import '../../test_support/localized_test_app.dart';
@@ -145,5 +148,68 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('search-field')), findsOneWidget);
+  });
+
+  testWidgets('reuses the page app bar shell with a circular back button', (
+    tester,
+  ) async {
+    const surface = Color(0xFFF2EDE6);
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        theme: ThemeData(
+          scaffoldBackgroundColor: surface,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        ),
+        home: Scaffold(
+          appBar: InlineSearchAppBar(
+            controller: controller,
+            focusNode: focusNode,
+            fieldKey: const Key('search-field'),
+            backButtonKey: const Key('search-back'),
+            hintText: '搜索作品',
+            clearTooltip: '清空',
+            onBack: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final scheme = Theme.of(tester.element(find.byType(InlineSearchAppBar)))
+        .colorScheme;
+    expect(find.byType(AppPageAppBar), findsOneWidget);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).backgroundColor, surface);
+    expect(find.byType(AppToolbarBackButton), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('search-back'))).shortestSide,
+      greaterThanOrEqualTo(48),
+    );
+    // 返回键的圆底来自公共玻璃表面；关闭档退回 surfaceContainerHigh 实色。
+    final backSurface = tester.widget<AppGlassSurface>(
+      find.descendant(
+        of: find.byType(AppToolbarBackButton),
+        matching: find.byType(AppGlassSurface),
+      ),
+    );
+    expect(backSurface.baseColor, scheme.surfaceContainerHigh);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.descendant(
+              of: find.byType(AppToolbarBackButton),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .style
+          ?.backgroundColor
+          ?.resolve(<WidgetState>{}),
+      Colors.transparent,
+    );
+    expect(tester.takeException(), isNull);
   });
 }

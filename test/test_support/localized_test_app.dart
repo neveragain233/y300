@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// The common application shell for widget tests.
@@ -67,6 +68,7 @@ class LocalizedTestApp extends MaterialApp {
   _defaultLocalizationsDelegates = <LocalizationsDelegate<dynamic>>[
     ...AppLocalizations.localizationsDelegates,
     FlutterQuillLocalizations.delegate,
+    AppPrismUiLocalizations.delegate,
   ];
 }
 

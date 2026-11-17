@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 import 'dart:async';
@@ -24,8 +25,7 @@ import 'package:y300/features/forum/presentation/forum_text_resolver.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_widgets.dart';
 import 'package:y300/features/posting/domain/models/posting_target.dart';
-import 'package:y300/features/posting/presentation/posting_composer_page.dart';
-import 'package:y300/features/posting/presentation/posting_composer_state.dart';
+import 'package:y300/features/posting/presentation/posting_composer_route.dart';
 import 'package:y300/features/search/presentation/forum_search_page.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
@@ -111,42 +111,39 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
 
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: AppBar(
+      // 顶栏外壳、返回键与动作胶囊沿用压入页公共实现；标题保持两行。
+      appBar: AppPageAppBar(
         leading:
             adaptiveDetailBackButton(context) ??
             (widget.initialUrl != null ? const AppToolbarBackButton() : null),
         titleSpacing: 0,
-        title: Padding(
+        titleWidget: Padding(
           padding: const EdgeInsetsDirectional.only(
             start: NavigationToolbar.kMiddleSpacing,
           ),
           child: _ForumDisplayAppBarTitle(projection: projection),
         ),
         actions: [
-          AppToolbarActions(
-            children: [
-              if (searchFid != null)
-                IconButton(
-                  key: const Key('forum-display-search-button'),
-                  tooltip: l10n.forumDisplaySearch,
-                  onPressed: () => _openSearch(context, searchFid),
-                  icon: const Icon(Icons.search),
-                ),
-              AppPopupMenuButton<String>(
-                key: const Key('forum-display-more-button'),
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  unawaited(
-                    _handleMoreMenuSelected(context, state, controller, value),
-                  );
-                },
-                itemBuilder: (context) => _buildMoreMenuItems(
-                  context,
-                  state,
-                  isLoading: asyncState.isLoading,
-                ),
-              ),
-            ],
+          if (searchFid != null)
+            IconButton(
+              key: const Key('forum-display-search-button'),
+              tooltip: l10n.forumDisplaySearch,
+              onPressed: () => _openSearch(context, searchFid),
+              icon: const Icon(Icons.search),
+            ),
+          AppPopupMenuButton<String>(
+            key: const Key('forum-display-more-button'),
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              unawaited(
+                _handleMoreMenuSelected(context, state, controller, value),
+              );
+            },
+            itemBuilder: (context) => _buildMoreMenuItems(
+              context,
+              state,
+              isLoading: asyncState.isLoading,
+            ),
           ),
         ],
       ),
@@ -213,11 +210,13 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
         key: const Key('forum-display-home-action'),
         value: 'forum-home',
         label: l10n.forumHomeTitle,
+        icon: const Icon(Icons.home_outlined),
       ),
       AppPopupMenuItem<String>(
         key: const Key('forum-display-refresh-action'),
         value: _refreshPageAction,
         label: l10n.forumRefreshPage,
+        icon: const Icon(Icons.refresh),
       ),
     ];
     if (!state.supports(ForumDisplayCapability.favoriteState)) {
@@ -230,6 +229,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           enabled: false,
           value: 'favorite-loading',
           label: l10n.forumProcessing,
+          icon: const Icon(Icons.hourglass_empty),
         ),
       );
     } else if (state.favoriteAction == ForumDisplayFavoriteAction.unknown) {
@@ -239,6 +239,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           enabled: false,
           value: 'favorite-unavailable',
           label: l10n.forumProcessing,
+          icon: const Icon(Icons.hourglass_empty),
         ),
       );
     } else {
@@ -249,6 +250,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
               key: const Key('forum-display-favorite-action'),
               value: _favoriteAction,
               label: l10n.forumFavoriteForum,
+              icon: const Icon(Icons.star_border),
             ),
           );
         case ForumDisplayFavoriteAction.unfavorite:
@@ -257,6 +259,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
               key: const Key('forum-display-unfavorite-action'),
               value: _unfavoriteAction,
               label: l10n.forumUnfavoriteForum,
+              icon: const Icon(Icons.star),
             ),
           );
         case ForumDisplayFavoriteAction.unknown:
@@ -269,6 +272,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           key: const Key('forum-display-compose-action'),
           value: _createThreadAction,
           label: l10n.forumDisplayCreateThread,
+          icon: const Icon(Icons.edit_outlined),
         ),
       );
     }
@@ -525,12 +529,9 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     BuildContext context,
     ForumDisplayPageState state,
   ) async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute<PostingComposerResult>(
-        builder: (_) => PostingComposerPage(
-          args: PostingComposerArgs(target: PostingTarget(fid: state.fid)),
-        ),
-      ),
+    final result = await openPostingComposer(
+      context,
+      target: PostingTarget(fid: state.fid),
     );
     if (!context.mounted || result?.sent != true) return;
     final feedback = readAccessFeedback(

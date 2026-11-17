@@ -14,6 +14,7 @@ import 'package:y300/features/tags/presentation/yamibo_tag_thread_page_controlle
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/native_page_dropdown_button.dart';
 
@@ -59,21 +60,16 @@ class YamiboTagThreadPage extends ConsumerWidget {
     ];
     final hiddenByRules =
         data != null && data.topics.isNotEmpty && visibleTopics.isEmpty;
+    final appBarTitle = data?.tag.name?.trim().isNotEmpty == true
+        ? data!.tag.name!
+        : (state.title.trim().isNotEmpty ? state.title : l10n.tagTitleFallback);
 
     return Scaffold(
       key: const Key('yamibo-tag-thread-page'),
       backgroundColor: palette.background,
-      appBar: AppBar(
+      appBar: AppPageAppBar(
         leading: adaptiveDetailBackButton(context),
-        title: Text(
-          data?.tag.name?.trim().isNotEmpty == true
-              ? data!.tag.name!
-              : (state.title.trim().isNotEmpty
-                    ? state.title
-                    : l10n.tagTitleFallback),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: appBarTitle,
       ),
       body: asyncState.isLoading && data == null
           ? const Center(child: CircularProgressIndicator())

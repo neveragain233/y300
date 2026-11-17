@@ -15,6 +15,7 @@ import 'package:y300/features/thread/data/providers/thread_repository_providers.
 import 'package:y300/features/thread/domain/repositories/thread_post_locator.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 import '../../../test_support/localized_test_app.dart';
 import '../test_support/thread_directory_fixture.dart';
@@ -36,6 +37,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       final l10n = _l10n(tester);
       expect(find.text(l10n.profileUserThreadsTitle), findsOneWidget);
       expect(
@@ -248,9 +250,8 @@ Future<ProviderContainer> _mount(
         theme: AppTheme.light(),
         locale: locale,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(scale)),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,
         ),
         home: page,

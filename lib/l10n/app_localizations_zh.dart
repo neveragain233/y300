@@ -481,6 +481,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonRetry => '重试';
 
   @override
+  String get commonLoading => '正在加载';
+
+  @override
   String get commonApply => '应用';
 
   @override
@@ -6192,6 +6195,219 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerBookmarksEmpty => '还没有书签章节';
+
+  @override
+  String get appPrismClearSearch => '清除搜索';
+
+  @override
+  String get appPrismNoSearchResults => '没有找到匹配结果';
+
+  @override
+  String get appPrismSelect => '选择';
+
+  @override
+  String get appPrismShowLess => '收起';
+
+  @override
+  String get appPrismShowMore => '展开更多';
+
+  @override
+  String get appPrismHidePassword => '隐藏密码';
+
+  @override
+  String get appPrismShowPassword => '显示密码';
+
+  @override
+  String get appPrismSort => '排序';
+
+  @override
+  String get appPrismSubmit => '提交';
+
+  @override
+  String get appPrismDialog => '对话框';
+
+  @override
+  String get appearanceTitle => '外观';
+
+  @override
+  String get appearanceThemeModeSectionTitle => '主题模式';
+
+  @override
+  String get appearancePreviewSemanticsLabel => '外观预览';
+
+  @override
+  String get appearancePreviewCaption => '预览随当前设置即时更新';
+
+  @override
+  String get appearanceDynamicColorLabel => '跟随系统动态色';
+
+  @override
+  String get appearanceLensFollowTitle => '透镜跟随方式';
+
+  @override
+  String get appearanceLensFollowPressDescription =>
+      '按下即跟随：透镜先移动到按下的入口，再从按压点继续跟手。';
+
+  @override
+  String get appearanceLensFromSelectionDescription =>
+      '从当前入口拖动：透镜停在当前选中项，从该项按相对位移跟手。';
+
+  @override
+  String get appearanceManageBarEntry => '管理底栏入口';
+
+  @override
+  String get appearanceResetAction => '恢复默认外观';
+
+  @override
+  String get appearanceResetConfirmTitle => '恢复默认外观';
+
+  @override
+  String get appearanceResetConfirmBody =>
+      '将重置主题、配色、明暗、玻璃、底栏样式、滑动和透镜跟随方式；语言与账号数据保持不变。';
+
+  @override
+  String get appearanceResetConfirmAction => '恢复';
+
+  @override
+  String get appearanceResetDone => '已恢复默认外观';
+
+  @override
+  String appearanceResetFailed(String error) {
+    return '恢复默认外观失败：$error';
+  }
+
+  @override
+  String get settingsSearchTooltip => '搜索设置';
+
+  @override
+  String get settingsSearchHint => '搜索设置';
+
+  @override
+  String get settingsSearchRecommendedTitle => '常用设置';
+
+  @override
+  String get settingsSearchNoResults => '没有找到匹配的设置';
+
+  @override
+  String get settingsSearchNoResultsHint => '试试主题、外观、玻璃、底栏、缓存、更新或黑名单';
+
+  @override
+  String get settingsSearchSummaryAppearanceNavigation => '外观入口与底栏入口管理';
+
+  @override
+  String get settingsSearchKeywordsAppearanceNavigation => '设置主页、外观、导航管理、分组';
+
+  @override
+  String get settingsSearchSummaryAppearance => '主题模式、配色、玻璃、导航与底栏、语言';
+
+  @override
+  String get settingsSearchKeywordsAppearance =>
+      '主题、外观、浅色、深色、玻璃、底栏、透镜、配色、动态色、语言、简繁';
+
+  @override
+  String get settingsSearchSummaryNavigationManagement => '底栏入口排序、显隐与启动页';
+
+  @override
+  String get settingsSearchKeywordsNavigationManagement => '底栏、入口、排序、显隐、启动页、导航';
+
+  @override
+  String get settingsSearchSummaryBrowsingPosts => '内容屏蔽与帖子悬浮操作';
+
+  @override
+  String get settingsSearchKeywordsBrowsingPosts => '设置主页、浏览、帖子、屏蔽、分组';
+
+  @override
+  String get settingsSearchSummaryContentFilter => '黑名单作者、屏蔽帖子与过滤规则';
+
+  @override
+  String get settingsSearchKeywordsContentFilter => '黑名单、屏蔽、过滤、隐藏、帖子、用户';
+
+  @override
+  String get settingsSearchSummaryThreadControls => '帖子悬浮按钮的触区、导航与滚动';
+
+  @override
+  String get settingsSearchKeywordsThreadControls => '帖子、悬浮、控件、触区、手势、滚动、导航';
+
+  @override
+  String get settingsSearchSummaryStorageAbout => '数据与存储、关于与更新检查';
+
+  @override
+  String get settingsSearchKeywordsStorageAbout => '设置主页、存储、数据、关于、更新、分组';
+
+  @override
+  String get settingsSearchSummaryDataStorage => '缓存、下载与本地数据管理';
+
+  @override
+  String get settingsSearchKeywordsDataStorage => '缓存、存储、数据、清理、下载、占用';
+
+  @override
+  String get settingsSearchSummaryAbout => '版本、更新检查与开源信息';
+
+  @override
+  String get settingsSearchKeywordsAbout => '关于、版本、更新、检查更新、开源、许可证';
+
+  @override
+  String get settingsSearchSummaryDebug => '调试构建中的预览与渲染工具';
+
+  @override
+  String get settingsSearchKeywordsDebug => '调试、开发、预览、渲染、工具';
+
+  @override
+  String get settingsSearchSummaryThemeMode => '跟随系统、浅色或深色';
+
+  @override
+  String get settingsSearchKeywordsThemeMode => '主题、模式、浅色、深色、暗色、明暗、跟随系统';
+
+  @override
+  String get settingsSearchSummaryColorTheme => '暖纸、月白、绛紫与系统动态色';
+
+  @override
+  String get settingsSearchKeywordsColorTheme => '配色、颜色、主题色、暖纸、月白、绛紫、动态色、取色';
+
+  @override
+  String get settingsSearchSummaryGlass => '关闭、标准或增强的玻璃质感';
+
+  @override
+  String get settingsSearchKeywordsGlass => '玻璃、材质、透明、模糊、毛玻璃、质感';
+
+  @override
+  String get settingsSearchSummaryNavigation => '底栏样式、滑动切换、透镜跟随与入口管理';
+
+  @override
+  String get settingsSearchKeywordsNavigation => '底栏、导航、沉浸式、旧式、滑动、透镜、跟随、入口';
+
+  @override
+  String get settingsSearchSummaryLanguage => '跟随系统、简体中文与繁體中文';
+
+  @override
+  String get settingsSearchKeywordsLanguage => '语言、中文、简体、繁体、简繁、跟随系统';
+
+  @override
+  String get settingsSearchSummaryReset => '恢复默认主题、配色、玻璃与导航设置';
+
+  @override
+  String get settingsSearchKeywordsReset => '恢复、默认、重置、还原';
+
+  @override
+  String get settingsSectionAppearanceNavigation => '外观与导航';
+
+  @override
+  String get settingsSectionBrowsingPosts => '浏览与帖子';
+
+  @override
+  String get settingsSectionStorageAbout => '存储与关于';
+
+  @override
+  String get settingsSectionDebug => '调试';
+
+  @override
+  String get threadControlsGroupDisplay => '显示';
+
+  @override
+  String get threadControlsGroupNavigation => '导航';
+
+  @override
+  String get threadControlsGroupScrolling => '滚动';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -6668,6 +6884,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get commonRetry => '重試';
+
+  @override
+  String get commonLoading => '正在載入';
 
   @override
   String get commonApply => '套用';
@@ -12383,4 +12602,218 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerBookmarksEmpty => '還沒有書籤章節';
+
+  @override
+  String get appPrismClearSearch => '清除搜尋';
+
+  @override
+  String get appPrismNoSearchResults => '找不到符合的結果';
+
+  @override
+  String get appPrismSelect => '選取';
+
+  @override
+  String get appPrismShowLess => '收合';
+
+  @override
+  String get appPrismShowMore => '展開更多';
+
+  @override
+  String get appPrismHidePassword => '隱藏密碼';
+
+  @override
+  String get appPrismShowPassword => '顯示密碼';
+
+  @override
+  String get appPrismSort => '排序';
+
+  @override
+  String get appPrismSubmit => '送出';
+
+  @override
+  String get appPrismDialog => '對話框';
+
+  @override
+  String get appearanceTitle => '外觀';
+
+  @override
+  String get appearanceThemeModeSectionTitle => '主題模式';
+
+  @override
+  String get appearancePreviewSemanticsLabel => '外觀預覽';
+
+  @override
+  String get appearancePreviewCaption => '預覽隨目前設定即時更新';
+
+  @override
+  String get appearanceDynamicColorLabel => '跟隨系統動態色';
+
+  @override
+  String get appearanceLensFollowTitle => '透鏡跟隨方式';
+
+  @override
+  String get appearanceLensFollowPressDescription =>
+      '按下即跟隨：透鏡先移動到按下的入口，再從按壓點繼續跟手。';
+
+  @override
+  String get appearanceLensFromSelectionDescription =>
+      '從目前入口拖動：透鏡停在目前選取項，從該項按相對位移跟手。';
+
+  @override
+  String get appearanceManageBarEntry => '管理底欄入口';
+
+  @override
+  String get appearanceResetAction => '恢復預設外觀';
+
+  @override
+  String get appearanceResetConfirmTitle => '恢復預設外觀';
+
+  @override
+  String get appearanceResetConfirmBody =>
+      '將重設主題、配色、明暗、玻璃、底欄樣式、滑動和透鏡跟隨方式；語言與帳號資料保持不變。';
+
+  @override
+  String get appearanceResetConfirmAction => '恢復';
+
+  @override
+  String get appearanceResetDone => '已恢復預設外觀';
+
+  @override
+  String appearanceResetFailed(String error) {
+    return '恢復預設外觀失敗：$error';
+  }
+
+  @override
+  String get settingsSearchTooltip => '搜尋設定';
+
+  @override
+  String get settingsSearchHint => '搜尋設定';
+
+  @override
+  String get settingsSearchRecommendedTitle => '常用設定';
+
+  @override
+  String get settingsSearchNoResults => '找不到符合的設定';
+
+  @override
+  String get settingsSearchNoResultsHint => '試試主題、外觀、玻璃、底欄、快取、更新或黑名單';
+
+  @override
+  String get settingsSearchSummaryAppearanceNavigation => '外觀入口與底欄入口管理';
+
+  @override
+  String get settingsSearchKeywordsAppearanceNavigation => '設定主頁、外觀、導覽列管理、分組';
+
+  @override
+  String get settingsSearchSummaryAppearance => '主題模式、配色、玻璃、導覽與底欄、語言';
+
+  @override
+  String get settingsSearchKeywordsAppearance =>
+      '主題、外觀、淺色、深色、玻璃、底欄、透鏡、配色、動態色、語言、簡繁';
+
+  @override
+  String get settingsSearchSummaryNavigationManagement => '底欄入口排序、顯示隱藏與啟動頁';
+
+  @override
+  String get settingsSearchKeywordsNavigationManagement =>
+      '底欄、入口、排序、顯示隱藏、啟動頁、導覽';
+
+  @override
+  String get settingsSearchSummaryBrowsingPosts => '內容屏蔽與帖子懸浮操作';
+
+  @override
+  String get settingsSearchKeywordsBrowsingPosts => '設定主頁、瀏覽、帖子、屏蔽、分組';
+
+  @override
+  String get settingsSearchSummaryContentFilter => '黑名單作者、屏蔽帖子與過濾規則';
+
+  @override
+  String get settingsSearchKeywordsContentFilter => '黑名單、屏蔽、過濾、隱藏、帖子、使用者';
+
+  @override
+  String get settingsSearchSummaryThreadControls => '帖子懸浮按鈕的觸控區、導覽與捲動';
+
+  @override
+  String get settingsSearchKeywordsThreadControls => '帖子、懸浮、控制項、觸控區、手勢、捲動、導覽';
+
+  @override
+  String get settingsSearchSummaryStorageAbout => '資料與儲存空間、關於與更新檢查';
+
+  @override
+  String get settingsSearchKeywordsStorageAbout => '設定主頁、儲存、資料、關於、更新、分組';
+
+  @override
+  String get settingsSearchSummaryDataStorage => '快取、下載與本機資料管理';
+
+  @override
+  String get settingsSearchKeywordsDataStorage => '快取、儲存、資料、清理、下載、佔用';
+
+  @override
+  String get settingsSearchSummaryAbout => '版本、更新檢查與開源資訊';
+
+  @override
+  String get settingsSearchKeywordsAbout => '關於、版本、更新、檢查更新、開源、授權條款';
+
+  @override
+  String get settingsSearchSummaryDebug => '偵錯建置中的預覽與轉譯工具';
+
+  @override
+  String get settingsSearchKeywordsDebug => '偵錯、開發、預覽、轉譯、工具';
+
+  @override
+  String get settingsSearchSummaryThemeMode => '跟隨系統、淺色或深色';
+
+  @override
+  String get settingsSearchKeywordsThemeMode => '主題、模式、淺色、深色、暗色、明暗、跟隨系統';
+
+  @override
+  String get settingsSearchSummaryColorTheme => '暖紙、月白、絳紫與系統動態色';
+
+  @override
+  String get settingsSearchKeywordsColorTheme => '配色、顏色、主題色、暖紙、月白、絳紫、動態色、取色';
+
+  @override
+  String get settingsSearchSummaryGlass => '關閉、標準或增強的玻璃質感';
+
+  @override
+  String get settingsSearchKeywordsGlass => '玻璃、材質、透明、模糊、毛玻璃、質感';
+
+  @override
+  String get settingsSearchSummaryNavigation => '底欄樣式、滑動切換、透鏡跟隨與入口管理';
+
+  @override
+  String get settingsSearchKeywordsNavigation => '底欄、導覽、沉浸式、舊式、滑動、透鏡、跟隨、入口';
+
+  @override
+  String get settingsSearchSummaryLanguage => '跟隨系統、簡體中文與繁體中文';
+
+  @override
+  String get settingsSearchKeywordsLanguage => '語言、中文、簡體、繁體、簡繁、跟隨系統';
+
+  @override
+  String get settingsSearchSummaryReset => '恢復預設主題、配色、玻璃與導覽設定';
+
+  @override
+  String get settingsSearchKeywordsReset => '恢復、預設、重設、還原';
+
+  @override
+  String get settingsSectionAppearanceNavigation => '外觀與導覽';
+
+  @override
+  String get settingsSectionBrowsingPosts => '瀏覽與帖子';
+
+  @override
+  String get settingsSectionStorageAbout => '儲存與關於';
+
+  @override
+  String get settingsSectionDebug => '偵錯';
+
+  @override
+  String get threadControlsGroupDisplay => '顯示';
+
+  @override
+  String get threadControlsGroupNavigation => '導覽';
+
+  @override
+  String get threadControlsGroupScrolling => '捲動';
 }

@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_models.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chrome_palette.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
+/// 阅读器顶栏：正文与控件色板沿用阅读专项解析，顶栏按钮使用同一玻璃组件。
+///
+/// 玻璃档位由应用根 `AppGlassEnvironment` 提供；关闭或高对比时按钮退回
+/// 该工具栏自身的 [ReaderChromePalette.chromeBackground]，前景保持控件色板。
 class ReaderTopOverlayBar extends StatelessWidget {
   const ReaderTopOverlayBar({super.key, required this.config});
 
@@ -23,10 +28,12 @@ class ReaderTopOverlayBar extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 64),
           child: Row(
             children: [
-              IconButton(
-                key: const Key('shared-reader-top-back-button'),
+              AppToolbarIconButton(
+                buttonKey: const Key('shared-reader-top-back-button'),
                 tooltip: AppLocalizations.of(context).readerBack,
                 onPressed: config.onBack,
+                foregroundColor: palette.chromeForeground,
+                baseColor: palette.chromeBackground,
                 icon: const Icon(Icons.arrow_back),
               ),
               Expanded(
@@ -49,7 +56,8 @@ class ReaderTopOverlayBar extends StatelessWidget {
                           key: const Key('shared-reader-top-title'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(color: palette.chromeForeground),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -57,7 +65,8 @@ class ReaderTopOverlayBar extends StatelessWidget {
                           key: const Key('shared-reader-top-subtitle'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: palette.chromeForeground),
                         ),
                       ],
                     ),
@@ -65,10 +74,12 @@ class ReaderTopOverlayBar extends StatelessWidget {
                 ),
               ),
               for (final action in config.actions)
-                IconButton(
-                  key: Key('shared-reader-top-action-${action.id}'),
+                AppToolbarIconButton(
+                  buttonKey: Key('shared-reader-top-action-${action.id}'),
                   tooltip: action.label,
                   onPressed: action.enabled ? action.onPressed : null,
+                  foregroundColor: palette.chromeForeground,
+                  baseColor: palette.chromeBackground,
                   icon: Icon(action.icon),
                 ),
             ],

@@ -9,6 +9,7 @@ import 'package:y300/features/profile/data/providers/friend_read_providers.dart'
 import 'package:y300/features/profile/presentation/friends/my_friends_page.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
 
 import '../../../test_support/localized_test_app.dart';
@@ -25,6 +26,7 @@ void main() {
     ) async {
       final repository = FriendFeedFixture(autoComplete: true);
       await _pumpPage(tester, repository: repository, locale: locale);
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       final l10n = _l10n(tester);
       expect(find.text(l10n.profileMyFriendsTitle), findsOneWidget);
       expect(find.text(l10n.profileFriendsTab), findsOneWidget);
@@ -232,7 +234,7 @@ void main() {
     expect(conversations, isEmpty);
     expect(removal.requests, isEmpty);
     expect(find.byKey(const Key('my-friends-actions-sheet')), findsNothing);
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byKey(const Key('my-friends-remove-confirm')), findsNothing);
     expect(repository.requests, hasLength(1));
     expect(tester.takeException(), isNull);
   });
@@ -591,7 +593,10 @@ void main() {
         expect(removal.requests, isEmpty);
         expect(find.byKey(const Key('my-friends-message-202')), findsOneWidget);
         expect(find.byKey(const Key('my-friends-remove-202')), findsNothing);
-        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          find.byKey(const Key('my-friends-remove-confirm')),
+          findsNothing,
+        );
 
         await tester.tap(find.byKey(const Key('my-friends-message-202')));
         await tester.pumpAndSettle();
@@ -605,7 +610,10 @@ void main() {
         expect(links, isEmpty);
         expect(removal.requests, isEmpty);
         expect(find.byKey(const Key('my-friends-actions-sheet')), findsNothing);
-        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          find.byKey(const Key('my-friends-remove-confirm')),
+          findsNothing,
+        );
         expect(repository.requests, hasLength(1));
         expect(tester.takeException(), isNull);
       }
@@ -640,7 +648,7 @@ void main() {
       container.read(_ownerSource.notifier).state = nextOwner;
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('my-friends-actions-sheet')), findsNothing);
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byKey(const Key('my-friends-remove-confirm')), findsNothing);
       expect(removal.requests, isEmpty);
       expect(tester.takeException(), isNull);
     });
@@ -682,7 +690,10 @@ void main() {
         staleSelection();
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('my-friends-actions-sheet')), findsNothing);
-        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          find.byKey(const Key('my-friends-remove-confirm')),
+          findsNothing,
+        );
         expect(removal.requests, isEmpty);
         expect(links, isEmpty);
         expect(conversations, isEmpty);
@@ -867,13 +878,16 @@ void main() {
       );
       await tester.pumpAndSettle();
       await _openRemovalConfirmation(tester);
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.byKey(const Key('my-friends-remove-confirm')),
+        findsOneWidget,
+      );
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MyFriendsPage)),
       );
       container.read(_ownerSource.notifier).state = (uid: '101', revision: 1);
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byKey(const Key('my-friends-remove-confirm')), findsNothing);
       expect(removal.requests, isEmpty);
       expect(tester.takeException(), isNull);
     },
@@ -1075,7 +1089,7 @@ Future<void> _openRemovalConfirmation(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('my-friends-remove-202')));
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('my-friends-actions-sheet')), findsNothing);
-  expect(find.byType(AlertDialog), findsOneWidget);
+  expect(find.byKey(const Key('my-friends-remove-confirm')), findsOneWidget);
 }
 
 Future<void> _expectRemovalAction(

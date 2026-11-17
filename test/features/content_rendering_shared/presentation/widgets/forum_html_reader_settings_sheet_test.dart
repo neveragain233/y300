@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_controller.dart';
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_repository_provider.dart';
 import 'package:y300/features/content_rendering_shared/domain/models/forum_html_reader_preferences.dart';
@@ -222,10 +223,9 @@ Slider _slider(WidgetTester tester, Key key) => tester.widget<Slider>(
   find.descendant(of: find.byKey(key), matching: find.byType(Slider)),
 );
 
-SwitchListTile _authorSwitch(WidgetTester tester) =>
-    tester.widget<SwitchListTile>(
-      find.byKey(const Key('forum-html-reader-preserve-font-size-switch')),
-    );
+prism.Switch _authorSwitch(WidgetTester tester) => tester.widget<prism.Switch>(
+  find.byKey(const Key('forum-html-reader-preserve-font-size-switch')),
+);
 
 TextButton _reset(WidgetTester tester) => tester.widget<TextButton>(
   find.byKey(const Key('forum-html-reader-reset-button')),

@@ -5,6 +5,7 @@ import 'package:y300/features/app_update/domain/models/app_update_check_result.d
 import 'package:y300/features/app_update/presentation/app_update_feedback_messages.dart';
 import 'package:y300/features/app_update/presentation/controllers/app_update_prompt_coordinator.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class AppUpdateCheckTile extends ConsumerStatefulWidget {
@@ -28,16 +29,14 @@ class _AppUpdateCheckTileState extends ConsumerState<AppUpdateCheckTile> {
       stream: coordinator.installedVersionStream,
       builder: (context, snapshot) {
         final version = snapshot.data?.trim();
-        return ListTile(
+        return AppGroupedRow(
           key: const Key('about-check-update-entry'),
           leading: const Icon(Icons.system_update_alt_outlined),
-          title: Text(l10n.appUpdateCheck),
+          title: l10n.appUpdateCheck,
           subtitle: widget.showVersionSubtitle
-              ? Text(
-                  version == null || version.isEmpty
-                      ? l10n.appUpdateVersionLoading
-                      : l10n.appUpdateCurrentVersion(version),
-                )
+              ? (version == null || version.isEmpty
+                    ? l10n.appUpdateVersionLoading
+                    : l10n.appUpdateCurrentVersion(version))
               : null,
           trailing: _checking
               ? const SizedBox.square(
@@ -46,7 +45,7 @@ class _AppUpdateCheckTileState extends ConsumerState<AppUpdateCheckTile> {
                 )
               : null,
           enabled: !_checking,
-          onTap: _checking ? null : () => _checkNow(coordinator),
+          onTap: () => _checkNow(coordinator),
         );
       },
     );

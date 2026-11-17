@@ -6,6 +6,7 @@ import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/config/app_storage_keys.dart';
 import 'package:y300/core/preferences/preference_key_names.dart';
@@ -28,6 +29,10 @@ void main() {
         expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
         expect(settings.navigationSwipeEnabled, isTrue);
         expect(settings.glassLevel, AppGlassLevel.standard);
+        expect(
+          settings.navigationLensMotion,
+          AppNavigationLensMotion.followPress,
+        );
       },
     );
 
@@ -105,6 +110,58 @@ void main() {
             expect(settings.brightnessPreference, preference);
           }
         }
+      },
+    );
+
+    test('saves and loads both lens motions and rounds them back', () async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = SharedPrefsAppAppearanceSettingsRepository();
+
+      for (final motion in AppNavigationLensMotion.values) {
+        await repository.save(
+          AppAppearanceSettings(
+            navigationLensMotion: motion,
+            languagePreference: AppLanguage.system,
+          ),
+        );
+        expect((await repository.load()).navigationLensMotion, motion);
+      }
+    });
+
+    test(
+      'missing, unknown and damaged lens motion fall back to follow press',
+      () async {
+        for (final snapshot in <String>[
+          '{"version":1,"source":"preset","family":"moonWhite",'
+              '"brightness":"dark","language":"system"}',
+          '{"version":1,"source":"preset","family":"moonWhite",'
+              '"brightness":"dark","language":"system","lensMotion":"future"}',
+          '{"version":1,"source":"preset","family":"moonWhite",'
+              '"brightness":"dark","language":"system","lensMotion":3}',
+        ]) {
+          SharedPreferences.setMockInitialValues({
+            PreferenceKeyNames.appAppearanceSnapshotV1: snapshot,
+          });
+          final settings = await SharedPrefsAppAppearanceSettingsRepository()
+              .load();
+          expect(
+            settings.navigationLensMotion,
+            AppNavigationLensMotion.followPress,
+            reason: snapshot,
+          );
+        }
+
+        SharedPreferences.setMockInitialValues({
+          PreferenceKeyNames.appAppearanceSnapshotV1: '{not json',
+          PreferenceKeyNames.appThemeFamily: 'plumPurple',
+        });
+        final damaged = await SharedPrefsAppAppearanceSettingsRepository()
+            .load();
+        expect(
+          damaged.navigationLensMotion,
+          AppNavigationLensMotion.followPress,
+        );
+        expect(damaged.themeFamily, AppThemeFamily.plumPurple);
       },
     );
 
@@ -343,6 +400,81 @@ void main() {
       expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
       expect(settings.navigationSwipeEnabled, isTrue);
     });
+
+    test('persists the lens motion independently', () async {
+      final repository = _FakeAppAppearanceSettingsRepository(
+        settings: AppAppearanceSettings.defaults(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appAppearanceSettingsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(appAppearanceControllerProvider.future);
+      await container
+          .read(appAppearanceControllerProvider.notifier)
+          .setNavigationLensMotion(AppNavigationLensMotion.fromSelection);
+
+      expect(
+        container
+            .read(appAppearanceControllerProvider)
+            .value!
+            .navigationLensMotion,
+        AppNavigationLensMotion.fromSelection,
+      );
+      expect(
+        repository.savedSettings.single.navigationLensMotion,
+        AppNavigationLensMotion.fromSelection,
+      );
+    });
+
+    test(
+      'reset appearance keeps language and account-independent data',
+      () async {
+        final repository = _FakeAppAppearanceSettingsRepository(
+          settings: AppAppearanceSettings.defaults().copyWith(
+            themeFamily: AppThemeFamily.plumPurple,
+            brightnessPreference: AppBrightnessPreference.dark,
+            glassLevel: AppGlassLevel.enhanced,
+            navigationBarStyle: AppNavigationBarStyle.legacy,
+            navigationSwipeEnabled: false,
+            navigationLensMotion: AppNavigationLensMotion.fromSelection,
+            languagePreference: AppLanguage.traditionalChinese,
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            appAppearanceSettingsRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(appAppearanceControllerProvider.future);
+        await container
+            .read(appAppearanceControllerProvider.notifier)
+            .resetAppearance();
+
+        final settings = container.read(appAppearanceControllerProvider).value!;
+        expect(settings.themeFamily, AppThemeFamily.warmPaper);
+        expect(settings.brightnessPreference, AppBrightnessPreference.light);
+        expect(settings.glassLevel, AppGlassLevel.standard);
+        expect(settings.navigationBarStyle, AppNavigationBarStyle.immersive);
+        expect(settings.navigationSwipeEnabled, isTrue);
+        expect(
+          settings.navigationLensMotion,
+          AppNavigationLensMotion.followPress,
+        );
+        expect(settings.languagePreference, AppLanguage.traditionalChinese);
+        expect(
+          repository.savedSettings.single.languagePreference,
+          AppLanguage.traditionalChinese,
+        );
+      },
+    );
 
     test('save failure rolls back state and rethrows', () async {
       final repository = _FakeAppAppearanceSettingsRepository(

@@ -17,6 +17,7 @@ import 'package:y300/features/messages/presentation/widgets/message_feed_view.da
 import 'package:y300/features/messages/presentation/widgets/message_read_status.dart';
 import 'package:y300/features/messages/presentation/widgets/private_message_editor.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 typedef MessageLinkOpener = void Function(BuildContext context, String url);
 
@@ -43,7 +44,7 @@ class PrivateConversationPage extends ConsumerWidget {
     if (account == null) {
       return Scaffold(
         backgroundColor: Theme.of(context).y300NativeContent.background,
-        appBar: AppBar(title: Text(label)),
+        appBar: AppPageAppBar(title: label),
         body: const MessageLoginPrompt(),
       );
     }
@@ -118,19 +119,16 @@ class _ConversationBodyState extends ConsumerState<_ConversationBody> {
       controller: controller,
       builder: (context, state) => Scaffold(
         backgroundColor: Theme.of(context).y300NativeContent.background,
-        appBar: AppBar(
-          title: Text(
-            resolveConversationTitle(
-                  state.data?.items ?? const [],
-                  widget.target,
-                  widget.title,
-                ) ??
-                (widget.target.kind == ForumConversationKind.group
-                    ? l10n.messageGroup
-                    : l10n.profilePrivateMessage),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+        appBar: AppPageAppBar(
+          title:
+              resolveConversationTitle(
+                state.data?.items ?? const [],
+                widget.target,
+                widget.title,
+              ) ??
+              (widget.target.kind == ForumConversationKind.group
+                  ? l10n.messageGroup
+                  : l10n.profilePrivateMessage),
         ),
         body: Center(
           child: ConstrainedBox(

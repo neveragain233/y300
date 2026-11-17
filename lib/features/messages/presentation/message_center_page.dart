@@ -1,4 +1,3 @@
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +16,7 @@ import 'package:y300/features/messages/presentation/widgets/message_read_status.
 import 'package:y300/features/messages/presentation/widgets/message_surface.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/native_primary_tab_bar.dart';
 
 enum MessageCenterTab { messages, notifications }
@@ -50,9 +50,9 @@ class MessageCenterPage extends ConsumerWidget {
     if (account == null) {
       return Scaffold(
         backgroundColor: Theme.of(context).y300NativeContent.background,
-        appBar: AppBar(
+        appBar: AppPageAppBar(
           leading: adaptiveDetailBackButton(context),
-          title: Text(AppLocalizations.of(context).profileMessageCenterTitle),
+          title: AppLocalizations.of(context).profileMessageCenterTitle,
         ),
         body: const MessageLoginPrompt(),
       );
@@ -120,22 +120,18 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
     );
     return Scaffold(
       backgroundColor: Theme.of(context).y300NativeContent.background,
-      appBar: AppBar(
+      appBar: AppPageAppBar(
         leading: adaptiveDetailBackButton(context),
-        title: Text(l10n.profileMessageCenterTitle),
+        title: l10n.profileMessageCenterTitle,
         actions: [
-          AppToolbarActions(
-            children: [
-              IconButton(
-                tooltip: l10n.messageNew,
-                icon: const Icon(Icons.edit_square),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const NewPrivateMessagePage(),
-                  ),
-                ),
+          IconButton(
+            tooltip: l10n.messageNew,
+            icon: const Icon(Icons.edit_square),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NewPrivateMessagePage(),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -269,12 +265,20 @@ class _ConversationRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MessageAvatar(
-              kind: group ? MessageAvatarKind.group : MessageAvatarKind.user,
-              userId: item.toUserId,
-              imageUrl: item.toUserAvatarUrl,
+            // 与通知行同一头像槽位：首行标题基线按 48 逻辑像素对齐。
+            SizedBox.square(
+              dimension: 48,
+              child: Center(
+                child: MessageAvatar(
+                  kind: group
+                      ? MessageAvatarKind.group
+                      : MessageAvatarKind.user,
+                  userId: item.toUserId,
+                  imageUrl: item.toUserAvatarUrl,
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

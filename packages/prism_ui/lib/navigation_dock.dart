@@ -302,9 +302,32 @@ class _DockSurface extends StatelessWidget {
 }
 
 class NavigationDockDestination {
-  const NavigationDockDestination({required this.glyph, required this.label});
+  const NavigationDockDestination({
+    this.key,
+    this.glyph,
+    this.icon,
+    this.selectedIcon,
+    required this.label,
+  }) : assert(
+         glyph != null || icon != null,
+         'A destination draws a glyph or an icon.',
+       ),
+       assert(
+         selectedIcon == null || icon != null,
+         'A selected icon replaces an icon.',
+       );
 
-  final Glyph glyph;
+  /// Keys the destination's slot, so a caller can address one destination.
+  final Key? key;
+
+  /// Drawn at [_iconSize], as the library's own destinations draw.
+  final Glyph? glyph;
+
+  /// Drawn in place of [glyph] at the size the caller sets, and
+  /// [selectedIcon] in its place while selected.
+  final Widget? icon;
+  final Widget? selectedIcon;
+
   final String label;
 }
 
@@ -314,11 +337,29 @@ class NavigationDock extends StatelessWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onSelected,
+    this.commitOnDrag = true,
+    this.projectVelocity = true,
+    this.dragFromSelection = false,
+    this.reduceMotion = false,
   });
 
   final List<NavigationDockDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+
+  /// Whether letting go after a drag selects the destination under the lens.
+  /// With a tap the pressed destination still selects.
+  final bool commitOnDrag;
+
+  /// Whether the velocity of a release carries the choice on to a neighbour.
+  final bool projectVelocity;
+
+  /// Whether a drag moves the lens from the selected destination rather than
+  /// jumping it under the finger. A tap still picks the pressed destination.
+  final bool dragFromSelection;
+
+  /// Whether presses and drags snap instead of moving and deforming.
+  final bool reduceMotion;
 
   static double heightOf(BuildContext context) {
     return _barHeight +
@@ -363,6 +404,10 @@ class NavigationDock extends StatelessWidget {
                       destinations: destinations,
                       selectedIndex: selectedIndex,
                       onSelected: onSelected,
+                      commitOnDrag: commitOnDrag,
+                      projectVelocity: projectVelocity,
+                      dragFromSelection: dragFromSelection,
+                      reduceMotion: reduceMotion,
                     ),
                   ),
                 ),
@@ -877,11 +922,45 @@ class FloatingNavigationBar extends StatefulWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onSelected,
+    this.commitOnDrag = true,
+    this.projectVelocity = true,
+    this.dragFromSelection = false,
+    this.reduceMotion = false,
   });
 
   final List<NavigationDockDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+
+  /// Whether letting go after a drag selects the destination under the lens.
+  /// With a tap the pressed destination still selects.
+  final bool commitOnDrag;
+
+  /// Whether the velocity of a release carries the choice on to a neighbour.
+  final bool projectVelocity;
+
+  /// Whether a drag moves the lens from the selected destination rather than
+  /// jumping it under the finger.
+  final bool dragFromSelection;
+
+  /// Whether presses and drags snap instead of moving and deforming.
+  final bool reduceMotion;
+
+  /// The narrowest bar that keeps every destination [extent] wide, which the
+  /// narrowest lens still allows. A caller that scrolls a bar too narrow for
+  /// the screen sizes it to this.
+  static double minimumWidthFor(
+    int count, {
+    double extent = kMinInteractiveDimension,
+  }) {
+    if (count <= 0) {
+      return 0;
+    }
+    if (count == 1) {
+      return extent + _barPadding * 4;
+    }
+    return _minLensWidth + (count - 1) * extent + _barPadding * 2;
+  }
 
   @override
   State<FloatingNavigationBar> createState() => _FloatingNavigationBarState();
@@ -945,14 +1024,49 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     super.didUpdateWidget(oldWidget);
     _syncParallax();
     _leanContent();
+    // A selection, a member or a mode that arrives mid-press retires the
+    // press's intent rather than letting it commit the old arrangement.
+    if (_pressedIndex != null &&
+        (oldWidget.selectedIndex != widget.selectedIndex ||
+            oldWidget.destinations.length != widget.destinations.length ||
+            oldWidget.commitOnDrag != widget.commitOnDrag ||
+            oldWidget.dragFromSelection != widget.dragFromSelection)) {
+      _cancelPress();
+    }
     final rest = _lensRest;
     if (_pressedIndex == null && _lens.target != rest) {
       _lens.springTo(rest, _travelSpring);
     }
   }
 
+  /// Spring, or snap when the caller asks for less motion.
+  void _springTo(
+    _Spring spring,
+    double target,
+    SpringDescription springDescription,
+  ) {
+    if (widget.reduceMotion) {
+      spring.jumpTo(target);
+    } else {
+      spring.springTo(target, springDescription);
+    }
+  }
+
+  /// Drops a press without committing it, as a change of the bar's state does.
+  void _cancelPress() {
+    _pressedIndex = null;
+    _dragging = false;
+    _dropping = false;
+    _springTo(_lens, _selectedIndex.toDouble(), _travelSpring);
+    _springTo(_swell, 0, _pressSpring);
+    _springTo(_stretch, 0, _pressSpring);
+    _lift.springTo(0, _liftSpring);
+  }
+
   @override
   void dispose() {
+    // A pointer's route outlives the bar when it is replaced mid-gesture.
+    _pointer = null;
     for (final parallax in _parallax) {
       parallax.dispose();
     }
@@ -977,7 +1091,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
         _jellyStretch * _saturate(velocity.abs() / _jellySpeed) -
         _jellySquash * _saturate(braking / _jellyBrake);
     if (target != _jelly.target) {
-      _jelly.springTo(target, _jellySpring);
+      _springTo(_jelly, target, _jellySpring);
     }
   }
 
@@ -1011,7 +1125,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
           ? 0.0
           : offset * _hoverMagnet * _hoverParallax;
       if (target != parallax.target) {
-        parallax.springTo(target, _hoverSpring);
+        _springTo(parallax, target, _hoverSpring);
       }
     }
   }
@@ -1032,7 +1146,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
       return;
     }
     _dropping = false;
-    _lift.springTo(0, _liftSpring);
+    _springTo(_lift, 0, _liftSpring);
   }
 
   double _positionAt(Offset localPosition) {
@@ -1041,7 +1155,13 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
         ? localPosition.dx
         : width - localPosition.dx;
     final layout = _layout;
-    final position = (dx - _barPadding - layout.inset) / layout.pitch - 0.5;
+    return _clampedPosition(
+      (dx - _barPadding - layout.inset) / layout.pitch - 0.5,
+    );
+  }
+
+  /// The lens's position, rubber-banded past either end of the bar.
+  double _clampedPosition(double position) {
     if (position < 0) {
       return _rubberBand(position, _overdrag);
     }
@@ -1073,7 +1193,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     }
     final rest = _lensRest;
     if (_lens.target != rest) {
-      _lens.springTo(rest, _hoverSpring);
+      _springTo(_lens, rest, _hoverSpring);
     }
   }
 
@@ -1088,20 +1208,23 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     if (_hoverShow.target == 0 && _hoverShow.value == 0) {
       _hover.jumpTo(target);
     } else {
-      _hover.springTo(target, _hoverSpring);
+      _springTo(_hover, target, _hoverSpring);
     }
-    _hoverShow.springTo(1, _fadeSpring);
+    _springTo(_hoverShow, 1, _fadeSpring);
     _leanLens();
   }
 
   void _settleSwell(SpringDescription spring) {
     final target = _cursor == null ? 0.0 : _hoverSwell;
     if (_pointer == null && _swell.target != target) {
-      _swell.springTo(target, spring);
+      _springTo(_swell, target, spring);
     }
   }
 
   void _handleHover(PointerHoverEvent event) {
+    if (!mounted) {
+      return;
+    }
     // The engine synthesizes a hover before a touch lands, and the touch
     // pointer lingers until removed, so a tap would leave the highlight on.
     if (event.kind == PointerDeviceKind.touch) {
@@ -1113,31 +1236,34 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
   }
 
   void _handleExit(PointerExitEvent event) {
+    if (!mounted) {
+      return;
+    }
     _cursor = null;
-    _hoverShow.springTo(0, _fadeSpring);
+    _springTo(_hoverShow, 0, _fadeSpring);
     _hoverAt.value = null;
     _leanLens();
     _settleSwell(_settleSpring);
   }
 
   void _handlePointerDown(PointerDownEvent event) {
-    if (_pointer != null || event.buttons & kPrimaryButton == 0) {
+    if (!mounted || _pointer != null || event.buttons & kPrimaryButton == 0) {
       return;
     }
     _pointer = event.pointer;
     _tracker = VelocityTracker.withKind(event.kind)
       ..addPosition(event.timeStamp, event.localPosition);
-    _hoverShow.springTo(0, _fadeSpring);
+    _springTo(_hoverShow, 0, _fadeSpring);
     _hoverAt.value = null;
-    _swell.springTo(1, _pressSpring);
+    _springTo(_swell, 1, _pressSpring);
     _glowAt = event.localPosition;
     _glowSpread.jumpTo(0);
-    _glow.springTo(1, _glowInSpring);
+    _springTo(_glow, 1, _glowInSpring);
     _press(event.localPosition);
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
-    if (event.pointer == _pointer) {
+    if (mounted && event.pointer == _pointer) {
       _tracker?.addPosition(event.timeStamp, event.localPosition);
       _glowAt = event.localPosition;
       _shine();
@@ -1146,7 +1272,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
   }
 
   void _handlePointerEnd(PointerEvent event) {
-    if (event.pointer != _pointer) {
+    if (!mounted || event.pointer != _pointer) {
       return;
     }
     _pointer = null;
@@ -1156,9 +1282,9 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
       _fling(tracker.getVelocity().pixelsPerSecond.dx);
     }
     _release(commit: event is PointerUpEvent);
-    _glow.springTo(0, _glowOutSpring);
-    _glowSpread.springTo(1, _glowOutSpring);
-    _stretch.springTo(0, _pressSpring);
+    _springTo(_glow, 0, _glowOutSpring);
+    _springTo(_glowSpread, 1, _glowOutSpring);
+    _springTo(_stretch, 0, _pressSpring);
     if (_cursor != null) {
       _cursor = event.localPosition;
       _showHover();
@@ -1175,29 +1301,60 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     _pressX = localPosition.dx;
     _dragging = false;
     _dropping = false;
-    _lift.springTo(1, _liftSpring);
-    _lens.springTo(index.toDouble(), _travelSpring);
+    _springTo(_lift, 1, _liftSpring);
+    // A bar whose drags start from the selection keeps the lens there until
+    // the finger moves; a tap still selects the destination under it.
+    if (!widget.dragFromSelection) {
+      _springTo(_lens, index.toDouble(), _travelSpring);
+    }
   }
 
   void _slide(Offset localPosition) {
     if (_pressedIndex == null) {
       return;
     }
+    final bool started;
     if (!_dragging) {
       if ((localPosition.dx - _pressX).abs() < kTouchSlop) {
         return;
       }
       _dragging = true;
+      // A bar that never commits a drag keeps taps as its only input: a finger
+      // that moves cancels the tap without sliding the lens or clicking.
+      if (!widget.commitOnDrag) {
+        return;
+      }
+      started = true;
+    } else {
+      if (!widget.commitOnDrag) {
+        return;
+      }
+      started = false;
+    }
+    final double position;
+    if (started && widget.dragFromSelection) {
+      _pressedIndex = _selectedIndex;
+      position = _selectedIndex.toDouble();
+    } else if (widget.dragFromSelection) {
+      final direction = Directionality.of(context) == TextDirection.ltr
+          ? 1.0
+          : -1.0;
+      position = _clampedPosition(
+        _selectedIndex +
+            (localPosition.dx - _pressX) / _layout.pitch * direction,
+      );
+    } else {
+      position = _positionAt(localPosition);
     }
     final size = context.size!;
     final overshoot =
         localPosition.dx - localPosition.dx.clamp(0.0, size.width);
-    _stretch.springTo(
+    _springTo(
+      _stretch,
       _rubberBand(overshoot, size.shortestSide * _pullLimit),
       _trackSpring,
     );
-    final position = _positionAt(localPosition);
-    _lens.springTo(position, _followSpring);
+    _springTo(_lens, position, _followSpring);
     final index = _indexAt(position);
     if (index != _pressedIndex) {
       HapticFeedback.selectionClick();
@@ -1208,6 +1365,9 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
   /// Carries a drag let go mid-flick on to the next destination, at most one
   /// past the one under the finger.
   void _fling(double velocityX) {
+    if (!widget.projectVelocity) {
+      return;
+    }
     final pressed = _pressedIndex;
     if (!_dragging || pressed == null) {
       return;
@@ -1235,12 +1395,20 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     if (index == null) {
       return;
     }
+    final commits = commit && (!_dragging || widget.commitOnDrag);
     _pressedIndex = null;
     _dragging = false;
-    _dropping = true;
-    _lens.springTo((commit ? index : _selectedIndex).toDouble(), _travelSpring);
-    _dropLift();
-    if (commit && index != widget.selectedIndex) {
+    final target = commits ? index : _selectedIndex;
+    if (widget.reduceMotion) {
+      _dropping = false;
+      _springTo(_lens, target.toDouble(), _travelSpring);
+      _springTo(_lift, 0, _liftSpring);
+    } else {
+      _dropping = true;
+      _lens.springTo(target.toDouble(), _travelSpring);
+      _dropLift();
+    }
+    if (commits && index != widget.selectedIndex) {
       widget.onSelected(index);
     }
   }
@@ -1315,10 +1483,14 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
                     Widget items(_LensPart part) => Padding(
                       padding: EdgeInsets.symmetric(horizontal: layout.inset),
                       child: Row(
+                        // Stretching gives every destination the bar's whole
+                        // height as its target, not just its content's.
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           for (final (index, destination)
                               in widget.destinations.indexed)
                             Expanded(
+                              key: destination.key,
                               child: _FloatingBarItem(
                                 destination: destination,
                                 selected: index == _selectedIndex,
@@ -1677,6 +1849,10 @@ class _FloatingBarItemState extends State<_FloatingBarItem> {
         blue: math.min(tint.b * brightness, 1),
       );
     }
+    final destination = widget.destination;
+    final icon = widget.selected
+        ? destination.selectedIcon ?? destination.icon
+        : destination.icon;
     final content = _LensTint(
       part: widget.part,
       lens: widget.lens,
@@ -1692,23 +1868,36 @@ class _FloatingBarItemState extends State<_FloatingBarItem> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            GlyphIcon(
-              widget.destination.glyph,
-              size: _iconSize,
-              color: color,
-              fill: 1,
-            ),
+            // A caller's icon keeps the size it brings; the glyph takes the
+            // bar's own.
+            if (icon != null)
+              IconTheme(
+                data: IconThemeData(color: color),
+                child: icon,
+              )
+            else
+              GlyphIcon(
+                destination.glyph!,
+                size: _iconSize,
+                color: color,
+                fill: 1,
+              ),
             const SizedBox(height: _labelGap),
             SizedBox(
               height: widget.labelHeight,
               child: Center(
-                child: Text(
-                  widget.destination.label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  style: widget.labelStyle?.copyWith(color: color),
-                ),
+                child: widget.part == _LensPart.inside
+                    ? _LensLabel(
+                        label: destination.label,
+                        style: widget.labelStyle?.copyWith(color: color),
+                      )
+                    : Text(
+                        destination.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: widget.labelStyle?.copyWith(color: color),
+                      ),
               ),
             ),
           ],
@@ -1743,6 +1932,38 @@ class _FloatingBarItemState extends State<_FloatingBarItem> {
               : content,
         ),
       ),
+    );
+  }
+}
+
+/// The label drawn over the lifted lens.
+///
+/// It copies the destination's own label for painting only; the copy above
+/// the glass is decorative, so it draws the paragraph instead of adding a
+/// second text widget beside the destination's.
+class _LensLabel extends StatelessWidget {
+  const _LensLabel({required this.label, required this.style});
+
+  final String label;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    var effective = style;
+    if (MediaQuery.boldTextOf(context)) {
+      effective = effective?.merge(
+        const TextStyle(fontWeight: FontWeight.bold),
+      );
+    }
+    return RichText(
+      text: TextSpan(text: label, style: effective),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      textAlign: TextAlign.start,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      locale: Localizations.maybeLocaleOf(context),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/forum_thread_badge_theme.dart';
@@ -39,8 +40,8 @@ void main() {
         expect(digest.foreground, theme.colorScheme.onSecondaryContainer);
         expect(sticky.background, theme.colorScheme.tertiaryContainer);
         expect(sticky.foreground, theme.colorScheme.onTertiaryContainer);
-        expect(poll.background, theme.appBarTheme.backgroundColor);
-        expect(poll.foreground, theme.appBarTheme.foregroundColor);
+        expect(poll.background, theme.y300BrandColors.accent);
+        expect(poll.foreground, theme.y300BrandColors.onAccent);
         for (final kind in ForumThreadBadgeKind.values) {
           final colors = ForumThreadBadgeColors.resolve(theme, kind);
           final first = colors.background.computeLuminance();
@@ -85,8 +86,8 @@ void main() {
     for (final scheme in [baseTheme.colorScheme, updatedScheme]) {
       final badgeTheme = ForumThreadBadgeTheme.fromColorScheme(
         scheme,
-        standardBackground: baseTheme.appBarTheme.backgroundColor,
-        standardForeground: baseTheme.appBarTheme.foregroundColor,
+        standardBackground: baseTheme.y300BrandColors.accent,
+        standardForeground: baseTheme.y300BrandColors.onAccent,
       );
       await _pumpBadgeTheme(
         tester,
@@ -116,8 +117,8 @@ void main() {
             foreground: scheme.onTertiaryContainer,
           ),
           standard: ForumThreadBadgeColors(
-            background: baseTheme.appBarTheme.backgroundColor!,
-            foreground: baseTheme.appBarTheme.foregroundColor!,
+            background: baseTheme.y300BrandColors.accent,
+            foreground: baseTheme.y300BrandColors.onAccent,
           ),
         ),
       );

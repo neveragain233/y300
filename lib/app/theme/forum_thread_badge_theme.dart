@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 
 /// Shared status colors for forum and user-topic cards.
 @immutable
@@ -20,8 +21,8 @@ final class ForumThreadBadgeColors {
         theme.extension<ForumThreadBadgeTheme>() ??
         ForumThreadBadgeTheme.fromColorScheme(
           theme.colorScheme,
-          standardBackground: theme.appBarTheme.backgroundColor,
-          standardForeground: theme.appBarTheme.foregroundColor,
+          standardBackground: theme.y300BrandColors.accent,
+          standardForeground: theme.y300BrandColors.onAccent,
         );
     return switch (kind) {
       ForumThreadBadgeKind.closed => colors.closed,

@@ -9,6 +9,7 @@ import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -18,11 +19,12 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/core/preferences/preference_key.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
-import 'package:y300/features/more/presentation/appearance_settings_sheet.dart';
+import 'package:y300/features/more/presentation/appearance_page.dart';
 import 'package:y300/app/content_rendering/native_forum_html_render_theme_factory.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../test_support/localized_test_app.dart';
 
@@ -156,7 +158,7 @@ void main() {
       );
       expect(theme.colorScheme, scheme);
       expect(theme.scaffoldBackgroundColor, scheme.surface);
-      expect(theme.appBarTheme.backgroundColor, scheme.surfaceContainer);
+      expect(theme.appBarTheme.backgroundColor, scheme.surface);
       expect(theme.appBarTheme.foregroundColor, scheme.onSurface);
       expect(theme.navigationBarTheme.backgroundColor, scheme.surfaceContainer);
       expect(theme.y300NativeContent.card, scheme.surfaceContainerLow);
@@ -194,17 +196,18 @@ void main() {
   }
 
   test(
-    'preset ignores available system scheme and keeps light icons on dark bar',
+    'preset ignores available system scheme and uses the page surface bar',
     () {
       final theme = AppTheme.build(
         family: AppThemeFamily.moonWhite,
         brightness: Brightness.light,
         dynamicScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
       );
-      expect(theme.appBarTheme.backgroundColor, const Color(0xFF2E3F5A));
+      expect(theme.appBarTheme.backgroundColor, const Color(0xFFF3F6FA));
+      expect(theme.y300BrandColors.accent, const Color(0xFF2E3F5A));
       expect(
         theme.appBarTheme.systemOverlayStyle!.statusBarIconBrightness,
-        Brightness.light,
+        Brightness.dark,
       );
     },
   );
@@ -310,7 +313,7 @@ void main() {
   );
 
   testWidgets(
-    'narrow traditional appearance exposes dynamic choice and fallback',
+    'narrow traditional appearance disables dynamic color and explains fallback',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = const Size(280, 720);
@@ -327,48 +330,66 @@ void main() {
                   .copyWith(textScaler: const TextScaler.linear(1.6)),
               child: child!,
             ),
-            home: const Scaffold(body: AppearanceSettingsSheet()),
+            home: const AppearancePage(),
           ),
         ),
       );
       await tester.pumpAndSettle();
+      final pageList = find.descendant(
+        of: find.byKey(const Key('appearance-page-list')),
+        matching: find.byType(Scrollable),
+      );
       final dynamicChoice = find.byKey(const Key('appearance-theme-dynamic'));
-      await tester.ensureVisible(dynamicChoice);
-      await tester.tap(dynamicChoice);
+      await tester.scrollUntilVisible(dynamicChoice, 200, scrollable: pageList);
       await tester.pumpAndSettle();
       final l10n = AppLocalizations.of(tester.element(dynamicChoice));
       expect(
         find.descendant(
           of: dynamicChoice,
-          matching: find.text(l10n.moreThemeDynamic),
+          matching: find.text(l10n.appearanceDynamicColorLabel),
         ),
         findsOneWidget,
       );
-      expect(find.text(l10n.moreThemeDynamicDescription), findsOneWidget);
       expect(
         find.byKey(const Key('appearance-dynamic-fallback')),
         findsOneWidget,
+      );
+      expect(
+        find.text(
+          l10n.moreThemeDynamicUnavailable(l10n.moreThemeFamilyWarmPaper),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(dynamicChoice);
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byKey(const Key('appearance-page'))),
+      );
+      expect(
+        container.read(appAppearanceControllerProvider).value!.colorSource,
+        AppThemeColorSource.preset,
       );
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'appearance sheet switches navigation style and gates swipe in legacy',
+    'appearance page switches navigation style and gates swipe in legacy',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
         ProviderScope(
           child: LocalizedTestApp(
             theme: AppTheme.light(),
-            home: const Scaffold(body: AppearanceSettingsSheet()),
+            home: const AppearancePage(),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      final sheet = find.byKey(const Key('appearance-settings-sheet'));
-      await tester.drag(sheet, const Offset(0, -220));
-      await tester.pumpAndSettle();
+      final pageList = find.descendant(
+        of: find.byKey(const Key('appearance-page-list')),
+        matching: find.byType(Scrollable),
+      );
 
       final immersive = find.byKey(
         const Key('appearance-navigation-style-immersive'),
@@ -377,20 +398,24 @@ void main() {
         const Key('appearance-navigation-style-legacy'),
       );
       final swipe = find.byKey(const Key('appearance-navigation-swipe'));
+      await tester.scrollUntilVisible(legacy, 240, scrollable: pageList);
+      await tester.pumpAndSettle();
       expect(immersive, findsOneWidget);
-      expect(legacy, findsOneWidget);
-      expect(tester.widget<SwitchListTile>(swipe).value, isTrue);
-      expect(tester.widget<SwitchListTile>(swipe).onChanged, isNotNull);
+      expect(tester.widget<AppSwitchRow>(swipe).value, isTrue);
+      expect(tester.widget<AppSwitchRow>(swipe).onChanged, isNotNull);
 
-      await tester.ensureVisible(legacy);
       await tester.tap(legacy);
       await tester.pumpAndSettle();
 
-      final container = ProviderScope.containerOf(tester.element(sheet));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byKey(const Key('appearance-page'))),
+      );
       final settings = container.read(appAppearanceControllerProvider).value!;
       expect(settings.navigationBarStyle, AppNavigationBarStyle.legacy);
-      expect(tester.widget<SwitchListTile>(swipe).onChanged, isNull);
-      final l10n = AppLocalizations.of(tester.element(sheet));
+      expect(tester.widget<AppSwitchRow>(swipe).onChanged, isNull);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byKey(const Key('appearance-page'))),
+      );
       expect(find.text(l10n.moreNavigationSwipeUnavailable), findsOneWidget);
 
       await tester.tap(immersive);
@@ -402,7 +427,7 @@ void main() {
             .navigationBarStyle,
         AppNavigationBarStyle.immersive,
       );
-      expect(tester.widget<SwitchListTile>(swipe).onChanged, isNotNull);
+      expect(tester.widget<AppSwitchRow>(swipe).onChanged, isNotNull);
 
       await tester.tap(swipe);
       await tester.pumpAndSettle();

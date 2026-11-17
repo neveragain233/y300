@@ -56,16 +56,10 @@ class NativePaginationBar extends StatelessWidget {
           spacing: spacing,
           runSpacing: spacing,
           children: [
-            SizedBox(
+            NativePaginationButton(
               key: previousButtonKey,
-              height: 34,
-              child: TextButton(
-                onPressed: canLoadPrevious && !isLoading
-                    ? onLoadPrevious
-                    : null,
-                style: buttonStyle,
-                child: Text(previousLabel),
-              ),
+              label: previousLabel,
+              onPressed: canLoadPrevious && !isLoading ? onLoadPrevious : null,
             ),
             NativePageDropdownButton(
               buttonKey: currentPageButtonKey,
@@ -91,17 +85,44 @@ class NativePaginationBar extends StatelessWidget {
                 ),
               )
             else
-              SizedBox(
+              NativePaginationButton(
                 key: nextButtonKey,
-                height: 34,
-                child: TextButton(
-                  onPressed: hasMore ? onLoadNext : null,
-                  style: buttonStyle,
-                  child: Text(nextLabel),
-                ),
+                label: nextLabel,
+                onPressed: hasMore ? onLoadNext : null,
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Filled page-navigation button shared by forum lists and thread pagination.
+///
+/// Keeping the geometry and colors here means a surface that reuses the button
+/// renders the same enabled, disabled and pressed states as the forum list.
+class NativePaginationButton extends StatelessWidget {
+  /// Creates a page-navigation button with [label].
+  const NativePaginationButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  /// Visible label text.
+  final String label;
+
+  /// Action for an enabled button; null renders the disabled state.
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 34,
+      child: TextButton(
+        onPressed: onPressed,
+        style: _pageButtonStyle(Theme.of(context)),
+        child: Text(label),
       ),
     );
   }

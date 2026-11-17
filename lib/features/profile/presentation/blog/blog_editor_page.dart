@@ -25,6 +25,8 @@ import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/features/profile/presentation/blog/blog_web_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 typedef BlogEditorResult = ({UserBlogReceipt receipt, String subject});
@@ -400,27 +402,17 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
     if (_dialogOpen) return false;
     _dialogOpen = true;
     final l10n = AppLocalizations.of(context);
-    final result = await showDialog<bool>(
+    final result = await showAppConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            key: confirmKey,
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
+      title: title,
+      message: message,
+      confirmLabel: l10n.commonConfirm,
+      cancelLabel: l10n.commonCancel,
+      confirmKey: confirmKey,
     );
     _dialogOpen = false;
     if (mounted) _scheduleFinish();
-    return result == true;
+    return result;
   }
 
   Future<void> _confirmLeave() async {
@@ -665,12 +657,8 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
         child: Scaffold(
           resizeToAvoidBottomInset: false,
           backgroundColor: native.card,
-          appBar: AppBar(
-            title: Text(
-              creating ? l10n.profileBlogWrite : l10n.profileBlogEdit,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          appBar: AppPageAppBar(
+            title: creating ? l10n.profileBlogWrite : l10n.profileBlogEdit,
             actions: [
               if (state.options != null)
                 IconButton(

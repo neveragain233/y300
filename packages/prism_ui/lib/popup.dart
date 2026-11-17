@@ -153,8 +153,12 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
     this.sourceColor = Colors.transparent,
     this.sourceImage,
     this.bareSource = false,
+    this.blursContent = true,
+    this.runsPickedAfterReturn = true,
     this.modal = true,
     this.avoid,
+    this.theme,
+    this.reduceMotion = false,
   }) : super(requestFocus: modal ? null : false);
 
   final WidgetBuilder builder;
@@ -177,11 +181,29 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
   /// Whether the source control shows no surface of its own at rest.
   final bool bareSource;
 
+  /// Whether the content blurs while the popup opens and returns. Off, the
+  /// labels and icons stay legible through the whole morph.
+  final bool blursContent;
+
+  /// Whether a picked item runs once the popup has returned into its control.
+  /// Off, it runs as soon as the popup is popped, as Material menus do.
+  final bool runsPickedAfterReturn;
+
   /// Off, focus stays on the page and touches outside pass through to it.
   final bool modal;
 
   /// A rect the popup keeps clear of when there is room above or below it.
   final Rect? avoid;
+
+  /// The theme the popup's own surface paints with, for a host whose theme
+  /// sits below the navigator: the platter and the glass are drawn above the
+  /// popup's content, so without it they would read the library's fallback
+  /// theme rather than the host's. Unset, they read the surrounding theme.
+  final ThemeData? theme;
+
+  /// Whether the platform asks for less motion: the popup then shows and
+  /// closes in place, with no morph and no content blur.
+  final bool reduceMotion;
 
   @override
   final String? barrierLabel;
@@ -193,11 +215,15 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
   bool get barrierDismissible => true;
 
   @override
-  Duration get transitionDuration => _openDuration;
+  Duration get transitionDuration =>
+      reduceMotion ? Duration.zero : _openDuration;
 
   @override
-  Duration get reverseTransitionDuration =>
-      sourceImage == null ? _shrinkDuration : _dismissDuration;
+  Duration get reverseTransitionDuration => reduceMotion
+      ? Duration.zero
+      : sourceImage == null
+      ? _shrinkDuration
+      : _dismissDuration;
 
   // A controller reverses over the share of its duration it had run, so a
   // popup closed while opening would rush the return its morph times in full.
@@ -268,7 +294,9 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
       action();
       return;
     }
-    unawaited(completed.whenComplete(action));
+    unawaited(
+      (runsPickedAfterReturn ? completed : popped).whenComplete(action),
+    );
   }
 
   @override
@@ -317,6 +345,27 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    final theme = this.theme;
+    if (theme == null) {
+      return _buildTransitions(context, animation, secondaryAnimation, child);
+    }
+    // The platter, its glass and its shadows are built here, above the
+    // content, so the host's theme has to mount above them as well.
+    return Theme(
+      data: theme,
+      child: Builder(
+        builder: (context) =>
+            _buildTransitions(context, animation, secondaryAnimation, child),
+      ),
+    );
+  }
+
+  Widget _buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     if (elevated) {
       return ElevatedSurfaceTheme(
         child: Builder(
@@ -355,6 +404,7 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
               sourceColor: sourceColor,
               sourceImage: sourceImage,
               bareSource: bareSource,
+              blursContent: blursContent,
               surfaceColor: SurfaceLevel.floatingOf(
                 colorScheme,
               ).colorOf(colorScheme),
@@ -444,6 +494,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
     required this.sourceColor,
     required this.sourceImage,
     required this.bareSource,
+    required this.blursContent,
     required this.surfaceColor,
     required this.shadows,
     required this.glass,
@@ -457,6 +508,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
   final Color sourceColor;
   final ValueListenable<ui.Image?>? sourceImage;
   final bool bareSource;
+  final bool blursContent;
   final Color surfaceColor;
   final List<BoxShadow> shadows;
 
@@ -474,6 +526,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
       sourceColor: sourceColor,
       sourceImage: sourceImage,
       bareSource: bareSource,
+      blursContent: blursContent,
       surfaceColor: surfaceColor,
       shadows: shadows,
       glass: glass,
@@ -493,6 +546,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
       ..sourceColor = sourceColor
       ..sourceImage = sourceImage
       ..bareSource = bareSource
+      ..blursContent = blursContent
       ..surfaceColor = surfaceColor
       ..shadows = shadows
       ..glass = glass;
@@ -521,10 +575,12 @@ class _RenderPopupMorph extends RenderProxyBox {
     required Color sourceColor,
     required ValueListenable<ui.Image?>? sourceImage,
     required this.bareSource,
+    required bool blursContent,
     required Color surfaceColor,
     required List<BoxShadow> shadows,
     required _PlatterGlass? glass,
   }) : _anchor = anchor,
+       _blursContent = blursContent,
        _animation = animation,
        _platter = platter,
        _sourceColor = sourceColor,
@@ -538,6 +594,16 @@ class _RenderPopupMorph extends RenderProxyBox {
   _PopupSurface surface;
 
   bool bareSource;
+
+  bool _blursContent;
+
+  set blursContent(bool value) {
+    if (value == _blursContent) {
+      return;
+    }
+    _blursContent = value;
+    markNeedsPaint();
+  }
 
   Rect _anchor;
 
@@ -932,13 +998,15 @@ class _RenderPopupMorph extends RenderProxyBox {
           context,
           offset,
           settled,
-          math.sqrt(
-            math.pow(_openContentBlur * (1 - settled), 2) +
-                math.pow(
-                  _openBlurBump * riseAndFall(frame.time, 0.069, 2.1),
-                  2,
-                ),
-          ),
+          _blursContent
+              ? math.sqrt(
+                  math.pow(_openContentBlur * (1 - settled), 2) +
+                      math.pow(
+                        _openBlurBump * riseAndFall(frame.time, 0.069, 2.1),
+                        2,
+                      ),
+                )
+              : 0,
           content,
         ),
       );
@@ -1098,7 +1166,7 @@ class _RenderPopupMorph extends RenderProxyBox {
         context,
         offset,
         reveal,
-        _maxContentBlur * (1 - reveal),
+        _blursContent ? _maxContentBlur * (1 - reveal) : 0,
         _contentTransform(
           platter,
           math.min(platter.width / card.width, platter.height / card.height),
@@ -1396,6 +1464,10 @@ class PopupAnchor extends StatefulWidget {
     required this.popupBuilder,
     this.placement = PopupPlacement.overAnchorEnd,
     this.bare = false,
+    this.blursContent = true,
+    this.runsPickedAfterReturn = true,
+    this.theme,
+    this.reduceMotion = false,
   });
 
   final Widget Function(PopupOpen open) targetBuilder;
@@ -1406,6 +1478,21 @@ class PopupAnchor extends StatefulWidget {
 
   /// Whether the target shows no surface of its own at rest, as a bar's title.
   final bool bare;
+
+  /// Whether the popup's content blurs while it opens and returns.
+  final bool blursContent;
+
+  /// Whether a picked item runs once the popup has returned into the control.
+  final bool runsPickedAfterReturn;
+
+  /// The theme the popup's own surface paints with; see
+  /// [AnchoredPopupRoute.theme].
+  final ThemeData? theme;
+
+  /// Whether the platform asks for less motion; see
+  /// [AnchoredPopupRoute.reduceMotion]. The control then stays as it is,
+  /// since no platter is drawn to stand in for it.
+  final bool reduceMotion;
 
   @override
   State<PopupAnchor> createState() => _PopupAnchorState();
@@ -1581,6 +1668,10 @@ class _PopupAnchorState extends State<PopupAnchor> {
       sourceColor: widget.bare ? Colors.transparent : _sourceColor(),
       sourceImage: snapshot,
       bareSource: widget.bare,
+      blursContent: widget.blursContent,
+      runsPickedAfterReturn: widget.runsPickedAfterReturn,
+      theme: widget.theme,
+      reduceMotion: widget.reduceMotion,
     );
     Navigator.of(context).push(route);
     void reveal() {
@@ -1603,7 +1694,11 @@ class _PopupAnchorState extends State<PopupAnchor> {
       snapshot.dispose();
     });
     // The control repaints its ink as it is tapped, so it can only be
-    // captured once that frame has been painted.
+    // captured once that frame has been painted. Without a morph the control
+    // stays visible, and the popup never stands in for it.
+    if (widget.reduceMotion) {
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _captureSource(route, snapshot),
     );
@@ -1820,9 +1915,11 @@ class _PopupPressRecognizer extends OneSequenceGestureRecognizer {
 
 class PopupMenuItem {
   const PopupMenuItem({
+    this.key,
     required this.label,
     this.subtitle,
     this.glyph,
+    this.leading,
     this.onPressed,
     this.danger = false,
     this.checked,
@@ -1831,9 +1928,17 @@ class PopupMenuItem {
     this.subItems = const [],
   });
 
+  /// Keys the row that shows this item, so a host can find and verify it.
+  final Key? key;
+
   final String label;
   final String? subtitle;
   final Glyph? glyph;
+
+  /// A widget drawn where [glyph] goes, as a Material app's menu icons are,
+  /// tinted with the row's foreground color.
+  final Widget? leading;
+
   final VoidCallback? onPressed;
   final bool danger;
   final bool? checked;
@@ -1858,13 +1963,22 @@ const _menuMaxWidth = 280.0;
 const _defaultMaxVisibleItems = 7;
 
 class PopupMenu extends StatefulWidget {
-  const PopupMenu({super.key, required this.items, this.maxVisibleItems});
+  const PopupMenu({
+    super.key,
+    required this.items,
+    this.maxVisibleItems,
+    this.onWillSelect,
+  });
 
   final List<PopupMenuItem> items;
 
   /// Half of the next row shows past these, so the cut tells the menu scrolls.
   /// Setting them builds only the rows in view, which needs rows of one height.
   final int? maxVisibleItems;
+
+  /// Called as a row is picked, before the popup closes, so a host can tell a
+  /// pick from a dismissal without waiting for the item's action to run.
+  final VoidCallback? onWillSelect;
 
   @override
   State<PopupMenu> createState() => _PopupMenuState();
@@ -2058,7 +2172,9 @@ class _PopupMenuState extends State<PopupMenu>
       final checked = item.checked == true;
       final row =
           (checked ? _itemArrowPadding : _itemPadding).horizontal +
-          (item.glyph != null ? _itemIconSize + 12 : 0) +
+          (item.glyph != null || item.leading != null
+              ? _itemIconSize + 12
+              : 0) +
           label +
           (checked ? 8 + _submenuArrowSize : 0);
       width = math.max(width, row);
@@ -2242,6 +2358,7 @@ class _PopupMenuState extends State<PopupMenu>
   }
 
   void _select(VoidCallback onPressed) {
+    widget.onWillSelect?.call();
     Navigator.of(context).pop();
     final runPicked = _runPicked;
     if (runPicked == null) {
@@ -2414,6 +2531,18 @@ class _PopupMenuState extends State<PopupMenu>
               if (item.glyph case final glyph?) ...[
                 GlyphIcon(glyph, size: _itemIconSize, color: foregroundColor),
                 const SizedBox(width: 12),
+              ] else if (item.leading case final leading?) ...[
+                IconTheme(
+                  data: IconThemeData(
+                    size: _itemIconSize,
+                    color: foregroundColor,
+                  ),
+                  child: SizedBox.square(
+                    dimension: _itemIconSize,
+                    child: Center(widthFactor: 1, child: leading),
+                  ),
+                ),
+                const SizedBox(width: 12),
               ],
               Expanded(
                 child: Column(
@@ -2451,6 +2580,7 @@ class _PopupMenuState extends State<PopupMenu>
       ),
     );
     return MetaData(
+      key: item.key,
       metaData: _MenuRow(
         index,
         onTap,

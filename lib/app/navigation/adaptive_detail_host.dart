@@ -466,12 +466,9 @@ class AdaptiveDetailExpandAction extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final l10n = AppLocalizations.of(context);
+    // 背景与前景交给所在动作胶囊统一解析，避免在玻璃表面内再叠一层实色圆底。
     return IconButton(
       key: const Key('adaptive-detail-expand'),
-      style: IconButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-      ),
       tooltip: scope.expanded
           ? l10n.layoutRestorePanes
           : l10n.layoutExpandDetail,

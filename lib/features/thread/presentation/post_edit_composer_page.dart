@@ -24,6 +24,9 @@ import 'package:y300/features/thread/presentation/post_edit_composer_state.dart'
 import 'package:y300/features/thread/presentation/widgets/post_edit_attachment_panel.dart';
 import 'package:y300/features/posting/presentation/widgets/thread_subject_field.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 
 class PostEditComposerPage extends ConsumerStatefulWidget {
@@ -102,8 +105,8 @@ class _PostEditComposerPageState extends ConsumerState<PostEditComposerPage> {
         key: const Key('post-edit-composer-page'),
         resizeToAvoidBottomInset:
             _editorSurface != ComposerSurfacePreference.quill,
-        appBar: AppBar(
-          title: Text(l10n.postEditTitle),
+        appBar: AppPageAppBar(
+          title: l10n.postEditTitle,
           actions: [
             IconButton(
               key: const Key('post-edit-composer-source-button'),
@@ -196,7 +199,7 @@ class _PostEditComposerPageState extends ConsumerState<PostEditComposerPage> {
 
   void _showSettingsSheet() {
     final provider = postEditComposerControllerProvider(widget.args);
-    showModalBottomSheet<void>(
+    showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => Consumer(
@@ -246,27 +249,15 @@ class _PostEditComposerPageState extends ConsumerState<PostEditComposerPage> {
     }
     final danglingAids = controller.danglingAttachmentAids(current);
     if (danglingAids.isNotEmpty) {
-      final confirmed = await showDialog<bool>(
+      final l10n = AppLocalizations.of(context);
+      final confirmed = await showAppConfirmDialog(
         context: context,
-        builder: (dialogContext) {
-          final l10n = AppLocalizations.of(dialogContext);
-          return AlertDialog(
-            title: Text(l10n.postEditDanglingAttachmentTitle),
-            content: Text(l10n.postEditDanglingAttachmentBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(l10n.postEditDanglingAttachmentConfirm),
-              ),
-            ],
-          );
-        },
+        title: l10n.postEditDanglingAttachmentTitle,
+        message: l10n.postEditDanglingAttachmentBody,
+        confirmLabel: l10n.postEditDanglingAttachmentConfirm,
+        cancelLabel: l10n.commonCancel,
       );
-      if (!mounted || confirmed != true) {
+      if (!mounted || !confirmed) {
         return;
       }
     }

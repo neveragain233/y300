@@ -17,7 +17,10 @@ import 'package:y300/features/thread/presentation/widgets/thread_page_picker_she
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
@@ -65,6 +68,7 @@ import 'package:y300/features/thread/presentation/services/thread_history_commit
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
 import 'package:y300/features/thread/presentation/thread_text_resolver.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
+import 'package:y300/features/thread/presentation/widgets/thread_detail_app_bar.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
@@ -117,6 +121,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   late final ThreadImageReaderReturnCoordinator _imageReaderReturnCoordinator;
   late final ThreadFloorNavigationCoordinator _floorNavigation;
   late final ThreadReplyTailCoordinator _replyTail;
+  late final ThreadDetailScrollTitleObserver _titleObserver;
   Set<String> _tailMembership = const <String>{};
   int _blacklistRevision = 0;
   String? _tailPageKey;
@@ -149,6 +154,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _titleObserver = ThreadDetailScrollTitleObserver(isMounted: () => mounted);
     _imageReaderReturnCoordinator = ThreadImageReaderReturnCoordinator(
       scrollController: _scrollController,
     )..topInsetForPost = _imageReturnTopInset;
@@ -191,6 +197,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncReadingVisibility();
+    // 字体、宽度与主题变化会改变首楼标题边界，下一帧重新核对。
+    _titleObserver.schedule();
   }
 
   @override
@@ -336,6 +344,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       _postRouteSession.invalidate();
       _replyTail.reset();
       _tailAutoAttempted = false;
+      _titleObserver.reset();
     }
     if (oldWidget.tid != widget.tid ||
         oldWidget.targetPid?.trim() != widget.targetPid?.trim() ||
@@ -359,6 +368,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     }
     _postRouteSession.dispose();
     _highlightClearTimer?.cancel();
+    _titleObserver.dispose();
     _replyTail
       ..removeListener(_handleReplyTailChanged)
       ..dispose();
@@ -380,7 +390,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         return Scaffold(
           key: const Key('thread-detail-blocked-rules-loading'),
           appBar: AppBar(),
-          body: ThreadDetailLoading(subject: widget.subject),
+          body: AppLoadingState(
+            key: const Key('thread-detail-rules-loading'),
+            label: l10n.threadDetailLoading,
+          ),
         );
       }
       final rule = _blockedRuleFor(blockedRules.value);
@@ -465,10 +478,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         if (nextNotice == null || nextNotice == previousNotice) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ThreadTextResolver.actionNotice(l10n, nextNotice)),
-          ),
+        showTransientSnackBar(
+          context,
+          ThreadTextResolver.actionNotice(l10n, nextNotice),
         );
       },
     );
@@ -512,33 +524,21 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       diagnostics: historyDiagnostics,
     );
 
+    _syncTitleStructure(state);
     final page = Scaffold(
       backgroundColor: palette.background,
-      appBar: AppBar(
+      appBar: ThreadDetailAppBar(
+        toolbarHeight: ThreadDetailAppBar.resolveToolbarHeight(context),
         leading: widget.bodyReadingObserver == null
             ? adaptiveDetailBackButton(context)
             : AppToolbarBackButton(
                 onPressed: () => unawaited(_closeReadingAndPop()),
               ),
-        centerTitle: false,
-        title: GestureDetector(
-          key: const Key('thread-detail-appbar-copy-link-area'),
-          behavior: HitTestBehavior.opaque,
-          onLongPress: () {
-            unawaited(_copyThreadUrl(state));
-          },
-          child: SizedBox(
-            width: double.infinity,
-            height: kToolbarHeight,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _ThreadDetailAppBarTitle(
-                forumName: projection.displayForumName,
-                initialForumName: widget.initialForumName,
-              ),
-            ),
-          ),
-        ),
+        forumName: projection.displayForumName,
+        initialForumName: widget.initialForumName,
+        subject: projection.displaySubject,
+        showSubject: _titleObserver.showSubject,
+        onCopyLink: () => unawaited(_copyThreadUrl(state)),
         actions: [
           IconButton(
             key: const Key('thread-detail-first-post-button'),
@@ -571,9 +571,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                         data: MediaQuery.of(context)
                             .copyWith(size: constraints.biggest),
                         child: (asyncState.isLoading && state.posts.isEmpty)
-                            ? ThreadDetailLoading(
-                                key: ValueKey(args),
+                            ? ThreadDetailEntrySurface(
                                 subject: projection.displaySubject,
+                                child: AppLoadingState(
+                                  key: ValueKey(args),
+                                  label: l10n.threadDetailLoading,
+                                ),
                               )
                             : (asyncState.hasError ||
                                       state.errorMessage != null) &&
@@ -610,6 +613,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                   () => controller.refresh(forceNetwork: true),
                                 ),
                                 child: ThreadDetailContent(
+                                  key: _titleObserver.viewportKey,
+                                  firstPostTitleKey: _titleObserver.titleKey,
                                   floorNavigation: _floorNavigation,
                                   onRepliesHeaderHeightChanged: (height) {
                                     if (mounted &&
@@ -874,6 +879,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         _floorNavigation.userScrolled();
       }
     }
+    _titleObserver.schedule();
     return false;
   }
 
@@ -883,8 +889,23 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     if (notification.depth == 0) {
       _bodyReadingCoordinator?.schedule();
       _floorNavigation.refresh();
+      _titleObserver.schedule();
     }
     return false;
+  }
+
+  /// 声明首楼标题是否可能出现在正文序列顶部。
+  ///
+  /// 翻页、倒序与只看该作者时首楼不在当前位置，顶栏直接显示“帖子标题＋板块名”；
+  /// 首屏加载中保留板块名，等正文可测后再按实际几何切换。
+  void _syncTitleStructure(ThreadDetailPageState state) {
+    final reverseOrFiltered =
+        state.isReverseOrderView || state.isOnlyAuthorView;
+    final loadsFirstPage = state.currentPage == 1;
+    _titleObserver.updateStructure(
+      tracks: !reverseOrFiltered && loadsFirstPage && state.posts.isNotEmpty,
+      forceSubject: reverseOrFiltered || state.currentPage > 1,
+    );
   }
 
   void _scheduleHistoryVisit({
@@ -978,7 +999,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
 
   Future<void> _unblockBlockedThread(BlockedThread rule) async {
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.maybeOf(context);
     final restored = await ref
         .read(blockedThreadsControllerProvider.notifier)
         .unblock(rule.tid);
@@ -986,9 +1006,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       return;
     }
     if (!restored) {
-      messenger?.showSnackBar(
-        SnackBar(content: Text(l10n.contentFilterSaveFailed)),
-      );
+      showTransientSnackBar(context, l10n.contentFilterSaveFailed);
       return;
     }
     setState(() => _allowedBlockedView = true);
@@ -1361,9 +1379,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
 
   void _openDisplaySettings() {
     unawaited(
-      showModalBottomSheet<void>(
+      // 显示设置统一走自适应面板：详情区窄屏为底部抽屉，宽屏为侧面板，
+      // 不再依赖 Material 底部抽屉的拖拽手柄形态。
+      showAdaptivePanel<void>(
         context: context,
-        showDragHandle: false,
         builder: (context) => const ForumHtmlReaderSettingsSheet(
           key: Key('thread-detail-display-settings-sheet'),
           showAuthorStyleControls: false,
@@ -1541,9 +1560,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 
   ThreadDetailContentProjection _resolveProjection(
@@ -1566,32 +1583,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       mode: mode,
       converterId: converterId,
       sourceRevision: sourceRevision,
-    );
-  }
-}
-
-class _ThreadDetailAppBarTitle extends StatelessWidget {
-  const _ThreadDetailAppBarTitle({
-    required this.forumName,
-    this.initialForumName,
-  });
-
-  final String? forumName;
-  final String? initialForumName;
-
-  @override
-  Widget build(BuildContext context) {
-    final parsedForumName = forumName?.trim();
-    final fallbackForumName = initialForumName?.trim();
-    final resolvedForumName = parsedForumName?.isNotEmpty == true
-        ? parsedForumName
-        : fallbackForumName;
-    return Text(
-      resolvedForumName == null || resolvedForumName.isEmpty
-          ? AppLocalizations.of(context).threadDetailTitle
-          : resolvedForumName,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -1634,38 +1625,46 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
             label: state.isOnlyAuthorView
                 ? l10n.threadDetailAllPosts
                 : l10n.threadDetailOnlyAuthor,
+            icon: const Icon(Icons.person_outline),
           ),
           AppPopupMenuItem<String>(
             value: state.isReverseOrderView ? 'normal-order' : 'reverse-order',
             label: state.isReverseOrderView
                 ? l10n.threadDetailNormalOrder
                 : l10n.threadDetailReverseOrder,
+            icon: const Icon(Icons.swap_vert),
           ),
         ],
         AppPopupMenuItem<String>(
           value: 'controls-settings',
           label: l10n.threadControlsTitle,
+          icon: const Icon(Icons.settings_suggest_outlined),
         ),
         AppPopupMenuItem<String>(
           key: const Key('thread-detail-display-settings-menu-item'),
           value: 'display-settings',
           label: l10n.threadDetailDisplaySettings,
+          icon: const Icon(Icons.tune),
         ),
         AppPopupMenuItem<String>(
           key: const Key('thread-detail-block-menu-item'),
           value: 'block-thread',
           label: l10n.contentFilterBlockAction,
+          icon: const Icon(Icons.visibility_off_outlined),
         ),
         if (onBlockAuthor != null)
           AppPopupMenuItem<String>(
             key: const Key('thread-detail-block-author-menu-item'),
             value: 'block-author',
             label: l10n.blacklistBlockAuthor,
+            icon: const Icon(Icons.person_off_outlined),
+            danger: true,
           ),
         if (state.homeUrl?.trim().isNotEmpty == true)
           AppPopupMenuItem<String>(
             value: 'home',
             label: l10n.threadDetailBackHome,
+            icon: const Icon(Icons.home_outlined),
           ),
       ],
       onSelected: (value) {
@@ -1721,25 +1720,17 @@ class _ThreadErrorView extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return ThreadDetailEntrySurface(
       subject: subject,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton(
-              key: const Key('thread-detail-retry-button'),
-              onPressed: onRetry,
-              child: Text(l10n.commonRetry),
-            ),
-            if (onOpenHome != null)
-              TextButton(
+      child: AppErrorState(
+        message: message,
+        retryLabel: l10n.commonRetry,
+        retryKey: const Key('thread-detail-retry-button'),
+        onRetry: onRetry,
+        secondaryAction: onOpenHome == null
+            ? null
+            : TextButton(
                 onPressed: onOpenHome,
                 child: Text(l10n.threadPostOpenHome),
               ),
-          ],
-        ),
       ),
     );
   }

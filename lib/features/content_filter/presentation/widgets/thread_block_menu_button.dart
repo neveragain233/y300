@@ -45,12 +45,15 @@ class ThreadBlockMenuButton extends ConsumerWidget {
           key: Key('thread-block-action-$tid'),
           value: 'block',
           label: l10n.contentFilterBlockAction,
+          icon: const Icon(Icons.visibility_off_outlined),
         ),
         if (canBlockAuthor)
           AppPopupMenuItem<String>(
             key: Key('thread-block-author-action-$tid'),
             value: 'block-author',
             label: l10n.blacklistBlockUser,
+            icon: const Icon(Icons.person_off_outlined),
+            danger: true,
           ),
       ],
       onSelected: (value) {

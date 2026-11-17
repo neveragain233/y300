@@ -2,9 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' as riverpod_misc;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/composer_shared/domain/repositories/composer_draft_repository.dart';
 import 'package:y300/features/composer_shared/data/services/composer_image_picker.dart';
@@ -23,8 +28,10 @@ import 'package:y300/features/posting/data/providers/posting_providers.dart';
 import 'package:y300/features/posting/domain/models/posting_target.dart';
 import 'package:y300/features/posting/presentation/posting_composer_controller.dart';
 import 'package:y300/features/posting/presentation/posting_composer_page.dart';
+import 'package:y300/features/posting/presentation/posting_composer_route.dart';
 import 'package:y300/features/posting/presentation/posting_composer_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 part 'posting_composer_page_test_fakes.dart';
 
@@ -248,7 +255,7 @@ void main() {
     expect(moreCenter.dx, lessThan(sendCenter.dx));
     expect(
       find.descendant(
-        of: find.byType(AppBar),
+        of: find.byType(AppPageAppBar),
         matching: find.byKey(const Key('posting-composer-image-button')),
       ),
       findsNothing,
@@ -510,6 +517,10 @@ void main() {
 
       await tester.tap(find.byKey(const Key('posting-composer-more-button')));
       await tester.pumpAndSettle();
+      // 设置面板内容在矮窗口下可能需要滚动才能露出重置项。
+      await tester.ensureVisible(
+        find.byKey(const Key('posting-composer-reset-draft-button')),
+      );
       await tester.tap(
         find.byKey(const Key('posting-composer-reset-draft-button')),
       );
@@ -533,7 +544,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('posting-composer-more-button')));
       await tester.pumpAndSettle();
-      final signatureSwitch = tester.widget<SwitchListTile>(
+      final signatureSwitch = tester.widget<prism.Switch>(
         find.byKey(const Key('posting-composer-use-signature-switch')),
       );
       expect(signatureSwitch.value, isFalse);
@@ -621,7 +632,7 @@ void main() {
       findsOneWidget,
     );
 
-    final signatureSwitch = tester.widget<SwitchListTile>(
+    final signatureSwitch = tester.widget<prism.Switch>(
       find.byKey(const Key('posting-composer-use-signature-switch')),
     );
     expect(signatureSwitch.value, isTrue);
@@ -629,7 +640,7 @@ void main() {
       find.byKey(const Key('posting-composer-use-signature-switch')),
     );
     await tester.pumpAndSettle();
-    final toggledSignatureSwitch = tester.widget<SwitchListTile>(
+    final toggledSignatureSwitch = tester.widget<prism.Switch>(
       find.byKey(const Key('posting-composer-use-signature-switch')),
     );
     expect(toggledSignatureSwitch.value, isFalse);
@@ -676,6 +687,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       expect(find.text('发帖 — 日常版'), findsOneWidget);
       expect(
         find.byKey(const Key('posting-composer-metadata-loading')),
@@ -1307,6 +1319,35 @@ void main() {
       final saved = await draftRepository.loadDraft(identity);
       expect(saved?.subject, '草稿标题');
       expect(saved?.message, '草稿正文');
+    },
+  );
+
+  testWidgets(
+    'PostingComposerPage opens through the detail host that hides shell chrome',
+    (tester) async {
+      final detailController = AdaptiveDetailController();
+      addTearDown(detailController.dispose);
+
+      await tester.pumpWidget(
+        _buildHostedPage(detailController: detailController),
+      );
+      await tester.pumpAndSettle();
+      expect(detailController.hasDetail, isFalse);
+
+      await tester.tap(find.byKey(const Key('open-hosted-posting-composer')));
+      await tester.pumpAndSettle();
+
+      // 主壳以 hasDetail 决定是否显示底栏：发帖必须作为详情路由打开，
+      // 否则编辑器底部工具栏会被底栏遮挡。
+      expect(detailController.hasDetail, isTrue);
+      expect(find.byType(PostingComposerPage), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(detailController.hasDetail, isFalse);
+      expect(find.byType(PostingComposerPage), findsNothing);
+      expect(tester.takeException(), isNull);
     },
   );
 

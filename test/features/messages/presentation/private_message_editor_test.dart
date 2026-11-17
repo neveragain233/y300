@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/dialog.dart' as prism;
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_sticker_input.dart';
 import 'package:y300/features/composer_shared/presentation/quill/composer_quill_embeds.dart';
@@ -80,9 +81,8 @@ void main() {
         container: container,
         child: LocalizedTestApp(
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
             child: child!,
           ),
           home: pushed
@@ -314,7 +314,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(prism.AlertDialog),
           matching: find.text(strings.messageSend),
         ),
       );

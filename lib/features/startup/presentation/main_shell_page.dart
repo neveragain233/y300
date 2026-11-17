@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:prism_ui/liquid_glass.dart';
 import 'package:y300/app/clipboard/forum_clipboard_link_host.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
@@ -16,7 +15,6 @@ import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
-import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/startup/main_shell_library_gate.dart';
 import 'package:y300/app/startup/main_shell_startup_coordinator.dart';
@@ -248,56 +246,49 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                 return TransientFeedbackLayout(
                   bottomOverlap: overlayInset,
                   child: Scaffold(
-                    body: LiquidGlassScope(
-                      enabled:
-                          showImmersiveChrome && appearance.glassLevel.enabled,
-                      quality: appearance.glassLevel == AppGlassLevel.enhanced
-                          ? LiquidGlassQuality.ultra
-                          : LiquidGlassQuality.standard,
-                      child: LiquidGlassHost(
-                        enabled:
-                            showImmersiveChrome &&
-                            appearance.glassLevel.enabled,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: MediaQuery(
-                                data: media.copyWith(
-                                  padding: media.padding.copyWith(
-                                    bottom: contentBottomPadding,
-                                  ),
-                                ),
-                                child: MainShellBottomInset(
-                                  bottom: overlayInset,
-                                  child: content,
+                    // 玻璃来源由应用根 AppGlassEnvironment 提供，主壳不再自建
+                    // scope/host，菜单、面板与分栏详情共用同一捕获。
+                    body: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: MediaQuery(
+                            data: media.copyWith(
+                              padding: media.padding.copyWith(
+                                bottom: contentBottomPadding,
+                              ),
+                            ),
+                            child: MainShellBottomInset(
+                              bottom: overlayInset,
+                              child: content,
+                            ),
+                          ),
+                        ),
+                        if (showImmersiveChrome)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: _BottomChromeSizeReporter(
+                              onHeight: _updateChromeHeight,
+                              child: ShelfSelectionBottomBar(
+                                fallback: MainNavigationCapsule(
+                                  items: items,
+                                  selectedIndex: selectedIndex,
+                                  glassLevel: appearance.glassLevel,
+                                  swipeEnabled:
+                                      appearance.navigationSwipeEnabled &&
+                                      !selection.isActive,
+                                  dragFromSelection: appearance
+                                      .navigationLensMotion
+                                      .dragFromSelection,
+                                  onSelected: selection.isActive
+                                      ? null
+                                      : selectGroup,
                                 ),
                               ),
                             ),
-                            if (showImmersiveChrome)
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                child: _BottomChromeSizeReporter(
-                                  onHeight: _updateChromeHeight,
-                                  child: ShelfSelectionBottomBar(
-                                    fallback: MainNavigationCapsule(
-                                      items: items,
-                                      selectedIndex: selectedIndex,
-                                      glassLevel: appearance.glassLevel,
-                                      swipeEnabled:
-                                          appearance.navigationSwipeEnabled &&
-                                          !selection.isActive,
-                                      onSelected: selection.isActive
-                                          ? null
-                                          : selectGroup,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                          ),
+                      ],
                     ),
                     bottomNavigationBar: useRail
                         ? const ShelfSelectionBottomBar()

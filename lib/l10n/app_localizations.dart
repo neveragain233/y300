@@ -967,6 +967,12 @@ abstract class AppLocalizations {
   /// **'重试'**
   String get commonRetry;
 
+  /// No description provided for @commonLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在加载'**
+  String get commonLoading;
+
   /// No description provided for @commonApply.
   ///
   /// In zh, this message translates to:
@@ -10380,6 +10386,420 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'还没有书签章节'**
   String get readerBookmarksEmpty;
+
+  /// No description provided for @appPrismClearSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除搜索'**
+  String get appPrismClearSearch;
+
+  /// No description provided for @appPrismNoSearchResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到匹配结果'**
+  String get appPrismNoSearchResults;
+
+  /// No description provided for @appPrismSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择'**
+  String get appPrismSelect;
+
+  /// No description provided for @appPrismShowLess.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get appPrismShowLess;
+
+  /// No description provided for @appPrismShowMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开更多'**
+  String get appPrismShowMore;
+
+  /// No description provided for @appPrismHidePassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏密码'**
+  String get appPrismHidePassword;
+
+  /// No description provided for @appPrismShowPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示密码'**
+  String get appPrismShowPassword;
+
+  /// No description provided for @appPrismSort.
+  ///
+  /// In zh, this message translates to:
+  /// **'排序'**
+  String get appPrismSort;
+
+  /// No description provided for @appPrismSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交'**
+  String get appPrismSubmit;
+
+  /// No description provided for @appPrismDialog.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话框'**
+  String get appPrismDialog;
+
+  /// 设置主页的外观入口与全屏外观页标题
+  ///
+  /// In zh, this message translates to:
+  /// **'外观'**
+  String get appearanceTitle;
+
+  /// 外观页中明暗主题分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'主题模式'**
+  String get appearanceThemeModeSectionTitle;
+
+  /// 顶部手机示意预览的读屏标签
+  ///
+  /// In zh, this message translates to:
+  /// **'外观预览'**
+  String get appearancePreviewSemanticsLabel;
+
+  /// 顶部预览下方的说明
+  ///
+  /// In zh, this message translates to:
+  /// **'预览随当前设置即时更新'**
+  String get appearancePreviewCaption;
+
+  /// 主题配色中跟随系统动态色的选项
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统动态色'**
+  String get appearanceDynamicColorLabel;
+
+  /// 底栏透镜跟随方式开关标题
+  ///
+  /// In zh, this message translates to:
+  /// **'透镜跟随方式'**
+  String get appearanceLensFollowTitle;
+
+  /// 透镜按下即跟随模式的说明
+  ///
+  /// In zh, this message translates to:
+  /// **'按下即跟随：透镜先移动到按下的入口，再从按压点继续跟手。'**
+  String get appearanceLensFollowPressDescription;
+
+  /// 透镜从当前入口拖动模式的说明
+  ///
+  /// In zh, this message translates to:
+  /// **'从当前入口拖动：透镜停在当前选中项，从该项按相对位移跟手。'**
+  String get appearanceLensFromSelectionDescription;
+
+  /// 外观页进入导航栏管理的行
+  ///
+  /// In zh, this message translates to:
+  /// **'管理底栏入口'**
+  String get appearanceManageBarEntry;
+
+  /// 外观页底部恢复默认外观的动作
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认外观'**
+  String get appearanceResetAction;
+
+  /// 恢复默认外观确认框标题
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认外观'**
+  String get appearanceResetConfirmTitle;
+
+  /// 恢复默认外观确认框正文
+  ///
+  /// In zh, this message translates to:
+  /// **'将重置主题、配色、明暗、玻璃、底栏样式、滑动和透镜跟随方式；语言与账号数据保持不变。'**
+  String get appearanceResetConfirmBody;
+
+  /// 恢复默认外观确认按钮
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get appearanceResetConfirmAction;
+
+  /// 恢复默认外观成功提示
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复默认外观'**
+  String get appearanceResetDone;
+
+  /// 恢复默认外观失败提示；error 是安全的外部错误摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认外观失败：{error}'**
+  String appearanceResetFailed(String error);
+
+  /// 设置主页顶栏搜索按钮的提示
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索设置'**
+  String get settingsSearchTooltip;
+
+  /// 设置搜索输入框的占位提示
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索设置'**
+  String get settingsSearchHint;
+
+  /// 设置搜索空输入时的常用入口分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'常用设置'**
+  String get settingsSearchRecommendedTitle;
+
+  /// 设置搜索无匹配结果时的标题
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到匹配的设置'**
+  String get settingsSearchNoResults;
+
+  /// 设置搜索无匹配结果时的关键词提示
+  ///
+  /// In zh, this message translates to:
+  /// **'试试主题、外观、玻璃、底栏、缓存、更新或黑名单'**
+  String get settingsSearchNoResultsHint;
+
+  /// 设置主页外观与导航分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'外观入口与底栏入口管理'**
+  String get settingsSearchSummaryAppearanceNavigation;
+
+  /// 设置主页外观与导航分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'设置主页、外观、导航管理、分组'**
+  String get settingsSearchKeywordsAppearanceNavigation;
+
+  /// 外观页入口的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'主题模式、配色、玻璃、导航与底栏、语言'**
+  String get settingsSearchSummaryAppearance;
+
+  /// 外观页入口搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'主题、外观、浅色、深色、玻璃、底栏、透镜、配色、动态色、语言、简繁'**
+  String get settingsSearchKeywordsAppearance;
+
+  /// 导航管理页的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'底栏入口排序、显隐与启动页'**
+  String get settingsSearchSummaryNavigationManagement;
+
+  /// 导航管理页搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'底栏、入口、排序、显隐、启动页、导航'**
+  String get settingsSearchKeywordsNavigationManagement;
+
+  /// 设置主页浏览与帖子分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'内容屏蔽与帖子悬浮操作'**
+  String get settingsSearchSummaryBrowsingPosts;
+
+  /// 设置主页浏览与帖子分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'设置主页、浏览、帖子、屏蔽、分组'**
+  String get settingsSearchKeywordsBrowsingPosts;
+
+  /// 内容屏蔽页的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'黑名单作者、屏蔽帖子与过滤规则'**
+  String get settingsSearchSummaryContentFilter;
+
+  /// 内容屏蔽页搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'黑名单、屏蔽、过滤、隐藏、帖子、用户'**
+  String get settingsSearchKeywordsContentFilter;
+
+  /// 帖子悬浮操作页的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子悬浮按钮的触区、导航与滚动'**
+  String get settingsSearchSummaryThreadControls;
+
+  /// 帖子悬浮操作页搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子、悬浮、控件、触区、手势、滚动、导航'**
+  String get settingsSearchKeywordsThreadControls;
+
+  /// 设置主页存储与关于分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'数据与存储、关于与更新检查'**
+  String get settingsSearchSummaryStorageAbout;
+
+  /// 设置主页存储与关于分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'设置主页、存储、数据、关于、更新、分组'**
+  String get settingsSearchKeywordsStorageAbout;
+
+  /// 数据与存储弹层的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存、下载与本地数据管理'**
+  String get settingsSearchSummaryDataStorage;
+
+  /// 数据与存储弹层搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存、存储、数据、清理、下载、占用'**
+  String get settingsSearchKeywordsDataStorage;
+
+  /// 关于页的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'版本、更新检查与开源信息'**
+  String get settingsSearchSummaryAbout;
+
+  /// 关于页搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'关于、版本、更新、检查更新、开源、许可证'**
+  String get settingsSearchKeywordsAbout;
+
+  /// 设置主页调试分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'调试构建中的预览与渲染工具'**
+  String get settingsSearchSummaryDebug;
+
+  /// 设置主页调试分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'调试、开发、预览、渲染、工具'**
+  String get settingsSearchKeywordsDebug;
+
+  /// 外观页主题模式分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统、浅色或深色'**
+  String get settingsSearchSummaryThemeMode;
+
+  /// 外观页主题模式分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'主题、模式、浅色、深色、暗色、明暗、跟随系统'**
+  String get settingsSearchKeywordsThemeMode;
+
+  /// 外观页配色主题分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'暖纸、月白、绛紫与系统动态色'**
+  String get settingsSearchSummaryColorTheme;
+
+  /// 外观页配色主题分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'配色、颜色、主题色、暖纸、月白、绛紫、动态色、取色'**
+  String get settingsSearchKeywordsColorTheme;
+
+  /// 外观页玻璃效果分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭、标准或增强的玻璃质感'**
+  String get settingsSearchSummaryGlass;
+
+  /// 外观页玻璃效果分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'玻璃、材质、透明、模糊、毛玻璃、质感'**
+  String get settingsSearchKeywordsGlass;
+
+  /// 外观页导航与底栏分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'底栏样式、滑动切换、透镜跟随与入口管理'**
+  String get settingsSearchSummaryNavigation;
+
+  /// 外观页导航与底栏分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'底栏、导航、沉浸式、旧式、滑动、透镜、跟随、入口'**
+  String get settingsSearchKeywordsNavigation;
+
+  /// 外观页界面语言分组的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统、简体中文与繁體中文'**
+  String get settingsSearchSummaryLanguage;
+
+  /// 外观页界面语言分组搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'语言、中文、简体、繁体、简繁、跟随系统'**
+  String get settingsSearchKeywordsLanguage;
+
+  /// 外观页恢复默认外观的摘要
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认主题、配色、玻璃与导航设置'**
+  String get settingsSearchSummaryReset;
+
+  /// 外观页恢复默认外观搜索的关键词
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复、默认、重置、还原'**
+  String get settingsSearchKeywordsReset;
+
+  /// 设置主页的外观与导航分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'外观与导航'**
+  String get settingsSectionAppearanceNavigation;
+
+  /// 设置主页的浏览与帖子分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览与帖子'**
+  String get settingsSectionBrowsingPosts;
+
+  /// 设置主页的存储与关于分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'存储与关于'**
+  String get settingsSectionStorageAbout;
+
+  /// 设置主页中仅调试构建可见的分组标题
+  ///
+  /// In zh, this message translates to:
+  /// **'调试'**
+  String get settingsSectionDebug;
+
+  /// No description provided for @threadControlsGroupDisplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示'**
+  String get threadControlsGroupDisplay;
+
+  /// No description provided for @threadControlsGroupNavigation.
+  ///
+  /// In zh, this message translates to:
+  /// **'导航'**
+  String get threadControlsGroupNavigation;
+
+  /// No description provided for @threadControlsGroupScrolling.
+  ///
+  /// In zh, this message translates to:
+  /// **'滚动'**
+  String get threadControlsGroupScrolling;
 }
 
 class _AppLocalizationsDelegate

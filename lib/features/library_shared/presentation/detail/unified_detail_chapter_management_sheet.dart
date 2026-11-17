@@ -8,6 +8,7 @@ import 'package:y300/features/recent_search/application/recent_searches_controll
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 
 /// 章节管理面板。
 ///
@@ -607,39 +608,23 @@ class _UnifiedDetailChapterManagementSheetState
       _showMessage(AppLocalizations.of(context).libraryChapterKeepOneVisible);
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            AppLocalizations.of(dialogContext).libraryChapterRemoveTitle,
-          ),
-          content: Text(
-            AppLocalizations.of(dialogContext).libraryChapterRemoveBody(
-              LibraryDetailTextResolver.chapterTitle(
-                AppLocalizations.of(dialogContext),
-                chapter.title,
-                chapter.sourceTid,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(AppLocalizations.of(dialogContext).commonCancel),
-            ),
-            FilledButton(
-              key: const Key(
-                'unified-detail-chapter-management-remove-confirm',
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(AppLocalizations.of(dialogContext).commonRemove),
-            ),
-          ],
-        );
-      },
+      title: l10n.libraryChapterRemoveTitle,
+      message: l10n.libraryChapterRemoveBody(
+        LibraryDetailTextResolver.chapterTitle(
+          l10n,
+          chapter.title,
+          chapter.sourceTid,
+        ),
+      ),
+      confirmLabel: l10n.commonRemove,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      confirmKey: const Key('unified-detail-chapter-management-remove-confirm'),
     );
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
     setState(() => _busyEpisodeIds.add(chapter.episodeId));

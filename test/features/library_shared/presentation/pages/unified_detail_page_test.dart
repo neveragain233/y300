@@ -11,6 +11,7 @@ import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/domain/models/library_sort_models.dart';
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_detail_page.dart';
+import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/widgets/cover_focal_point_picker.dart';
@@ -991,7 +992,9 @@ void main() {
       find.byKey(const Key('unified-detail-header-section')),
       findsOneWidget,
     );
-    expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+    // 顶栏“更多”菜单改用公共菜单入口，不再构建 Material PopupMenuButton。
+    expect(find.byType(AppPopupMenuButton<String>), findsWidgets);
+    expect(find.byIcon(Icons.more_vert), findsOneWidget);
 
     await tester.tap(
       find.descendant(
@@ -1008,7 +1011,7 @@ void main() {
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(PopupMenuButton<String>).last);
+    await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('unified-detail-edit-metadata')));
     await tester.pumpAndSettle();

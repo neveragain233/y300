@@ -7,7 +7,9 @@ import 'package:y300/features/profile/data/providers/profile_read_providers.dart
 import 'package:y300/features/profile/presentation/blog/blog_action_page.dart';
 import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+
 import '../../../test_support/localized_test_app.dart';
 import '../test_support/blog_operation_fixture.dart';
 
@@ -18,6 +20,7 @@ void main() {
     ) async {
       final service = BlogOperationFixture();
       final host = await _open(tester, service, action: action);
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       expect(
         tester
             .widget<FilledButton>(find.byKey(const Key('blog-action-submit')))

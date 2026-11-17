@@ -1,6 +1,7 @@
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -14,19 +15,14 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/presentation/login_webview_page.dart';
 import 'package:y300/features/comic/presentation/comic_download_queue_page.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_unused_image_management_page.dart';
-import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
 import 'package:y300/features/forum/presentation/forum_home_controller.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_driver.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_route_factory.dart';
 import 'package:y300/features/messages/application/message_attention_providers.dart';
 import 'package:y300/features/messages/presentation/widgets/message_attention_icon.dart';
-import 'package:y300/features/more/presentation/about_page.dart';
-import 'package:y300/features/more/presentation/appearance_settings_sheet.dart';
-import 'package:y300/features/more/presentation/data_storage_sheet.dart';
-import 'package:y300/features/more/presentation/more_debug_tools.dart';
 import 'package:y300/features/more/presentation/more_account_action.dart';
 import 'package:y300/features/more/presentation/more_account_header.dart';
-import 'package:y300/features/more/presentation/navigation_management_page.dart';
+import 'package:y300/features/more/presentation/settings_page.dart';
 import 'package:y300/features/profile/presentation/current_account_summary_controller.dart';
 import 'package:y300/features/profile/presentation/current_account_avatar_controller.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
@@ -44,7 +40,6 @@ class MorePage extends ConsumerStatefulWidget {
 }
 
 class _MorePageState extends ConsumerState<MorePage> {
-  final MoreDebugTools _debugTools = const MoreDebugTools();
   bool _openingMyProfile = false;
   bool _openingMyContent = false;
   bool _openingMyCredits = false;
@@ -97,17 +92,13 @@ class _MorePageState extends ConsumerState<MorePage> {
     );
 
     return Y300PageScaffold(
-      appBar: AppBar(
-        title: Text(l10n.appNavigationMy),
+      appBar: AppRootPageAppBar(
+        title: l10n.appNavigationMy,
         actions: [
-          AppToolbarActions(
-            children: [
-              MoreAccountAction(
-                onLogin: () => _openLoginPage(context),
-                onLogout: () => _confirmAndLogout(context, ref),
-                isPending: _accountActionPending,
-              ),
-            ],
+          MoreAccountAction(
+            onLogin: () => _openLoginPage(context),
+            onLogout: () => _confirmAndLogout(context, ref),
+            isPending: _accountActionPending,
           ),
         ],
       ),
@@ -147,6 +138,7 @@ class _MorePageState extends ConsumerState<MorePage> {
                         key: ValueKey('more-destination-${destination.name}'),
                         leading: Icon(destination.icon),
                         title: Text(destination.localizedLabel(l10n)),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
                         onTap: () => Navigator.of(context).push(
                           ref.read(mainDestinationRouteFactoryProvider)(
                             destination,
@@ -161,6 +153,7 @@ class _MorePageState extends ConsumerState<MorePage> {
                           showAttention: hasMessageAttention,
                         ),
                         title: Text(l10n.moreMyMessages),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
                         onTap: canOpenMyContent
                             ? () => _openMyContentPage(
                                 ForumUserProfileActionKind.messages,
@@ -171,6 +164,7 @@ class _MorePageState extends ConsumerState<MorePage> {
                       key: const Key('more-my-blogs-entry'),
                       leading: const Icon(Icons.auto_stories_outlined),
                       title: Text(l10n.profileMyBlogs),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
                       onTap: canOpenMyContent
                           ? () => _openMyContentPage(
                               ForumUserProfileActionKind.blogs,
@@ -181,6 +175,7 @@ class _MorePageState extends ConsumerState<MorePage> {
                       key: const Key('more-my-friends-entry'),
                       leading: const Icon(Icons.people_outline_rounded),
                       title: Text(l10n.profileMyFriendsTitle),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
                       onTap: canOpenMyContent
                           ? () => _openMyContentPage(
                               ForumUserProfileActionKind.friends,
@@ -196,29 +191,16 @@ class _MorePageState extends ConsumerState<MorePage> {
                       key: const Key('more-unused-images-entry'),
                       leading: const Icon(Icons.photo_library_outlined),
                       title: Text(l10n.moreUnusedImages),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
                       onTap: _accountActionPending
                           ? null
                           : () => _openUnusedImagesPage(context, authSession),
                     ),
                     ListTile(
-                      key: const Key('more-content-filter-entry'),
-                      leading: const Icon(Icons.visibility_off_outlined),
-                      title: Text(l10n.contentFilterEntry),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ContentFilterPage(
-                              managedBlacklistRouteBuilder:
-                                  _managedBlacklistRoute,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    ListTile(
                       key: const Key('more-download-queue-entry'),
                       leading: const Icon(Icons.offline_pin_outlined),
                       title: Text(l10n.moreDownloadQueue),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
@@ -233,55 +215,16 @@ class _MorePageState extends ConsumerState<MorePage> {
                   title: l10n.moreSectionSettings,
                   children: [
                     ListTile(
-                      key: const Key('more-appearance-entry'),
-                      leading: const Icon(Icons.palette_outlined),
-                      title: Text(l10n.moreAppearance),
-                      onTap: () => _showAppearanceSettingsSheet(context),
-                    ),
-                    ListTile(
-                      key: const Key('more-navigation-management-entry'),
-                      leading: const Icon(Icons.view_week_outlined),
-                      title: Text(l10n.moreNavigationManagement),
-                      onTap: navigationState == null
-                          ? null
-                          : () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      const NavigationManagementPage(),
-                                ),
-                              );
-                            },
-                    ),
-                    ListTile(
-                      key: const Key('more-thread-controls-entry'),
-                      leading: const Icon(Icons.touch_app_outlined),
-                      title: Text(l10n.threadControlsTitle),
+                      key: const Key('more-settings-entry'),
+                      leading: const Icon(Icons.settings_outlined),
+                      title: Text(l10n.moreSectionSettings),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => const ThreadControlsSettingsPage(),
+                          builder: (_) => const SettingsPage(),
                         ),
                       ),
                     ),
-                    ListTile(
-                      key: const Key('more-data-storage-entry'),
-                      leading: const Icon(Icons.storage_outlined),
-                      title: Text(l10n.moreDataAndStorage),
-                      onTap: () => _showDataStorageSheet(context),
-                    ),
-                    ListTile(
-                      key: const Key('more-about-entry'),
-                      leading: const Icon(Icons.info_outline),
-                      title: Text(l10n.moreAbout),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const AboutPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    ..._debugTools.buildTiles(context, l10n),
                   ],
                 ),
               ],
@@ -289,30 +232,6 @@ class _MorePageState extends ConsumerState<MorePage> {
           ),
         ),
       ),
-    );
-  }
-
-  Route<void> _managedBlacklistRoute() {
-    final owner = ref.read(verifiedSessionOwnerProvider);
-    return ref.read(forumWebViewRouteFactoryProvider)(
-      ForumWebViewLaunchConfig(
-        initialUri: Uri.parse(AppConfig.siteBaseUrl).replace(
-          path: '/home.php',
-          queryParameters: <String, String>{
-            'mod': 'space',
-            'do': 'friend',
-            'view': 'blacklist',
-          },
-        ),
-        expectedAccountId: owner?.uid,
-      ),
-    );
-  }
-
-  Future<void> _showAppearanceSettingsSheet(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      builder: (_) => const AppearanceSettingsSheet(),
     );
   }
 
@@ -391,15 +310,6 @@ class _MorePageState extends ConsumerState<MorePage> {
     } finally {
       if (mounted) setState(() => _openingMyCredits = false);
     }
-  }
-
-  // 内容含迁移状态卡与总览，可能超过默认半屏高度，允许抽屉撑满。
-  Future<void> _showDataStorageSheet(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const DataStorageSheet(),
-    );
   }
 
   Future<bool> _openLoginPage(BuildContext context) async {
@@ -508,26 +418,18 @@ class _MorePageState extends ConsumerState<MorePage> {
     final initialOwner = ref.read(verifiedSessionOwnerProvider);
     setState(() => _confirmingLogout = true);
     try {
-      final confirmed = await showDialog<bool>(
+      final l10n = AppLocalizations.of(context);
+      final confirmed = await showAppConfirmDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(AppLocalizations.of(context).moreLogoutConfirmTitle),
-          content: Text(AppLocalizations.of(context).moreLogoutConfirmBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(AppLocalizations.of(context).commonCancel),
-            ),
-            FilledButton(
-              key: const Key('more-logout-confirm-button'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(AppLocalizations.of(context).moreLogout),
-            ),
-          ],
-        ),
+        title: l10n.moreLogoutConfirmTitle,
+        message: l10n.moreLogoutConfirmBody,
+        confirmLabel: l10n.moreLogout,
+        cancelLabel: l10n.commonCancel,
+        destructive: true,
+        confirmKey: const Key('more-logout-confirm-button'),
       );
       if (!context.mounted ||
-          confirmed != true ||
+          !confirmed ||
           ref.read(authSessionControllerProvider).asData?.value.uid !=
               initialSession.uid ||
           ref.read(verifiedSessionOwnerProvider) != initialOwner) {
@@ -551,14 +453,14 @@ class _MorePageState extends ConsumerState<MorePage> {
         return;
       }
 
-      final l10n = AppLocalizations.of(context);
+      final logoutL10n = AppLocalizations.of(context);
       final failure = ref
           .read(authSessionControllerProvider)
           .asData
           ?.value
           .logoutFailure;
-      final message = l10n.moreLogoutFailed(
-        LocalizedErrorSummary.resolve(l10n, failure),
+      final message = logoutL10n.moreLogoutFailed(
+        LocalizedErrorSummary.resolve(logoutL10n, failure),
       );
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
@@ -572,46 +474,20 @@ class _MoreSection extends StatelessWidget {
   const _MoreSection({required this.title, required this.children});
   final String title;
   final List<Widget> children;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppLayoutTokens.contentSpacing,
-        AppLayoutTokens.sectionSpacing,
-        AppLayoutTokens.contentSpacing,
-        0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              title,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Material(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(AppLayoutTokens.panelRadius),
-            clipBehavior: Clip.antiAlias,
-            child: ListTileTheme(
-              minVerticalPadding: 12,
-              child: Column(
-                children: [
-                  for (var i = 0; i < children.length; i++) ...[
-                    if (i > 0)
-                      const Divider(height: .5, thickness: .5, indent: 56),
-                    children[i],
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
+    return ListTileTheme(
+      minVerticalPadding: 12,
+      child: AppGroupedSection(
+        title: title,
+        margin: const EdgeInsets.fromLTRB(
+          AppLayoutTokens.contentSpacing,
+          AppLayoutTokens.sectionSpacing,
+          AppLayoutTokens.contentSpacing,
+          0,
+        ),
+        children: children,
       ),
     );
   }

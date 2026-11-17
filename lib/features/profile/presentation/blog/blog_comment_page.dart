@@ -13,6 +13,8 @@ import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart
 import 'package:y300/features/profile/presentation/blog/blog_web_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 String blogCommentActionLabel(
@@ -179,8 +181,8 @@ class _BlogCommentPageState extends ConsumerState<BlogCommentPage> {
         child: Scaffold(
           resizeToAvoidBottomInset: false,
           backgroundColor: native.card,
-          appBar: AppBar(
-            title: Text(blogCommentActionLabel(l10n, widget.target.action)),
+          appBar: AppPageAppBar(
+            title: blogCommentActionLabel(l10n, widget.target.action),
           ),
           body: BlogComposerLayout(
             onKeyboardShown: _revealCaretAfterKeyboardTransition,
@@ -331,26 +333,16 @@ class _BlogCommentPageState extends ConsumerState<BlogCommentPage> {
     if (_controller.value.dirty) {
       _confirmingLeave = true;
       final l10n = AppLocalizations.of(context);
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showAppConfirmDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l10n.profileBlogOpenWeb),
-          content: Text(l10n.profileBlogWebInputNotice),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.commonCancel),
-            ),
-            TextButton(
-              key: const Key('blog-comment-confirm-web'),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        ),
+        title: l10n.profileBlogOpenWeb,
+        message: l10n.profileBlogWebInputNotice,
+        confirmLabel: l10n.commonConfirm,
+        cancelLabel: l10n.commonCancel,
+        confirmKey: const Key('blog-comment-confirm-web'),
       );
       _confirmingLeave = false;
-      if (!mounted || confirmed != true) return;
+      if (!mounted || !confirmed) return;
     }
     if (!mounted || _controller.value.phase != BlogCommentPhase.failed) return;
     await openBlogWebPage(
@@ -369,31 +361,19 @@ class _BlogCommentPageState extends ConsumerState<BlogCommentPage> {
     final uncertain =
         _controller.value.phase == BlogCommentPhase.submitting ||
         _controller.value.phase == BlogCommentPhase.unknown;
-    final leave = await showDialog<bool>(
+    final leave = await showAppConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.profileBlogLeaveCommentTitle),
-        content: Text(
-          uncertain
-              ? l10n.profileBlogLeavePendingCommentBody
-              : l10n.profileBlogLeaveCommentBody,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            key: const Key('blog-comment-leave'),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
+      title: l10n.profileBlogLeaveCommentTitle,
+      message: uncertain
+          ? l10n.profileBlogLeavePendingCommentBody
+          : l10n.profileBlogLeaveCommentBody,
+      confirmLabel: l10n.commonConfirm,
+      cancelLabel: l10n.commonCancel,
+      confirmKey: const Key('blog-comment-leave'),
     );
     _confirmingLeave = false;
     if (!mounted) return;
-    if (_receipt != null || leave == true) Navigator.of(context).pop(_receipt);
+    if (_receipt != null || leave) Navigator.of(context).pop(_receipt);
   }
 }
 

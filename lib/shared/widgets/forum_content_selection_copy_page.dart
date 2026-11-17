@@ -6,12 +6,15 @@ import 'package:flutter/rendering.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/core/clipboard/clipboard_text_writer.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 
 /// The caller owns navigation/failure feedback and checks `isCurrent` before
 /// applying asynchronous results to this selection's source page.
-typedef ForumSelectionLinkOpener =
-    Future<void> Function(String url, bool Function() isCurrent);
+typedef ForumSelectionLinkOpener = Future<void> Function(
+  String url,
+  bool Function() isCurrent,
+);
 
 class ForumContentSelectionCopyPage extends StatefulWidget {
   const ForumContentSelectionCopyPage({
@@ -238,7 +241,8 @@ class _ForumContentSelectionCopyPageState
     );
     return Scaffold(
       backgroundColor: native.background,
-      appBar: AppBar(centerTitle: false, title: Text(widget.title)),
+      // 复制页正常路径沿用压入页外壳：标题、返回与动作仍是同一套顶栏。
+      appBar: AppPageAppBar(title: widget.title),
       body: SelectionArea(
         onSelectionChanged: customMenu ? _textChanged : null,
         contextMenuBuilder: customMenu

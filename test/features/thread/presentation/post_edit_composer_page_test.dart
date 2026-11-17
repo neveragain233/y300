@@ -1,4 +1,5 @@
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +47,7 @@ void main() {
         _buildApp(args: args, results: results, command: command),
       );
       await _openEditor(tester);
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       expect(
         tester
             .widget<IconButton>(find.byKey(const Key('post-edit-save-button')))

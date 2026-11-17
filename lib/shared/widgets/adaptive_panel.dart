@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 
 /// 辅助操作覆盖所属连续区域，不挤压底下的阅读或详情视口。
 Future<T?> showAdaptivePanel<T>({
@@ -94,13 +95,12 @@ Future<T?> showAdaptivePanel<T>({
               rect: panel,
               child: MediaQuery(
                 data: localMedia,
-                child: Material(
+                // 表面并入应用根玻璃宿主：关闭档与高对比回退主题实色，
+                // 标准／增强档共用同一份背景捕获，不在这里新建宿主。
+                child: AppGlassSurface(
                   key: const Key('adaptive-side-panel'),
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(AppLayoutTokens.panelRadius),
-                  ),
-                  clipBehavior: Clip.antiAlias,
+                  borderRadius: AppLayoutTokens.panelRadius,
+                  baseColor: Theme.of(context).colorScheme.surfaceContainerLow,
                   child: SafeArea(
                     bottom: bottomInset == 0,
                     child: Column(

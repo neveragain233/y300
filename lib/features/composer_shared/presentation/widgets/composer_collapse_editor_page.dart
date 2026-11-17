@@ -15,6 +15,8 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_quil
 import 'package:y300/features/composer_shared/presentation/widgets/composer_title_field_decoration.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 
 typedef ComposerCollapseSaveCommitter =
@@ -275,13 +277,12 @@ class _ComposerCollapseEditorPageState
       child: Scaffold(
         key: Key('${widget.keyPrefix}-page'),
         resizeToAvoidBottomInset: false,
-        appBar: AppBar(
-          leading: BackButton(onPressed: _handleBackPressed),
-          title: Text(
-            widget.isNew
-                ? localizations.composerCollapseCreateTitle
-                : localizations.composerCollapseEditTitle,
-          ),
+        // 折叠内容编辑器与其他压入页共用顶栏外壳、返回键与动作胶囊。
+        appBar: AppPageAppBar(
+          leading: AppToolbarBackButton(onPressed: _handleBackPressed),
+          title: widget.isNew
+              ? localizations.composerCollapseCreateTitle
+              : localizations.composerCollapseEditTitle,
           actions: [
             if (widget.onDelete != null)
               IconButton(
@@ -544,9 +545,8 @@ class _CollapseUploadStatus extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            AppLocalizations.of(
-              context,
-            ).composerUploadingImages(current, total),
+            AppLocalizations.of(context)
+                .composerUploadingImages(current, total),
           ),
           const SizedBox(height: 6),
           LinearProgressIndicator(value: total > 0 ? progress : null),

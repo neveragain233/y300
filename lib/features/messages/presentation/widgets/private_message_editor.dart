@@ -9,6 +9,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/message_command_text.dart';
 import 'package:y300/features/messages/presentation/widgets/message_composer_row.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 
 enum PrivateMessageEditorLayout { form, conversation }
 
@@ -58,25 +59,13 @@ class _PrivateMessageEditorState extends ConsumerState<PrivateMessageEditor> {
 
   Future<bool> _confirm(String title, String body, String action) async {
     final l10n = AppLocalizations.of(context);
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            scrollable: true,
-            title: Text(title),
-            content: Text(body),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l10n.commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(action),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return showAppConfirmDialog(
+      context: context,
+      title: title,
+      message: body,
+      confirmLabel: action,
+      cancelLabel: l10n.commonCancel,
+    );
   }
 
   Future<void> _leave() async {

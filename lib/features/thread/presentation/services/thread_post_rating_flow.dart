@@ -10,6 +10,7 @@ import 'package:y300/features/thread/presentation/thread_post_rate_form_projecti
 import 'package:y300/features/thread/presentation/thread_text_resolver.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// Reuses the same form, display projection, sheet and feedback at every entry.
@@ -59,7 +60,7 @@ Future<DataCommandResult<ThreadPostRatingReceipt>?> showThreadPostRatingFlow({
         converter: ref.read(textConverterProvider(mode)),
       );
   if (!context.mounted || !isCurrent()) return null;
-  final draft = await showModalBottomSheet<ThreadPostRateDraft>(
+  final draft = await showAdaptivePanel<ThreadPostRateDraft>(
     context: context,
     isScrollControlled: true,
     builder: (_) => ThreadPostRateSheet(projection: projection),

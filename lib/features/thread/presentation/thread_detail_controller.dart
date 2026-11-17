@@ -127,6 +127,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
         queryParameters: current?.queryParameters ?? const <String, String>{},
         failureCode: ThreadUiErrorCode.refreshFailed,
         validateTarget: !_initialTargetValidated,
+        countFallback: current,
       ),
     );
     final generation = _pageLoadGeneration;
@@ -169,8 +170,8 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
             typeName: data.typeName,
             forumName: data.forumName,
             forumUrl: data.forumUrl,
-            views: data.views,
-            replies: data.replies,
+            views: data.hasServerCounts ? data.views : current.views,
+            replies: data.hasServerCounts ? data.replies : current.replies,
             currentPage: data.currentPage,
             lastPage:
                 effectiveCapabilities.supports(
@@ -633,6 +634,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
       page: afterSubmit.currentPage <= 0 ? 1 : afterSubmit.currentPage,
       previous: const <ThreadPost>[],
       queryParameters: afterSubmit.queryParameters,
+      countFallback: afterSubmit,
     );
     if (!ref.mounted || generation != _pageLoadGeneration) {
       return;
@@ -911,6 +913,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
         page: current.currentPage <= 0 ? 1 : current.currentPage,
         previous: const <ThreadPost>[],
         queryParameters: current.queryParameters,
+        countFallback: current,
       );
       if (ref.mounted && generation == _pageLoadGeneration) {
         state = AsyncData(
@@ -1004,6 +1007,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
         page: latest.currentPage <= 0 ? 1 : latest.currentPage,
         previous: const <ThreadPost>[],
         queryParameters: latest.queryParameters,
+        countFallback: latest,
       );
       if (!ref.mounted || generation != _pageLoadGeneration) return;
       state = AsyncData(
@@ -1025,6 +1029,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
     required Map<String, String> queryParameters,
     ThreadUiErrorCode? failureCode,
     bool validateTarget = false,
+    ThreadDetailPageState? countFallback,
   }) async {
     final generation = ++_pageLoadGeneration;
     bool isCurrent() => ref.mounted && generation == _pageLoadGeneration;
@@ -1210,6 +1215,14 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
           capabilities: capabilities,
           readMetadata: metadata,
         );
+        // 后续页没有首楼统计块时，解析结果里的 0 只表示“未知”，不能覆盖
+        // 已经知道的计数；真正的计数由下次回到首楼时重新提供。
+        final resolvedViewState = !data.hasServerCounts && countFallback != null
+            ? viewState.copyWith(
+                replies: countFallback.replies,
+                views: countFallback.views,
+              )
+            : viewState;
         _logNative(
           'controller_success',
           'tid=${_args.tid} requestedPage=$page parsedPage=${data.currentPage} '
@@ -1220,7 +1233,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
               'firstMessageLength=${merged.isEmpty ? 0 : merged.first.message.length}',
         );
         if (checkTarget) _initialTargetValidated = true;
-        return viewState;
+        return resolvedViewState;
       } catch (error, stackTrace) {
         _logNative(
           'controller_processing_failure',
@@ -1350,6 +1363,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
       previous: const <ThreadPost>[],
       queryParameters: nextQuery,
       failureCode: ThreadUiErrorCode.pageLoadFailed,
+      countFallback: current,
     );
     if (!ref.mounted || generation != _pageLoadGeneration) return;
     final afterLoading = state.value ?? current;

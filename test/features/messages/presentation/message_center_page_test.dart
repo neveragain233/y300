@@ -18,6 +18,7 @@ import 'package:y300/features/messages/presentation/new_private_message_page.dar
 import 'package:y300/features/messages/presentation/private_conversation_page.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 import '../../../test_support/localized_test_app.dart';
 import '../support/message_test_repository.dart';
@@ -128,6 +129,7 @@ void main() {
     'swipes and tab taps agree across loading, empty, and error pages',
     (tester) async {
       await pumpCenter(tester);
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       await swipeToTab(tester, MessageCenterTab.notifications);
       expect(repository.reads, hasLength(1));
       expect(repository.notificationReads, hasLength(1));
@@ -175,6 +177,21 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('signed-out page keeps the pushed shell and login prompt', (
+    tester,
+  ) async {
+    container.updateOverrides([
+      messageAttentionOwnerProvider.overrideWithValue(null),
+      messageAccountIdProvider.overrideWithValue(null),
+      messageRepositoryProvider.overrideWithValue(repository),
+      privateMessageComposeRepositoryProvider.overrideWithValue(compose),
+    ]);
+    await pumpCenter(tester);
+    expect(find.byType(AppPageAppBar), findsOneWidget);
+    expect(find.text(l10n(tester).messageLoginRequired), findsOneWidget);
+    expect(repository.reads, isEmpty);
+  });
 
   testWidgets(
     'a short cancelled horizontal swipe does not visit the other feed',

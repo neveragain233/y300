@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 class BlogEditorAccessFields extends StatelessWidget {
@@ -149,23 +151,89 @@ class BlogEditorAccessFields extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 4),
-        SwitchListTile(
-          key: const Key('blog-editor-comments-enabled'),
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-          title: Text(
-            l10n.profileBlogCommentsAllowed,
-            style: theme.textTheme.bodyMedium?.copyWith(color: native.body),
-          ),
+        BlogEditorSwitchRow(
+          controlKey: const Key('blog-editor-comments-enabled'),
+          title: l10n.profileBlogCommentsAllowed,
+          titleStyle: theme.textTheme.bodyMedium?.copyWith(color: native.body),
           value: draft.commentsEnabled,
           onChanged: enabled && !readOnly && options.canEditComments
               ? (value) =>
                     onChanged((draft) => draft.copyWith(commentsEnabled: value))
               : null,
-          activeThumbColor: native.author,
-          activeTrackColor: native.selectionBackground,
         ),
       ],
+    );
+  }
+}
+
+/// 日志编辑表单里的开关行。
+///
+/// 表单是紧密排布的输入项，没有分组列表表面，套用 `AppSwitchRow` 会多出
+/// 缩进和最小行高；这里只取同一 prism 开关外观。整行与开关都可切换，
+/// 禁用态由空回调表达，原 `contentPadding: zero`／`dense` 的排布保持不变。
+class BlogEditorSwitchRow extends StatelessWidget {
+  const BlogEditorSwitchRow({
+    super.key,
+    required this.controlKey,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+    this.titleStyle,
+  });
+
+  final Key controlKey;
+  final String title;
+  final TextStyle? titleStyle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = onChanged != null;
+    void toggle() {
+      if (enabled) {
+        onChanged!(!value);
+      }
+    }
+
+    final disabledColor = theme.colorScheme.onSurface.withValues(alpha: 0.38);
+    return Semantics(
+      container: true,
+      label: title,
+      toggled: value,
+      enabled: enabled,
+      onTap: enabled ? toggle : null,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? toggle : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: (titleStyle ?? theme.textTheme.bodyLarge)?.copyWith(
+                      color: enabled
+                          ? (titleStyle?.color ?? theme.colorScheme.onSurface)
+                          : disabledColor,
+                    ),
+                  ),
+                ),
+                AppPrismTheme(
+                  child: prism.Switch(
+                    key: controlKey,
+                    value: value,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

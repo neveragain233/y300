@@ -1,8 +1,10 @@
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/posting/domain/models/posting_models.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 /// 投票编辑器。
 ///
@@ -166,13 +168,11 @@ class ThreadPollEditor extends StatelessWidget {
               label: Text(l10n.postingPollAddOption),
             ),
           const SizedBox(height: 12),
-          SwitchListTile(
-            key: multipleSwitchKey,
+          _PollSwitchRow(
+            controlKey: multipleSwitchKey,
             value: poll.multiple,
             onChanged: enabled ? onMultipleChanged : null,
-            title: Text(l10n.postingPollMultiple),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
+            title: l10n.postingPollMultiple,
           ),
           if (poll.multiple)
             _MaxChoicesField(
@@ -192,22 +192,18 @@ class ThreadPollEditor extends StatelessWidget {
             enabled: enabled,
             onChanged: onExpirationDaysChanged,
           ),
-          SwitchListTile(
-            key: overtSwitchKey,
+          _PollSwitchRow(
+            controlKey: overtSwitchKey,
             value: poll.overt,
             onChanged: enabled ? onOvertChanged : null,
-            title: Text(l10n.postingPollPublicVoters),
-            subtitle: Text(l10n.postingPollPublicVotersDescription),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
+            title: l10n.postingPollPublicVoters,
+            subtitle: l10n.postingPollPublicVotersDescription,
           ),
-          SwitchListTile(
-            key: visibilityPollSwitchKey,
+          _PollSwitchRow(
+            controlKey: visibilityPollSwitchKey,
             value: poll.visibilityPoll,
             onChanged: enabled ? onVisibilityPollChanged : null,
-            title: Text(l10n.postingPollShowResultsAfterVote),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
+            title: l10n.postingPollShowResultsAfterVote,
           ),
         ],
       ),
@@ -286,6 +282,95 @@ class _NumberField extends StatelessWidget {
         final clamped = parsed < min ? min : (parsed > max ? max : parsed);
         onChanged(clamped);
       },
+    );
+  }
+}
+
+/// 投票编辑器内的开关行。
+///
+/// 编辑器在带边框的紧凑表单里，没有分组列表表面，套用 `AppSwitchRow` 会多出
+/// 一层缩进和最小行高；这里只取同一 prism 开关外观，整行与开关都可切换，
+/// 禁用态由空回调表达，仍由调用方传入稳定 key。
+class _PollSwitchRow extends StatelessWidget {
+  const _PollSwitchRow({
+    required this.controlKey,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+    this.subtitle,
+  });
+
+  final Key? controlKey;
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = onChanged != null;
+    void toggle() {
+      if (enabled) {
+        onChanged!(!value);
+      }
+    }
+
+    final titleColor = enabled
+        ? theme.colorScheme.onSurface
+        : theme.colorScheme.onSurface.withValues(alpha: 0.38);
+    final supportingColor = enabled
+        ? theme.colorScheme.onSurfaceVariant
+        : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.38);
+    return Semantics(
+      container: true,
+      label: subtitle == null ? title : '$title\n$subtitle',
+      toggled: value,
+      enabled: enabled,
+      onTap: enabled ? toggle : null,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? toggle : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: supportingColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                AppPrismTheme(
+                  child: prism.Switch(
+                    key: controlKey,
+                    value: value,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

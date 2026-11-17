@@ -36,6 +36,48 @@ ThreadCreationPreparation _metadata({
   );
 }
 
+List<riverpod_misc.Override> _composerOverrides({
+  ComposerDraftRepository? draftRepository,
+  ComposerPreferencesRepository? preferencesRepository,
+  ThreadCreationPreparationRepository? metadataRepository,
+  ThreadCreationCommand? threadCreationCommand,
+  ComposerImagePicker? imagePicker,
+  ComposerImageUploadCoordinator? imageUploadCoordinator,
+  ComposerDraftAttachmentVerificationService? draftVerificationService,
+}) {
+  return [
+    composerDraftRepositoryProvider.overrideWithValue(
+      draftRepository ?? _MemoryDraftRepository(),
+    ),
+    composerPreferencesRepositoryProvider.overrideWithValue(
+      preferencesRepository ?? _FakeComposerPreferencesRepository(),
+    ),
+    composerImagePickerProvider.overrideWithValue(
+      imagePicker ?? _FakeImagePicker(),
+    ),
+    composerImageUploadCoordinatorProvider.overrideWithValue(
+      imageUploadCoordinator ?? _FakeUploadCoordinator(),
+    ),
+    composerDraftAttachmentVerificationServiceProvider.overrideWithValue(
+      draftVerificationService ??
+          const _NoopPostingDraftAttachmentVerificationService(),
+    ),
+    threadCreationPreparationProvider.overrideWithValue(
+      metadataRepository ?? _FakeMetadataRepository.success(_metadata()),
+    ),
+    threadCreationCommandProvider.overrideWithValue(
+      threadCreationCommand ?? _FakeThreadCreationCommand(),
+    ),
+    forumBbCodeRendererProvider.overrideWithValue(
+      const FlutterBbCodeForumRenderer(),
+    ),
+    stickerGroupsProvider.overrideWith((_) async => const []),
+    stickerPickerPreferencesRepositoryProvider.overrideWithValue(
+      _FakeStickerPickerPreferencesRepository(),
+    ),
+  ];
+}
+
 /// 打开 PostingComposerPage 当作初始页：用于查看页面"自身"渲染的 widget 测试。
 Widget _buildPage({
   PostingComposerArgs? args,
@@ -50,43 +92,58 @@ Widget _buildPage({
   Locale locale = const Locale('zh'),
 }) {
   return ProviderScope(
-    overrides: [
-      composerDraftRepositoryProvider.overrideWithValue(
-        draftRepository ?? _MemoryDraftRepository(),
-      ),
-      composerPreferencesRepositoryProvider.overrideWithValue(
-        preferencesRepository ?? _FakeComposerPreferencesRepository(),
-      ),
-      composerImagePickerProvider.overrideWithValue(
-        imagePicker ?? _FakeImagePicker(),
-      ),
-      composerImageUploadCoordinatorProvider.overrideWithValue(
-        imageUploadCoordinator ?? _FakeUploadCoordinator(),
-      ),
-      composerDraftAttachmentVerificationServiceProvider.overrideWithValue(
-        draftVerificationService ??
-            const _NoopPostingDraftAttachmentVerificationService(),
-      ),
-      threadCreationPreparationProvider.overrideWithValue(
-        metadataRepository ?? _FakeMetadataRepository.success(_metadata()),
-      ),
-      threadCreationCommandProvider.overrideWithValue(
-        threadCreationCommand ?? _FakeThreadCreationCommand(),
-      ),
-      forumBbCodeRendererProvider.overrideWithValue(
-        const FlutterBbCodeForumRenderer(),
-      ),
-      stickerGroupsProvider.overrideWith((_) async => const []),
-      stickerPickerPreferencesRepositoryProvider.overrideWithValue(
-        _FakeStickerPickerPreferencesRepository(),
-      ),
-    ],
+    overrides: _composerOverrides(
+      draftRepository: draftRepository,
+      preferencesRepository: preferencesRepository,
+      metadataRepository: metadataRepository,
+      threadCreationCommand: threadCreationCommand,
+      imagePicker: imagePicker,
+      imageUploadCoordinator: imageUploadCoordinator,
+      draftVerificationService: draftVerificationService,
+    ),
     child: LocalizedTestApp(
       locale: locale,
       theme: theme,
       home: PostingComposerPage(args: args ?? _args()),
     ),
   );
+}
+
+/// 在真实详情宿主内打开发帖页：发帖必须作为详情路由，主壳才会隐藏底栏。
+Widget _buildHostedPage({
+  required AdaptiveDetailController detailController,
+  PostingComposerArgs? args,
+}) {
+  return ProviderScope(
+    overrides: _composerOverrides(),
+    child: LocalizedTestApp(
+      home: AdaptiveDetailHost(
+        controller: detailController,
+        child: _HostedPostingLauncher(args: args ?? _args()),
+      ),
+    ),
+  );
+}
+
+class _HostedPostingLauncher extends StatelessWidget {
+  const _HostedPostingLauncher({required this.args});
+
+  final PostingComposerArgs args;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: FilledButton(
+          key: const Key('open-hosted-posting-composer'),
+          onPressed: () {
+            unawaited(openPostingComposer(context, target: args.target));
+          },
+          child: const Text('open'),
+        ),
+      ),
+    );
+  }
 }
 
 class _FakeComposerPreferencesRepository
@@ -118,36 +175,13 @@ Widget _buildLauncher({
   ValueChanged<PostingComposerResult>? onResult,
 }) {
   return ProviderScope(
-    overrides: [
-      composerDraftRepositoryProvider.overrideWithValue(
-        draftRepository ?? _MemoryDraftRepository(),
-      ),
-      composerPreferencesRepositoryProvider.overrideWithValue(
-        _FakeComposerPreferencesRepository(),
-      ),
-      composerImagePickerProvider.overrideWithValue(
-        imagePicker ?? _FakeImagePicker(),
-      ),
-      composerImageUploadCoordinatorProvider.overrideWithValue(
-        imageUploadCoordinator ?? _FakeUploadCoordinator(),
-      ),
-      composerDraftAttachmentVerificationServiceProvider.overrideWithValue(
-        const _NoopPostingDraftAttachmentVerificationService(),
-      ),
-      threadCreationPreparationProvider.overrideWithValue(
-        metadataRepository ?? _FakeMetadataRepository.success(_metadata()),
-      ),
-      threadCreationCommandProvider.overrideWithValue(
-        threadCreationCommand ?? _FakeThreadCreationCommand(),
-      ),
-      forumBbCodeRendererProvider.overrideWithValue(
-        const FlutterBbCodeForumRenderer(),
-      ),
-      stickerGroupsProvider.overrideWith((_) async => const []),
-      stickerPickerPreferencesRepositoryProvider.overrideWithValue(
-        _FakeStickerPickerPreferencesRepository(),
-      ),
-    ],
+    overrides: _composerOverrides(
+      draftRepository: draftRepository,
+      metadataRepository: metadataRepository,
+      threadCreationCommand: threadCreationCommand,
+      imagePicker: imagePicker,
+      imageUploadCoordinator: imageUploadCoordinator,
+    ),
     child: LocalizedTestApp(
       theme: theme,
       home: _PostingComposerLauncher(

@@ -10,14 +10,21 @@ final class AppComponentThemeBuilder {
   const AppComponentThemeBuilder._();
 
   static AppBarTheme appBarTheme(AppThemePalette palette) {
+    // 顶栏使用页面自身表面，标题与图标取该表面前景色；
+    // 预设强调色改由 `Y300BrandColors` 承担，不再铺满整条顶栏。
     return AppBarTheme(
-      backgroundColor: palette.appBarBackground,
-      foregroundColor: palette.appBarForeground,
+      backgroundColor: palette.scaffoldBackground,
+      foregroundColor: palette.onSurface,
+      titleTextStyle: TextStyle(
+        color: palette.onSurface,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+      ),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       systemOverlayStyle: AppSystemUi.onSurfaces(
-        top: palette.appBarBackground,
+        top: palette.scaffoldBackground,
         bottom: palette.navigationBarBackground,
       ),
     );
@@ -225,6 +232,32 @@ final class AppComponentThemeBuilder {
       side: BorderSide(color: scheme.outlineVariant),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
+  }
+
+  /// 主要、次要与描边按钮统一为胶囊形，触区不小于 44 逻辑像素。
+  static ButtonStyle appButtonStyle() {
+    return const ButtonStyle(
+      minimumSize: WidgetStatePropertyAll<Size>(Size(64, 44)),
+      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+        EdgeInsets.symmetric(horizontal: 20),
+      ),
+      shape: WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder()),
+      textStyle: WidgetStatePropertyAll<TextStyle>(
+        TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  static FilledButtonThemeData filledButtonTheme() {
+    return FilledButtonThemeData(style: appButtonStyle());
+  }
+
+  static TextButtonThemeData textButtonTheme() {
+    return TextButtonThemeData(style: appButtonStyle());
+  }
+
+  static OutlinedButtonThemeData outlinedButtonTheme() {
+    return OutlinedButtonThemeData(style: appButtonStyle());
   }
 
   static CardThemeData cardTheme(ColorScheme scheme) {

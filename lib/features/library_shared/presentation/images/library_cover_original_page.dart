@@ -4,6 +4,7 @@ import 'package:y300/features/library_shared/data/providers/library_cover_provid
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 import 'package:y300/features/library_shared/domain/services/library_cover_decode_policy.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_image_provider.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 
 /// Full-resolution viewer whose bitmap is evicted when the route closes so it
@@ -45,25 +46,34 @@ class _LibraryCoverOriginalPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+    // 原图页的底色由图片表面提供，不跟随应用页面表面；这里只把顶栏换成
+    // 公共压入页外壳，并在局部主题里保留黑色图片表面与浅色状态栏图标。
+    final base = Theme.of(context);
+    return Theme(
+      data: base.copyWith(
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: base.colorScheme.primary,
+          brightness: Brightness.dark,
+        ),
       ),
-      body: Center(
-        child: InteractiveViewer(
-          minScale: 0.8,
-          maxScale: 6,
-          child: Image(
-            image: _provider,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.medium,
-            errorBuilder: (context, error, stackTrace) =>
-                const LibraryCoverPlaceholder(
-                  key: Key('library-cover-original-placeholder'),
-                  color: Colors.black,
-                ),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: const AppPageAppBar(titleWidget: SizedBox.shrink()),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 6,
+            child: Image(
+              image: _provider,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (context, error, stackTrace) =>
+                  const LibraryCoverPlaceholder(
+                    key: Key('library-cover-original-placeholder'),
+                    color: Colors.black,
+                  ),
+            ),
           ),
         ),
       ),

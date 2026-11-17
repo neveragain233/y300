@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// Gate shown when a blocked thread is opened from a direct link, favorite or
 /// history entry.
@@ -25,7 +26,7 @@ class BlockedThreadGateView extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       key: const Key('content-filter-blocked-thread-gate'),
-      appBar: AppBar(title: Text(l10n.contentFilterDirectTitle)),
+      appBar: AppPageAppBar(title: l10n.contentFilterDirectTitle),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),

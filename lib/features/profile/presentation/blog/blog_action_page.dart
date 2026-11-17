@@ -10,6 +10,8 @@ import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart
 import 'package:y300/features/profile/presentation/blog/blog_web_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 const blogManagementActions = {
@@ -36,9 +38,8 @@ Future<UserBlogReceipt?> openBlogActionPage(
 }) async {
   final actor = ref.read(blogAccountIdProvider);
   if (actor == null) {
-    await Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute(builder: (_) => const LoginPage()));
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => const LoginPage()));
     return null;
   }
   return Navigator.of(context).push<UserBlogReceipt>(
@@ -73,13 +74,13 @@ class BlogActionMenu extends StatelessWidget {
     if (available.isEmpty) {
       return const SizedBox.shrink();
     }
-    return PopupMenuButton<UserBlogAction>(
+    return AppPopupMenuButton<UserBlogAction>(
       onSelected: onSelected,
       itemBuilder: (context) => [
         for (final action in available)
-          PopupMenuItem(
+          AppPopupMenuItem<UserBlogAction>(
             value: action,
-            child: Text(blogActionLabel(AppLocalizations.of(context), action)),
+            label: blogActionLabel(AppLocalizations.of(context), action),
           ),
       ],
     );
@@ -140,7 +141,7 @@ class _BlogActionPageState extends ConsumerState<BlogActionPage> {
     };
     return Scaffold(
       backgroundColor: native.background,
-      appBar: AppBar(title: Text(blogActionLabel(l10n, widget.target.action))),
+      appBar: AppPageAppBar(title: blogActionLabel(l10n, widget.target.action)),
       body: SafeArea(
         child: ValueListenableBuilder<BlogActionState>(
           valueListenable: _controller,

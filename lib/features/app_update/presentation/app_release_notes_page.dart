@@ -6,6 +6,7 @@ import 'package:version/version.dart';
 import 'package:y300/features/app_update/data/providers/app_update_providers.dart';
 import 'package:y300/features/app_update/domain/models/app_release_notes_load_result.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 class AppReleaseNotesPage extends ConsumerStatefulWidget {
   const AppReleaseNotesPage({super.key, required this.installedVersion});
@@ -31,8 +32,8 @@ class _AppReleaseNotesPageState extends ConsumerState<AppReleaseNotesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).moreAboutReleaseNotes),
+      appBar: AppPageAppBar(
+        title: AppLocalizations.of(context).moreAboutReleaseNotes,
       ),
       body: SafeArea(
         child: Center(
@@ -71,9 +72,8 @@ class _AppReleaseNotesPageState extends ConsumerState<AppReleaseNotesPage> {
                   const SizedBox(height: 16),
                   SelectableText(
                     notes.body,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyLarge?.copyWith(height: 1.55),
+                    style: Theme.of(context).textTheme.bodyLarge
+                        ?.copyWith(height: 1.55),
                   ),
                 ],
               ),

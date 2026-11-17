@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/forum_link_routes.dart';
 import 'package:y300/features/forum/domain/services/yamibo_forum_link_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
@@ -40,8 +42,10 @@ import 'package:y300/features/profile/data/providers/thread_read_providers.dart'
 import 'package:y300/features/profile/data/providers/friend_read_providers.dart';
 import 'package:y300/features/profile/presentation/friends/my_friends_page.dart';
 import 'package:y300/features/profile/presentation/threads/user_thread_page.dart';
+
 import '../../profile/test_support/thread_directory_fixture.dart';
 import '../../profile/test_support/friend_read_fixture.dart';
+
 import 'package:y300/features/reply/data/providers/reply_providers.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_converter_factory.dart';
@@ -279,40 +283,41 @@ void main() {
     ForumWebViewHostPurpose.browse,
     ForumWebViewHostPurpose.selfProfile,
   ]) {
-    testWidgets('profile WebView AppBar opts into native action with $purpose', (
-      tester,
-    ) async {
-      final driver = _FakeForumWebViewDriver();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            verifiedSessionOwnerProvider.overrideWithValue((
-              uid: '654321',
-              revision: 0,
-            )),
-            forumWebViewInitialUriProvider.overrideWithValue(
-              Uri.parse(
-                'https://bbs.yamibo.com/home.php?mod=space&uid=654321&do=profile&mobile=2',
+    testWidgets(
+      'profile WebView AppBar opts into native action with $purpose',
+      (tester) async {
+        final driver = _FakeForumWebViewDriver();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              verifiedSessionOwnerProvider.overrideWithValue((
+                uid: '654321',
+                revision: 0,
+              )),
+              forumWebViewInitialUriProvider.overrideWithValue(
+                Uri.parse(
+                  'https://bbs.yamibo.com/home.php?mod=space&uid=654321&do=profile&mobile=2',
+                ),
               ),
-            ),
-            forumWebViewHostPurposeProvider.overrideWithValue(purpose),
-          ],
-          child: _buildTestApp(driver: driver),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byKey(
-            const Key('forum-webview-native-profile-button'),
+              forumWebViewHostPurposeProvider.overrideWithValue(purpose),
+            ],
+            child: _buildTestApp(driver: driver),
           ),
-        ),
-        purpose == ForumWebViewHostPurpose.selfProfile
-            ? findsOneWidget
-            : findsNothing,
-      );
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byKey(
+              const Key('forum-webview-native-profile-button'),
+            ),
+          ),
+          purpose == ForumWebViewHostPurpose.selfProfile
+              ? findsOneWidget
+              : findsNothing,
+        );
+      },
+    );
   }
 
   testWidgets('standalone forum home has a working route back button', (
@@ -731,8 +736,7 @@ void main() {
         ..javaScriptResult = _threadDocumentResult(
           title: '结构化主题',
           forumName: '中文百合漫画区',
-          canonicalHref:
-              'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=524596&highlight=%BC%AB%CF%DE',
+          canonicalHref: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=524596&highlight=%BC%AB%CF%DE',
           postCount: 20,
         );
 
@@ -1045,8 +1049,7 @@ void main() {
       page: 2,
     ),
     (
-      url:
-          'https://bbs.yamibo.com/home.php?mod=space&do=friend&uid=101&view=online&type=member&page=2&mobile=2',
+      url: 'https://bbs.yamibo.com/home.php?mod=space&do=friend&uid=101&view=online&type=member&page=2&mobile=2',
       scope: ForumFriendFeedScope.online,
       page: 2,
     ),
@@ -1173,13 +1176,13 @@ void main() {
       await tester.pumpAndSettle();
       if (boundary == 'background') {
         unawaited(
-          Navigator.of(
-            tester.element(find.byType(ForumWebViewPage)),
-          ).push<void>(
-            MaterialPageRoute(
-              builder: (_) => const Scaffold(key: Key('friend-browser-cover')),
-            ),
-          ),
+          Navigator.of(tester.element(find.byType(ForumWebViewPage)))
+              .push<void>(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const Scaffold(key: Key('friend-browser-cover')),
+                ),
+              ),
         );
         await tester.pumpAndSettle();
       } else {
@@ -1598,8 +1601,7 @@ void main() {
           tid: '570388',
           pid: '41575705',
           page: 2,
-          url:
-              'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=570388&page=2#pid41575705',
+          url: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=570388&page=2#pid41575705',
         ),
       );
 
@@ -1934,44 +1936,45 @@ void main() {
   });
 
   for (final invalidation in ['owner', 'navigation', 'dispose']) {
-    testWidgets('ForumWebViewPage suppresses stale copy feedback after $invalidation', (
-      tester,
-    ) async {
-      final driver = _FakeForumWebViewDriver();
-      final clipboard = _FakeClipboardTextWriter(pending: Completer<void>());
-      final launcher = _FakeForumWebViewExternalLauncher();
-      var accountCurrent = true;
-      await tester.pumpWidget(
-        _buildTestApp(
-          driver: driver,
-          launcher: launcher,
-          clipboardWriter: clipboard,
-          isAccountCurrent: () => accountCurrent,
-        ),
-      );
-      await tester.pump();
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(ForumWebViewPage)),
-      );
-      await driver.dispatchNavigationRequest('https://example.com/late');
-      expect(clipboard.written, ['https://example.com/late']);
-      switch (invalidation) {
-        case 'owner':
-          accountCurrent = false;
-        case 'navigation':
-          await driver.dispatchPageStarted(
-            'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=6',
-          );
-        case 'dispose':
-          await tester.pumpWidget(const SizedBox());
-      }
-      clipboard.pending!.complete();
-      await tester.pump();
-      expect(launcher.launchedUris, isEmpty);
-      expect(find.text(l10n.linkCopied), findsNothing);
-      expect(find.text(l10n.linkCopyFailed), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
+    testWidgets(
+      'ForumWebViewPage suppresses stale copy feedback after $invalidation',
+      (tester) async {
+        final driver = _FakeForumWebViewDriver();
+        final clipboard = _FakeClipboardTextWriter(pending: Completer<void>());
+        final launcher = _FakeForumWebViewExternalLauncher();
+        var accountCurrent = true;
+        await tester.pumpWidget(
+          _buildTestApp(
+            driver: driver,
+            launcher: launcher,
+            clipboardWriter: clipboard,
+            isAccountCurrent: () => accountCurrent,
+          ),
+        );
+        await tester.pump();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(ForumWebViewPage)),
+        );
+        await driver.dispatchNavigationRequest('https://example.com/late');
+        expect(clipboard.written, ['https://example.com/late']);
+        switch (invalidation) {
+          case 'owner':
+            accountCurrent = false;
+          case 'navigation':
+            await driver.dispatchPageStarted(
+              'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=6',
+            );
+          case 'dispose':
+            await tester.pumpWidget(const SizedBox());
+        }
+        clipboard.pending!.complete();
+        await tester.pump();
+        expect(launcher.launchedUris, isEmpty);
+        expect(find.text(l10n.linkCopied), findsNothing);
+        expect(find.text(l10n.linkCopyFailed), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets('ForumWebViewPage still rejects javascript without copying', (
@@ -2427,21 +2430,31 @@ void main() {
       find.byKey(const Key('forum-webview-thread-reply-button')),
       findsOneWidget,
     );
-    final appBar = tester.widget<AppBar>(find.byType(AppBar));
-    final actionKeys = appBar.actions!
-        .map((action) => action.key)
-        .whereType<Key>()
-        .toList(growable: false);
+    // 动作已收进公共顶栏胶囊，按 AppBar 内的实际按钮与几何顺序断言。
+    final appBar = find.byType(AppBar);
+    final replyButton = find.byKey(
+      const Key('forum-webview-thread-reply-button'),
+    );
+    expect(find.descendant(of: appBar, matching: replyButton), findsOneWidget);
     expect(
-      actionKeys,
-      containsAllInOrder(const <Key>[
-        Key('forum-webview-thread-reply-button'),
-        Key('forum-webview-more-button'),
-      ]),
+      find.descendant(
+        of: appBar,
+        matching: find.byKey(const Key('forum-webview-more-button')),
+      ),
+      findsOneWidget,
     );
     expect(
-      actionKeys,
-      isNot(contains(const Key('forum-webview-search-button'))),
+      find.descendant(
+        of: appBar,
+        matching: find.byKey(const Key('forum-webview-search-button')),
+      ),
+      findsNothing,
+    );
+    expect(
+      tester.getCenter(replyButton).dx,
+      lessThan(
+        tester.getCenter(find.byKey(const Key('forum-webview-more-button'))).dx,
+      ),
     );
 
     await tester.tap(

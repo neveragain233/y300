@@ -116,16 +116,12 @@ class BlogEditorSettingsFields extends StatelessWidget {
         ),
         if (options.canPublishFeed || draft.publishFeed) ...[
           const SizedBox(height: 4),
-          SwitchListTile(
-            key: const Key('blog-editor-publish-feed'),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: Text(
-              l10n.profileBlogPublishFeed,
-              style: theme.textTheme.bodyMedium?.copyWith(color: native.body),
+          BlogEditorSwitchRow(
+            controlKey: const Key('blog-editor-publish-feed'),
+            title: l10n.profileBlogPublishFeed,
+            titleStyle: theme.textTheme.bodyMedium?.copyWith(
+              color: native.body,
             ),
-            activeThumbColor: native.author,
-            activeTrackColor: native.selectionBackground,
             value: draft.publishFeed,
             onChanged: enabled && !readOnly
                 ? (value) {

@@ -8,6 +8,8 @@ import 'package:y300/app/navigation/main_navigation_group_presentation.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class NavigationManagementPage extends ConsumerWidget {
@@ -23,8 +25,8 @@ class NavigationManagementPage extends ConsumerWidget {
     );
     return Scaffold(
       key: const Key('navigation-management-page'),
-      appBar: AppBar(
-        title: Text(l10n.moreNavigationManagement),
+      appBar: AppPageAppBar(
+        title: l10n.moreNavigationManagement,
         actions: [
           IconButton(
             key: const Key('navigation-management-reset'),
@@ -57,33 +59,41 @@ class NavigationManagementPage extends ConsumerWidget {
             children: [
               Column(
                 children: [
-                  ListTile(
-                    title: Text(l10n.navigationStartupPage),
-                    trailing: DropdownButton<MainStartupPage>(
-                      key: const Key('navigation-startup-page'),
-                      value: state.settings.startupPage,
-                      items: [
-                        DropdownMenuItem(
-                          value: MainStartupPage.forum,
-                          child: Text(l10n.appNavigationForum),
-                        ),
-                        DropdownMenuItem(
-                          value: MainStartupPage.bookshelf,
-                          child: Text(l10n.appNavigationBookshelf),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: AppGroupedSection(
+                      children: [
+                        AppGroupedRow(
+                          title: l10n.navigationStartupPage,
+                          trailing: DropdownButton<MainStartupPage>(
+                            key: const Key('navigation-startup-page'),
+                            value: state.settings.startupPage,
+                            items: [
+                              DropdownMenuItem(
+                                value: MainStartupPage.forum,
+                                child: Text(l10n.appNavigationForum),
+                              ),
+                              DropdownMenuItem(
+                                value: MainStartupPage.bookshelf,
+                                child: Text(l10n.appNavigationBookshelf),
+                              ),
+                            ],
+                            onChanged: state.isSaving
+                                ? null
+                                : (value) {
+                                    if (value != null) {
+                                      unawaited(
+                                        _runMutation(
+                                          context,
+                                          () =>
+                                              controller.setStartupPage(value),
+                                        ),
+                                      );
+                                    }
+                                  },
+                          ),
                         ),
                       ],
-                      onChanged: state.isSaving
-                          ? null
-                          : (value) {
-                              if (value != null) {
-                                unawaited(
-                                  _runMutation(
-                                    context,
-                                    () => controller.setStartupPage(value),
-                                  ),
-                                );
-                              }
-                            },
                     ),
                   ),
                   Expanded(
@@ -106,82 +116,81 @@ class NavigationManagementPage extends ConsumerWidget {
                         final visible = MainNavigationGrouping.members(
                           destination,
                         ).any(state.settings.isVisible);
-                        return Column(
+                        return Padding(
                           key: ValueKey<String>(
                             'navigation-management-item-${destination.name}',
                           ),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ListTile(
-                                    key: ValueKey<String>(
-                                      'navigation-management-open-${destination.name}',
-                                    ),
-                                    onTap: () => Navigator.of(context).push(
-                                      ref.read(
-                                        mainDestinationRouteFactoryProvider,
-                                      )(
-                                        MainNavigationGrouping.members(
-                                          destination,
-                                        ).first,
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: AppGroupedSection(
+                            margin: EdgeInsets.zero,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: AppGroupedRow(
+                                      key: ValueKey<String>(
+                                        'navigation-management-open-${destination.name}',
                                       ),
-                                    ),
-                                    leading: Icon(destination.icon),
-                                    title: Text(
-                                      destination.localizedLabel(l10n),
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.only(
-                                    end: 16,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Switch(
-                                        key: ValueKey<String>(
-                                          'navigation-management-visible-${destination.name}',
+                                      onTap: () => Navigator.of(context).push(
+                                        ref.read(
+                                          mainDestinationRouteFactoryProvider,
+                                        )(
+                                          MainNavigationGrouping.members(
+                                            destination,
+                                          ).first,
                                         ),
-                                        value: visible,
-                                        onChanged: state.isSaving
-                                            ? null
-                                            : (nextVisible) => unawaited(
-                                                _runMutation(
-                                                  context,
-                                                  () => controller
-                                                      .setGroupVisibility(
-                                                        destination,
-                                                        nextVisible,
-                                                      ),
-                                                ),
-                                              ),
                                       ),
-                                      Tooltip(
-                                        message:
-                                            l10n.moreNavigationDragToReorder,
-                                        child: ReorderableDragStartListener(
+                                      leading: Icon(destination.icon),
+                                      title: destination.localizedLabel(l10n),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(
+                                      end: 16,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Switch(
                                           key: ValueKey<String>(
-                                            'navigation-management-drag-${destination.name}',
+                                            'navigation-management-visible-${destination.name}',
                                           ),
-                                          index: index,
-                                          enabled: !state.isSaving,
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(12),
-                                            child: Icon(Icons.drag_handle),
+                                          value: visible,
+                                          onChanged: state.isSaving
+                                              ? null
+                                              : (nextVisible) => unawaited(
+                                                  _runMutation(
+                                                    context,
+                                                    () => controller
+                                                        .setGroupVisibility(
+                                                          destination,
+                                                          nextVisible,
+                                                        ),
+                                                  ),
+                                                ),
+                                        ),
+                                        Tooltip(
+                                          message:
+                                              l10n.moreNavigationDragToReorder,
+                                          child: ReorderableDragStartListener(
+                                            key: ValueKey<String>(
+                                              'navigation-management-drag-${destination.name}',
+                                            ),
+                                            index: index,
+                                            enabled: !state.isSaving,
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: Icon(Icons.drag_handle),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            if (index != order.length - 1)
-                              const Divider(height: 1, indent: 56),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ),

@@ -19,6 +19,9 @@ import 'package:y300/features/composer_shared/presentation/services/composer_dra
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/features/reply/presentation/reply_composer_controller.dart';
 import 'package:y300/features/reply/presentation/reply_composer_state.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 
 class ReplyComposerPage extends ConsumerStatefulWidget {
@@ -100,12 +103,10 @@ class _ReplyComposerPageState extends ConsumerState<ReplyComposerPage> {
       child: Scaffold(
         resizeToAvoidBottomInset:
             _editorSurface != ComposerSurfacePreference.quill,
-        appBar: AppBar(
-          title: Text(
-            widget.args.target.isPostReply
-                ? l10n.replyFloorTitle
-                : l10n.replyThreadTitle,
-          ),
+        appBar: AppPageAppBar(
+          title: widget.args.target.isPostReply
+              ? l10n.replyFloorTitle
+              : l10n.replyThreadTitle,
           actions: [
             IconButton(
               key: const Key('reply-composer-source-button'),
@@ -323,33 +324,17 @@ class _ReplyComposerPageState extends ConsumerState<ReplyComposerPage> {
     ReplyComposerController controller,
   ) async {
     final navigator = Navigator.of(context);
-    final shouldLeave = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final shouldLeave = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(l10n.replyLeaveTitle),
-          content: Text(l10n.replyLeaveBody),
-          actions: [
-            TextButton(
-              key: const Key('reply-composer-continue-edit-button'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: Text(l10n.composerContinueEditing),
-            ),
-            FilledButton(
-              key: const Key('reply-composer-save-leave-button'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: Text(l10n.composerSaveDraftAndLeave),
-            ),
-          ],
-        );
-      },
+      title: l10n.replyLeaveTitle,
+      message: l10n.replyLeaveBody,
+      confirmLabel: l10n.composerSaveDraftAndLeave,
+      cancelLabel: l10n.composerContinueEditing,
+      cancelKey: const Key('reply-composer-continue-edit-button'),
+      confirmKey: const Key('reply-composer-save-leave-button'),
     );
-    if (!mounted || shouldLeave != true) {
+    if (!mounted || !shouldLeave) {
       return;
     }
     await controller.flushDraft();
@@ -362,7 +347,7 @@ class _ReplyComposerPageState extends ConsumerState<ReplyComposerPage> {
 
   void _showSettingsSheet() {
     final provider = replyComposerControllerProvider(widget.args);
-    showModalBottomSheet<void>(
+    showAdaptivePanel<void>(
       context: context,
       builder: (sheetContext) {
         return Consumer(
@@ -416,34 +401,18 @@ class _ReplyComposerPageState extends ConsumerState<ReplyComposerPage> {
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final colorScheme = Theme.of(dialogContext).colorScheme;
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(l10n.composerResetDraftTitle),
-          content: Text(l10n.composerResetDraftBody),
-          actions: [
-            TextButton(
-              key: const Key('reply-composer-reset-cancel-button'),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              key: const Key('reply-composer-reset-confirm-button'),
-              style: FilledButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: colorScheme.onError,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.commonReset),
-            ),
-          ],
-        );
-      },
+      title: l10n.composerResetDraftTitle,
+      message: l10n.composerResetDraftBody,
+      confirmLabel: l10n.commonReset,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      cancelKey: const Key('reply-composer-reset-cancel-button'),
+      confirmKey: const Key('reply-composer-reset-confirm-button'),
     );
-    if (!mounted || confirmed != true) {
+    if (!mounted || !confirmed) {
       return;
     }
     await controller.resetDraft();
@@ -557,9 +526,8 @@ class _ReplyComposerBody extends StatelessWidget {
       if (verification.failed) ...[
         ComposerStatusBanner.error(
           key: const Key('reply-composer-draft-image-verification-error'),
-          text: AppLocalizations.of(
-            context,
-          ).composerDraftImageVerificationFailed,
+          text: AppLocalizations.of(context)
+              .composerDraftImageVerificationFailed,
           retryButtonKey: const Key(
             'reply-composer-retry-draft-image-verification',
           ),

@@ -5,6 +5,7 @@ import 'package:y300/features/composer_shared/domain/models/composer_attachment_
 import 'package:y300/features/thread/presentation/post_edit_composer_state.dart';
 import 'package:y300/features/thread/presentation/widgets/post_edit_attachment_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
+
 import '../../../../test_support/localized_test_app.dart';
 import '../../test_support/post_edit_test_support.dart';
 
@@ -53,7 +54,7 @@ void main() {
       findsNothing,
     );
     final deleteButton = find.byKey(const Key('post-edit-delete-image-12'));
-    expect(tester.getSize(deleteButton), const Size.square(40));
+    expect(tester.getSize(deleteButton), const Size.square(48));
     final deleteVisual = find.byKey(
       const Key('post-edit-delete-image-visual-12'),
     );
@@ -62,7 +63,11 @@ void main() {
       find.descendant(of: deleteVisual, matching: find.byIcon(Icons.close)),
     );
     expect(closeIcon.size, 14);
-    await tester.tap(deleteButton);
+    // 命中区向内扩展到 48，视觉圆钮仍贴住图片角落，不随命中区位移。
+    final buttonRect = tester.getRect(deleteButton);
+    final visualRect = tester.getRect(deleteVisual);
+    expect(visualRect.topRight, buttonRect.topRight + const Offset(-8, 8));
+    await tester.tapAt(buttonRect.topLeft + const Offset(4, 44));
     await tester.pumpAndSettle();
     final l10n = AppLocalizations.of(
       tester.element(find.byType(PostEditAttachmentPanel)),

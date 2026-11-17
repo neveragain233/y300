@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/features/thread/presentation/thread_controls_preferences_controller.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -27,9 +28,10 @@ void main() {
       );
       await tester.ensureVisible(toggle);
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      expect(tester.widget<AppSwitchRow>(toggle).value, isFalse);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
+      expect(tester.widget<AppSwitchRow>(toggle).value, isTrue);
       expect(
         container
             .read(threadControlsPreferencesControllerProvider)

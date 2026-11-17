@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// Whole-thread prompt for a topic whose author is on the web blacklist.
 ///
@@ -24,7 +25,7 @@ class BlacklistAuthorGateView extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       key: const Key('blacklist-author-gate'),
-      appBar: AppBar(title: Text(l10n.blacklistAuthorGateTitle)),
+      appBar: AppPageAppBar(title: l10n.blacklistAuthorGateTitle),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),

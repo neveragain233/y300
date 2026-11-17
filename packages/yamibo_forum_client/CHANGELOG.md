@@ -8,6 +8,11 @@ and versions follow the policy in [VERSIONING.md](VERSIONING.md).
 
 ### Added
 
+- `ThreadDetailData.hasServerCounts`, separating parsed server reply/view
+  counters from pages without the first-post statistics block. HTML parsing
+  reports unknown counts for later pages, snapshot decoding treats records
+  written before the field as unknown, and existing constructors keep counts
+  known by default.
 - Response-local lazy HTML decoding shared by navigation observation, business
   reads, login/access checks, and editor preparation. Weak response identity
   avoids a second full-page DOM without adding a persistent cache or changing

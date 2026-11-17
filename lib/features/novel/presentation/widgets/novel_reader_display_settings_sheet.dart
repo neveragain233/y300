@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
@@ -9,6 +10,7 @@ import 'package:y300/features/novel/domain/models/novel_reader_spacing.dart';
 import 'package:y300/features/novel/presentation/novel_text_resolver.dart';
 import 'package:y300/features/novel/presentation/controllers/novel_chapter_interactions_dock_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 class NovelReaderDisplaySettingsSheet extends StatefulWidget {
   const NovelReaderDisplaySettingsSheet({
@@ -232,10 +234,9 @@ class _NovelReaderDisplaySettingsSheetState
                       _draft.copyWith(conversionMode: value),
                     ),
                   ),
-                  SwitchListTile.adaptive(
-                    key: const Key('novel-reader-safe-area-switch'),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                    title: Text(l10n.novelSafeContent),
+                  _PanelSwitchRow(
+                    controlKey: const Key('novel-reader-safe-area-switch'),
+                    title: l10n.novelSafeContent,
                     value: _draft.safeAreaEnabled,
                     onChanged: (value) => _applyPreferences(
                       _draft.copyWith(safeAreaEnabled: value),
@@ -246,14 +247,11 @@ class _NovelReaderDisplaySettingsSheetState
                       final dock = ref.watch(
                         novelChapterInteractionsDockControllerProvider,
                       );
-                      return SwitchListTile.adaptive(
-                        key: const Key(
+                      return _PanelSwitchRow(
+                        controlKey: const Key(
                           'novel-reader-chapter-interactions-dock-switch',
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                        ),
-                        title: Text(l10n.novelChapterInteractionsDockSetting),
+                        title: l10n.novelChapterInteractionsDockSetting,
                         value: dock.value?.enabled ?? true,
                         onChanged: dock.value == null
                             ? null
@@ -439,6 +437,73 @@ class _SettingsSection extends StatelessWidget {
           ),
           ...children,
         ],
+      ),
+    );
+  }
+}
+
+/// 阅读设置面板中的开关行。
+///
+/// 面板自身已有水平内边距和紧凑行距，不套用分组列表的 `AppSwitchRow`；
+/// 这里只取同一 prism 开关外观，整行与尾部开关都可切换。
+class _PanelSwitchRow extends StatelessWidget {
+  const _PanelSwitchRow({
+    required this.controlKey,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final Key controlKey;
+  final String title;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = onChanged != null;
+    void toggle() {
+      if (enabled) {
+        onChanged!(!value);
+      }
+    }
+
+    return Semantics(
+      container: true,
+      label: title,
+      toggled: value,
+      enabled: enabled,
+      onTap: enabled ? toggle : null,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? toggle : null,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: enabled
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
+                  ),
+                ),
+                AppPrismTheme(
+                  child: prism.Switch(
+                    key: controlKey,
+                    value: value,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

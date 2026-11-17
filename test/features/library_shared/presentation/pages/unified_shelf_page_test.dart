@@ -25,6 +25,7 @@ import 'package:y300/features/library_shared/presentation/pages/unified_shelf_pa
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
 import 'package:y300/features/library_shared/presentation/services/recent_reading_action.dart';
 import 'package:y300/l10n/app_localizations_zh.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
@@ -231,16 +232,20 @@ void main() {
 
     expect(find.text('已添加标签'), findsNothing);
 
-    // 切到第 3 个 tab（显示），避免依赖具体文案。
-    await tester.tap(find.byType(TextButton).at(2));
+    // 切到第 3 个分段（显示），避免依赖具体文案。
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
+    );
     await tester.pumpAndSettle();
 
-    // 选择列表模式：第二个 Radio 对应 list。
-    await tester.tap(find.byType(Radio<LibraryDisplayMode>).at(1));
+    // 选择列表模式：分组行使用同一槽位，当前选中项显示勾选。
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-display-list')),
+    );
     await tester.pumpAndSettle();
 
-    // 点击底部右侧应用按钮（FilledButton）。
-    await tester.tap(find.byType(FilledButton).first);
+    // 点击底部右侧确认按钮（胶囊 FilledButton）。
+    await tester.tap(find.byKey(const Key('unified-shelf-filter-apply')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('unified-shelf-list-view')), findsOneWidget);
@@ -366,7 +371,9 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.filter_list).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(TextButton).at(1));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-1')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('章节数'), findsOneWidget);
@@ -380,7 +387,7 @@ void main() {
 
     final favoriteTile = find.ancestor(
       of: find.text('收藏日期'),
-      matching: find.byType(ListTile),
+      matching: find.byType(AppGroupedRow),
     );
     expect(
       find.descendant(
@@ -394,7 +401,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('章节数'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton).first);
+    await tester.tap(find.byKey(const Key('unified-shelf-filter-apply')));
     await tester.pumpAndSettle();
 
     expect(queriedSort?.field, LibraryShelfSortField.chapterCount);
@@ -446,7 +453,9 @@ void main() {
     expect(find.text('阅读过'), findsNothing);
     expect(find.text('有书签'), findsOneWidget);
 
-    await tester.tap(find.byType(TextButton).at(1));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-1')),
+    );
     await tester.pumpAndSettle();
     expect(find.text('章节数'), findsOneWidget);
     expect(find.text('未读章节数'), findsNothing);
@@ -524,11 +533,15 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.filter_list).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(TextButton).at(2));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(Radio<LibraryDisplayMode>).at(1));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-display-list')),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton).first);
+    await tester.tap(find.byKey(const Key('unified-shelf-filter-apply')));
     await tester.pumpAndSettle();
 
     final list = tester.widget<ListView>(
@@ -1100,7 +1113,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('筛选'), findsWidgets);
-    await tester.tap(find.byType(TextButton).at(2));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('网格'), findsOneWidget);

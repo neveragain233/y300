@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 
 @immutable
@@ -51,10 +52,9 @@ class ThreadDetailNativePalette {
   }) {
     final scheme = theme.colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
-    final appBarBackground =
-        theme.appBarTheme.backgroundColor ?? scheme.primary;
-    final appBarForeground =
-        theme.appBarTheme.foregroundColor ?? scheme.onPrimary;
+    final brand = theme.y300BrandColors;
+    final appBarBackground = brand.accent;
+    final appBarForeground = brand.onAccent;
     final native = theme.y300NativeContent;
     final usesDynamicColor =
         theme.extension<Y300ThemeExtension>()?.usesDynamicColor ?? false;

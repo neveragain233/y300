@@ -5,6 +5,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/widgets/message_read_status.dart';
 import 'package:y300/features/messages/presentation/widgets/private_message_batch_composer.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 class NewPrivateMessagePage extends ConsumerWidget {
   const NewPrivateMessagePage({super.key});
@@ -16,13 +17,7 @@ class NewPrivateMessagePage extends ConsumerWidget {
     final palette = Theme.of(context).y300NativeContent;
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(l10n.messageNew),
-        backgroundColor: palette.card,
-        foregroundColor: palette.itemTitle,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: AppPageAppBar(title: l10n.messageNew),
       body: account == null
           ? const MessageLoginPrompt()
           : PrivateMessageBatchComposer(

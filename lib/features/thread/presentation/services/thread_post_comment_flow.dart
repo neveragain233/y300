@@ -6,6 +6,7 @@ import 'package:y300/features/thread/presentation/thread_post_interaction_models
 import 'package:y300/features/thread/presentation/thread_text_resolver.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// Reuses the same form, display projection, sheet and feedback at every entry.
@@ -46,7 +47,7 @@ Future<DataCommandResult<ThreadPostCommentReceipt>?> showThreadPostCommentFlow({
     );
     return null;
   }
-  final draft = await showModalBottomSheet<ThreadPostCommentDraft>(
+  final draft = await showAdaptivePanel<ThreadPostCommentDraft>(
     context: context,
     isScrollControlled: true,
     builder: (_) => ThreadPostCommentSheet(form: formResult.dataOrNull!),

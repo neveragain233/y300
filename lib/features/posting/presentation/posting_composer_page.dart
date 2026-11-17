@@ -1,5 +1,6 @@
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_read_access_tile.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -27,6 +28,9 @@ import 'package:y300/features/posting/presentation/widgets/thread_special_switch
 import 'package:y300/features/posting/presentation/widgets/thread_subject_field.dart';
 import 'package:y300/features/posting/presentation/widgets/thread_tags_field.dart';
 import 'package:y300/features/posting/presentation/widgets/thread_type_selector.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 
 /// 自制发帖页。
@@ -121,8 +125,8 @@ class _PostingComposerPageState extends ConsumerState<PostingComposerPage> {
       child: Scaffold(
         resizeToAvoidBottomInset:
             _editorSurface != ComposerSurfacePreference.quill,
-        appBar: AppBar(
-          title: Text(_appBarTitle(state)),
+        appBar: AppPageAppBar(
+          title: _appBarTitle(state),
           actions: [
             IconButton(
               key: const Key('posting-composer-source-button'),
@@ -392,33 +396,17 @@ class _PostingComposerPageState extends ConsumerState<PostingComposerPage> {
     PostingComposerController controller,
   ) async {
     final navigator = Navigator.of(context);
-    final shouldLeave = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final shouldLeave = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(l10n.postingLeaveTitle),
-          content: Text(l10n.postingLeaveBody),
-          actions: [
-            TextButton(
-              key: const Key('posting-composer-continue-edit-button'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: Text(l10n.composerContinueEditing),
-            ),
-            FilledButton(
-              key: const Key('posting-composer-save-leave-button'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: Text(l10n.composerSaveDraftAndLeave),
-            ),
-          ],
-        );
-      },
+      title: l10n.postingLeaveTitle,
+      message: l10n.postingLeaveBody,
+      confirmLabel: l10n.composerSaveDraftAndLeave,
+      cancelLabel: l10n.composerContinueEditing,
+      cancelKey: const Key('posting-composer-continue-edit-button'),
+      confirmKey: const Key('posting-composer-save-leave-button'),
     );
-    if (!mounted || shouldLeave != true) {
+    if (!mounted || !shouldLeave) {
       return;
     }
     await controller.flushDraft();
@@ -431,7 +419,7 @@ class _PostingComposerPageState extends ConsumerState<PostingComposerPage> {
 
   void _showSettingsSheet() {
     final provider = postingComposerControllerProvider(widget.args);
-    showModalBottomSheet<void>(
+    showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) {
@@ -532,34 +520,18 @@ class _PostingComposerPageState extends ConsumerState<PostingComposerPage> {
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final colorScheme = Theme.of(dialogContext).colorScheme;
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(l10n.composerResetDraftTitle),
-          content: Text(l10n.composerResetDraftBody),
-          actions: [
-            TextButton(
-              key: const Key('posting-composer-reset-cancel-button'),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              key: const Key('posting-composer-reset-confirm-button'),
-              style: FilledButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: colorScheme.onError,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.commonReset),
-            ),
-          ],
-        );
-      },
+      title: l10n.composerResetDraftTitle,
+      message: l10n.composerResetDraftBody,
+      confirmLabel: l10n.commonReset,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      cancelKey: const Key('posting-composer-reset-cancel-button'),
+      confirmKey: const Key('posting-composer-reset-confirm-button'),
     );
-    if (!mounted || confirmed != true) {
+    if (!mounted || !confirmed) {
       return;
     }
     await controller.resetDraft();
@@ -727,9 +699,8 @@ class _PostingComposerBodyState extends State<_PostingComposerBody> {
       if (verification.failed) ...[
         ComposerStatusBanner.error(
           key: const Key('posting-composer-draft-image-verification-error'),
-          text: AppLocalizations.of(
-            context,
-          ).composerDraftImageVerificationFailed,
+          text: AppLocalizations.of(context)
+              .composerDraftImageVerificationFailed,
           retryButtonKey: const Key(
             'posting-composer-retry-draft-image-verification',
           ),

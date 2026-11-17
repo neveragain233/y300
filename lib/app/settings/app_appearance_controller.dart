@@ -3,6 +3,7 @@ import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_appearance_settings_repository.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
@@ -71,6 +72,23 @@ class AppAppearanceController extends AsyncNotifier<AppAppearanceSettings> {
     await _saveOrRollback(previous.copyWith(navigationSwipeEnabled: enabled));
   }
 
+  Future<void> setNavigationLensMotion(AppNavigationLensMotion motion) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.navigationLensMotion == motion) return;
+    await _saveOrRollback(previous.copyWith(navigationLensMotion: motion));
+  }
+
+  /// 恢复默认外观：只重置外观字段，语言与账号数据保持原样。
+  Future<void> resetAppearance() async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    final defaults = AppAppearanceSettings.defaults();
+    final next = defaults.copyWith(
+      languagePreference: previous.languagePreference,
+    );
+    if (_sameAppearanceFields(previous, next)) return;
+    await _saveOrRollback(next);
+  }
+
   Future<void> setBrightnessPreference(
     AppBrightnessPreference preference,
   ) async {
@@ -100,6 +118,16 @@ class AppAppearanceController extends AsyncNotifier<AppAppearanceSettings> {
     });
     _saveTail = save.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     await save;
+  }
+
+  bool _sameAppearanceFields(AppAppearanceSettings a, AppAppearanceSettings b) {
+    return a.themeFamily == b.themeFamily &&
+        a.colorSource == b.colorSource &&
+        a.navigationBarStyle == b.navigationBarStyle &&
+        a.navigationSwipeEnabled == b.navigationSwipeEnabled &&
+        a.navigationLensMotion == b.navigationLensMotion &&
+        a.glassLevel == b.glassLevel &&
+        a.brightnessPreference == b.brightnessPreference;
   }
 
   Future<void> setLanguagePreference(AppLanguage preference) async {

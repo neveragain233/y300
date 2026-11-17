@@ -19,6 +19,7 @@ import 'package:y300/features/profile/presentation/blog/blog_comment_page.dart';
 import 'package:y300/features/profile/presentation/blog/blog_comment_editor.dart';
 import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
@@ -31,6 +32,7 @@ void main() {
     (tester) async {
       final service = BlogCommentFixture(autoPrepare: true);
       final host = await _open(tester, service);
+      expect(find.byType(AppPageAppBar), findsOneWidget);
       expect(host.container.read(blogMutationBusProvider).last, isNull);
       await _enter(tester, 'comment fixture');
       await _submit(tester);
@@ -253,7 +255,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       service.applied();
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byKey(const Key('blog-comment-leave')), findsOneWidget);
       await tester.tap(find.text(l10n.commonCancel));
       await tester.pumpAndSettle();
       expect((await host.receipt)!.commentId, '41');

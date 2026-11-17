@@ -8,6 +8,7 @@ import '../../../test_support/localized_test_app.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/theme/app_theme.dart';
@@ -2198,7 +2199,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final safeAreaSwitch = tester.widget<SwitchListTile>(
+    final safeAreaSwitch = tester.widget<prism.Switch>(
       find.byKey(const Key('novel-reader-safe-area-switch')),
     );
     expect(safeAreaSwitch.value, isTrue);

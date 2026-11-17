@@ -5,6 +5,7 @@ import 'package:y300/features/auth/presentation/auth_text_resolver.dart';
 import 'package:y300/features/auth/presentation/login_controller.dart';
 import 'package:y300/features/auth/presentation/login_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 class LoginPage extends ConsumerWidget {
   const LoginPage({super.key});
@@ -17,7 +18,7 @@ class LoginPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.authLoginTitle)),
+      appBar: AppPageAppBar(title: l10n.authLoginTitle),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

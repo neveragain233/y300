@@ -5,7 +5,6 @@ import 'package:y300/app/navigation/forum_link_routes.dart';
 import 'package:y300/features/thread/domain/models/thread_post_target.dart';
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/features/composer_shared/presentation/services/read_access_feedback.dart';
@@ -37,8 +36,7 @@ import 'package:y300/features/forum/presentation/widgets/forum_favorite_forum_pi
 import 'package:y300/features/history/data/providers/history_providers.dart';
 import 'package:y300/features/history/domain/models/history_models.dart';
 import 'package:y300/features/posting/domain/models/posting_target.dart';
-import 'package:y300/features/posting/presentation/posting_composer_page.dart';
-import 'package:y300/features/posting/presentation/posting_composer_state.dart';
+import 'package:y300/features/posting/presentation/posting_composer_route.dart';
 import 'package:y300/features/profile/presentation/my_profile_webview_action.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/forum/domain/services/yamibo_forum_link_resolver.dart';
@@ -49,7 +47,9 @@ import 'package:y300/features/composer_shared/domain/models/composer_kind.dart';
 import 'package:y300/features/composer_shared/presentation/services/composer_text_resolver.dart';
 import 'package:y300/features/thread/data/providers/thread_repository_providers.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
 
 class ForumWebViewPage extends ConsumerStatefulWidget {
@@ -147,7 +147,8 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     if (!_sessionOwner.isCurrent) {
       final l10n = AppLocalizations.of(context);
       return Scaffold(
-        appBar: AppBar(),
+        // 账号切换后不再保留旧网页壳；顶栏只承担返回外壳，说明仍在正文。
+        appBar: const AppPageAppBar(title: ''),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -170,7 +171,6 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     final initialUri = ref.watch(forumWebViewInitialUriProvider);
     final popOnRootBack = ref.watch(forumWebViewPopOnRootBackProvider);
     final hostPurpose = ref.watch(forumWebViewHostPurposeProvider);
-    final overlayStyle = _resolveSystemUiOverlayStyle(context);
     final homeUri = initialUri ?? navigator.homeUri;
     final state =
         asyncState.asData?.value ??
@@ -204,30 +204,26 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
       });
     }
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayStyle,
-      child: PopScope<Object?>(
-        canPop: _shouldAllowRoutePop(state, popOnRootBack: popOnRootBack),
-        onPopInvokedWithResult: (didPop, _) {
-          if (didPop) {
-            return;
-          }
-          unawaited(
-            _handleBackNavigation(driver, state, popOnRootBack: popOnRootBack),
-          );
-        },
-        child: Scaffold(
-          key: const Key('forum-webview-page'),
-          appBar: _buildAppBar(
-            context,
-            state,
-            driver,
-            overlayStyle: overlayStyle,
-            popOnRootBack: popOnRootBack,
-            hostPurpose: hostPurpose,
-          ),
-          body: _buildWebViewSurface(context: context, driver: driver),
+    return PopScope<Object?>(
+      canPop: _shouldAllowRoutePop(state, popOnRootBack: popOnRootBack),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        unawaited(
+          _handleBackNavigation(driver, state, popOnRootBack: popOnRootBack),
+        );
+      },
+      child: Scaffold(
+        key: const Key('forum-webview-page'),
+        appBar: _buildAppBar(
+          context,
+          state,
+          driver,
+          popOnRootBack: popOnRootBack,
+          hostPurpose: hostPurpose,
         ),
+        body: _buildWebViewSurface(context: context, driver: driver),
       ),
     );
   }
@@ -695,19 +691,18 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     BuildContext context,
     ForumWebViewState state,
     ForumWebViewDriver driver, {
-    required SystemUiOverlayStyle overlayStyle,
     required bool popOnRootBack,
     required ForumWebViewHostPurpose hostPurpose,
   }) {
     final l10n = AppLocalizations.of(context);
     final title = ForumTextResolver.webViewTitle(l10n, state);
+    final showBackButton =
+        !(state.pageKind == ForumWebViewPageKind.home && !popOnRootBack);
 
-    return AppBar(
-      automaticallyImplyLeading: false,
-      systemOverlayStyle: overlayStyle,
-      leading: state.pageKind == ForumWebViewPageKind.home && !popOnRootBack
-          ? null
-          : BackButton(
+    return AppPageAppBar(
+      // 首页根入口原本不显示返回键；显式空前导避免公共外壳回落到默认返回键。
+      leading: showBackButton
+          ? AppToolbarBackButton(
               key: const Key('forum-webview-back-button'),
               onPressed: () {
                 unawaited(
@@ -718,8 +713,10 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
                   ),
                 );
               },
-            ),
-      title: Text(title),
+            )
+          : const SizedBox.shrink(),
+      titleSpacing: showBackButton ? null : 16,
+      title: title,
       actions: [
         if (hostPurpose == ForumWebViewHostPurpose.selfProfile)
           MyProfileWebViewAction(currentUri: state.currentUri),
@@ -1018,20 +1015,11 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
       return;
     }
     final driver = ref.read(forumWebViewDriverProvider);
-    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
     final l10n = AppLocalizations.of(context);
-    final result = await navigator.push<PostingComposerResult>(
-      MaterialPageRoute<PostingComposerResult>(
-        builder: (_) => PostingComposerPage(
-          args: PostingComposerArgs(
-            target: PostingTarget(
-              fid: request.fid,
-              sourceUri: request.sourceUri,
-            ),
-          ),
-        ),
-      ),
+    final result = await openPostingComposer(
+      context,
+      target: PostingTarget(fid: request.fid, sourceUri: request.sourceUri),
     );
     if (!_isCurrent || result == null || !result.sent) {
       return;
@@ -1153,20 +1141,6 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     // WebView in a Flutter Scrollable brings back the mixed-shell scrolling
     // regressions UX-2 is trying to remove.
     return driver.buildWidget(key: const Key('forum-webview-surface'));
-  }
-
-  SystemUiOverlayStyle _resolveSystemUiOverlayStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final background =
-        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
-    final isDark =
-        ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
-    return (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-        .copyWith(
-          statusBarColor: Colors.transparent,
-          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        );
   }
 
   Future<void> _copyExternalUri(Uri uri) async {

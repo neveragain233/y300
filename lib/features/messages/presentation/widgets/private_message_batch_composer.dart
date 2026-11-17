@@ -17,6 +17,7 @@ import 'package:y300/features/messages/presentation/widgets/private_message_batc
 import 'package:y300/features/messages/presentation/widgets/private_message_compose_canvas.dart';
 import 'package:y300/features/messages/presentation/widgets/private_message_recipient_bar.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 
 /// A route/account-owned draft; only the immutable send snapshot crosses into
@@ -113,26 +114,13 @@ class _PrivateMessageBatchComposerState
     if (!_ownsAccount || _confirming) return false;
     setState(() => _confirming = true);
     final l10n = AppLocalizations.of(context);
-    final accepted =
-        await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            scrollable: true,
-            title: Text(title),
-            content: Text(body),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l10n.commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(action),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    final accepted = await showAppConfirmDialog(
+      context: context,
+      title: title,
+      message: body,
+      confirmLabel: action,
+      cancelLabel: l10n.commonCancel,
+    );
     if (!mounted) return false;
     setState(() => _confirming = false);
     if (_finishPending) _finish();

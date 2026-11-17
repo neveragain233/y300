@@ -6,6 +6,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_atta
 import 'package:y300/features/composer_shared/presentation/widgets/composer_image_delete_button.dart';
 import 'package:y300/features/thread/presentation/post_edit_composer_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 
 class PostEditAttachmentPanel extends StatelessWidget {
   const PostEditAttachmentPanel({
@@ -185,25 +186,16 @@ class _PostEditAttachmentCard extends StatelessWidget {
 
   Future<void> _confirmDelete(BuildContext context, String aid) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.postEditDeleteImageTitle),
-        content: Text(l10n.postEditDeleteImageBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            key: const Key('post-edit-confirm-delete-image'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.postEditDeleteImageConfirm),
-          ),
-        ],
-      ),
+      title: l10n.postEditDeleteImageTitle,
+      message: l10n.postEditDeleteImageBody,
+      confirmLabel: l10n.postEditDeleteImageConfirm,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      confirmKey: const Key('post-edit-confirm-delete-image'),
     );
-    if (confirmed == true) {
+    if (confirmed) {
       onDelete(aid);
     }
   }

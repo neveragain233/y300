@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -29,6 +30,7 @@ import 'package:y300/features/profile/presentation/blog/blog_editor_page.dart';
 import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
@@ -42,6 +44,7 @@ void main() {
     final service = BlogOperationFixture(autoPrepare: true);
     final repo = MemoryBlogDraftRepository();
     final host = await _open(tester, service, create: true, drafts: repo);
+    expect(find.byType(AppPageAppBar), findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('blog-editor-subject')),
       '未发布标题',
@@ -708,7 +711,7 @@ void main() {
       );
       expect(
         tester
-            .widget<SwitchListTile>(
+            .widget<prism.Switch>(
               find.byKey(const Key('blog-editor-publish-feed')),
             )
             .value,
@@ -953,7 +956,7 @@ void main() {
       );
       expect(
         tester
-            .widget<SwitchListTile>(
+            .widget<prism.Switch>(
               find.byKey(const Key('blog-editor-comments-enabled')),
             )
             .onChanged,
@@ -1093,7 +1096,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       service.saved();
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.text(_l10n(tester).profileBlogLeaveEditorTitle),
+        findsOneWidget,
+      );
       await tester.tap(find.text(_l10n(tester).commonCancel));
       await tester.pumpAndSettle();
       expect((await host.result)?.receipt.blogId, '11');

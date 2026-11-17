@@ -7,6 +7,7 @@ import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart
 import 'package:y300/features/reader_shared/presentation/engine/engine.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 int _nextBlogImageSession = 0;
 
@@ -76,7 +77,7 @@ class _BlogImageReaderPageState extends ConsumerState<BlogImageReaderPage> {
     final l10n = AppLocalizations.of(context);
     if (_expired) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: AppPageAppBar(title: l10n.threadImageReaderTitle),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),

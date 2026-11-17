@@ -3,6 +3,7 @@ import 'package:y300/features/library_shared/presentation/reader/reader_sheet_wi
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 import 'package:y300/features/reader_shared/presentation/reader_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 /// 阅读器显示设置抽屉（阅读模式 / 页面适配 / 背景 / 页间距 / 页码浮层）。
 ///
@@ -247,9 +248,9 @@ class _ReaderDisplaySettingsContentState
             ],
           ),
         ),
-        SwitchListTile(
+        AppSwitchRow(
           key: const Key('comic-reader-page-indicator-switch'),
-          title: Text(l10n.readerPageIndicator),
+          title: l10n.readerPageIndicator,
           value: _current.showPageIndicator,
           onChanged: (value) {
             setState(

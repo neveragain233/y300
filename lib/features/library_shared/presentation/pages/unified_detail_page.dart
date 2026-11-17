@@ -9,6 +9,7 @@ import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/theme/app_system_ui.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -544,16 +545,19 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                           AppPopupMenuItem<String>(
                             value: 'refresh',
                             label: l10n.libraryDetailRefresh,
+                            icon: const Icon(Icons.refresh),
                           ),
                           AppPopupMenuItem<String>(
                             value: 'change-category',
                             label: l10n.libraryDetailChangeCategory,
+                            icon: const Icon(Icons.category_outlined),
                           ),
                           if (widget.adapter is DetailMetadataEditor)
                             AppPopupMenuItem<String>(
                               key: const Key('unified-detail-edit-metadata'),
                               value: 'edit-metadata',
                               label: l10n.libraryDetailEditMetadata,
+                              icon: const Icon(Icons.edit_outlined),
                             ),
                           if (widget.adapter is DetailCatalogEditor)
                             AppPopupMenuItem<String>(
@@ -562,12 +566,14 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                               ),
                               value: 'configure-catalog',
                               label: l10n.libraryDetailConfigureCatalog,
+                              icon: const Icon(Icons.list_alt),
                             ),
                           if (_sourceTagsAdapter != null)
                             AppPopupMenuItem<String>(
                               key: const Key('unified-detail-source-tags'),
                               value: 'source-tags',
                               label: l10n.libraryDetailSourceTags,
+                              icon: const Icon(Icons.local_offer_outlined),
                             ),
                           // 章节长按之外的第二个入口：隐藏全部章节后列表为空，
                           // 长按目标随之消失，只靠长按会把“全部显示”永久锁死。
@@ -576,12 +582,14 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                               key: const Key('unified-detail-manage-chapters'),
                               value: 'manage-chapters',
                               label: l10n.libraryDetailManageChapters,
+                              icon: const Icon(Icons.checklist),
                             ),
                           if (_supportsCoverEditing)
                             AppPopupMenuItem<String>(
                               key: const Key('unified-detail-set-cover'),
                               value: 'set-custom-cover',
                               label: l10n.libraryDetailSetCustomCover,
+                              icon: const Icon(Icons.image_outlined),
                             ),
                           if (_supportsCoverCandidates)
                             AppPopupMenuItem<String>(
@@ -590,16 +598,20 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                               ),
                               value: 'set-cover-from-post',
                               label: l10n.libraryDetailSetCoverFromPost,
+                              icon: const Icon(Icons.photo_library_outlined),
                             ),
                           if (_supportsCoverEditing && _canRemoveCover)
                             AppPopupMenuItem<String>(
                               key: const Key('unified-detail-remove-cover'),
                               value: 'remove-custom-cover',
                               label: l10n.libraryDetailRemoveCustomCover,
+                              icon: const Icon(Icons.hide_image_outlined),
+                              danger: true,
                             ),
                           AppPopupMenuItem<String>(
                             value: 'edit-intro',
                             label: l10n.libraryDetailEditIntro,
+                            icon: const Icon(Icons.notes_outlined),
                           ),
                         ],
                         onSelected: (value) async {
@@ -864,10 +876,12 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       AppPopupMenuItem<String>(
         value: 'download-unread',
         label: l10n.libraryDetailDownloadUnread,
+        icon: const Icon(Icons.download_for_offline_outlined),
       ),
       AppPopupMenuItem<String>(
         value: 'download-all',
         label: l10n.libraryDetailDownloadAll,
+        icon: const Icon(Icons.download_outlined),
       ),
     ];
   }
@@ -1218,28 +1232,17 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
     if (_isResettingWorkReading) {
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(l10n.libraryDetailResetReadingTitle),
-          content: Text(l10n.libraryDetailResetReadingBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              key: const Key('unified-detail-work-reset-reading-confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.libraryDetailResetReadingConfirm),
-            ),
-          ],
-        );
-      },
+      title: l10n.libraryDetailResetReadingTitle,
+      message: l10n.libraryDetailResetReadingBody,
+      confirmLabel: l10n.libraryDetailResetReadingConfirm,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      confirmKey: const Key('unified-detail-work-reset-reading-confirm'),
     );
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
     setState(() {
@@ -1413,25 +1416,15 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
       return;
     }
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.libraryDetailUseTagAsCatalogTitle),
-        content: Text(l10n.libraryDetailUseTagAsCatalogMessage(tag.label)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            key: const Key('unified-detail-source-tag-catalog-confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
+      title: l10n.libraryDetailUseTagAsCatalogTitle,
+      message: l10n.libraryDetailUseTagAsCatalogMessage(tag.label),
+      confirmLabel: l10n.commonConfirm,
+      cancelLabel: l10n.commonCancel,
+      confirmKey: const Key('unified-detail-source-tag-catalog-confirm'),
     );
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
     final catalogUrl = Uri.parse(AppConfig.siteBaseUrl)

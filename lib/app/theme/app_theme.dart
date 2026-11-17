@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_component_theme_builder.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
@@ -73,6 +74,9 @@ final class AppTheme {
         colorScheme,
       ),
       sliderTheme: AppComponentThemeBuilder.sliderTheme(colorScheme),
+      filledButtonTheme: AppComponentThemeBuilder.filledButtonTheme(),
+      textButtonTheme: AppComponentThemeBuilder.textButtonTheme(),
+      outlinedButtonTheme: AppComponentThemeBuilder.outlinedButtonTheme(),
       listTileTheme: AppComponentThemeBuilder.listTileTheme(colorScheme),
       dividerTheme: AppComponentThemeBuilder.dividerTheme(colorScheme),
       iconButtonTheme: AppComponentThemeBuilder.iconButtonTheme(colorScheme),
@@ -83,6 +87,7 @@ final class AppTheme {
       cardTheme: AppComponentThemeBuilder.cardTheme(colorScheme)
           .copyWith(color: palette.surfaceContainer),
       extensions: <ThemeExtension<dynamic>>[
+        Y300BrandColors.fromPalette(palette),
         ForumThreadBadgeTheme.fromColorScheme(
           colorScheme,
           standardBackground: palette.appBarBackground,

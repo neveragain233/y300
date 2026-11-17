@@ -6,6 +6,8 @@ import 'package:y300/features/composer_shared/domain/models/composer_unused_imag
 import 'package:y300/features/composer_shared/presentation/controllers/composer_unused_image_management_controller.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_image_delete_button.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 class ComposerUnusedImageManagementPage extends ConsumerWidget {
   const ComposerUnusedImageManagementPage({super.key});
@@ -19,8 +21,8 @@ class ComposerUnusedImageManagementPage extends ConsumerWidget {
     );
     return Scaffold(
       key: const Key('composer-unused-image-management-page'),
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).unusedImagesPageTitle),
+      appBar: AppPageAppBar(
+        title: AppLocalizations.of(context).unusedImagesPageTitle,
       ),
       body: asyncState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -249,25 +251,16 @@ class _UnusedImageCard extends ConsumerWidget {
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.unusedImagesDeleteTitle),
-        content: Text(l10n.unusedImagesDeleteBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            key: const Key('unused-images-confirm-delete'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.commonDelete),
-          ),
-        ],
-      ),
+      title: l10n.unusedImagesDeleteTitle,
+      message: l10n.unusedImagesDeleteBody,
+      confirmLabel: l10n.commonDelete,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      confirmKey: const Key('unused-images-confirm-delete'),
     );
-    if (confirmed != true || !context.mounted) {
+    if (!confirmed || !context.mounted) {
       return;
     }
     final deleted = await ref

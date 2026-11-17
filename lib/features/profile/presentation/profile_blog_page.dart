@@ -1,5 +1,4 @@
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 import 'dart:async';
 
@@ -40,6 +39,8 @@ import 'package:y300/features/profile/presentation/widgets/feed_pagination_scrol
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
@@ -105,37 +106,33 @@ class _ProfileBlogPageState extends ConsumerState<ProfileBlogPage> {
       isActive: widget.isActive,
       builder: (context, state, _) => Scaffold(
         backgroundColor: palette.background,
-        appBar: AppBar(
+        appBar: AppPageAppBar(
           leading: adaptiveDetailBackButton(context),
-          title: Text(l10n.profileBlogTitle),
+          title: l10n.profileBlogTitle,
           actions: [
-            AppToolbarActions(
-              children: [
-                IconButton(
-                  key: const Key('blog-write'),
-                  tooltip: l10n.profileBlogWrite,
-                  onPressed: () async {
-                    final result = await openBlogEditorPage(context, ref);
-                    if (!mounted ||
-                        result == null ||
-                        !context.mounted ||
-                        ref.read(blogAccountIdProvider) !=
-                            result.receipt.target.actorUserId) {
-                      return;
-                    }
-                    await Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => ProfileBlogDetailPage(
-                          ownerUserId: result.receipt.target.ownerUserId,
-                          blogId: result.receipt.blogId,
-                          initialTitle: result.subject,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.edit_note),
-                ),
-              ],
+            IconButton(
+              key: const Key('blog-write'),
+              tooltip: l10n.profileBlogWrite,
+              onPressed: () async {
+                final result = await openBlogEditorPage(context, ref);
+                if (!mounted ||
+                    result == null ||
+                    !context.mounted ||
+                    ref.read(blogAccountIdProvider) !=
+                        result.receipt.target.actorUserId) {
+                  return;
+                }
+                await Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => ProfileBlogDetailPage(
+                      ownerUserId: result.receipt.target.ownerUserId,
+                      blogId: result.receipt.blogId,
+                      initialTitle: result.subject,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit_note),
             ),
           ],
         ),
@@ -341,8 +338,8 @@ class _ProfileBlogDetailPageState extends ConsumerState<ProfileBlogDetailPage> {
           setActive: controller.setActive,
           builder: (context, state, _) => Scaffold(
             backgroundColor: palette.background,
-            appBar: AppBar(
-              title: _BlogDetailTitle(
+            appBar: AppPageAppBar(
+              titleWidget: _BlogDetailTitle(
                 data: state.data,
                 initialTitle: _allowInitialTitle ? widget.initialTitle : null,
               ),
@@ -417,9 +414,10 @@ class _ProfileBlogDetailPageState extends ConsumerState<ProfileBlogDetailPage> {
 
   void _openDisplaySettings() {
     unawaited(
-      showModalBottomSheet<void>(
+      // 面板宿主统一走 showAdaptivePanel：详情页所在区域决定挂载位置，
+      // 窄屏仍是底部抽屉，宽屏为本区域的侧面板。
+      showAdaptivePanel<void>(
         context: context,
-        showDragHandle: false,
         builder: (_) => const ForumHtmlReaderSettingsSheet(
           key: Key('blog-detail-display-settings-sheet'),
           showConversionControls: false,

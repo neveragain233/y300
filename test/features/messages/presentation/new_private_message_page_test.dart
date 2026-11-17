@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/dialog.dart' as prism;
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/messages/data/private_message_compose_repository_provider.dart';
 import 'package:y300/features/messages/domain/message_refresh_bus.dart';
@@ -10,6 +11,7 @@ import 'package:y300/features/messages/domain/private_message_compose_repository
 import 'package:y300/features/messages/presentation/message_feed_providers.dart';
 import 'package:y300/features/messages/presentation/new_private_message_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 import '../../../test_support/localized_test_app.dart';
 import '../support/message_input_test_helper.dart';
@@ -79,6 +81,7 @@ void main() {
     tester,
   ) async {
     await openPage(tester);
+    expect(find.byType(AppPageAppBar), findsOneWidget);
     await enterMessageText(tester, 'draft');
     expect(
       tester
@@ -332,7 +335,7 @@ void main() {
       await tester.pump();
       expect(events, hasLength(previousEvents + 1));
       expect(events.last.directoryOnly, isTrue);
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(prism.AlertDialog), findsOneWidget);
 
       await tester.tap(
         find.text(

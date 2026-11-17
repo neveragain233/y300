@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-
-import '../../../../test_support/localized_test_app.dart';
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/liquid_glass.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
+import 'package:y300/shared/widgets/app_glass_environment.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
+
+import '../../../../test_support/localized_test_app.dart';
 
 void main() {
   testWidgets('ReaderOverlayScaffold hides menu by default', (tester) async {
@@ -246,6 +249,83 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('reader top buttons follow app glass and fall back to chrome', (
+    tester,
+  ) async {
+    final theme = AppTheme.light();
+    final palette = const ReaderChromePaletteResolver().resolve(theme);
+    final back = find.byKey(const Key('shared-reader-top-back-button'));
+    final action = find.byKey(const Key('shared-reader-top-action-search'));
+    final topActions = [
+      ReaderToolbarAction(
+        id: 'search',
+        icon: Icons.search,
+        label: '查找章节',
+        onPressed: () {},
+      ),
+    ];
+
+    Future<void> pump({
+      required AppGlassLevel? level,
+      bool highContrast = false,
+    }) async {
+      await tester.pumpWidget(
+        _buildScaffold(
+          theme: theme,
+          menuInitiallyVisible: true,
+          topActions: topActions,
+          glassLevel: level,
+          highContrast: highContrast,
+        ),
+      );
+      await tester.pump();
+    }
+
+    for (final level in [AppGlassLevel.standard, AppGlassLevel.enhanced]) {
+      await pump(level: level);
+      // 返回与每个顶栏动作各一块玻璃，来源是应用根唯一宿主。
+      expect(find.byType(LiquidGlass), findsNWidgets(2));
+      expect(find.byType(LiquidGlassHost), findsOneWidget);
+      for (final finder in [back, action]) {
+        expect(tester.getSize(finder).shortestSide, greaterThanOrEqualTo(48));
+        expect(
+          find.ancestor(of: finder, matching: find.byType(AppGlassSurface)),
+          findsOneWidget,
+        );
+      }
+    }
+
+    for (final sample in [
+      (level: AppGlassLevel.off, highContrast: false),
+      (level: AppGlassLevel.standard, highContrast: true),
+    ]) {
+      await pump(level: sample.level, highContrast: sample.highContrast);
+      expect(find.byType(LiquidGlass), findsNothing);
+      for (final finder in [back, action]) {
+        final surfaceFinder = find
+            .ancestor(of: finder, matching: find.byType(AppGlassSurface))
+            .first;
+        expect(
+          tester.widget<AppGlassSurface>(surfaceFinder).baseColor,
+          palette.chromeBackground,
+        );
+        expect(
+          tester
+              .widget<Material>(
+                find
+                    .descendant(
+                      of: surfaceFinder,
+                      matching: find.byType(Material),
+                    )
+                    .first,
+              )
+              .color,
+          palette.chromeBackground,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    }
+  });
 }
 
 Future<void> _pumpTapAndOverlayAnimation(WidgetTester tester) async {
@@ -264,16 +344,24 @@ Widget _buildScaffold({
   double textScale = 1,
   bool reduceMotion = false,
   Duration animationDuration = Duration.zero,
+  AppGlassLevel? glassLevel,
+  bool highContrast = false,
 }) {
   return LocalizedTestApp(
     theme: theme,
-    builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: TextScaler.linear(textScale),
-        disableAnimations: reduceMotion,
-      ),
-      child: child!,
-    ),
+    builder: (context, child) {
+      final content = MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(textScale),
+          disableAnimations: reduceMotion,
+          highContrast: highContrast,
+        ),
+        child: child!,
+      );
+      return glassLevel == null
+          ? content
+          : AppGlassEnvironment(glassLevel: glassLevel, child: content);
+    },
     home: Scaffold(
       body: ReaderOverlayScaffold(
         controller: controller,

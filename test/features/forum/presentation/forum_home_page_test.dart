@@ -171,7 +171,14 @@ void main() {
 
       expect(find.byType(Scaffold), findsOneWidget);
       expect(find.byKey(const Key('forum-home-list')), findsNothing);
-      expect(find.byKey(const Key('forum-home-blank-body')), findsOneWidget);
+      expect(find.byKey(const Key('forum-home-loading')), findsOneWidget);
+      expect(
+        find.text(
+          AppLocalizations.of(tester.element(find.byType(ForumHomePage)))
+              .commonLoading,
+        ),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const Key('forum-home-refresh-progress')),
         findsNothing,
@@ -183,6 +190,61 @@ void main() {
       expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
       expect(find.text('综合区'), findsOneWidget);
       expect(find.text('公告区'), findsOneWidget);
+    });
+
+    testWidgets('empty directory shows the shared empty state', (tester) async {
+      final repository = _FakeForumHomeRepository(
+        () async => forumHomeReadSuccess(_emptyPayload()),
+      );
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-home-empty-state')), findsOneWidget);
+      expect(
+        find.text(
+          AppLocalizations.of(tester.element(find.byType(ForumHomePage)))
+              .forumHomeEmpty,
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
+    });
+
+    testWidgets('load failure uses the shared error state and retries', (
+      tester,
+    ) async {
+      var requests = 0;
+      final repository = _FakeForumHomeRepository(() async {
+        requests += 1;
+        if (requests == 1) {
+          return const DataReadFailure(
+            kind: DataReadFailureKind.network,
+            diagnosticMessage: 'fixture-offline',
+          );
+        }
+        return forumHomeReadSuccess(_loggedOutPayload());
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository, retry: (_, _) => null));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-home-retry-button')), findsOneWidget);
+      expect(
+        find.text(
+          AppLocalizations.of(tester.element(find.byType(ForumHomePage)))
+              .commonRetry,
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('forum-home-list')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('forum-home-retry-button')));
+      await tester.pumpAndSettle();
+
+      expect(requests, 2);
+      expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
+      expect(find.byKey(const Key('forum-home-retry-button')), findsNothing);
     });
 
     testWidgets(
@@ -1437,7 +1499,8 @@ void main() {
         confirm('20');
         await tester.pump();
         await tester.pump();
-        expect(find.byKey(const Key('forum-home-blank-body')), findsOneWidget);
+        // 换号后旧内容必须消失；等待新账号内容时显示公共加载态。
+        expect(find.byKey(const Key('forum-home-loading')), findsOneWidget);
         expect(find.byKey(const Key('forum-home-list')), findsNothing);
         expect(tester.takeException(), isNull);
       },
@@ -1651,8 +1714,10 @@ Widget _buildTestApp(
   ForumImagePrecacheService? forumImagePrecacheService,
   List<riverpod_misc.Override> extraOverrides =
       const <riverpod_misc.Override>[],
+  Duration? Function(int, Object)? retry,
 }) {
   return ProviderScope(
+    retry: retry,
     overrides: _overrides(
       repository,
       launcher: launcher,
@@ -1734,6 +1799,14 @@ ForumHomePayload _loggedOutPayload({
     isLoggedIn: false,
     favoriteForums: const [],
     chromeData: ForumHomeChromeData(carouselItems: carouselItems),
+  );
+}
+
+ForumHomePayload _emptyPayload() {
+  return ForumHomePayload(
+    directory: const ForumDirectoryData(sections: []),
+    isLoggedIn: false,
+    favoriteForums: const [],
   );
 }
 

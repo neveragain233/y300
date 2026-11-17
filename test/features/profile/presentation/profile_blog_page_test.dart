@@ -16,6 +16,7 @@ import 'package:y300/features/profile/presentation/blog/blog_action_page.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_page.dart';
 import 'package:y300/features/profile/presentation/profile_user_link.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
@@ -57,6 +58,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          expect(find.byType(AppPageAppBar), findsOneWidget);
           if (source != 'list') {
             await tester.tap(find.byKey(const Key('profile-blog-item-117558')));
             await tester.pumpAndSettle();
@@ -802,7 +804,7 @@ void main() {
       expect(find.byKey(const Key('blog-detail-open-web')), findsNothing);
       expect(
         find.descendant(
-          of: find.byType(AppBar),
+          of: find.byType(AppPageAppBar),
           matching: find.byIcon(Icons.open_in_browser),
         ),
         findsNothing,

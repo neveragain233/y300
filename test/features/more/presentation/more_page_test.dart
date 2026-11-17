@@ -14,7 +14,6 @@ import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
-import 'package:y300/app/theme/app_theme_palette.dart';
 import 'package:y300/core/network/api_result.dart';
 import 'package:y300/core/network/cookie_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -32,7 +31,8 @@ import 'package:y300/features/messages/data/message_repository_provider.dart';
 import 'package:y300/features/messages/presentation/message_center_page.dart';
 import 'package:y300/features/messages/presentation/message_feed_providers.dart';
 import 'package:y300/features/messages/presentation/widgets/message_attention_icon.dart';
-import 'package:y300/features/more/presentation/appearance_settings_sheet.dart';
+import 'package:y300/features/more/presentation/about_page.dart';
+import 'package:y300/features/more/presentation/settings_page.dart';
 import 'package:y300/features/more/presentation/more_page.dart';
 import 'package:y300/features/profile/data/providers/daily_sign_in_providers.dart';
 import 'package:y300/features/profile/data/providers/friend_read_providers.dart';
@@ -55,35 +55,63 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
   for (final locale in [const Locale('zh'), const Locale('zh', 'TW')]) {
-    testWidgets('More has no clipboard setting in ${locale.toLanguageTag()}', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
-            appAppearanceControllerProvider.overrideWith(
-              () => _FakeAppAppearanceController(),
-            ),
-          ],
-          child: LocalizedTestApp(home: const MorePage(), locale: locale),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final navigationEntry = find.byKey(
-        const Key('more-navigation-management-entry'),
-      );
-      await _scrollUntilVisibleIfNeeded(tester, navigationEntry);
-      final l10n = AppLocalizations.of(tester.element(navigationEntry));
-      expect(find.text(l10n.moreNavigationManagement), findsOneWidget);
-      expect(find.text(l10n.moreAppearance), findsOneWidget);
-      expect(find.byType(SwitchListTile), findsNothing);
-      expect(find.byIcon(Icons.content_paste_go_outlined), findsNothing);
-      expect(
-        find.byKey(const Key('more-clipboard-link-detection-switch')),
-        findsNothing,
-      );
-    });
+    testWidgets(
+      'More keeps one settings entry without duplicate settings rows in '
+      '${locale.toLanguageTag()}',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
+              appAppearanceControllerProvider.overrideWith(
+                () => _FakeAppAppearanceController(),
+              ),
+            ],
+            child: LocalizedTestApp(home: const MorePage(), locale: locale),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final settingsEntry = find.byKey(const Key('more-settings-entry'));
+        await _scrollUntilVisibleIfNeeded(tester, settingsEntry);
+        final l10n = AppLocalizations.of(tester.element(settingsEntry));
+        expect(
+          (tester.widget<ListTile>(settingsEntry).title! as Text).data,
+          l10n.moreSectionSettings,
+        );
+        for (final key in [
+          'more-appearance-entry',
+          'more-navigation-management-entry',
+          'more-content-filter-entry',
+          'more-thread-controls-entry',
+          'more-data-storage-entry',
+          'more-about-entry',
+          'more-composer-quill-prototype-entry',
+          'more-html-renderer-prototype-entry',
+        ]) {
+          expect(find.byKey(Key(key)), findsNothing, reason: key);
+        }
+        expect(find.byType(SwitchListTile), findsNothing);
+        expect(find.byIcon(Icons.content_paste_go_outlined), findsNothing);
+        expect(
+          find.byKey(const Key('more-clipboard-link-detection-switch')),
+          findsNothing,
+        );
+
+        await tester.tap(settingsEntry);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('settings-page')), findsOneWidget);
+        expect(
+          find.byKey(const Key('more-navigation-management-entry')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('more-appearance-entry')), findsOneWidget);
+        expect(
+          find.byKey(const Key('more-clipboard-link-detection-switch')),
+          findsNothing,
+        );
+        expect(find.byType(SwitchListTile), findsNothing);
+      },
+    );
   }
 
   for (final type in UserThreadDirectoryType.values) {
@@ -537,10 +565,11 @@ void main() {
     );
     await _scrollUntilVisibleIfNeeded(
       tester,
-      find.byKey(const Key('more-appearance-entry')),
+      find.byKey(const Key('more-settings-entry')),
     );
-    expect(find.byKey(const Key('more-appearance-entry')), findsOneWidget);
-    expect(find.byKey(const Key('more-data-storage-entry')), findsOneWidget);
+    expect(find.byKey(const Key('more-settings-entry')), findsOneWidget);
+    expect(find.byKey(const Key('more-appearance-entry')), findsNothing);
+    expect(find.byKey(const Key('more-data-storage-entry')), findsNothing);
   });
 
   testWidgets('MorePage renders entries without descriptions', (tester) async {
@@ -579,26 +608,13 @@ void main() {
     expect(find.byKey(const Key('more-unused-images-entry')), findsOneWidget);
     expect(find.text('未使用图片管理'), findsOneWidget);
     expect(find.byKey(const Key('more-forum-mode-entry')), findsNothing);
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-appearance-entry')),
-    );
-    expect(find.byKey(const Key('more-appearance-entry')), findsOneWidget);
-    expect(find.text('外观与文字'), findsOneWidget);
-    expect(
-      find.byKey(const Key('more-navigation-management-entry')),
-      findsOneWidget,
-    );
-    expect(find.text('导航栏管理'), findsOneWidget);
     expect(find.byKey(const Key('more-cache-settings-entry')), findsNothing);
-    expect(find.byKey(const Key('more-data-storage-entry')), findsOneWidget);
-    expect(find.text('数据与存储'), findsOneWidget);
+    expect(find.byKey(const Key('more-settings-entry')), findsOneWidget);
     final l10n = AppLocalizations.of(tester.element(find.byType(MorePage)));
     await _expectMyContentEntryOrderAndLabels(tester, l10n);
     expect(find.text(l10n.moreMyProfile), findsNothing);
     expect(find.text(l10n.moreMyProfileSignedOutSubtitle), findsNothing);
     expect(find.text(l10n.moreUnusedImagesSubtitle), findsNothing);
-    expect(find.text(l10n.moreDataAndStorageSubtitle), findsNothing);
     expect(find.text(l10n.moreVisibleNavigationCount(5)), findsNothing);
     await _scrollUntilVisibleIfNeeded(
       tester,
@@ -613,22 +629,6 @@ void main() {
       find.byKey(const Key('more-reader-settings-placeholder')),
       findsNothing,
     );
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-composer-quill-prototype-entry')),
-    );
-    expect(
-      find.byKey(const Key('more-composer-quill-prototype-entry')),
-      findsOneWidget,
-    );
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-html-renderer-prototype-entry')),
-    );
-    expect(
-      find.byKey(const Key('more-html-renderer-prototype-entry')),
-      findsOneWidget,
-    );
     expect(
       find.byKey(const Key('more-thread-detail-diagnostic-switch')),
       findsNothing,
@@ -637,13 +637,74 @@ void main() {
       find.byKey(const Key('more-thread-detail-diagnostic-copy-entry')),
       findsNothing,
     );
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-about-entry')),
+  });
+
+  testWidgets('settings entry opens the migrated settings page', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
+          appAppearanceControllerProvider.overrideWith(
+            () => _FakeAppAppearanceController(),
+          ),
+        ],
+        child: const LocalizedTestApp(home: MorePage()),
+      ),
     );
-    expect(find.byKey(const Key('more-about-entry')), findsOneWidget);
-    expect(find.text('关于'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    final settingsEntry = find.byKey(const Key('more-settings-entry'));
+    await _scrollUntilVisibleIfNeeded(tester, settingsEntry);
+    await tester.tap(settingsEntry);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingsPage), findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
+    Future<void> expectVisible(Finder finder) async {
+      await _scrollUntilVisibleIfNeeded(tester, finder);
+      expect(finder, findsOneWidget);
+    }
+
+    await expectVisible(find.text(l10n.settingsSectionAppearanceNavigation));
+    await expectVisible(find.byKey(const Key('more-appearance-entry')));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('more-appearance-entry')),
+        matching: find.byIcon(Icons.chevron_right),
+      ),
+      findsOneWidget,
+    );
+    await expectVisible(
+      find.byKey(const Key('more-navigation-management-entry')),
+    );
+    await expectVisible(find.text(l10n.settingsSectionBrowsingPosts));
+    await expectVisible(find.byKey(const Key('more-content-filter-entry')));
+    await expectVisible(find.byKey(const Key('more-thread-controls-entry')));
+    await expectVisible(find.text(l10n.settingsSectionStorageAbout));
+    await expectVisible(find.byKey(const Key('more-data-storage-entry')));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('more-data-storage-entry')),
+        matching: find.byIcon(Icons.chevron_right),
+      ),
+      findsNothing,
+    );
+    await expectVisible(find.byKey(const Key('more-about-entry')));
+    await expectVisible(find.text(l10n.settingsSectionDebug));
+    await expectVisible(
+      find.byKey(const Key('more-composer-quill-prototype-entry')),
+    );
+    await expectVisible(
+      find.byKey(const Key('more-html-renderer-prototype-entry')),
+    );
     expect(find.text(l10n.moreAboutSubtitle), findsNothing);
+
+    await tester.tap(find.byKey(const Key('more-about-entry')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AboutPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('MorePage cache queue entry supports large Traditional text', (
@@ -706,10 +767,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final settingsEntry = find.byKey(const Key('more-settings-entry'));
+    await _scrollUntilVisibleIfNeeded(tester, settingsEntry);
+    await tester.tap(settingsEntry);
+    await tester.pumpAndSettle();
     final entry = find.byKey(const Key('more-html-renderer-prototype-entry'));
     await _scrollUntilVisibleIfNeeded(tester, entry);
-    await tester.drag(find.byType(ListView), const Offset(0, -80));
-    await tester.pumpAndSettle();
     await tester.tap(entry);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -1108,394 +1171,6 @@ void main() {
       0,
     );
   });
-
-  testWidgets('MorePage changes theme family and brightness independently', (
-    tester,
-  ) async {
-    final appearanceController = _FakeAppAppearanceController();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
-
-          appAppearanceControllerProvider.overrideWith(
-            () => appearanceController,
-          ),
-        ],
-        child: const LocalizedTestApp(home: MorePage()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-appearance-entry')),
-    );
-    await tester.tap(find.byKey(const Key('more-appearance-entry')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('appearance-settings-sheet')), findsOneWidget);
-    expect(
-      find.text(
-        AppLocalizations.of(tester.element(find.byType(MorePage)))
-            .appNavigationMy,
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('外观与文字'), findsOneWidget);
-    expect(
-      find.byKey(const Key('appearance-settings-close-button')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('appearance-theme-segmented-button')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('appearance-theme-family-warmPaper')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('appearance-theme-family-moonWhite')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('appearance-theme-family-plumPurple')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('appearance-brightness-option-system')),
-      findsOneWidget,
-    );
-    expect(find.byIcon(Icons.check), findsNothing);
-    for (final family in AppThemeFamily.values) {
-      final palette = AppThemePalette.resolve(family, Brightness.light);
-      final swatch = tester.widget<Container>(
-        find.byKey(Key('appearance-theme-family-swatch-${family.name}')),
-      );
-      final primarySwatch = find.byKey(
-        Key('appearance-theme-family-swatch-${family.name}-primary'),
-      );
-      final pageSwatch = find.byKey(
-        Key('appearance-theme-family-swatch-${family.name}-page'),
-      );
-      expect(tester.widget<ColoredBox>(primarySwatch).color, palette.primary);
-      expect(
-        tester.widget<ColoredBox>(pageSwatch).color,
-        palette.surfaceContainer,
-      );
-      expect(tester.getSize(primarySwatch).height, greaterThan(0));
-      expect(tester.getSize(pageSwatch).height, greaterThan(0));
-      expect(
-        tester.getSize(primarySwatch).width,
-        tester.getSize(pageSwatch).width,
-      );
-      expect((swatch.decoration! as BoxDecoration).border, isNull);
-    }
-
-    await tester.tap(
-      find.byKey(const Key('appearance-theme-family-plumPurple')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const Key('appearance-brightness-option-dark')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(appearanceController.themeFamily, AppThemeFamily.plumPurple);
-    expect(
-      appearanceController.brightnessPreference,
-      AppBrightnessPreference.dark,
-    );
-    expect(
-      find.byKey(const Key('appearance-brightness-icon-dark')),
-      findsOneWidget,
-    );
-    expect(find.byIcon(Icons.check), findsNothing);
-
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('appearance-settings-sheet')), findsNothing);
-  });
-
-  testWidgets('Appearance theme swatches follow the active brightness', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appAppearanceControllerProvider.overrideWith(
-            _FakeAppAppearanceController.new,
-          ),
-        ],
-        child: LocalizedTestApp(
-          theme: AppTheme.dark(),
-          home: const Scaffold(body: AppearanceSettingsSheet()),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    for (final family in AppThemeFamily.values) {
-      final palette = AppThemePalette.resolve(family, Brightness.dark);
-      expect(
-        tester
-            .widget<ColoredBox>(
-              find.byKey(
-                Key('appearance-theme-family-swatch-${family.name}-primary'),
-              ),
-            )
-            .color,
-        palette.primary,
-      );
-      expect(
-        tester
-            .widget<ColoredBox>(
-              find.byKey(
-                Key('appearance-theme-family-swatch-${family.name}-page'),
-              ),
-            )
-            .color,
-        palette.surfaceContainer,
-      );
-    }
-  });
-
-  testWidgets(
-    'Appearance settings keeps each option group on one scrollable row',
-    (tester) async {
-      tester.view.physicalSize = const Size(280, 720);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final appearanceController = _FakeAppAppearanceController();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            appAppearanceControllerProvider.overrideWith(
-              () => appearanceController,
-            ),
-          ],
-          child: const LocalizedTestApp(
-            locale: Locale('zh', 'TW'),
-            home: MediaQuery(
-              data: MediaQueryData(
-                size: Size(280, 720),
-                textScaler: TextScaler.linear(1.6),
-              ),
-              child: Scaffold(body: AppearanceSettingsSheet()),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      Future<void> scrollSheet(double dy) async {
-        await tester.drag(
-          find.byKey(const Key('appearance-settings-sheet')),
-          Offset(0, dy),
-        );
-        await tester.pumpAndSettle();
-      }
-
-      void expectHorizontalStrip(Key key, {bool needsScroll = true}) {
-        final strip = find.byKey(key);
-        expect(strip, findsOneWidget);
-        expect(
-          tester.widget<SingleChildScrollView>(strip).scrollDirection,
-          Axis.horizontal,
-        );
-        if (!needsScroll) {
-          return;
-        }
-        final scrollable = tester.state<ScrollableState>(
-          find.descendant(of: strip, matching: find.byType(Scrollable)),
-        );
-        expect(scrollable.position.maxScrollExtent, greaterThan(0));
-      }
-
-      expectHorizontalStrip(
-        const Key('appearance-theme-family-options-scroll'),
-      );
-      expectHorizontalStrip(const Key('appearance-brightness-options-scroll'));
-
-      _expectSameVerticalCenter(tester, const <Key>[
-        Key('appearance-brightness-option-light'),
-        Key('appearance-brightness-option-dark'),
-        Key('appearance-brightness-option-system'),
-      ]);
-      _expectSingleLineButtonLabel(
-        tester,
-        const Key('appearance-brightness-option-system'),
-      );
-
-      await scrollSheet(-220);
-      expectHorizontalStrip(
-        const Key('appearance-navigation-options-scroll'),
-        needsScroll: false,
-      );
-      expect(
-        find.byKey(const Key('appearance-navigation-swipe')),
-        findsOneWidget,
-      );
-
-      await scrollSheet(-260);
-      expectHorizontalStrip(const Key('appearance-language-options-scroll'));
-      _expectSameVerticalCenter(tester, const <Key>[
-        Key('appearance-language-option-system'),
-        Key('appearance-language-option-simplifiedChinese'),
-        Key('appearance-language-option-traditionalChinese'),
-      ]);
-      _expectSingleLineButtonLabel(
-        tester,
-        const Key('appearance-language-option-traditionalChinese'),
-      );
-
-      final languageStrip = find.byKey(
-        const Key('appearance-language-options-scroll'),
-      );
-      final languageScrollable = tester.state<ScrollableState>(
-        find.descendant(of: languageStrip, matching: find.byType(Scrollable)),
-      );
-      await tester.drag(languageStrip, const Offset(-160, 0));
-      await tester.pumpAndSettle();
-      expect(languageScrollable.position.pixels, greaterThan(0));
-
-      await scrollSheet(-260);
-      await scrollSheet(700);
-      expect(
-        tester
-            .widget<SingleChildScrollView>(
-              find.byKey(const Key('appearance-theme-family-options-scroll')),
-            )
-            .scrollDirection,
-        Axis.horizontal,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('Appearance settings drawer changes app language', (
-    tester,
-  ) async {
-    final appearanceController = _FakeAppAppearanceController();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
-
-          appAppearanceControllerProvider.overrideWith(
-            () => appearanceController,
-          ),
-        ],
-        child: const LocalizedTestApp(home: MorePage()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-appearance-entry')),
-    );
-    await tester.tap(find.byKey(const Key('more-appearance-entry')));
-    await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const Key('appearance-settings-sheet')),
-      const Offset(0, -420),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const Key('appearance-language-option-system')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('appearance-language-option-simplifiedChinese')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('appearance-language-option-traditionalChinese')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('appearance-language-icon-system')),
-      findsOneWidget,
-    );
-    expect(find.byIcon(Icons.check), findsNothing);
-    expect(
-      find.byKey(const Key('appearance-language-behavior-description')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('appearance-language-content-note')),
-      findsNothing,
-    );
-    expect(find.text('界面语言跟随设备，服务器内容保持原文'), findsNothing);
-    expect(find.text('用户名和网页模式内容保持原样'), findsNothing);
-
-    final traditionalOption = find.byKey(
-      const Key('appearance-language-option-traditionalChinese'),
-    );
-    await Scrollable.ensureVisible(tester.element(traditionalOption));
-    await tester.pumpAndSettle();
-    await tester.tap(traditionalOption);
-    await tester.pumpAndSettle();
-
-    expect(
-      appearanceController.languagePreference,
-      AppLanguage.traditionalChinese,
-    );
-    expect(
-      find.byKey(const Key('appearance-language-icon-traditionalChinese')),
-      findsOneWidget,
-    );
-    expect(find.byIcon(Icons.check), findsNothing);
-    expect(find.text('界面使用繁体，原生解析内容转换为繁体'), findsNothing);
-  });
-
-  testWidgets('Appearance settings drawer shows snackbar when save fails', (
-    tester,
-  ) async {
-    final appearanceController = _FakeAppAppearanceController(failOnSave: true);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
-
-          appAppearanceControllerProvider.overrideWith(
-            () => appearanceController,
-          ),
-        ],
-        child: const LocalizedTestApp(home: MorePage()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _scrollUntilVisibleIfNeeded(
-      tester,
-      find.byKey(const Key('more-appearance-entry')),
-    );
-    await tester.tap(find.byKey(const Key('more-appearance-entry')));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const Key('appearance-brightness-option-system')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('主题设置保存失败'), findsOneWidget);
-    expect(
-      appearanceController.brightnessPreference,
-      AppBrightnessPreference.light,
-    );
-    expect(find.byKey(const Key('appearance-settings-sheet')), findsOneWidget);
-    expect(
-      find.byKey(const Key('appearance-brightness-icon-light')),
-      findsOneWidget,
-    );
-    expect(find.byIcon(Icons.check), findsNothing);
-  });
 }
 
 Future<void> _expectMyContentEntryOrderAndLabels(
@@ -1664,23 +1339,6 @@ ForumWebViewRouteFactory _profileWebRoutes(
   );
 };
 
-void _expectSameVerticalCenter(WidgetTester tester, List<Key> keys) {
-  final centers = keys
-      .map((key) => tester.getCenter(find.byKey(key)).dy)
-      .toList(growable: false);
-  for (final center in centers.skip(1)) {
-    expect(center, closeTo(centers.first, 0.01));
-  }
-}
-
-void _expectSingleLineButtonLabel(WidgetTester tester, Key buttonKey) {
-  final label = tester.widget<Text>(
-    find.descendant(of: find.byKey(buttonKey), matching: find.byType(Text)),
-  );
-  expect(label.maxLines, 1);
-  expect(label.softWrap, isFalse);
-}
-
 Future<void> _scrollUntilVisibleIfNeeded(
   WidgetTester tester,
   Finder finder,
@@ -1847,15 +1505,7 @@ class _FakeAuthRepository implements AuthRepository {
 }
 
 class _FakeAppAppearanceController extends AppAppearanceController {
-  _FakeAppAppearanceController({this.failOnSave = false});
-
-  final bool failOnSave;
   var _settings = AppAppearanceSettings.defaults();
-
-  AppThemeFamily get themeFamily => _settings.themeFamily;
-  AppBrightnessPreference get brightnessPreference =>
-      _settings.brightnessPreference;
-  AppLanguage get languagePreference => _settings.languagePreference;
 
   @override
   Future<AppAppearanceSettings> build() async {
@@ -1864,52 +1514,22 @@ class _FakeAppAppearanceController extends AppAppearanceController {
 
   @override
   Future<void> setThemeFamily(AppThemeFamily family) async {
-    final previous = _settings;
-    if (previous.themeFamily == family) {
-      return;
-    }
-    _settings = previous.copyWith(themeFamily: family);
+    _settings = _settings.copyWith(themeFamily: family);
     state = AsyncData(_settings);
-    if (!failOnSave) {
-      return;
-    }
-    _settings = previous;
-    state = AsyncData(previous);
-    throw StateError('save failed');
   }
 
   @override
   Future<void> setBrightnessPreference(
     AppBrightnessPreference preference,
   ) async {
-    final previous = _settings;
-    if (previous.brightnessPreference == preference) {
-      return;
-    }
-    _settings = previous.copyWith(brightnessPreference: preference);
+    _settings = _settings.copyWith(brightnessPreference: preference);
     state = AsyncData(_settings);
-    if (!failOnSave) {
-      return;
-    }
-    _settings = previous;
-    state = AsyncData(previous);
-    throw StateError('save failed');
   }
 
   @override
   Future<void> setLanguagePreference(AppLanguage language) async {
-    final previous = _settings;
-    if (previous.languagePreference == language) {
-      return;
-    }
-    _settings = previous.copyWith(languagePreference: language);
+    _settings = _settings.copyWith(languagePreference: language);
     state = AsyncData(_settings);
-    if (!failOnSave) {
-      return;
-    }
-    _settings = previous;
-    state = AsyncData(previous);
-    throw StateError('save failed');
   }
 }
 

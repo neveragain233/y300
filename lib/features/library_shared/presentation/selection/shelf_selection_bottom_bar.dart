@@ -9,6 +9,7 @@ import 'package:y300/features/library_shared/presentation/selection/shelf_select
 import 'package:y300/features/library_shared/presentation/services/library_error_summary.dart';
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 
 /// Shares selection actions between tabbed and independently opened shelves.
 class ShelfSelectionBottomBar extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _ShelfSelectionBottomBarState
   Future<bool?> _confirmSelectionAction(
     SelectionAction action,
     ShelfSelectionHostState? state,
-  ) {
+  ) async {
     final l10n = AppLocalizations.of(context);
     final selectedCount = state?.selectedCount ?? 0;
     final title = action.id == SelectionActionIds.unfavorite
@@ -124,24 +125,12 @@ class _ShelfSelectionBottomBarState
             selectedCount,
             SelectionActionTextResolver.label(l10n, action.id),
           );
-    return showDialog<bool>(
+    return showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(content),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
+      title: title,
+      message: content,
+      confirmLabel: l10n.commonConfirm,
+      cancelLabel: l10n.commonCancel,
     );
   }
 
@@ -193,9 +182,7 @@ class _ShelfSelectionBottomBarState
                 leading: const Icon(Icons.playlist_remove),
                 title: Text(l10n.libraryShelfRemoveFromCategory),
                 onTap: () {
-                  Navigator.of(
-                    sheetContext,
-                  ).pop(LibraryCategoryTargets.home);
+                  Navigator.of(sheetContext).pop(LibraryCategoryTargets.home);
                 },
               ),
               const Divider(height: 1),

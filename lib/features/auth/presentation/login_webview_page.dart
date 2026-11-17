@@ -10,6 +10,7 @@ import 'package:y300/features/auth/data/services/webview_login_session_resolver.
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/presentation/auth_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// 基于 WebView 的登录页。
 ///
@@ -64,8 +65,8 @@ class _LoginWebViewPageState extends ConsumerState<LoginWebViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).authLoginTitle),
+      appBar: AppPageAppBar(
+        title: AppLocalizations.of(context).authLoginTitle,
         bottom: _loadProgress < 100
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(2),

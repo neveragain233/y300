@@ -17,15 +17,15 @@ import 'package:y300/features/thread/presentation/services/thread_post_route_lau
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 
-typedef UserThreadOpener =
-    void Function(
-      BuildContext context,
-      UserThreadSummary thread,
-      UserThreadReplyPreview? reply,
-    );
+typedef UserThreadOpener = void Function(
+  BuildContext context,
+  UserThreadSummary thread,
+  UserThreadReplyPreview? reply,
+);
 
 class UserThreadPage extends ConsumerStatefulWidget {
   const UserThreadPage({
@@ -133,10 +133,8 @@ class _UserThreadPageState extends ConsumerState<UserThreadPage> {
     final loginRequiredMessage = isSelf
         ? l10n.profileThreadsLoginRequired
         : l10n.profileUserThreadsLoginRequired;
-    final appBar = AppBar(
-      title: Text(
-        isSelf ? l10n.profileMyThreadsTitle : l10n.profileUserThreadsTitle,
-      ),
+    final appBar = AppPageAppBar(
+      title: isSelf ? l10n.profileMyThreadsTitle : l10n.profileUserThreadsTitle,
     );
     if (owner == null) {
       _postRouteSession.invalidate();
@@ -360,9 +358,9 @@ class _UserThreadFeedState extends State<_UserThreadFeed> {
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).y300NativeContent.supportingText,
+                                  color: Theme.of(context)
+                                      .y300NativeContent
+                                      .supportingText,
                                 ),
                           ),
                         ],

@@ -86,6 +86,7 @@ class ThreadDetailHtmlParser {
       author: posts.isEmpty ? '' : posts.first.author,
       replies: threadHeader.replies,
       views: threadHeader.views,
+      hasServerCounts: threadHeader.hasCounts,
       currentPage: page,
       perPage: posts.isEmpty ? 20 : posts.length,
       posts: List<ThreadPost>.unmodifiable(posts),
@@ -138,6 +139,7 @@ class ThreadDetailHtmlParser {
       author: posts.isEmpty ? '' : posts.first.author,
       replies: threadHeader.replies,
       views: threadHeader.views,
+      hasServerCounts: threadHeader.hasCounts,
       currentPage: page,
       perPage: posts.isEmpty ? 20 : posts.length,
       posts: List<ThreadPost>.unmodifiable(posts),
@@ -188,6 +190,8 @@ class ThreadDetailHtmlParser {
       forumUrl: _resolve(forumAnchor?.attributes['href']),
       views: metrics.isEmpty ? 0 : metrics.first,
       replies: replies,
+      // 计数只随首楼统计块返回；后续页没有可用的服务器计数。
+      hasCounts: metrics.isNotEmpty,
     );
   }
 
@@ -213,6 +217,7 @@ class ThreadDetailHtmlParser {
       forumUrl: _resolve(forumAnchor?.attributes['href']),
       views: _parseLabeledInt(statText, '查看'),
       replies: _parseLabeledInt(statText, '回复'),
+      hasCounts: statText.isNotEmpty,
     );
   }
 
@@ -1650,6 +1655,7 @@ class _ThreadHeader {
     required this.subject,
     required this.views,
     required this.replies,
+    this.hasCounts = false,
     this.typeName,
     this.forumName,
     this.forumUrl,
@@ -1661,4 +1667,5 @@ class _ThreadHeader {
   final String? forumUrl;
   final int views;
   final int replies;
+  final bool hasCounts;
 }

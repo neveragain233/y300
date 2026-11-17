@@ -8,6 +8,8 @@ import 'package:y300/features/more/data/about_providers.dart';
 import 'package:y300/features/more/domain/models/about_app_info.dart';
 import 'package:y300/features/more/presentation/more_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class AboutPage extends ConsumerStatefulWidget {
@@ -29,7 +31,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     final appInfo = ref.watch(aboutAppInfoProvider);
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.moreAbout)),
+      appBar: AppPageAppBar(title: l10n.moreAbout),
       body: SafeArea(
         child: Align(
           alignment: Alignment.topCenter,
@@ -37,28 +39,34 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             constraints: const BoxConstraints(maxWidth: 640),
             child: ListView(
               key: const Key('about-page-list'),
-              padding: const EdgeInsets.only(bottom: 32),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 _AboutHeader(appInfo: appInfo.value),
-                _AboutSectionLabel(l10n.moreAboutVersionSection),
-                const AppUpdateCheckTile(showVersionSubtitle: false),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                ListTile(
-                  key: const Key('about-release-notes-entry'),
-                  leading: const Icon(Icons.history_outlined),
-                  title: Text(l10n.moreAboutReleaseNotes),
-                  trailing: const Icon(Icons.chevron_right),
-                  enabled: _installedVersion(appInfo.value) != null,
-                  onTap: () => _openReleaseNotes(appInfo.value),
+                AppGroupedSection(
+                  title: l10n.moreAboutVersionSection,
+                  children: [
+                    const AppUpdateCheckTile(showVersionSubtitle: false),
+                    AppGroupedRow(
+                      key: const Key('about-release-notes-entry'),
+                      leading: const Icon(Icons.history_outlined),
+                      title: l10n.moreAboutReleaseNotes,
+                      showChevron: true,
+                      enabled: _installedVersion(appInfo.value) != null,
+                      onTap: () => _openReleaseNotes(appInfo.value),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                _AboutSectionLabel(l10n.moreAboutProjectSection),
-                ListTile(
-                  key: const Key('about-github-entry'),
-                  leading: const FaIcon(FontAwesomeIcons.github),
-                  title: Text(l10n.moreAboutGitHub),
-                  trailing: const Icon(Icons.open_in_new),
-                  onTap: _openGitHubRepository,
+                AppGroupedSection(
+                  title: l10n.moreAboutProjectSection,
+                  children: [
+                    AppGroupedRow(
+                      key: const Key('about-github-entry'),
+                      leading: const FaIcon(FontAwesomeIcons.github),
+                      title: l10n.moreAboutGitHub,
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: _openGitHubRepository,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -117,7 +125,7 @@ class _AboutHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
       child: Column(
         children: [
           Image.asset(
@@ -140,25 +148,6 @@ class _AboutHeader extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AboutSectionLabel extends StatelessWidget {
-  const _AboutSectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-        ),
       ),
     );
   }

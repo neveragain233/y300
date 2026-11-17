@@ -143,12 +143,11 @@ class _ThreadPostRateSheetState extends State<ThreadPostRateSheet> {
               },
             ),
             const SizedBox(height: 8),
-            SwitchListTile(
-              key: const Key('thread-post-rate-notify-switch'),
-              contentPadding: EdgeInsets.zero,
+            _RateSheetSwitchRow(
+              controlKey: const Key('thread-post-rate-notify-switch'),
               value: _notifyAuthor,
               onChanged: (value) => setState(() => _notifyAuthor = value),
-              title: Text(l10n.threadRatingNotifyAuthor),
+              title: l10n.threadRatingNotifyAuthor,
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -277,6 +276,73 @@ class _ThreadPostCommentSheetState extends State<ThreadPostCommentSheet> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 评分面板内的开关行。
+///
+/// 面板是紧凑表单，没有分组列表表面；这里只取同一 prism 开关外观，
+/// 整行与开关都可切换，行高与相邻输入项保持一致。
+class _RateSheetSwitchRow extends StatelessWidget {
+  const _RateSheetSwitchRow({
+    required this.controlKey,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final Key controlKey;
+  final String title;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = onChanged != null;
+    void toggle() {
+      if (enabled) {
+        onChanged!(!value);
+      }
+    }
+
+    return Semantics(
+      container: true,
+      label: title,
+      toggled: value,
+      enabled: enabled,
+      onTap: enabled ? toggle : null,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? toggle : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: enabled
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
+                  ),
+                ),
+                AppPrismTheme(
+                  child: prism.Switch(
+                    key: controlKey,
+                    value: value,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

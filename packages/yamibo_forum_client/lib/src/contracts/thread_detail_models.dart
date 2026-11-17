@@ -344,6 +344,7 @@ class ThreadDetailData {
     this.shareUrl,
     this.homeUrl,
     this.desktopUrl,
+    this.hasServerCounts = true,
   });
 
   /// Stable thread identifier.
@@ -411,6 +412,13 @@ class ThreadDetailData {
 
   /// Validated desktop thread URL, when available.
   final String? desktopUrl;
+
+  /// Whether [replies] and [views] come from a parsed server statistics block.
+  ///
+  /// Mobile thread pages below the first page omit the first-post block that
+  /// carries both counters, so zero there means "unknown" rather than "none".
+  /// Appending such a page must keep the counts already known to the caller.
+  final bool hasServerCounts;
 
   /// Discuz 返回 replies 为回帖数，不含主楼，故这里使用 <= 保守判断。
   bool get hasMore {

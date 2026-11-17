@@ -53,10 +53,10 @@ class ThreadLoadMoreSection extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 8,
             children: [
-              TextButton(
+              NativePaginationButton(
                 key: const Key('thread-detail-previous-page-button'),
+                label: l10n.threadDetailPreviousPage,
                 onPressed: canLoadPrevious ? onLoadPreviousPage : null,
-                child: Text(l10n.threadDetailPreviousPage),
               ),
               Text(
                 lastPage == null
@@ -64,12 +64,12 @@ class ThreadLoadMoreSection extends StatelessWidget {
                     : l10n.threadControlsPageSummary(currentPage, lastPage!),
                 key: const Key('thread-detail-page-label'),
               ),
-              TextButton(
+              NativePaginationButton(
                 key: const Key('thread-detail-load-more-button'),
+                label: hasMore
+                    ? l10n.threadDetailNextPage
+                    : l10n.threadDetailNoMore,
                 onPressed: hasMore ? onLoadNextPage : null,
-                child: Text(
-                  hasMore ? l10n.threadDetailNextPage : l10n.threadDetailNoMore,
-                ),
               ),
             ],
           ),

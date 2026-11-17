@@ -244,6 +244,7 @@
   "commonClose": "关闭",
   "commonClear": "清空",
   "commonRetry": "重试",
+  "commonLoading": "正在加载",
   "commonApply": "应用",
   "commonSave": "保存",
   "commonDelete": "删除",
@@ -2560,5 +2561,245 @@
   "moreNavigationGroupingDescription": "漫画和小说合并为“书架”，位置由顺序中第一个可见书架入口决定；记录和日志列在“我的”中。隐藏设置继续作用于对应入口。",
   "readerCatalog": "目录",
   "readerBookmarks": "书签",
-  "readerBookmarksEmpty": "还没有书签章节"
+  "readerBookmarksEmpty": "还没有书签章节",
+  "appPrismClearSearch": "清除搜索",
+  "appPrismNoSearchResults": "没有找到匹配结果",
+  "appPrismSelect": "选择",
+  "appPrismShowLess": "收起",
+  "appPrismShowMore": "展开更多",
+  "appPrismHidePassword": "隐藏密码",
+  "appPrismShowPassword": "显示密码",
+  "appPrismSort": "排序",
+  "appPrismSubmit": "提交",
+  "appPrismDialog": "对话框",
+  "appearanceTitle": "外观",
+  "@appearanceTitle": {
+    "description": "设置主页的外观入口与全屏外观页标题"
+  },
+  "appearanceThemeModeSectionTitle": "主题模式",
+  "@appearanceThemeModeSectionTitle": {
+    "description": "外观页中明暗主题分组标题"
+  },
+  "appearancePreviewSemanticsLabel": "外观预览",
+  "@appearancePreviewSemanticsLabel": {
+    "description": "顶部手机示意预览的读屏标签"
+  },
+  "appearancePreviewCaption": "预览随当前设置即时更新",
+  "@appearancePreviewCaption": {
+    "description": "顶部预览下方的说明"
+  },
+  "appearanceDynamicColorLabel": "跟随系统动态色",
+  "@appearanceDynamicColorLabel": {
+    "description": "主题配色中跟随系统动态色的选项"
+  },
+  "appearanceLensFollowTitle": "透镜跟随方式",
+  "@appearanceLensFollowTitle": {
+    "description": "底栏透镜跟随方式开关标题"
+  },
+  "appearanceLensFollowPressDescription": "按下即跟随：透镜先移动到按下的入口，再从按压点继续跟手。",
+  "@appearanceLensFollowPressDescription": {
+    "description": "透镜按下即跟随模式的说明"
+  },
+  "appearanceLensFromSelectionDescription": "从当前入口拖动：透镜停在当前选中项，从该项按相对位移跟手。",
+  "@appearanceLensFromSelectionDescription": {
+    "description": "透镜从当前入口拖动模式的说明"
+  },
+  "appearanceManageBarEntry": "管理底栏入口",
+  "@appearanceManageBarEntry": {
+    "description": "外观页进入导航栏管理的行"
+  },
+  "appearanceResetAction": "恢复默认外观",
+  "@appearanceResetAction": {
+    "description": "外观页底部恢复默认外观的动作"
+  },
+  "appearanceResetConfirmTitle": "恢复默认外观",
+  "@appearanceResetConfirmTitle": {
+    "description": "恢复默认外观确认框标题"
+  },
+  "appearanceResetConfirmBody": "将重置主题、配色、明暗、玻璃、底栏样式、滑动和透镜跟随方式；语言与账号数据保持不变。",
+  "@appearanceResetConfirmBody": {
+    "description": "恢复默认外观确认框正文"
+  },
+  "appearanceResetConfirmAction": "恢复",
+  "@appearanceResetConfirmAction": {
+    "description": "恢复默认外观确认按钮"
+  },
+  "appearanceResetDone": "已恢复默认外观",
+  "@appearanceResetDone": {
+    "description": "恢复默认外观成功提示"
+  },
+  "appearanceResetFailed": "恢复默认外观失败：{error}",
+  "@appearanceResetFailed": {
+    "description": "恢复默认外观失败提示；error 是安全的外部错误摘要",
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "settingsSearchTooltip": "搜索设置",
+  "@settingsSearchTooltip": {
+    "description": "设置主页顶栏搜索按钮的提示"
+  },
+  "settingsSearchHint": "搜索设置",
+  "@settingsSearchHint": {
+    "description": "设置搜索输入框的占位提示"
+  },
+  "settingsSearchRecommendedTitle": "常用设置",
+  "@settingsSearchRecommendedTitle": {
+    "description": "设置搜索空输入时的常用入口分组标题"
+  },
+  "settingsSearchNoResults": "没有找到匹配的设置",
+  "@settingsSearchNoResults": {
+    "description": "设置搜索无匹配结果时的标题"
+  },
+  "settingsSearchNoResultsHint": "试试主题、外观、玻璃、底栏、缓存、更新或黑名单",
+  "@settingsSearchNoResultsHint": {
+    "description": "设置搜索无匹配结果时的关键词提示"
+  },
+  "settingsSearchSummaryAppearanceNavigation": "外观入口与底栏入口管理",
+  "@settingsSearchSummaryAppearanceNavigation": {
+    "description": "设置主页外观与导航分组的摘要"
+  },
+  "settingsSearchKeywordsAppearanceNavigation": "设置主页、外观、导航管理、分组",
+  "@settingsSearchKeywordsAppearanceNavigation": {
+    "description": "设置主页外观与导航分组搜索的关键词"
+  },
+  "settingsSearchSummaryAppearance": "主题模式、配色、玻璃、导航与底栏、语言",
+  "@settingsSearchSummaryAppearance": {
+    "description": "外观页入口的摘要"
+  },
+  "settingsSearchKeywordsAppearance": "主题、外观、浅色、深色、玻璃、底栏、透镜、配色、动态色、语言、简繁",
+  "@settingsSearchKeywordsAppearance": {
+    "description": "外观页入口搜索的关键词"
+  },
+  "settingsSearchSummaryNavigationManagement": "底栏入口排序、显隐与启动页",
+  "@settingsSearchSummaryNavigationManagement": {
+    "description": "导航管理页的摘要"
+  },
+  "settingsSearchKeywordsNavigationManagement": "底栏、入口、排序、显隐、启动页、导航",
+  "@settingsSearchKeywordsNavigationManagement": {
+    "description": "导航管理页搜索的关键词"
+  },
+  "settingsSearchSummaryBrowsingPosts": "内容屏蔽与帖子悬浮操作",
+  "@settingsSearchSummaryBrowsingPosts": {
+    "description": "设置主页浏览与帖子分组的摘要"
+  },
+  "settingsSearchKeywordsBrowsingPosts": "设置主页、浏览、帖子、屏蔽、分组",
+  "@settingsSearchKeywordsBrowsingPosts": {
+    "description": "设置主页浏览与帖子分组搜索的关键词"
+  },
+  "settingsSearchSummaryContentFilter": "黑名单作者、屏蔽帖子与过滤规则",
+  "@settingsSearchSummaryContentFilter": {
+    "description": "内容屏蔽页的摘要"
+  },
+  "settingsSearchKeywordsContentFilter": "黑名单、屏蔽、过滤、隐藏、帖子、用户",
+  "@settingsSearchKeywordsContentFilter": {
+    "description": "内容屏蔽页搜索的关键词"
+  },
+  "settingsSearchSummaryThreadControls": "帖子悬浮按钮的触区、导航与滚动",
+  "@settingsSearchSummaryThreadControls": {
+    "description": "帖子悬浮操作页的摘要"
+  },
+  "settingsSearchKeywordsThreadControls": "帖子、悬浮、控件、触区、手势、滚动、导航",
+  "@settingsSearchKeywordsThreadControls": {
+    "description": "帖子悬浮操作页搜索的关键词"
+  },
+  "settingsSearchSummaryStorageAbout": "数据与存储、关于与更新检查",
+  "@settingsSearchSummaryStorageAbout": {
+    "description": "设置主页存储与关于分组的摘要"
+  },
+  "settingsSearchKeywordsStorageAbout": "设置主页、存储、数据、关于、更新、分组",
+  "@settingsSearchKeywordsStorageAbout": {
+    "description": "设置主页存储与关于分组搜索的关键词"
+  },
+  "settingsSearchSummaryDataStorage": "缓存、下载与本地数据管理",
+  "@settingsSearchSummaryDataStorage": {
+    "description": "数据与存储弹层的摘要"
+  },
+  "settingsSearchKeywordsDataStorage": "缓存、存储、数据、清理、下载、占用",
+  "@settingsSearchKeywordsDataStorage": {
+    "description": "数据与存储弹层搜索的关键词"
+  },
+  "settingsSearchSummaryAbout": "版本、更新检查与开源信息",
+  "@settingsSearchSummaryAbout": {
+    "description": "关于页的摘要"
+  },
+  "settingsSearchKeywordsAbout": "关于、版本、更新、检查更新、开源、许可证",
+  "@settingsSearchKeywordsAbout": {
+    "description": "关于页搜索的关键词"
+  },
+  "settingsSearchSummaryDebug": "调试构建中的预览与渲染工具",
+  "@settingsSearchSummaryDebug": {
+    "description": "设置主页调试分组的摘要"
+  },
+  "settingsSearchKeywordsDebug": "调试、开发、预览、渲染、工具",
+  "@settingsSearchKeywordsDebug": {
+    "description": "设置主页调试分组搜索的关键词"
+  },
+  "settingsSearchSummaryThemeMode": "跟随系统、浅色或深色",
+  "@settingsSearchSummaryThemeMode": {
+    "description": "外观页主题模式分组的摘要"
+  },
+  "settingsSearchKeywordsThemeMode": "主题、模式、浅色、深色、暗色、明暗、跟随系统",
+  "@settingsSearchKeywordsThemeMode": {
+    "description": "外观页主题模式分组搜索的关键词"
+  },
+  "settingsSearchSummaryColorTheme": "暖纸、月白、绛紫与系统动态色",
+  "@settingsSearchSummaryColorTheme": {
+    "description": "外观页配色主题分组的摘要"
+  },
+  "settingsSearchKeywordsColorTheme": "配色、颜色、主题色、暖纸、月白、绛紫、动态色、取色",
+  "@settingsSearchKeywordsColorTheme": {
+    "description": "外观页配色主题分组搜索的关键词"
+  },
+  "settingsSearchSummaryGlass": "关闭、标准或增强的玻璃质感",
+  "@settingsSearchSummaryGlass": {
+    "description": "外观页玻璃效果分组的摘要"
+  },
+  "settingsSearchKeywordsGlass": "玻璃、材质、透明、模糊、毛玻璃、质感",
+  "@settingsSearchKeywordsGlass": {
+    "description": "外观页玻璃效果分组搜索的关键词"
+  },
+  "settingsSearchSummaryNavigation": "底栏样式、滑动切换、透镜跟随与入口管理",
+  "@settingsSearchSummaryNavigation": {
+    "description": "外观页导航与底栏分组的摘要"
+  },
+  "settingsSearchKeywordsNavigation": "底栏、导航、沉浸式、旧式、滑动、透镜、跟随、入口",
+  "@settingsSearchKeywordsNavigation": {
+    "description": "外观页导航与底栏分组搜索的关键词"
+  },
+  "settingsSearchSummaryLanguage": "跟随系统、简体中文与繁體中文",
+  "@settingsSearchSummaryLanguage": {
+    "description": "外观页界面语言分组的摘要"
+  },
+  "settingsSearchKeywordsLanguage": "语言、中文、简体、繁体、简繁、跟随系统",
+  "@settingsSearchKeywordsLanguage": {
+    "description": "外观页界面语言分组搜索的关键词"
+  },
+  "settingsSearchSummaryReset": "恢复默认主题、配色、玻璃与导航设置",
+  "@settingsSearchSummaryReset": {
+    "description": "外观页恢复默认外观的摘要"
+  },
+  "settingsSearchKeywordsReset": "恢复、默认、重置、还原",
+  "@settingsSearchKeywordsReset": {
+    "description": "外观页恢复默认外观搜索的关键词"
+  },
+  "settingsSectionAppearanceNavigation": "外观与导航",
+  "@settingsSectionAppearanceNavigation": {
+    "description": "设置主页的外观与导航分组标题"
+  },
+  "settingsSectionBrowsingPosts": "浏览与帖子",
+  "@settingsSectionBrowsingPosts": {
+    "description": "设置主页的浏览与帖子分组标题"
+  },
+  "settingsSectionStorageAbout": "存储与关于",
+  "@settingsSectionStorageAbout": {
+    "description": "设置主页的存储与关于分组标题"
+  },
+  "settingsSectionDebug": "调试",
+  "@settingsSectionDebug": {
+    "description": "设置主页中仅调试构建可见的分组标题"
+  },
+  "threadControlsGroupDisplay": "显示",
+  "threadControlsGroupNavigation": "导航",
+  "threadControlsGroupScrolling": "滚动"
 }

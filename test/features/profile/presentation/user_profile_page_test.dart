@@ -32,6 +32,7 @@ import 'package:y300/features/forum/presentation/webview/forum_webview_driver.da
 import 'package:y300/features/forum/presentation/webview/forum_webview_route_factory.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 import '../../../support/forum_auth_test_support.dart';
 import '../../../test_support/localized_test_app.dart';
@@ -523,8 +524,7 @@ void main() {
       tester,
       repository: _FakeProfileRepository(
         data: _profileWith(
-          avatarUrl:
-              'https://bbs.yamibo.com/uc_server/data/avatar/000/12/34/56_avatar_middle.jpg',
+          avatarUrl: 'https://bbs.yamibo.com/uc_server/data/avatar/000/12/34/56_avatar_middle.jpg',
         ),
       ),
       imageCacheService: _NoopImageCacheService(),
@@ -615,9 +615,8 @@ void main() {
     expect(find.byIcon(Icons.home_outlined), findsNothing);
     expect(find.byKey(const Key('daily-sign-in-panel')), findsNothing);
     expect(
-      ProviderScope.containerOf(
-        tester.element(find.byType(MyProfilePage)),
-      ).exists(dailySignInControllerProvider),
+      ProviderScope.containerOf(tester.element(find.byType(MyProfilePage)))
+          .exists(dailySignInControllerProvider),
       isFalse,
     );
 
@@ -1186,7 +1185,7 @@ void main() {
     final settings = find.byKey(const Key('user-profile-action-settings'));
     expect(settings, findsOneWidget);
     expect(
-      find.descendant(of: find.byType(AppBar), matching: settings),
+      find.descendant(of: find.byType(AppPageAppBar), matching: settings),
       findsOneWidget,
     );
     expect(

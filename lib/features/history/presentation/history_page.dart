@@ -1,5 +1,3 @@
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -18,6 +16,8 @@ import 'package:y300/features/recent_search/application/recent_searches_controll
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 
 typedef HistoryEntryOpenCallback = Future<HistoryOpenResult> Function(
   BuildContext context,
@@ -169,63 +169,40 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   PreferredSizeWidget _buildAppBar(HistoryViewState state) {
     final l10n = AppLocalizations.of(context);
     if (_searchActive) {
-      return AppBar(
-        leading: IconButton(
-          key: const Key('history-search-close'),
-          tooltip: l10n.historySearchClose,
-          onPressed: _closeSearch,
-          icon: const Icon(Icons.arrow_back),
-        ),
-        title: TextField(
-          key: const Key('history-search-input'),
-          controller: _searchController,
-          focusNode: _searchFocusNode,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: l10n.historySearchHint,
-            border: InputBorder.none,
-            suffixIcon: _searchController.text.isEmpty
-                ? null
-                : IconButton(
-                    key: const Key('history-search-clear'),
-                    tooltip: l10n.historySearchClear,
-                    onPressed: () {
-                      _searchController.clear();
-                      _controller.updateSearchText('');
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-          ),
-          onChanged: (value) {
-            _controller.updateSearchText(value);
-            setState(() {});
-          },
-          onSubmitted: _recordRecentSearch,
-        ),
+      return InlineSearchAppBar(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        fieldKey: const Key('history-search-input'),
+        hintText: l10n.historySearchHint,
+        clearTooltip: l10n.historySearchClear,
+        onBack: _closeSearch,
+        backButtonKey: const Key('history-search-close'),
+        clearButtonKey: const Key('history-search-clear'),
+        onChanged: (value) {
+          _controller.updateSearchText(value);
+          setState(() {});
+        },
+        onSubmitted: _recordRecentSearch,
       );
     }
-    return AppBar(
+    return AppPageAppBar(
       leading: adaptiveDetailBackButton(context),
-      title: Text(l10n.historyTitle),
+      title: l10n.historyTitle,
+      // 公共外壳统一包一层动作胶囊，这里只保留原按钮、key 与顺序。
       actions: [
-        AppToolbarActions(
-          children: [
-            IconButton(
-              key: const Key('history-search-button'),
-              tooltip: l10n.historySearchOpen,
-              onPressed: _openSearch,
-              icon: const Icon(Icons.search),
-            ),
-            if (state.items.isNotEmpty)
-              IconButton(
-                key: const Key('history-clear-all-button'),
-                tooltip: l10n.historyClearAll,
-                onPressed: _confirmClearAll,
-                icon: const Icon(Icons.delete_sweep_outlined),
-              ),
-          ],
+        IconButton(
+          key: const Key('history-search-button'),
+          tooltip: l10n.historySearchOpen,
+          onPressed: _openSearch,
+          icon: const Icon(Icons.search),
         ),
+        if (state.items.isNotEmpty)
+          IconButton(
+            key: const Key('history-clear-all-button'),
+            tooltip: l10n.historyClearAll,
+            onPressed: _confirmClearAll,
+            icon: const Icon(Icons.delete_sweep_outlined),
+          ),
       ],
     );
   }

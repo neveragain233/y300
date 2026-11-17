@@ -40,6 +40,7 @@ class ThreadDetailSnapshotCodec
       'author': value.author,
       'replies': value.replies,
       'views': value.views,
+      'hasServerCounts': value.hasServerCounts,
       'currentPage': value.currentPage,
       'perPage': value.perPage,
       'lastPage': value.lastPage,
@@ -69,6 +70,8 @@ class ThreadDetailSnapshotCodec
       author: LooseJson.string(map['author']),
       replies: LooseJson.integer(map['replies']),
       views: LooseJson.integer(map['views']),
+      // 旧快照没有该字段，按“计数未知”解码，避免继续把后续页的 0 当真。
+      hasServerCounts: LooseJson.boolean(map['hasServerCounts']),
       currentPage: LooseJson.integer(map['currentPage'], fallback: 1),
       perPage: LooseJson.integer(map['perPage'], fallback: 20),
       lastPage: _nullableInt(map['lastPage']),

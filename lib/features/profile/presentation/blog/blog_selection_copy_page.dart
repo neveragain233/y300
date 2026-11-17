@@ -7,6 +7,7 @@ import 'package:y300/features/profile/presentation/blog/blog_image_reader_page.d
 import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_content_selection_copy_page.dart';
 
 class BlogSelectionCopyPage extends ConsumerStatefulWidget {
@@ -58,7 +59,7 @@ class _BlogSelectionCopyPageState extends ConsumerState<BlogSelectionCopyPage> {
     if (_expired) {
       return Scaffold(
         key: const Key('blog-selection-copy-page'),
-        appBar: AppBar(title: Text(l10n.threadSelectionCopyTitle)),
+        appBar: AppPageAppBar(title: l10n.threadSelectionCopyTitle),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),

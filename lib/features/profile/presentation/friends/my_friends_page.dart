@@ -16,16 +16,17 @@ import 'package:y300/features/profile/presentation/widgets/feed_pagination_scrol
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
 
 typedef FriendLinkOpener = void Function(BuildContext context, String url);
-typedef FriendConversationOpener =
-    void Function(
-      BuildContext context,
-      ForumConversationTarget target,
-      String title,
-    );
+typedef FriendConversationOpener = void Function(
+  BuildContext context,
+  ForumConversationTarget target,
+  String title,
+);
 
 class MyFriendsPage extends ConsumerStatefulWidget {
   const MyFriendsPage({
@@ -145,7 +146,7 @@ class _MyFriendsPageState extends ConsumerState<MyFriendsPage> {
     final l10n = AppLocalizations.of(context);
     final palette = Theme.of(context).y300NativeContent;
     final owner = ref.watch(verifiedSessionOwnerProvider);
-    final appBar = AppBar(title: Text(l10n.profileMyFriendsTitle));
+    final appBar = AppPageAppBar(title: l10n.profileMyFriendsTitle);
     if (owner == null) {
       return Scaffold(
         key: const Key('my-friends-page'),
@@ -218,14 +219,11 @@ class _MyFriendsPageState extends ConsumerState<MyFriendsPage> {
     }
     final owner = controller.owner;
     if (owner == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) =>
-          _RemoveFriendDialog(owner: owner, username: item.username),
-    );
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await _confirmRemoveFriend(owner, item.username);
     // The dialog route must be removed before active-route ownership resumes.
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || confirmed != true) return;
+    if (!mounted || !confirmed) return;
     final current = _boundItem(controller, target);
     if (current == null ||
         !current.canRemove ||
@@ -238,13 +236,45 @@ class _MyFriendsPageState extends ConsumerState<MyFriendsPage> {
     if (!mounted) return;
     if (!_current(controller)) return;
     if (result is DataCommandOutcomeUnknown<ForumFriendRemovalReceipt>) return;
-    final l10n = AppLocalizations.of(context);
     final message = result is DataCommandApplied<ForumFriendRemovalReceipt>
         ? l10n.profileFriendsRemoved
         : LocalizedErrorSummary.resolve(l10n, result);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// 账号会话变化必须在确认生效前关闭旧确认框，命令仍由调用方复核归属。
+  Future<bool> _confirmRemoveFriend(
+    VerifiedSessionOwner owner,
+    String username,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    var dialogOpen = true;
+    final session = ref.listenManual(verifiedSessionOwnerProvider, (_, next) {
+      if (!dialogOpen || next == owner) return;
+      // Provider notifications can arrive while the page is building; defer
+      // the route change to the frame that follows.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !dialogOpen) return;
+        dialogOpen = false;
+        Navigator.of(context).pop(false);
+      });
+    });
+    try {
+      return await showAppConfirmDialog(
+        context: context,
+        title: l10n.profileFriendRemoveTitle,
+        message: l10n.profileFriendRemoveBody(username),
+        confirmLabel: l10n.profileFriendsRemove,
+        cancelLabel: l10n.commonCancel,
+        destructive: true,
+        confirmKey: const Key('my-friends-remove-confirm'),
+        cancelKey: const Key('my-friends-remove-cancel'),
+      );
+    } finally {
+      dialogOpen = false;
+      session.close();
+    }
   }
 }
 
@@ -499,55 +529,6 @@ class _FriendsFeedState extends State<_FriendsFeed> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _RemoveFriendDialog extends ConsumerStatefulWidget {
-  const _RemoveFriendDialog({required this.owner, required this.username});
-
-  final VerifiedSessionOwner owner;
-  final String username;
-
-  @override
-  ConsumerState<_RemoveFriendDialog> createState() =>
-      _RemoveFriendDialogState();
-}
-
-class _RemoveFriendDialogState extends ConsumerState<_RemoveFriendDialog> {
-  bool _dismissScheduled = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final owner = ref.watch(verifiedSessionOwnerProvider);
-    if (owner != widget.owner) {
-      if ((ModalRoute.isCurrentOf(context) ?? false) && !_dismissScheduled) {
-        _dismissScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _dismissScheduled = false;
-          if (mounted && (ModalRoute.isCurrentOf(context) ?? false)) {
-            Navigator.of(context).pop(false);
-          }
-        });
-      }
-      return const SizedBox.shrink();
-    }
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l10n.profileFriendRemoveTitle),
-      content: Text(l10n.profileFriendRemoveBody(widget.username)),
-      actions: [
-        TextButton(
-          key: const Key('my-friends-remove-cancel'),
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          key: const Key('my-friends-remove-confirm'),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.profileFriendsRemove),
-        ),
-      ],
     );
   }
 }

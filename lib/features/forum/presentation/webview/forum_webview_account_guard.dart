@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// A form opened for one actor must not survive an account switch. Replacing
 /// the child disposes its platform view instead of covering a live old form.
@@ -63,7 +64,8 @@ class _ForumWebViewAccountGuardState
     }
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(),
+      // 门控页只保留压入页返回外壳，说明与关闭动作仍在正文。
+      appBar: const AppPageAppBar(title: ''),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

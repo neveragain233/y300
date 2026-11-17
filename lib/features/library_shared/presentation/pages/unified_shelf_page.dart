@@ -1,14 +1,13 @@
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
@@ -30,11 +29,12 @@ import 'package:y300/features/library_shared/presentation/services/library_shelf
 import 'package:y300/features/library_shared/presentation/services/recent_reading_action.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:y300/features/library_shared/presentation/services/library_task_text_resolver.dart';
-import 'package:y300/features/library_shared/presentation/widgets/library_sort_option_tile.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/shelf/shelf_category_capsule_bar.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
@@ -724,64 +724,60 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     }
     final moduleActions = _moduleMenuActions();
     if (!state.isSearchMode) {
-      return AppBar(
+      return AppRootPageAppBar(
         leading: adaptiveDetailBackButton(context),
-        title:
-            ShelfPageTitleScope.titleOf(context) ??
-            Text(
-              LibraryShelfTextResolver.moduleTitle(
-                AppLocalizations.of(context),
-                state.moduleKey,
-              ),
-            ),
+        titleWidget: ShelfPageTitleScope.titleOf(context),
+        title: LibraryShelfTextResolver.moduleTitle(
+          AppLocalizations.of(context),
+          state.moduleKey,
+        ),
         actions: [
-          AppToolbarActions(
-            children: [
-              IconButton(
-                key: const Key('unified-shelf-search-button'),
-                icon: const Icon(Icons.search),
-                tooltip: AppLocalizations.of(context).libraryShelfSearch,
-                onPressed: _enterSearchMode,
+          IconButton(
+            key: const Key('unified-shelf-search-button'),
+            icon: const Icon(Icons.search),
+            tooltip: AppLocalizations.of(context).libraryShelfSearch,
+            onPressed: _enterSearchMode,
+          ),
+          IconButton(
+            key: const Key('unified-shelf-filter-button'),
+            icon: const Icon(Icons.filter_list),
+            tooltip: AppLocalizations.of(context).libraryShelfFilterAndSort,
+            onPressed: _showFilterSheet,
+          ),
+          AppPopupMenuButton<String>(
+            key: const Key('unified-shelf-more-button'),
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => [
+              AppPopupMenuItem<String>(
+                value: 'add-category',
+                label: AppLocalizations.of(context).libraryShelfCreateCategory,
+                icon: const Icon(Icons.add),
               ),
-              IconButton(
-                key: const Key('unified-shelf-filter-button'),
-                icon: const Icon(Icons.filter_list),
-                tooltip: AppLocalizations.of(context).libraryShelfFilterAndSort,
-                onPressed: _showFilterSheet,
+              AppPopupMenuItem<String>(
+                value: 'rename-category',
+                label: AppLocalizations.of(context).libraryShelfRenameCategory,
+                icon: const Icon(Icons.drive_file_rename_outline),
               ),
-              AppPopupMenuButton<String>(
-                key: const Key('unified-shelf-more-button'),
-                onSelected: _handleMenuAction,
-                itemBuilder: (context) => [
-                  AppPopupMenuItem<String>(
-                    value: 'add-category',
-                    label: AppLocalizations.of(context)
-                        .libraryShelfCreateCategory,
-                  ),
-                  AppPopupMenuItem<String>(
-                    value: 'rename-category',
-                    label: AppLocalizations.of(context)
-                        .libraryShelfRenameCategory,
-                  ),
-                  AppPopupMenuItem<String>(
-                    value: 'delete-category',
-                    label: AppLocalizations.of(context)
-                        .libraryShelfDeleteCategory,
-                  ),
-                  if (moduleActions.isNotEmpty) ...[
-                    const PopupMenuDivider(),
-                    ..._moduleActionItems(moduleActions),
-                  ],
-                  const PopupMenuDivider(),
-                  AppPopupMenuItem<String>(
-                    value: 'refresh-shelf',
-                    label: AppLocalizations.of(context).libraryShelfUpdate,
-                  ),
-                  AppPopupMenuItem<String>(
-                    value: 'random-open',
-                    label: AppLocalizations.of(context).libraryShelfRandomOpen,
-                  ),
-                ],
+              AppPopupMenuItem<String>(
+                value: 'delete-category',
+                label: AppLocalizations.of(context).libraryShelfDeleteCategory,
+                icon: const Icon(Icons.delete_outline),
+                danger: true,
+              ),
+              if (moduleActions.isNotEmpty) ...[
+                const PopupMenuDivider(),
+                ..._moduleActionItems(moduleActions),
+              ],
+              const PopupMenuDivider(),
+              AppPopupMenuItem<String>(
+                value: 'refresh-shelf',
+                label: AppLocalizations.of(context).libraryShelfUpdate,
+                icon: const Icon(Icons.refresh),
+              ),
+              AppPopupMenuItem<String>(
+                value: 'random-open',
+                label: AppLocalizations.of(context).libraryShelfRandomOpen,
+                icon: const Icon(Icons.shuffle),
               ),
             ],
           ),
@@ -902,105 +898,66 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             final l10n = AppLocalizations.of(context);
-            final tabs = [
-              l10n.libraryShelfFilter,
-              l10n.libraryShelfSort,
-              l10n.libraryShelfDisplayMode,
-            ];
             return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: List.generate(tabs.length, (index) {
-                        final selected = tabIndex == index;
-                        return Expanded(
-                          child: TextButton(
-                            onPressed: () =>
-                                setSheetState(() => tabIndex = index),
-                            child: Text(
-                              tabs[index],
-                              style: TextStyle(
-                                fontWeight: selected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
+                    _ShelfPanelSegmentedTabs(
+                      labels: [
+                        l10n.libraryShelfFilter,
+                        l10n.libraryShelfSort,
+                        l10n.libraryShelfDisplayMode,
+                      ],
+                      selectedIndex: tabIndex,
+                      onSelected: (index) =>
+                          setSheetState(() => tabIndex = index),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Flexible(
                       fit: FlexFit.loose,
+                      // 矮窗口与大字号下只有内容滚动，确认／取消固定在尾部。
                       child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (tabIndex == 0)
-                              _FilterTab(
-                                filters: selectedFilter,
-                                showDownloaded: supportsDownloadedFilter,
-                                showReadState: capabilities.supportsReadState,
-                                showBookmarked:
-                                    capabilities.supportsBookmarkFilter,
-                                onChanged: (next) =>
-                                    setSheetState(() => selectedFilter = next),
-                              ),
-                            if (tabIndex == 1)
-                              _SortTab(
-                                sortOption: selectedSort,
-                                availableFields:
-                                    capabilities.availableSortFields,
-                                onChanged: (next) =>
-                                    setSheetState(() => selectedSort = next),
-                              ),
-                            if (tabIndex == 2)
-                              _DisplayTab(
-                                displayMode: selectedMode,
-                                gridColumns: selectedColumns,
-                                onDisplayModeChanged: (mode) =>
-                                    setSheetState(() => selectedMode = mode),
-                                onGridColumnsChanged: (columns) =>
-                                    setSheetState(
-                                      () => selectedColumns = columns,
-                                    ),
-                              ),
-                          ],
-                        ),
+                        key: const Key('unified-shelf-panel-scroll'),
+                        child: switch (tabIndex) {
+                          0 => _FilterTab(
+                            filters: selectedFilter,
+                            showDownloaded: supportsDownloadedFilter,
+                            showReadState: capabilities.supportsReadState,
+                            showBookmarked: capabilities.supportsBookmarkFilter,
+                            onChanged: (next) =>
+                                setSheetState(() => selectedFilter = next),
+                          ),
+                          1 => _SortTab(
+                            sortOption: selectedSort,
+                            availableFields: capabilities.availableSortFields,
+                            onChanged: (next) =>
+                                setSheetState(() => selectedSort = next),
+                          ),
+                          _ => _DisplayTab(
+                            displayMode: selectedMode,
+                            gridColumns: selectedColumns,
+                            onDisplayModeChanged: (mode) =>
+                                setSheetState(() => selectedMode = mode),
+                            onGridColumnsChanged: (columns) =>
+                                setSheetState(() => selectedColumns = columns),
+                          ),
+                        },
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            child: Text(l10n.commonCancel),
-                          ),
+                    _ShelfPanelActions(
+                      onCancel: () => Navigator.of(sheetContext).pop(),
+                      onApply: () => unawaited(
+                        _commitShelfPanel(
+                          sheetContext: sheetContext,
+                          filters: selectedFilter,
+                          sortOption: selectedSort,
+                          displayMode: selectedMode,
+                          gridColumnCount: selectedColumns.round(),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: () async {
-                              await _controller.updateFilters(selectedFilter);
-                              await _controller.updateSortOption(selectedSort);
-                              await _controller.updateDisplayMode(selectedMode);
-                              await _controller.updateGridColumnCount(
-                                selectedColumns.toInt(),
-                              );
-                              if (!sheetContext.mounted || !mounted) {
-                                return;
-                              }
-                              Navigator.of(sheetContext).pop();
-                              setState(() {});
-                            },
-                            child: Text(l10n.commonApply),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -1010,6 +967,37 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         );
       },
     );
+  }
+
+  /// 确认只提交实际变化的项，一次性完成并关闭面板，不重复持久化或重载书架。
+  Future<void> _commitShelfPanel({
+    required BuildContext sheetContext,
+    required LibraryFilterSet filters,
+    required LibraryShelfSortOption sortOption,
+    required LibraryDisplayMode displayMode,
+    required int gridColumnCount,
+  }) async {
+    final state = _controller.state;
+    if (!_sameLibraryFilters(filters, state.filters)) {
+      await _controller.updateFilters(filters);
+    }
+    if (sortOption.field != state.sortOption.field ||
+        sortOption.direction != state.sortOption.direction) {
+      await _controller.updateSortOption(sortOption);
+    }
+    if (displayMode != state.displayMode) {
+      await _controller.updateDisplayMode(displayMode);
+    }
+    if (gridColumnCount != state.gridColumnCount) {
+      await _controller.updateGridColumnCount(gridColumnCount);
+    }
+    if (!sheetContext.mounted) {
+      return;
+    }
+    Navigator.of(sheetContext).pop();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   List<LibraryShelfMenuAction> _moduleMenuActions() {
@@ -1196,31 +1184,16 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         );
         return;
       }
-      final confirmed = await showDialog<bool>(
+      final l10n = AppLocalizations.of(context);
+      final confirmed = await showAppConfirmDialog(
         context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: Text(
-              AppLocalizations.of(dialogContext)
-                  .libraryShelfDeleteCategoryTitle,
-            ),
-            content: Text(
-              AppLocalizations.of(dialogContext).libraryShelfDeleteCategoryBody,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(AppLocalizations.of(dialogContext).commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(AppLocalizations.of(dialogContext).commonDelete),
-              ),
-            ],
-          );
-        },
+        title: l10n.libraryShelfDeleteCategoryTitle,
+        message: l10n.libraryShelfDeleteCategoryBody,
+        confirmLabel: l10n.commonDelete,
+        cancelLabel: l10n.commonCancel,
+        destructive: true,
       );
-      if (confirmed != true) {
+      if (!confirmed) {
         return;
       }
       await _controller.deleteCategory(selectedCategory.categoryId);
@@ -2028,29 +2001,34 @@ class _FilterTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final l10n = AppLocalizations.of(context);
+    return AppGroupedSection(
       children: [
         if (showDownloaded)
           _TriStateLine(
-            label: AppLocalizations.of(context).libraryShelfFilterDownloaded,
+            key: const ValueKey<String>('unified-shelf-filter-downloaded'),
+            label: l10n.libraryShelfFilterDownloaded,
             value: filters.downloaded,
             onChanged: (v) => onChanged(filters.copyWith(downloaded: v)),
           ),
         if (showReadState) ...[
           _TriStateLine(
-            label: AppLocalizations.of(context).libraryShelfFilterUnread,
+            key: const ValueKey<String>('unified-shelf-filter-unread'),
+            label: l10n.libraryShelfFilterUnread,
             value: filters.unread,
             onChanged: (v) => onChanged(filters.copyWith(unread: v)),
           ),
           _TriStateLine(
-            label: AppLocalizations.of(context).libraryShelfFilterRead,
+            key: const ValueKey<String>('unified-shelf-filter-read'),
+            label: l10n.libraryShelfFilterRead,
             value: filters.read,
             onChanged: (v) => onChanged(filters.copyWith(read: v)),
           ),
         ],
         if (showBookmarked)
           _TriStateLine(
-            label: AppLocalizations.of(context).libraryShelfFilterBookmarked,
+            key: const ValueKey<String>('unified-shelf-filter-bookmarked'),
+            label: l10n.libraryShelfFilterBookmarked,
             value: filters.bookmarked,
             onChanged: (v) => onChanged(filters.copyWith(bookmarked: v)),
           ),
@@ -2072,33 +2050,41 @@ class _SortTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: availableFields
-          .map((field) {
-            final selected = field == sortOption.field;
-            return LibrarySortOptionTile(
-              label: LibraryShelfTextResolver.sortField(
-                AppLocalizations.of(context),
-                field,
-              ),
-              selected: selected,
-              direction: sortOption.direction,
-              onTap: () {
-                final nextDirection =
-                    selected &&
-                        sortOption.direction == LibrarySortDirection.desc
-                    ? LibrarySortDirection.asc
-                    : LibrarySortDirection.desc;
-                onChanged(
-                  LibraryShelfSortOption(
-                    field: field,
-                    direction: nextDirection,
-                  ),
-                );
-              },
-            );
-          })
-          .toList(growable: false),
+    final l10n = AppLocalizations.of(context);
+    return AppGroupedSection(
+      children: [
+        for (final field in availableFields)
+          AppGroupedRow(
+            key: ValueKey<String>('unified-shelf-sort-${field.name}'),
+            title: LibraryShelfTextResolver.sortField(l10n, field),
+            selected: field == sortOption.field,
+            trailing: field == sortOption.field
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        sortOption.direction == LibrarySortDirection.asc
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.check, size: 18),
+                    ],
+                  )
+                : null,
+            onTap: () {
+              final selected = field == sortOption.field;
+              final nextDirection =
+                  selected && sortOption.direction == LibrarySortDirection.desc
+                  ? LibrarySortDirection.asc
+                  : LibrarySortDirection.desc;
+              onChanged(
+                LibraryShelfSortOption(field: field, direction: nextDirection),
+              );
+            },
+          ),
+      ],
     );
   }
 }
@@ -2118,53 +2104,59 @@ class _DisplayTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        RadioGroup<LibraryDisplayMode>(
-          groupValue: displayMode,
-          onChanged: (value) {
-            if (value != null) {
-              onDisplayModeChanged(value);
-            }
-          },
-          child: Column(
+        AppGroupedSection(
+          children: [
+            AppGroupedRow(
+              key: const ValueKey<String>('unified-shelf-display-grid'),
+              leading: const Icon(Icons.grid_view),
+              title: l10n.libraryShelfGrid,
+              selected: displayMode == LibraryDisplayMode.grid,
+              trailing: displayMode == LibraryDisplayMode.grid
+                  ? const Icon(Icons.check, size: 20)
+                  : null,
+              onTap: () => onDisplayModeChanged(LibraryDisplayMode.grid),
+            ),
+            AppGroupedRow(
+              key: const ValueKey<String>('unified-shelf-display-list'),
+              leading: const Icon(Icons.view_list),
+              title: l10n.libraryShelfList,
+              selected: displayMode == LibraryDisplayMode.list,
+              trailing: displayMode == LibraryDisplayMode.list
+                  ? const Icon(Icons.check, size: 20)
+                  : null,
+              onTap: () => onDisplayModeChanged(LibraryDisplayMode.list),
+            ),
+          ],
+        ),
+        if (displayMode == LibraryDisplayMode.grid)
+          AppGroupedSection(
             children: [
-              ListTile(
-                title: Text(AppLocalizations.of(context).libraryShelfGrid),
-                leading: const Radio<LibraryDisplayMode>(
-                  value: LibraryDisplayMode.grid,
+              AppGroupedRow(
+                title: l10n.libraryShelfColumnsPerRow,
+                semanticsValue: '${gridColumns.round()}',
+                trailing: Text(
+                  '${gridColumns.round()}',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-              ListTile(
-                title: Text(AppLocalizations.of(context).libraryShelfList),
-                leading: const Radio<LibraryDisplayMode>(
-                  value: LibraryDisplayMode.list,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Slider(
+                  key: const Key('unified-shelf-grid-columns-slider'),
+                  value: gridColumns.clamp(1, 10),
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
+                  label: '${gridColumns.round()}',
+                  onChanged: onGridColumnsChanged,
                 ),
               ),
             ],
           ),
-        ),
-        if (displayMode == LibraryDisplayMode.grid) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Text(AppLocalizations.of(context).libraryShelfColumnsPerRow),
-                Expanded(
-                  child: Slider(
-                    value: gridColumns.clamp(1, 10),
-                    min: 1,
-                    max: 10,
-                    divisions: 9,
-                    label: '${gridColumns.round()}',
-                    onChanged: onGridColumnsChanged,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -2172,6 +2164,7 @@ class _DisplayTab extends StatelessWidget {
 
 class _TriStateLine extends StatelessWidget {
   const _TriStateLine({
+    super.key,
     required this.label,
     required this.value,
     required this.onChanged,
@@ -2195,10 +2188,9 @@ class _TriStateLine extends StatelessWidget {
         icon = Icons.indeterminate_check_box;
         break;
     }
-    return ListTile(
-      dense: true,
+    return AppGroupedRow(
       leading: Icon(icon),
-      title: Text(label),
+      title: label,
       onTap: () {
         final next = switch (value) {
           TriStateFilterValue.ignore => TriStateFilterValue.include,
@@ -2209,4 +2201,127 @@ class _TriStateLine extends StatelessWidget {
       },
     );
   }
+}
+
+/// 面板内的紧凑胶囊分段控件：三个分段共用同一底色，选中项落在实色胶囊上。
+///
+/// 分段保持 48 逻辑像素触区，选中状态同时进入语义树，供读屏区分当前分组。
+class _ShelfPanelSegmentedTabs extends StatelessWidget {
+  const _ShelfPanelSegmentedTabs({
+    required this.labels,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<String> labels;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('unified-shelf-panel-tabs'),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(27),
+      ),
+      child: Row(
+        children: [
+          for (var index = 0; index < labels.length; index++)
+            Expanded(
+              child: _ShelfPanelSegment(
+                index: index,
+                label: labels[index],
+                selected: index == selectedIndex,
+                onTap: () => onSelected(index),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShelfPanelSegment extends StatelessWidget {
+  const _ShelfPanelSegment({
+    required this.index,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int index;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return TextButton(
+      key: ValueKey<String>('unified-shelf-panel-tab-$index'),
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        backgroundColor: selected ? scheme.surface : Colors.transparent,
+        foregroundColor: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+        textStyle: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+        shape: const StadiumBorder(),
+      ),
+      // 选中状态并入按钮自身的语义节点，读屏可读出当前分段。
+      child: Semantics(
+        selected: selected,
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+    );
+  }
+}
+
+/// 面板尾部动作：取消与确认都使用胶囊按钮，矮窗口下固定在滚动区之外。
+class _ShelfPanelActions extends StatelessWidget {
+  const _ShelfPanelActions({required this.onCancel, required this.onApply});
+
+  final VoidCallback onCancel;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    const buttonSize = Size(0, 48);
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            key: const Key('unified-shelf-filter-cancel'),
+            style: OutlinedButton.styleFrom(minimumSize: buttonSize),
+            onPressed: onCancel,
+            child: Text(l10n.commonCancel),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: FilledButton(
+            key: const Key('unified-shelf-filter-apply'),
+            style: FilledButton.styleFrom(minimumSize: buttonSize),
+            onPressed: onApply,
+            child: Text(l10n.commonApply),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+bool _sameLibraryFilters(LibraryFilterSet a, LibraryFilterSet b) {
+  return a.downloaded == b.downloaded &&
+      a.unread == b.unread &&
+      a.read == b.read &&
+      a.hasTags == b.hasTags &&
+      a.bookmarked == b.bookmarked;
 }

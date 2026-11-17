@@ -2,8 +2,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/liquid_glass.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 
 import '../../test_support/localized_test_app.dart';
 
@@ -205,6 +207,121 @@ void main() {
     await tester.tap(find.byKey(const Key('adaptive-panel-close')));
     await tester.pumpAndSettle();
     expect(find.text('panel'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('panel surface falls back to a solid full-height surface', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        builder: (context, child) => LiquidGlassScope(
+          enabled: true,
+          quality: LiquidGlassQuality.standard,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(highContrast: true),
+            child: child!,
+          ),
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: TextButton(
+                onPressed: () => showAdaptivePanel<void>(
+                  context: context,
+                  builder: (_) => const Text('panel'),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final panel = find.byKey(const Key('adaptive-side-panel'));
+    expect(panel, findsOneWidget);
+    expect(tester.widget<AppGlassSurface>(panel).level, isNull);
+    // 高对比沿用主题实色：不建玻璃层，也不影响面板几何与关闭键。
+    expect(
+      find.descendant(of: panel, matching: find.byType(LiquidGlass)),
+      findsNothing,
+    );
+    expect(tester.getRect(panel), const Rect.fromLTWH(720, 0, 480, 800));
+    expect(find.byKey(const Key('adaptive-panel-close')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('adaptive-panel-close')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('short panel keeps footer actions reachable with large text', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 420);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    var confirmed = 0;
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: TextButton(
+                onPressed: () => showAdaptivePanel<void>(
+                  context: context,
+                  builder: (panelContext) => Column(
+                    children: [
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              for (var index = 0; index < 12; index++)
+                                SizedBox(height: 56, child: Text('设置项 $index')),
+                            ],
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        key: const Key('panel-confirm'),
+                        onPressed: () {
+                          confirmed++;
+                          Navigator.of(panelContext).pop();
+                        },
+                        child: const Text('确定'),
+                      ),
+                    ],
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final confirm = find.byKey(const Key('panel-confirm'));
+    expect(confirm, findsOneWidget);
+    expect(tester.getRect(confirm).bottom, lessThanOrEqualTo(420));
+    await tester.drag(find.text('设置项 0'), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(confirmed, 1);
     expect(tester.takeException(), isNull);
   });
 }

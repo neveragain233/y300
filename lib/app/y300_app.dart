@@ -3,6 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/clipboard/forum_clipboard_runtime.dart';
 import 'package:y300/app/localization/app_locale_resolution.dart';
+import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/startup/blacklist_sync_host.dart';
@@ -15,6 +16,7 @@ import 'package:y300/features/forum/presentation/webview/waf_challenge_recovery_
 import 'package:y300/features/startup/presentation/daily_sign_in_automation_host.dart';
 import 'package:y300/features/startup/presentation/main_shell_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_glass_environment.dart';
 
 /// 应用根组件，仅负责主题与路由入口。
 class Y300App extends ConsumerWidget {
@@ -60,6 +62,7 @@ class Y300App extends ConsumerWidget {
           localizationsDelegates: const [
             ...AppLocalizations.localizationsDelegates,
             FlutterQuillLocalizations.delegate,
+            AppPrismUiLocalizations.delegate,
           ],
           locale: localeForAppLanguage(settings.languagePreference),
           localeListResolutionCallback: (locales, _) =>
@@ -72,7 +75,14 @@ class Y300App extends ConsumerWidget {
           builder: (context, child) => WafChallengeRecoveryHost(
             onBusyChanged: clipboard.setWafBusy,
             child: MessageAttentionProbeHost(
-              child: BlacklistSyncHost(child: child ?? const SizedBox.shrink()),
+              child: BlacklistSyncHost(
+                // 玻璃来源包住 Navigator，普通路由、根页菜单、模态和分栏
+                // 详情共用同一宿主；WAF、消息与黑名单 host 仍是应用根职责。
+                child: AppGlassEnvironment(
+                  glassLevel: settings.glassLevel,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
             ),
           ),
           home: enableAppUpdatePrompt

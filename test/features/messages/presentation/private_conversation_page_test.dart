@@ -12,6 +12,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/private_conversation_page.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 import '../../../test_support/localized_test_app.dart';
 import '../support/message_test_repository.dart';
@@ -834,7 +835,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.descendant(of: find.byType(AppBar), matching: find.text('Alice')),
+      find.descendant(
+        of: find.byType(AppPageAppBar),
+        matching: find.text('Alice'),
+      ),
       findsOneWidget,
     );
     await tester.longPress(find.byType(ForumHtmlContentView));
