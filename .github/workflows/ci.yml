@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       full_tests:
-        description: "Run the full test suite (about 18 minutes)"
+        description: "Run the full test suite in 4 shards (about 8 minutes)"
         type: boolean
         default: false
 
@@ -22,6 +22,8 @@ concurrency:
 # 锁文件里的包地址记录为 pub.dev；若在 CI 覆盖 PUB_HOSTED_URL，pub 会把它当成
 # 另一个源并重新解析，把依赖升级到最新版本，静态检查会因新弃用告警失败。
 # 这里保持默认源，让 CI 复用锁定的版本。
+#
+# 时间预算以这个 4 核 ubuntu-24.04 环境为准；本机 macOS 的结果只用于相对比较。
 
 jobs:
   test:
@@ -64,67 +66,140 @@ jobs:
         run: flutter pub get
       - name: Analyze app
         run: flutter analyze --no-pub
-      - name: Test app
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        run: flutter test --no-pub --reporter expanded
       - name: Analyze protocol package
         working-directory: packages/yamibo_forum_client
         run: dart analyze --fatal-infos
-      - name: Test protocol package
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        working-directory: packages/yamibo_forum_client
-        run: dart test --reporter expanded
       - name: Analyze markup package
         working-directory: packages/forum_markup_core
         run: dart analyze --fatal-infos
-      - name: Test markup package
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        working-directory: packages/forum_markup_core
-        run: dart test --reporter expanded
       - name: Run markup package example
         working-directory: packages/forum_markup_core
         run: dart run example/basic_markup.dart
       - name: Analyze title package
         working-directory: packages/content_title_core
         run: dart analyze --fatal-infos
-      - name: Test title package
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        working-directory: packages/content_title_core
-        run: dart test --reporter expanded
       - name: Run title package example
         working-directory: packages/content_title_core
         run: dart run example/analyze_title.dart
       - name: Analyze geometry package
         working-directory: packages/continuous_image_geometry
         run: dart analyze --fatal-infos
-      - name: Test geometry package
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        working-directory: packages/continuous_image_geometry
-        run: dart test --reporter expanded
       - name: Run geometry package example
         working-directory: packages/continuous_image_geometry
         run: dart run example/geometry.dart
       - name: Analyze pagination package
         working-directory: packages/html_pagination_core
         run: dart analyze --fatal-infos
-      - name: Test pagination package
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        working-directory: packages/html_pagination_core
-        run: dart test --reporter expanded
       - name: Run pagination package example
         working-directory: packages/html_pagination_core
         run: dart run example/paginate_html.dart
       - name: Analyze renderer package
         working-directory: packages/forum_content_renderer
         run: flutter analyze --no-pub
-      - name: Test renderer package
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
-        working-directory: packages/forum_content_renderer
-        run: flutter test --no-pub --reporter expanded
       - name: Analyze renderer example
         working-directory: packages/forum_content_renderer/example
         run: flutter analyze --no-pub
-      - name: Test renderer example widget
-        if: github.event_name == 'workflow_dispatch' && inputs.full_tests
+
+  fast-tests:
+    name: Fast tests (shard ${{ matrix.shard }}/2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - name: Install SQLite
+        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-0 libsqlite3-dev
+      - name: Install app dependencies
+        run: flutter pub get
+      - name: Run fast tier shard
+        run: python3 tool/test_tiers.py fast --shard ${{ matrix.shard }}/2 --timings .test-timings/fast-${{ matrix.shard }}.json
+      - name: Upload fast timing report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fast-timings-${{ matrix.shard }}
+          path: .test-timings/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  package-tests:
+    name: Package tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - name: Install app dependencies
+        run: flutter pub get
+      - name: Install protocol package dependencies
+        working-directory: packages/yamibo_forum_client
+        run: dart pub get
+      - name: Install markup package dependencies
+        working-directory: packages/forum_markup_core
+        run: dart pub get
+      - name: Install title package dependencies
+        working-directory: packages/content_title_core
+        run: dart pub get
+      - name: Install geometry package dependencies
+        working-directory: packages/continuous_image_geometry
+        run: dart pub get
+      - name: Install pagination package dependencies
+        working-directory: packages/html_pagination_core
+        run: dart pub get
+      - name: Install renderer package dependencies
+        working-directory: packages/forum_content_renderer
+        run: flutter pub get
+      - name: Install renderer example dependencies
         working-directory: packages/forum_content_renderer/example
-        run: flutter test --no-pub --reporter expanded
+        run: flutter pub get
+      - name: Run package suites
+        run: python3 tool/test_tiers.py packages
+
+  full-tests:
+    name: Full tests (shard ${{ matrix.shard }}/4)
+    if: github.event_name == 'workflow_dispatch' && inputs.full_tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - name: Install SQLite
+        run: sudo apt-get update && sudo apt-get install --yes libsqlite3-0 libsqlite3-dev
+      - name: Install app dependencies
+        run: flutter pub get
+      - name: Run full tier shard
+        run: python3 tool/test_tiers.py all --shard ${{ matrix.shard }}/4 --timings .test-timings/full-${{ matrix.shard }}.json
+      - name: Upload full timing report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: full-timings-${{ matrix.shard }}
+          path: .test-timings/
+          if-no-files-found: ignore
+          retention-days: 14
