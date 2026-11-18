@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// Adds a non-blocking loading indicator after one uninterrupted load deadline.
@@ -98,7 +99,7 @@ class _DelayedImageLoadingOverlayState
     _timer?.cancel();
     _timer = null;
     _showIndicator = false;
-    if (!widget.enabled || !widget.isLoading) {
+    if (!widget.enabled || !widget.isLoading || AppEdition.isEInk) {
       return;
     }
     if (widget.delay.inMicroseconds <= 0) {

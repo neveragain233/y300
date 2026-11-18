@@ -15,7 +15,7 @@ import 'package:y300/features/thread/data/providers/thread_repository_providers.
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';

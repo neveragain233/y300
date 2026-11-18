@@ -6,7 +6,7 @@ import 'package:y300/app/localization/app_locale_resolution.dart';
 import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
-import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/app/settings/bold_font_provider.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/startup/blacklist_sync_host.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/core/config/app_edition.dart';
 
 abstract final class AppLayoutTokens {
   static const double compactSpacing = 8;

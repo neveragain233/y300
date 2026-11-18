@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_component_theme_builder.dart';
-import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';

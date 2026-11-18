@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/core/eink/eink_paging_router.dart';
 
 /// 墨水屏滚动行为：不绘制 overscroll 光效，统一钳制物理，减少整屏重绘。

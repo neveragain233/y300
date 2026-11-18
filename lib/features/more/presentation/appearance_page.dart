@@ -7,6 +7,7 @@ import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/settings/bold_font_provider.dart';
 import 'package:y300/app/theme/app_dynamic_colors.dart';
@@ -362,7 +363,10 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                             maxColumns: 2,
                             minCardWidth: 130,
                             children: [
-                              for (final style in AppNavigationBarStyle.values)
+                              for (final style
+                                  in AppEdition.isEInk
+                                      ? const [AppNavigationBarStyle.legacy]
+                                      : AppNavigationBarStyle.values)
                                 _AppearanceOptionCard(
                                   key: Key(
                                     'appearance-navigation-style-${style.name}',

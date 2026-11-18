@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/icons/icons.dart';
 import 'package:prism_ui/loading.dart' as prism_loading;
@@ -62,7 +63,9 @@ class _AppLoadingStateState extends State<AppLoadingState> {
     final scheme = theme.colorScheme;
     // 减少动态效果时不画持续旋转的指示器，文字仍说明正在读取。
     final showIndicator =
-        _showIndicator && !MediaQuery.disableAnimationsOf(context);
+        _showIndicator &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        !AppEdition.isEInk;
     final label = widget.label;
     return Semantics(
       container: true,
