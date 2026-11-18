@@ -3,6 +3,7 @@ abstract final class PreferenceKeyNames {
   static const appThemeColorSource = 'app_theme_color_source';
   static const appAppearanceSnapshotV1 = 'app.appearance.snapshot.v1';
   static const appThemeFamily = 'app_theme_family';
+  static const readerHardwarePageKeys = 'reader_hardware_page_keys';
   static const appThemePreference = 'app_theme_preference';
   static const appLanguagePreference = 'app_language_preference';
   static const appNavigationSnapshotV1 = 'app.navigation.snapshot.v1';

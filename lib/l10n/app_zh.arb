@@ -4,21 +4,28 @@
   "comicRatingUnavailable": "当前帖子暂不支持评分",
   "comicReplyUnavailable": "当前帖子暂不支持回复",
   "comicCommentRefreshFailed": "评论刷新失败，已保留原有评论",
-
   "navigationStartupPage": "启动页面",
   "@@locale": "zh",
-
   "clipboardLinkFoundThread": "发现百合会帖子链接",
-  "@clipboardLinkFoundThread": {"description": "剪贴板中唯一可推荐目标为论坛帖子"},
+  "@clipboardLinkFoundThread": {
+    "description": "剪贴板中唯一可推荐目标为论坛帖子"
+  },
   "clipboardLinkFoundPost": "发现百合会楼层链接",
-  "@clipboardLinkFoundPost": {"description": "剪贴板中唯一可推荐目标为论坛楼层"},
+  "@clipboardLinkFoundPost": {
+    "description": "剪贴板中唯一可推荐目标为论坛楼层"
+  },
   "clipboardLinkFoundForum": "发现百合会版块链接",
-  "@clipboardLinkFoundForum": {"description": "剪贴板中唯一可推荐目标为论坛版块"},
+  "@clipboardLinkFoundForum": {
+    "description": "剪贴板中唯一可推荐目标为论坛版块"
+  },
   "clipboardLinkFoundBlog": "发现百合会日志链接",
-  "@clipboardLinkFoundBlog": {"description": "剪贴板中唯一可推荐目标为论坛日志"},
+  "@clipboardLinkFoundBlog": {
+    "description": "剪贴板中唯一可推荐目标为论坛日志"
+  },
   "clipboardLinkOpen": "打开",
-  "@clipboardLinkOpen": {"description": "剪贴板论坛链接轻提示的打开按钮"},
-
+  "@clipboardLinkOpen": {
+    "description": "剪贴板论坛链接轻提示的打开按钮"
+  },
   "appLanguageSectionTitle": "界面语言",
   "@appLanguageSectionTitle": {
     "description": "应用设置中的界面语言分区标题"
@@ -61,11 +68,23 @@
   "messageChooseRecipients": "请选择收件人",
   "messageRecipientSearchHint": "搜索好友或输入完整用户名",
   "messageRecipientCountCompact": "{count}/20",
-  "@messageRecipientCountCompact": {"placeholders": {"count": {"type": "int"}}},
+  "@messageRecipientCountCompact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageComposeEmptyHint": "从上方选择收件人，在下方输入私信",
   "messageComposeSelectedHint": "私信会分别发送给所选收件人",
   "messageRecipientSelectedCount": "已选 {count}/20 人",
-  "@messageRecipientSelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@messageRecipientSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageRecipientAlreadySelected": "该收件人已添加",
   "messageRecipientLimitReached": "最多选择 20 位收件人",
   "messageFriendSearch": "搜索好友用户名",
@@ -75,7 +94,13 @@
   "messageBatchResultTitle": "发送结果",
   "messageBatchOnlyFriends": "当前账号只能向好友群发私信，请从好友中选择收件人",
   "messageBatchReportedAccepted": "论坛报告已受理 {count} 位收件人",
-  "@messageBatchReportedAccepted": {"placeholders": {"count": {"type": "int"}}},
+  "@messageBatchReportedAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageBatchExcluded": "明确未提交的收件人",
   "messageBatchUnproven": "送达未逐一证实的收件人",
   "messageBatchSubmittedMessage": "已提交的消息",
@@ -97,7 +122,9 @@
   "messageYesterdayTime": "昨天 {time}",
   "@messageYesterdayTime": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "messageDetails": "消息详情与复制",
@@ -105,7 +132,9 @@
   "messageOpenProfile": "查看{name}的资料",
   "@messageOpenProfile": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "messageHistoryChanged": "对话历史发生变化，请刷新后继续查看",
@@ -136,7 +165,9 @@
   "messageRepeatedNotifications": "另有 {count} 条相同提醒未重复展示",
   "@messageRepeatedNotifications": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "contentFilterEntry": "内容屏蔽",
@@ -145,7 +176,9 @@
   "contentFilterCount": "共 {count} 条",
   "@contentFilterCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "contentFilterThreadsEmpty": "还没有屏蔽任何帖子。在版块、搜索或标签页的帖子菜单中可以选择「屏蔽此帖」。",
@@ -154,19 +187,25 @@
   "contentFilterUnblocked": "已恢复「{subject}」",
   "@contentFilterUnblocked": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "String"
+      }
     }
   },
   "contentFilterBlocked": "已屏蔽「{subject}」",
   "@contentFilterBlocked": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "String"
+      }
     }
   },
   "contentFilterAlreadyBlocked": "「{subject}」已在屏蔽列表",
   "@contentFilterAlreadyBlocked": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "String"
+      }
     }
   },
   "contentFilterSaveFailed": "屏蔽设置保存失败",
@@ -204,29 +243,39 @@
   "blacklistReviewList": "查看名单",
   "@blacklistBlockApplied": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "@blacklistBlockAlready": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "contentFilterWebBlacklistOpen": "打开网页名单",
   "contentFilterWebBlacklistMemberUid": "UID：{uid}",
   "@contentFilterWebBlacklistLastSync": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "@contentFilterWebBlacklistCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "@contentFilterWebBlacklistMemberUid": {
     "placeholders": {
-      "uid": { "type": "String" }
+      "uid": {
+        "type": "String"
+      }
     }
   },
   "recentSearchTitle": "最近搜索",
@@ -234,7 +283,9 @@
   "searchScopeSummary": "搜索范围：{scope}",
   "@searchScopeSummary": {
     "placeholders": {
-      "scope": { "type": "String" }
+      "scope": {
+        "type": "String"
+      }
     }
   },
   "searchScopeAllForums": "全站",
@@ -250,7 +301,6 @@
   "commonDelete": "删除",
   "commonRemove": "移除",
   "commonUnknownError": "未知错误",
-
   "networkSecurityVerificationTitle": "安全验证",
   "@networkSecurityVerificationTitle": {
     "description": "站点反爬虫要求使用前台 WebView 验证时的页面标题"
@@ -263,7 +313,6 @@
   "@networkSecurityVerificationFailed": {
     "description": "安全验证超时或 Cookie 同步失败时的提示"
   },
-
   "forumHomeTitle": "论坛首页",
   "forumHomeSearch": "搜索论坛",
   "forumHomeRefresh": "刷新论坛首页",
@@ -271,12 +320,20 @@
   "forumHomeLoadFailed": "论坛首页加载失败：{error}",
   "@forumHomeLoadFailed": {
     "description": "论坛首页首屏加载失败；error 是 presentation 层清理后的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumHomeRefreshFailed": "刷新论坛首页失败：{error}",
   "@forumHomeRefreshFailed": {
     "description": "论坛首页刷新失败；error 是 presentation 层清理后的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumHomeFavoriteForums": "我收藏的版块",
   "forumHomeUncategorized": "未分类",
@@ -296,20 +353,32 @@
   "forumDisplayPage": "第{page}页",
   "@forumDisplayPage": {
     "description": "论坛列表当前页按钮；page 是当前页码",
-    "placeholders": {"page": {"type": "int"}}
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
   },
   "forumDisplayEmpty": "暂无帖子",
   "forumDisplayLoadFailed": "帖子列表加载失败：{error}",
   "@forumDisplayLoadFailed": {
     "description": "论坛列表加载失败；error 是 presentation 层清理后的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumDisplayCopiedLink": "已复制帖子链接",
   "forumWebViewLoading": "正在加载论坛页面",
   "forumWebViewLoadFailed": "论坛页面加载失败：{error}",
   "@forumWebViewLoadFailed": {
     "description": "受管论坛 WebView 加载失败；error 是安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumWebViewRetry": "重试加载",
   "forumWebViewOpenExternal": "在外部打开",
@@ -327,13 +396,21 @@
   "forumActionFailed": "操作失败，请稍后重试：{error}",
   "@forumActionFailed": {
     "description": "论坛收藏或刷新操作失败；error 是安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumFavoriteForumsTitle": "取消收藏",
   "forumFavoriteForumsLoadFailed": "加载收藏版块失败：{error}",
   "@forumFavoriteForumsLoadFailed": {
     "description": "收藏版块列表加载失败；error 是安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumNoFavoriteForums": "暂无收藏版块",
   "forumWebViewAuthorOnly": "只看楼主",
@@ -347,15 +424,22 @@
   "forumWebViewForumSearch": "{board}搜索",
   "@forumWebViewForumSearch": {
     "description": "当前版块搜索页标题；board 是服务器返回的版块名",
-    "placeholders": {"board": {"type": "String"}}
+    "placeholders": {
+      "board": {
+        "type": "String"
+      }
+    }
   },
   "forumWebViewSearchForum": "论坛搜索",
   "forumForumByFid": "fid={fid}",
   "@forumForumByFid": {
     "description": "无法解析版块名称时的安全标题；fid 是原始版块 ID",
-    "placeholders": {"fid": {"type": "String"}}
+    "placeholders": {
+      "fid": {
+        "type": "String"
+      }
+    }
   },
-
   "historyTitle": "记录",
   "historySearchHint": "搜索记录",
   "historySearchOpen": "搜索记录",
@@ -368,7 +452,11 @@
   "historyOpenFailedDetail": "打开失败：{error}",
   "@historyOpenFailedDetail": {
     "description": "打开历史目标失败的安全摘要；error 已由 presentation 层清理",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "historyDeleteFailed": "删除记录失败",
   "historyDeleted": "已删除记录",
@@ -398,7 +486,11 @@
   "historyDaysAgo": "{days, plural, =1 {1 天前} other {{days} 天前}}",
   "@historyDaysAgo": {
     "description": "历史日期分组相对今天的天数",
-    "placeholders": {"days": {"type": "int"}}
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "historyTargetInvalid": "记录目标无效",
   "historyPageClosed": "当前页面已关闭",
@@ -406,22 +498,28 @@
   "historyWorkUnavailable": "该{type}作品已从本地移除",
   "@historyWorkUnavailable": {
     "description": "历史中的漫画或小说作品不再存在时显示；type 是本地化类型名称",
-    "placeholders": {"type": {"type": "String"}}
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
   },
   "historyNativeUnavailable": "当前无法打开原生页面",
   "historyLoginRequired": "请先登录后再打开此记录",
-
   "appNavigationForum": "论坛",
   "appNavigationFavorites": "收藏",
   "appNavigationComic": "漫画",
   "appNavigationNovel": "小说",
   "appNavigationHistory": "记录",
   "appNavigationMore": "更多",
-
   "librarySelectionSelectedCount": "{count, plural, =0 {未选择项目} other {已选 {count} 项}}",
   "@librarySelectionSelectedCount": {
     "description": "多选主壳标题；count 是当前选中的项目数量",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "librarySelectionExit": "退出多选",
   "librarySelectionSelectAll": "全选当前分类",
@@ -435,21 +533,33 @@
   "librarySelectionActionFailed": "批量操作失败：{error}",
   "@librarySelectionActionFailed": {
     "description": "批量操作异常提示；error 是经过清理的安全错误摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "librarySelectionConfirmUnfavoriteTitle": "确认取消收藏",
   "librarySelectionConfirmActionTitle": "确认执行操作",
   "librarySelectionConfirmUnfavoriteBody": "将取消已选 {count, plural, =0 {0 项} other {{count} 项}}收藏。若作品已无其它活跃收藏来源，相关本地作品、章节、封面缓存和离线缓存也会被清除。是否继续？",
   "@librarySelectionConfirmUnfavoriteBody": {
     "description": "取消收藏确认正文；count 是选中项目数量",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "librarySelectionConfirmActionBody": "将对已选 {count, plural, =0 {0 项} other {{count} 项}}执行“{action}”，是否继续？",
   "@librarySelectionConfirmActionBody": {
     "description": "普通多选动作确认正文；action 是由稳定 action id 映射的本地化名称",
     "placeholders": {
-      "count": {"type": "int"},
-      "action": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "action": {
+        "type": "String"
+      }
     }
   },
   "librarySelectionSelectCategory": "选择分类",
@@ -458,49 +568,83 @@
   "librarySelectionKeepCurrentCategory": "保持不变",
   "librarySelectionMixedSourceHint": "所选作品包含漫画和小说，请分别为每个来源选择目标分类；未选择来源的作品保持原分类。",
   "librarySelectionSourceSection": "{source}作品（{count} 项）",
-  "@librarySelectionSourceSection": {"placeholders": {"source": {"type": "String"}, "count": {"type": "int"}}},
-
+  "@librarySelectionSourceSection": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "librarySelectionCategoryAssigned": "{count, plural, =0 {没有项目设置分类} other {已为 {count} 项设置分类}}",
   "@librarySelectionCategoryAssigned": {
     "description": "批量设置分类成功提示；count 是成功处理的项目数量",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "librarySelectionCategoryAssignedPartial": "{succeededCount, plural, =0 {没有项目设置分类} other {已为 {succeededCount} 项设置分类}}；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}",
   "@librarySelectionCategoryAssignedPartial": {
     "description": "批量设置分类部分失败提示",
     "placeholders": {
-      "succeededCount": {"type": "int"},
-      "failedCount": {"type": "int"}
+      "succeededCount": {
+        "type": "int"
+      },
+      "failedCount": {
+        "type": "int"
+      }
     }
   },
   "librarySelectionCategoryRemoved": "{count, plural, =0 {没有项目移出分类} other {已将 {count} 项移出分类}}",
   "@librarySelectionCategoryRemoved": {
     "description": "批量移出分类成功提示",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "librarySelectionCategoryRemovedPartial": "{succeededCount, plural, =0 {没有项目移出分类} other {已将 {succeededCount} 项移出分类}}；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}",
   "@librarySelectionCategoryRemovedPartial": {
     "description": "批量移出分类部分失败提示",
     "placeholders": {
-      "succeededCount": {"type": "int"},
-      "failedCount": {"type": "int"}
+      "succeededCount": {
+        "type": "int"
+      },
+      "failedCount": {
+        "type": "int"
+      }
     }
   },
   "librarySelectionReadStateChanged": "已将 {count, plural, =0 {0 项} other {{count} 项}}标记为{state}",
   "@librarySelectionReadStateChanged": {
     "description": "批量阅读状态修改成功提示；state 是已读或未读的本地化名称",
     "placeholders": {
-      "count": {"type": "int"},
-      "state": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "state": {
+        "type": "String"
+      }
     }
   },
   "librarySelectionReadStateChangedPartial": "已将 {succeededCount, plural, =0 {0 项} other {{succeededCount} 项}}标记为{state}；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}",
   "@librarySelectionReadStateChangedPartial": {
     "description": "批量阅读状态修改部分失败提示",
     "placeholders": {
-      "succeededCount": {"type": "int"},
-      "failedCount": {"type": "int"},
-      "state": {"type": "String"}
+      "succeededCount": {
+        "type": "int"
+      },
+      "failedCount": {
+        "type": "int"
+      },
+      "state": {
+        "type": "String"
+      }
     }
   },
   "librarySelectionRead": "已读",
@@ -508,14 +652,22 @@
   "librarySelectionDownloadQueued": "已将 {count, plural, =0 {0 个章节} other {{count} 个章节}}加入缓存队列",
   "@librarySelectionDownloadQueued": {
     "description": "批量缓存入队提示；count 是新加入队列的章节数量",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "librarySelectionDownloadQueuedPartial": "已将 {count, plural, =0 {0 个章节} other {{count} 个章节}}加入缓存队列；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}",
   "@librarySelectionDownloadQueuedPartial": {
     "description": "批量缓存入队部分失败提示",
     "placeholders": {
-      "count": {"type": "int"},
-      "failedCount": {"type": "int"}
+      "count": {
+        "type": "int"
+      },
+      "failedCount": {
+        "type": "int"
+      }
     }
   },
   "librarySelectionDownloadAlreadyQueued": "所选章节已在缓存队列中",
@@ -523,38 +675,61 @@
   "librarySelectionUnfavorite": "已取消 {count, plural, =0 {0 项} other {{count} 项}}收藏",
   "@librarySelectionUnfavorite": {
     "description": "批量取消收藏成功提示；count 是成功取消的项目数量",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "librarySelectionUnfavoritePartial": "已取消 {succeededCount, plural, =0 {0 项} other {{succeededCount} 项}}收藏；{failedCount, plural, =0 {没有失败项目} other {失败 {failedCount} 项}}",
   "@librarySelectionUnfavoritePartial": {
     "description": "批量取消收藏部分失败提示",
     "placeholders": {
-      "succeededCount": {"type": "int"},
-      "failedCount": {"type": "int"}
+      "succeededCount": {
+        "type": "int"
+      },
+      "failedCount": {
+        "type": "int"
+      }
     }
   },
   "librarySelectionUnsupported": "当前不支持批量{action}",
   "@librarySelectionUnsupported": {
     "description": "当前书架不支持某个批量动作；action 是本地化动作名称",
-    "placeholders": {"action": {"type": "String"}}
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
   },
   "librarySelectionMissingTargetCategory": "请选择目标分类",
   "librarySelectionNoValidItems": "没有可处理的项目",
   "librarySelectionNoChange": "没有可执行的{action}",
   "@librarySelectionNoChange": {
     "description": "批量动作没有产生变化；action 是本地化动作名称",
-    "placeholders": {"action": {"type": "String"}}
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
   },
-
   "libraryShelfTitle": "{module, select, comic {漫画} novel {小说} favorite {收藏} other {书架}}",
   "@libraryShelfTitle": {
     "description": "统一书架标题；module 是稳定 LibraryModuleKey 名称",
-    "placeholders": {"module": {"type": "String"}}
+    "placeholders": {
+      "module": {
+        "type": "String"
+      }
+    }
   },
   "libraryShelfLoadFailed": "加载书架失败：{error}",
   "@libraryShelfLoadFailed": {
     "description": "统一书架加载失败；error 是 presentation 层清理后的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "libraryShelfEmpty": "书架为空",
   "libraryShelfSearch": "搜索书架",
@@ -569,7 +744,13 @@
   "libraryShelfComicBadge": "漫",
   "libraryShelfNovelBadge": "文",
   "libraryShelfUnreadBadgeSemantics": "未读 {count} 章",
-  "@libraryShelfUnreadBadgeSemantics": {"placeholders": {"count": {"type": "int"}}},
+  "@libraryShelfUnreadBadgeSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryShelfCategoryOperationFailed": "分类操作失败",
   "libraryShelfCreateCategoryNeedsSource": "请先切换到漫画或小说分类，再新建分类",
   "libraryShelfRemoveFromCategory": "移出分类",
@@ -579,7 +760,14 @@
   "libraryShelfCategoryMatchCount": "{name} {count, plural, =0 {0} other {{count}}}",
   "@libraryShelfCategoryMatchCount": {
     "description": "搜索时的分类标签；name 是数据库中的原始分类名",
-    "placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "libraryShelfUpdate": "更新书架",
   "libraryShelfRandomOpen": "随机打开作品",
@@ -608,11 +796,14 @@
   "libraryShelfMergeDuplicatesSuccess": "已合并 {count, plural, =0 {0 个重复作品} other {{count} 个重复作品}}",
   "@libraryShelfMergeDuplicatesSuccess": {
     "description": "漫画书架合并重复项成功提示",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "libraryShelfMergeDuplicatesNoChange": "没有可合并的重复作品",
   "libraryShelfActionUnsupported": "当前书架不支持此操作",
-
   "libraryTaskCoverWarmup": "正在准备封面",
   "libraryTaskFavoriteSyncFetching": "正在获取收藏列表",
   "libraryTaskFavoriteSyncSaving": "正在保存收藏数据",
@@ -620,7 +811,11 @@
   "libraryTaskFavoriteSyncLoadingDetailsSubject": "正在读取《{subject}》",
   "@libraryTaskFavoriteSyncLoadingDetailsSubject": {
     "description": "收藏同步读取详情；subject 是原始作品标题",
-    "placeholders": {"subject": {"type": "String"}}
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
   },
   "libraryTaskFavoriteSyncFinishing": "正在完成收藏同步",
   "libraryTaskFavoriteParseQueued": "收藏解析正在排队",
@@ -629,30 +824,58 @@
   "libraryTaskFavoriteQueueSummary": "前台等待 {foreground} · 自动剩余 {automatic} · 失败 {failed}",
   "@libraryTaskFavoriteQueueSummary": {
     "placeholders": {
-      "foreground": {"type": "int"},
-      "automatic": {"type": "int"},
-      "failed": {"type": "int"}
+      "foreground": {
+        "type": "int"
+      },
+      "automatic": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
     }
   },
   "libraryTaskComicSearchWaiting": "漫画搜索正在等待",
   "libraryTaskComicSearchWaitingSubject": "《{subject}》正在等待搜索",
   "@libraryTaskComicSearchWaitingSubject": {
     "description": "漫画搜索队列等待；subject 是原始作品标题",
-    "placeholders": {"subject": {"type": "String"}}
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
   },
   "libraryTaskComicSearchWaitingDuration": "《{subject}》正在等待搜索，预计 {duration}",
   "@libraryTaskComicSearchWaitingDuration": {
     "description": "漫画搜索队列等待；subject 原样显示，duration 已本地化",
-    "placeholders": {"subject": {"type": "String"}, "duration": {"type": "String"}}
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
   },
   "libraryTaskDurationSeconds": "{count, plural, =1 {1 秒} other {{count} 秒}}",
-  "@libraryTaskDurationSeconds": {"placeholders": {"count": {"type": "int"}}},
+  "@libraryTaskDurationSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryTaskDurationMinutes": "{count, plural, =1 {1 分钟} other {{count} 分钟}}",
-  "@libraryTaskDurationMinutes": {"placeholders": {"count": {"type": "int"}}},
+  "@libraryTaskDurationMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryTaskFavoriteSyncNotificationTitle": "收藏同步",
   "libraryTaskComicSearchNotificationTitle": "漫画搜索",
   "libraryTaskNotificationTitle": "书架任务",
-
   "libraryDetailDownload": "缓存",
   "libraryDetailFilterAndSort": "筛选与排序",
   "libraryDetailRefresh": "刷新",
@@ -667,7 +890,9 @@
   "libraryDetailUseTagAsCatalogMessage": "将「{tag}」设为目录并刷新章节？该标签可能包含讨论、番外或其他作品。",
   "@libraryDetailUseTagAsCatalogMessage": {
     "placeholders": {
-      "tag": { "type": "String" }
+      "tag": {
+        "type": "String"
+      }
     }
   },
   "libraryDetailUseTagAsCatalogFailed": "设置目录失败",
@@ -702,7 +927,11 @@
   "libraryDetailLoadFailed": "加载详情失败：{error}",
   "@libraryDetailLoadFailed": {
     "description": "统一详情加载失败；error 是 presentation 层清理后的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "libraryDetailInShelf": "在书架中",
   "libraryDetailAddToShelf": "添加到书架",
@@ -716,21 +945,46 @@
   "libraryDetailMetadataSemantics": "{label}：{value}",
   "@libraryDetailMetadataSemantics": {
     "description": "详情头部元数据语义；value 是原始作者或发布者名称",
-    "placeholders": {"label": {"type": "String"}, "value": {"type": "String"}}
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
   },
   "libraryDetailDownloadUnread": "缓存未读章节",
   "libraryDetailDownloadAll": "缓存全部章节",
   "libraryDetailDeleteDownloadFailed": "删除缓存失败：{error}",
-  "@libraryDetailDeleteDownloadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailDeleteDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailDownloadFailed": "缓存失败：{error}",
-  "@libraryDetailDownloadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailReadStateUpdateFailed": "阅读状态更新失败",
   "libraryDetailAllChapters": "全部章节",
   "libraryDetailDownloaded": "已缓存",
   "libraryDetailUnread": "未读",
   "libraryDetailBookmarked": "已加书签",
   "libraryDetailExcludeFilter": "排除{label}",
-  "@libraryDetailExcludeFilter": {"placeholders": {"label": {"type": "String"}}},
+  "@libraryDetailExcludeFilter": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailFilter": "筛选",
   "libraryDetailSort": "排序",
   "libraryDetailSortBySource": "按来源",
@@ -743,24 +997,56 @@
   "libraryDetailResetReadingConfirm": "重置",
   "libraryDetailResetReadingFailed": "重置作品阅读失败",
   "libraryDetailRefreshFailed": "更新失败：{error}",
-  "@libraryDetailRefreshFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailRefreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailRefreshUpdated": "已更新",
   "libraryDetailRefreshChaptersChanged": "{insertedCount, plural, =0 {未新增章节} other {已新增 {insertedCount} 章}}，{updatedCount, plural, =0 {未更新章节} other {更新 {updatedCount} 章}}",
   "@libraryDetailRefreshChaptersChanged": {
     "description": "详情刷新后的章节增删统计",
-    "placeholders": {"insertedCount": {"type": "int"}, "updatedCount": {"type": "int"}}
+    "placeholders": {
+      "insertedCount": {
+        "type": "int"
+      },
+      "updatedCount": {
+        "type": "int"
+      }
+    }
   },
   "libraryDetailRefreshAlreadyCurrent": "已是最新章节",
   "libraryDetailRefreshNoUpdates": "未发现新的章节",
   "libraryDetailRefreshQueued": "已加入更新队列，预计 {duration}",
-  "@libraryDetailRefreshQueued": {"placeholders": {"duration": {"type": "String"}}},
+  "@libraryDetailRefreshQueued": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailRefreshQueuedAtPosition": "已加入更新队列，前方 {position, plural, =0 {没有等待任务} other {有 {position} 个任务}}，预计 {duration}",
   "@libraryDetailRefreshQueuedAtPosition": {
-    "placeholders": {"position": {"type": "int"}, "duration": {"type": "String"}}
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
   },
   "libraryDetailRefreshUnavailable": "暂无可更新内容",
   "libraryDetailCatalogLoadFailed": "读取目录配置失败：{error}",
-  "@libraryDetailCatalogLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailCatalogLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailMetadataTitle": "标题",
   "libraryDetailMetadataSearchTitle": "更新搜索关键词",
   "libraryDetailMetadataSearchHelp": "留空时优先使用自定义标题，否则使用当前作品标题",
@@ -770,41 +1056,89 @@
   "libraryDetailSourceValue": "{label}：{value}",
   "@libraryDetailSourceValue": {
     "description": "只读来源字段；value 是原始服务器或用户内容",
-    "placeholders": {"label": {"type": "String"}, "value": {"type": "String"}}
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
   },
   "libraryDetailSourceEmpty": "{label}：无",
-  "@libraryDetailSourceEmpty": {"placeholders": {"label": {"type": "String"}}},
+  "@libraryDetailSourceEmpty": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailCatalogUrl": "目录 URL",
   "libraryDetailCatalogSource": "来源目录：{url}",
   "@libraryDetailCatalogSource": {
     "description": "目录来源；url 是原始 URL，仅展示不改写",
-    "placeholders": {"url": {"type": "String"}}
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   },
   "libraryDetailCatalogSourceEmpty": "来源目录：无",
   "libraryDetailCatalogSaveFailed": "保存失败：{error}",
-  "@libraryDetailCatalogSaveFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailCatalogSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailCatalogInvalidUrl": "请输入有效的目录 URL",
   "libraryDetailCatalogIncompleteUrl": "目录 URL 不完整",
   "libraryDetailCatalogUnsupportedScheme": "目录 URL 仅支持 HTTP 或 HTTPS",
   "libraryDetailCatalogUnexpectedHost": "目录 URL 必须来自 {host}",
   "@libraryDetailCatalogUnexpectedHost": {
     "description": "目录 URL host 校验；host 是协议要求的原始 host",
-    "placeholders": {"host": {"type": "String"}}
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
   },
   "libraryDetailCatalogNotTagCatalog": "请输入标签目录页面的 URL",
   "libraryDetailCoverUpdateFailed": "封面更新失败：{error}",
-  "@libraryDetailCoverUpdateFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailCoverUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailCoverUpdated": "封面已更新",
   "libraryDetailCoverRemoveFailed": "取消封面失败：{error}",
-  "@libraryDetailCoverRemoveFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryDetailCoverRemoveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryDetailCoverRemoved": "已取消封面",
-
   "libraryChapterCount": "{count, plural, =0 {共 0 章} other {共 {count} 章}}",
-  "@libraryChapterCount": {"placeholders": {"count": {"type": "int"}}},
+  "@libraryChapterCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryChapterFallbackTitle": "章节 {tid}",
   "@libraryChapterFallbackTitle": {
     "description": "来源章节标题为空时的显示兜底；tid 是原始帖子 ID",
-    "placeholders": {"tid": {"type": "String"}}
+    "placeholders": {
+      "tid": {
+        "type": "String"
+      }
+    }
   },
   "libraryChapterBookmarkSemantics": "已添加书签",
   "libraryChapterDownloading": "正在缓存",
@@ -817,27 +1151,77 @@
   "libraryChapterMarkReadThroughDone": "已将本章及之前的章节标为已读",
   "libraryChapterMarkReadThroughUndo": "撤销",
   "libraryChapterCurrentPage": "第 {page} 页",
-  "@libraryChapterCurrentPage": {"placeholders": {"page": {"type": "int"}}},
+  "@libraryChapterCurrentPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
   "libraryChapterLastRead": "上次阅读",
   "libraryChapterProgressPercent": "{percent}%",
-  "@libraryChapterProgressPercent": {"placeholders": {"percent": {"type": "int"}}},
+  "@libraryChapterProgressPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "libraryChapterLastReadPercent": "上次阅读 {percent}%",
   "libraryDetailStartFromBeginning": "从头阅读",
-  "@libraryChapterLastReadPercent": {"placeholders": {"percent": {"type": "int"}}},
+  "@libraryChapterLastReadPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "libraryChapterProgressSemantics": "{subtitle}，{progress}",
   "@libraryChapterProgressSemantics": {
     "description": "章节进度语义；subtitle 和 progress 都由共享 presentation 生成，章节数据保持原样",
-    "placeholders": {"subtitle": {"type": "String"}, "progress": {"type": "String"}}
+    "placeholders": {
+      "subtitle": {
+        "type": "String"
+      },
+      "progress": {
+        "type": "String"
+      }
+    }
   },
   "libraryChapterFilterAny": "不限",
   "libraryChapterFilterOnly": "只看{label}",
-  "@libraryChapterFilterOnly": {"placeholders": {"label": {"type": "String"}}},
+  "@libraryChapterFilterOnly": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterFilterExclude": "排除{label}",
-  "@libraryChapterFilterExclude": {"placeholders": {"label": {"type": "String"}}},
+  "@libraryChapterFilterExclude": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterManagementLoading": "正在读取章节",
   "libraryChapterManagementSummary": "{total, plural, =0 {共 0 章} other {共 {total} 章}} · {parsed, plural, =0 {解析 0 章} other {解析 {parsed} 章}} · {manual, plural, =0 {手动 0 章} other {手动 {manual} 章}} · {hidden, plural, =0 {隐藏 0 章} other {隐藏 {hidden} 章}}",
   "@libraryChapterManagementSummary": {
-    "placeholders": {"total": {"type": "int"}, "parsed": {"type": "int"}, "manual": {"type": "int"}, "hidden": {"type": "int"}}
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "parsed": {
+        "type": "int"
+      },
+      "manual": {
+        "type": "int"
+      },
+      "hidden": {
+        "type": "int"
+      }
+    }
   },
   "libraryChapterFilterLabel": "筛选章节",
   "libraryChapterFilterHint": "按标题或 TID 搜索",
@@ -856,74 +1240,129 @@
   "libraryChapterAdded": "已添加章节",
   "libraryChapterDuplicate": "该章节已存在",
   "libraryChapterAddFailed": "添加失败：{error}",
-  "@libraryChapterAddFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryChapterAddFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterInputEmpty": "请输入帖子链接或 TID",
   "libraryChapterInputInvalidUrl": "请输入有效的帖子链接或 TID",
   "libraryChapterInputUnsupportedScheme": "帖子链接仅支持 HTTP 或 HTTPS",
   "libraryChapterInputUnexpectedHost": "帖子链接必须来自 {host}",
   "@libraryChapterInputUnexpectedHost": {
     "description": "手动章节 host 校验；host 是协议要求的原始 host",
-    "placeholders": {"host": {"type": "String"}}
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
   },
   "libraryChapterInputUnsupportedThreadUrl": "不支持此帖子链接形式",
   "libraryChapterInputMissingTid": "帖子链接中缺少有效的 TID",
   "libraryChapterVisibilityUpdateFailed": "更新显示状态失败：{error}",
-  "@libraryChapterVisibilityUpdateFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryChapterVisibilityUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterRestoredSourceTitle": "已恢复来源章节名",
   "libraryChapterRenamed": "已重命名章节",
   "libraryChapterRenameFailed": "重命名失败：{error}",
-  "@libraryChapterRenameFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryChapterRenameFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterRemoveTitle": "移除该章节？",
   "libraryChapterRemoveBody": "将删除手动添加的“{title}”及其阅读记录与缓存任务，此操作不可撤销。",
   "@libraryChapterRemoveBody": {
     "description": "移除手动章节确认；title 是原始或用户自定义章节名",
-    "placeholders": {"title": {"type": "String"}}
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "libraryChapterParsedCannotRemove": "解析章节不可移除，可改为隐藏",
   "libraryChapterRemoved": "已移除章节",
   "libraryChapterRemovedWithWarnings": "章节已移除，但{warnings}",
-  "@libraryChapterRemovedWithWarnings": {"placeholders": {"warnings": {"type": "String"}}},
+  "@libraryChapterRemovedWithWarnings": {
+    "placeholders": {
+      "warnings": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterDownloadTaskCleanupFailed": "缓存任务清理失败",
   "libraryChapterDownloadFileCleanupFailed": "章节缓存文件清理失败",
   "libraryChapterRemoveFailed": "移除失败：{error}",
-  "@libraryChapterRemoveFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@libraryChapterRemoveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryChapterRenameTitle": "重命名章节",
   "libraryChapterName": "章节名",
   "libraryChapterRestoreDefaultTitleHelp": "留空恢复默认章节名",
   "libraryChapterRestoreSourceTitleHelp": "留空恢复来源章节名：{title}",
   "@libraryChapterRestoreSourceTitleHelp": {
     "description": "章节重命名说明；title 是原始来源章节名",
-    "placeholders": {"title": {"type": "String"}}
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "libraryChapterManual": "手动",
   "libraryChapterParsed": "解析",
   "libraryChapterLoadFailed": "读取章节失败：{error}",
-  "@libraryChapterLoadFailed": {"placeholders": {"error": {"type": "String"}}},
-
+  "@libraryChapterLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "libraryCoverFocalTitle": "调整封面焦点",
   "libraryCoverFocalHelp": "拖动选框选择封面取景区域，原图不会被裁剪",
   "libraryCoverImageLoadFailed": "图片加载失败",
   "libraryCoverRetry": "重试",
   "libraryCoverLoadFailed": "封面加载失败，点按重试",
   "libraryCoverCenter": "居中",
-
   "libraryErrorRedactedLink": "[链接已隐藏]",
   "libraryErrorRedactedSecret": "[敏感信息已隐藏]",
-
   "readerBack": "返回",
   "readerPrevious": "上一章",
   "readerNext": "下一章",
   "readerSelectedSemantics": "{label}，已选择",
   "@readerSelectedSemantics": {
     "description": "共享阅读器分段按钮选中语义；label 已由调用方本地化",
-    "placeholders": {"label": {"type": "String"}}
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "readerProgressSemantics": "阅读进度：{current} / {total}",
   "@readerProgressSemantics": {
     "description": "共享阅读器进度滑块语义；current 和 total 是调用方提供的显示值",
-    "placeholders": {"current": {"type": "String"}, "total": {"type": "String"}}
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
   },
-
   "readerModeVertical": "垂直",
   "readerModeLtr": "左到右",
   "readerModeRtl": "右到左",
@@ -945,7 +1384,16 @@
   "readerPageIndicator": "页码浮层",
   "readerPagedBackgroundBlackNote": "翻页模式固定黑色背景；背景选择在滚动模式生效。",
   "readerThumbnailPageSemantics": "第 {current} 页，共 {total} 页",
-  "@readerThumbnailPageSemantics": {"placeholders":{"current":{"type":"int"},"total":{"type":"int"}}},
+  "@readerThumbnailPageSemantics": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "readerNoImages": "没有可阅读图片",
   "readerImageLoadFailed": "图片加载失败",
   "readerTailContent": "末尾内容",
@@ -953,7 +1401,13 @@
   "readerDownloadUnsupported": "当前图片不支持下载",
   "readerExportSaving": "正在保存当前图片",
   "readerExportSaved": "已保存到{destination}",
-  "@readerExportSaved": {"placeholders": {"destination": {"type": "String"}}},
+  "@readerExportSaved": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
   "readerExportDefaultDestination": "系统照片",
   "readerExportCacheUnavailable": "图片暂不可用，请重试",
   "readerExportPermissionDenied": "没有照片库写入权限，请在系统设置中允许",
@@ -961,16 +1415,33 @@
   "readerExportUnsupportedPlatform": "当前平台不支持保存图片",
   "readerExportUnsupportedFormat": "当前图片格式不支持保存",
   "readerExportFailed": "保存图片失败，请重试",
-
   "comicUntitledWork": "未命名漫画（{workId}）",
-  "@comicUntitledWork": {"placeholders": {"workId": {"type": "String"}}},
+  "@comicUntitledWork": {
+    "placeholders": {
+      "workId": {
+        "type": "String"
+      }
+    }
+  },
   "comicChapterFallbackTitle": "章节 {sourceTid}",
-  "@comicChapterFallbackTitle": {"placeholders": {"sourceTid": {"type": "String"}}},
+  "@comicChapterFallbackTitle": {
+    "placeholders": {
+      "sourceTid": {
+        "type": "String"
+      }
+    }
+  },
   "comicAddToShelf": "加入书架",
   "comicAlreadyInShelf": "已在书架",
   "comicNoImages": "当前章节没有可阅读图片",
   "comicReaderLoadFailed": "加载阅读器失败：{error}",
-  "@comicReaderLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@comicReaderLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "comicReaderNetworkFailure": "网络异常，请检查后重试",
   "comicReaderAuthFailure": "登录态已失效，请重新登录后重试",
   "comicReaderServerFailure": "服务暂时不可用，请稍后重试",
@@ -1009,15 +1480,36 @@
   "comicEpisodeSwitchFailed": "章节切换失败，已保留当前章节",
   "comicSetCoverFocus": "调整封面焦点",
   "comicNextChapterTitle": "下一章：{title}",
-  "@comicNextChapterTitle": {"placeholders": {"title": {"type": "String"}}},
+  "@comicNextChapterTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "comicSwitchingEpisode": "正在切换章节",
   "comicOpenNextEpisode": "点击进入下一章",
   "comicOpeningEpisode": "正在打开章节",
   "comicRefreshNoNewLinks": "未提取到新的章节链接",
   "comicRefreshCompleted": "章节刷新完成：新增 {insertedCount, plural, =0 {0} other {{insertedCount}}}，更新 {updatedCount, plural, =0 {0} other {{updatedCount}}}",
-  "@comicRefreshCompleted": {"placeholders": {"insertedCount": {"type": "int"}, "updatedCount": {"type": "int"}}},
+  "@comicRefreshCompleted": {
+    "placeholders": {
+      "insertedCount": {
+        "type": "int"
+      },
+      "updatedCount": {
+        "type": "int"
+      }
+    }
+  },
   "comicRefreshFailed": "刷新章节失败：{error}",
-  "@comicRefreshFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@comicRefreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "comicComment": "评论",
   "comicCommentLoading": "评论加载中",
   "comicCommentEmpty": "暂无评论",
@@ -1026,7 +1518,13 @@
   "comicCommentUnavailableFeedback": "无法查看评论",
   "comicCommentContinue": "继续滑动进入下一章",
   "comicCommentContinueTo": "继续滑动进入：{title}",
-  "@comicCommentContinueTo": {"placeholders": {"title": {"type": "String"}}},
+  "@comicCommentContinueTo": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "comicDownloadQueue": "缓存队列",
   "comicDownloadQueueEmpty": "暂无缓存任务",
   "comicDownloadActive": "正在缓存",
@@ -1037,64 +1535,171 @@
   "comicDownloadRemove": "移除任务",
   "comicDownloadRetry": "重试",
   "comicDownloadQueuePosition": "{episodeTitle} · 第 {position} 位",
-  "@comicDownloadQueuePosition": {"placeholders": {"episodeTitle": {"type": "String"}, "position": {"type": "int"}}},
+  "@comicDownloadQueuePosition": {
+    "placeholders": {
+      "episodeTitle": {
+        "type": "String"
+      },
+      "position": {
+        "type": "int"
+      }
+    }
+  },
   "comicDownloadFailureDetail": "{episodeTitle} · {error}",
-  "@comicDownloadFailureDetail": {"placeholders": {"episodeTitle": {"type": "String"}, "error": {"type": "String"}}},
+  "@comicDownloadFailureDetail": {
+    "placeholders": {
+      "episodeTitle": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "comicDownloadResolvingImages": "正在解析图片",
   "comicDownloadProgress": "{completed}/{total}",
-  "@comicDownloadProgress": {"placeholders": {"completed": {"type": "int"}, "total": {"type": "int"}}},
+  "@comicDownloadProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "comicDownloadCancelFailed": "取消缓存失败：{error}",
   "comicDownloadRemoveFailed": "移除任务失败：{error}",
   "comicDownloadRetryFailed": "重试失败：{error}",
-  "@comicDownloadCancelFailed": {"placeholders": {"error": {"type": "String"}}},
-  "@comicDownloadRemoveFailed": {"placeholders": {"error": {"type": "String"}}},
-  "@comicDownloadRetryFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@comicDownloadCancelFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@comicDownloadRemoveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@comicDownloadRetryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "comicDownloadWorkUnavailable": "漫画作品不存在或已被移除",
   "comicDownloadEpisodeUnavailable": "漫画章节不存在或已被移除",
   "comicDownloadNoImages": "章节没有可缓存图片",
   "comicDownloadImageFailed": "部分图片缓存失败",
   "comicDownloadStorageFailed": "缓存文件保存失败",
   "comicDownloadUnknownFailure": "缓存失败，请重试",
-
   "novelUntitledWork": "未命名小说（{novelId}）",
-  "@novelUntitledWork": {"placeholders": {"novelId": {"type": "String"}}},
+  "@novelUntitledWork": {
+    "placeholders": {
+      "novelId": {
+        "type": "String"
+      }
+    }
+  },
   "novelChapterFallbackTitle": "章节 {sourceTid}",
-  "@novelChapterFallbackTitle": {"placeholders": {"sourceTid": {"type": "String"}}},
+  "@novelChapterFallbackTitle": {
+    "placeholders": {
+      "sourceTid": {
+        "type": "String"
+      }
+    }
+  },
   "novelOriginalBadge": "原创",
   "novelOpenInReader": "阅读器",
   "novelOpenSourcePost": "原帖",
   "novelSaveOpenModeFailed": "保存章节打开方式失败：{error}",
-  "@novelSaveOpenModeFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@novelSaveOpenModeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "novelSourceRouteDialogTitle": "无法定位原帖楼层",
   "novelOpenThreadHome": "打开帖子首页",
   "novelSourceRouteInvalidTid": "章节缺少有效的来源 TID",
   "novelSourceRouteInvalidPid": "章节缺少有效的来源 PID",
   "novelSourceRouteLocatorFailed": "原帖楼层定位失败：{error}",
-  "@novelSourceRouteLocatorFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@novelSourceRouteLocatorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "novelSourceRouteEmptyResult": "原帖楼层定位结果为空",
   "novelSourceRouteMismatchedResult": "原帖楼层定位结果与章节来源不一致",
   "novelSourceRouteInvalidPage": "原帖楼层页码无效",
   "novelHydrationRecoveringMetadata": "正在恢复小说来源信息",
   "novelHydrationPreparing": "正在准备章节",
   "novelHydrationCommitting": "正在保存 {count, plural, =0 {0 个章节} other {{count} 个章节}}",
-  "@novelHydrationCommitting": {"placeholders": {"count": {"type": "int"}}},
+  "@novelHydrationCommitting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "novelHydrationLoadingPage": "正在加载第 {currentPage} 页 · 已发现 {acceptedCount, plural, =0 {0 章} other {{acceptedCount} 章}}",
-  "@novelHydrationLoadingPage": {"placeholders": {"currentPage": {"type": "int"}, "acceptedCount": {"type": "int"}}},
+  "@novelHydrationLoadingPage": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "acceptedCount": {
+        "type": "int"
+      }
+    }
+  },
   "novelHydrationLoadingPageOfTotal": "正在加载第 {currentPage}/{totalPages} 页 · 已发现 {acceptedCount, plural, =0 {0 章} other {{acceptedCount} 章}}",
-  "@novelHydrationLoadingPageOfTotal": {"placeholders": {"currentPage": {"type": "int"}, "totalPages": {"type": "int"}, "acceptedCount": {"type": "int"}}},
+  "@novelHydrationLoadingPageOfTotal": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      },
+      "acceptedCount": {
+        "type": "int"
+      }
+    }
+  },
   "novelHydrationMissingSource": "缺少小说来源信息，无法加载章节",
   "novelHydrationMissingPublisher": "来源帖子缺少有效的发布者 ID",
   "novelHydrationMissingTid": "小说缺少来源帖子 ID",
   "novelHydrationMissingCheckpoint": "章节同步检查点缺失，无法安全更新",
   "novelHydrationInterrupted": "章节同步已中断，请重试",
   "novelChapterLoadFailed": "章节加载失败：{error}",
-  "@novelChapterLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@novelChapterLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "novelChapterLoadUnknown": "章节加载失败，请重试",
   "novelReaderNoChapters": "小说没有可阅读章节",
   "novelReaderContentMissing": "章节正文暂不可用",
   "novelReaderChapterUnavailable": "上次阅读的章节已不可用，请从作品详情重新选择章节",
   "novelReaderLoadFailed": "加载阅读器失败：{error}",
-  "@novelReaderLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@novelReaderLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "novelDisplaySettings": "显示设置",
   "novelTypography": "排版",
   "novelFontSize": "字号",
@@ -1170,7 +1775,13 @@
   "novelCurrent": "当前",
   "novelLastRead": "上次阅读",
   "novelNextChapter": "下一章：{title}",
-  "@novelNextChapter": {"placeholders": {"title": {"type": "String"}}},
+  "@novelNextChapter": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "novelChapterUnavailable": "章节暂时无法显示",
   "novelUpdateWork": "更新作品",
   "novelPagedWindowUnavailable": "当前窗口无法生成分页布局",
@@ -1182,46 +1793,155 @@
   "novelPagedWaitingForPage": "正在准备目标页…",
   "novelPagedWaitTimedOut": "目标页尚未准备好，请重试",
   "novelPagedBackgroundPaused": "后续分页已暂停，当前页面仍可阅读",
-  "novelPagedWaitingForPage": "正在准备目标页…",
-  "novelPagedWaitTimedOut": "目标页尚未准备好，请重试",
-  "novelPagedBackgroundPaused": "后续分页已暂停，当前页面仍可阅读",
   "novelReturnToScroll": "回到滚动",
   "novelPages": "{count, plural, =0 {0 页} other {{count} 页}}",
-  "@novelPages": {"placeholders": {"count": {"type": "int"}}},
+  "@novelPages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "novelPageSemantics": "{chapterTitle}，第 {currentPage} 页，共 {totalPages}",
-  "@novelPageSemantics": {"placeholders": {"chapterTitle": {"type": "String"}, "currentPage": {"type": "int"}, "totalPages": {"type": "String"}}},
+  "@novelPageSemantics": {
+    "placeholders": {
+      "chapterTitle": {
+        "type": "String"
+      },
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "String"
+      }
+    }
+  },
   "novelPageValue": "第 {currentPage} 页，共 {totalPages}",
-  "@novelPageValue": {"placeholders": {"currentPage": {"type": "int"}, "totalPages": {"type": "String"}}},
+  "@novelPageValue": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "String"
+      }
+    }
+  },
   "novelNextPageSemantics": "下一页，第 {page} 页",
   "novelPreviousPageSemantics": "上一页，第 {page} 页",
-  "@novelNextPageSemantics": {"placeholders": {"page": {"type": "int"}}},
-  "@novelPreviousPageSemantics": {"placeholders": {"page": {"type": "int"}}},
+  "@novelNextPageSemantics": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "@novelPreviousPageSemantics": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
   "novelPageIndicator": "{currentPage} / {totalPages}",
-  "@novelPageIndicator": {"placeholders": {"currentPage": {"type": "int"}, "totalPages": {"type": "String"}}},
+  "@novelPageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "String"
+      }
+    }
+  },
   "novelReadingStatusChapter": "第 {current} / {total} 章",
-  "@novelReadingStatusChapter": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@novelReadingStatusChapter": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusVertical": "本章 {percent}% · 剩 {count} 页",
-  "@novelReadingStatusVertical": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "@novelReadingStatusVertical": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusVerticalApprox": "本章 {percent}% · 约剩 {count} 页",
-  "@novelReadingStatusVerticalApprox": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "@novelReadingStatusVerticalApprox": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusVerticalEnd": "本章 {percent}% · 本章完",
-  "@novelReadingStatusVerticalEnd": {"placeholders": {"percent": {"type": "int"}}},
+  "@novelReadingStatusVerticalEnd": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusPaged": "第 {current} / {total} 页",
-  "@novelReadingStatusPaged": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@novelReadingStatusPaged": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusPagedPending": "第 {current} 页 · 计算中",
-  "@novelReadingStatusPagedPending": {"placeholders": {"current": {"type": "int"}}},
+  "@novelReadingStatusPagedPending": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      }
+    }
+  },
   "novelChapterTurnContinue": "{direction, select, next {继续滑动进入下一章} previous {继续滑动进入上一章} other {继续滑动切换章节}}",
   "novelChapterTurnRelease": "{direction, select, next {松手进入下一章 · {title}} previous {松手进入上一章 · {title}} other {松手切换章节 · {title}}}",
-  "@novelChapterTurnRelease": {"placeholders": {"direction": {"type": "String"}, "title": {"type": "String"}}},
+  "@novelChapterTurnRelease": {
+    "placeholders": {
+      "direction": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "novelPageOfTotalSemantics": "第 {page} 页，共 {total} 页",
-  "@novelPageOfTotalSemantics": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
-
+  "@novelPageOfTotalSemantics": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "libraryOperationWorkNotFound": "作品不存在或已被移除",
   "libraryOperationChapterNotFound": "章节不存在或已被移除",
   "libraryOperationUnsupported": "当前模块不支持此操作",
   "libraryOperationCacheWriteFailed": "缓存写入失败，请重试",
   "libraryOperationDefaultCategoryImmutable": "系统分类不能修改或删除",
-
   "moreTitle": "更多",
   "moreMyProfile": "我的资料",
   "moreMyMessages": "我的消息",
@@ -1231,7 +1951,9 @@
   "@moreMyProfileSubtitle": {
     "description": "个人资料入口副标题；username 是原始用户名，不进行内容转换",
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "moreUnusedImages": "未使用图片管理",
@@ -1245,15 +1967,48 @@
   "moreAccountReplies": "回复",
   "moreAccountCreditLabel": "积分",
   "moreAccountStatistic": "{label}：{value}",
-  "@moreAccountStatistic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" } } },
-  "@moreAccountCredits": { "placeholders": { "value": { "type": "String" } } },
+  "@moreAccountStatistic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@moreAccountCredits": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountUnavailable": "—",
   "moreAccountGroup": "用户组：{name}",
-  "@moreAccountGroup": { "placeholders": { "name": { "type": "String" } } },
+  "@moreAccountGroup": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountAvatar": "{name}的头像",
-  "@moreAccountAvatar": { "placeholders": { "name": { "type": "String" } } },
+  "@moreAccountAvatar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountOpenProfile": "查看{name}的资料",
-  "@moreAccountOpenProfile": { "placeholders": { "name": { "type": "String" } } },
+  "@moreAccountOpenProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountLoadFailed": "资料暂时无法加载",
   "moreLoginSubtitle": "登录论坛账号并同步登录状态",
   "moreLogout": "退出登录",
@@ -1262,7 +2017,9 @@
   "@moreLogoutSubtitleUsername": {
     "description": "已登录账号副标题；username 是原始用户名",
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "moreLogoutConfirmTitle": "退出登录",
@@ -1272,17 +2029,27 @@
   "@moreLogoutFailed": {
     "description": "退出登录失败提示；error 是安全的外部错误摘要",
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "moreForumCurrentMode": "当前：{mode}",
   "@moreForumCurrentMode": {
-    "placeholders": {"mode": {"type": "String"}}
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   },
   "moreAppearance": "外观与文字",
   "moreCurrentTheme": "当前：{theme}",
   "@moreCurrentTheme": {
-    "placeholders": {"theme": {"type": "String"}}
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
   },
   "moreColorThemeSectionTitle": "配色主题",
   "moreAppearanceModeSectionTitle": "外观模式",
@@ -1347,8 +2114,12 @@
   "moreThemeSummary": "{family} · {mode}",
   "@moreThemeSummary": {
     "placeholders": {
-      "family": {"type": "String"},
-      "mode": {"type": "String"}
+      "family": {
+        "type": "String"
+      },
+      "mode": {
+        "type": "String"
+      }
     }
   },
   "moreThemeLight": "日间",
@@ -1360,13 +2131,21 @@
   "moreThemeSaveFailed": "主题设置保存失败：{error}",
   "@moreThemeSaveFailed": {
     "description": "保存主题偏好失败提示；error 是安全的外部错误摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "moreNavigationManagement": "导航栏管理",
   "moreVisibleNavigationCount": "已显示 {count, plural, =0 {0 项} other {{count} 项}}",
   "@moreVisibleNavigationCount": {
     "description": "更多页导航栏管理入口的可见项目数量",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "moreNavigationRestoreDefault": "恢复默认",
   "moreNavigationRetry": "重试",
@@ -1381,32 +2160,56 @@
   "@moreDownloadActiveProgress": {
     "description": "缓存队列当前任务摘要；标题和章节名是原始业务内容",
     "placeholders": {
-      "comicTitle": {"type": "String"},
-      "episodeTitle": {"type": "String"},
-      "progress": {"type": "String"},
-      "waitingCount": {"type": "int"}
+      "comicTitle": {
+        "type": "String"
+      },
+      "episodeTitle": {
+        "type": "String"
+      },
+      "progress": {
+        "type": "String"
+      },
+      "waitingCount": {
+        "type": "int"
+      }
     }
   },
   "moreDownloadWaiting": "等待缓存 · {count, plural, =0 {0 个任务} other {{count} 个任务}}",
   "@moreDownloadWaiting": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "moreDownloadFailed": "{count, plural, =0 {0 个任务缓存失败} other {{count} 个任务缓存失败}}",
   "@moreDownloadFailed": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "moreDownloadEmpty": "暂无缓存任务",
   "moreAbout": "关于",
   "moreAboutSubtitle": "应用信息",
   "moreAboutVersion": "版本 {version}",
   "@moreAboutVersion": {
-    "placeholders": {"version": {"type": "String"}}
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   },
   "moreAboutVersionWithBuild": "版本 {version} ({buildNumber})",
   "@moreAboutVersionWithBuild": {
     "placeholders": {
-      "version": {"type": "String"},
-      "buildNumber": {"type": "String"}
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
     }
   },
   "moreAboutVersionLoading": "版本读取中",
@@ -1419,11 +2222,14 @@
   "moreDebugQuillComposerSubtitle": "验证所见即所得的 Discuz BBCode 转换",
   "moreDebugHtmlRenderer": "HTML 正文渲染原型",
   "moreDebugHtmlRendererSubtitle": "验证复杂正文 HTML 的原生渲染",
-
   "moreStorageLoadFailed": "加载数据与存储设置失败：{error}",
   "@moreStorageLoadFailed": {
     "description": "数据与存储页面加载失败提示；error 是安全的外部错误摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "moreStorageClearCache": "清理缓存",
   "moreStorageClear": "清理",
@@ -1444,7 +2250,11 @@
   "moreStorageMigrationRetry": "重试迁移",
   "moreStorageMaximumCache": "最大缓存：{size}",
   "@moreStorageMaximumCache": {
-    "placeholders": {"size": {"type": "String"}}
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "moreStorageNoticeCachePartiallyCleared": "部分缓存清理失败，请稍后重试",
   "moreStorageNoticeCacheCleared": "已清理常规缓存，长期缓存、离线内容与用户数据已保留",
@@ -1456,12 +2266,20 @@
   "moreStorageNoticeDiagnosticsExported": "缓存诊断已导出：{path}",
   "@moreStorageNoticeDiagnosticsExported": {
     "description": "缓存诊断导出完成提示；path 是本地文件路径",
-    "placeholders": {"path": {"type": "String"}}
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   },
   "moreStorageUsageOverview": "缓存与数据总览",
   "moreStorageUsageTotal": "应用数据总计：{size}",
   "@moreStorageUsageTotal": {
-    "placeholders": {"size": {"type": "String"}}
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
   },
   "moreStorageReloadUsage": "重新统计",
   "moreStorageExportDiagnostics": "缓存诊断导出",
@@ -1480,8 +2298,12 @@
   "moreStorageImageRole": "{role}{qualifier}",
   "@moreStorageImageRole": {
     "placeholders": {
-      "role": {"type": "String"},
-      "qualifier": {"type": "String"}
+      "role": {
+        "type": "String"
+      },
+      "qualifier": {
+        "type": "String"
+      }
     }
   },
   "moreStorageImageQualifierRecentReader": "（最近阅读）",
@@ -1511,15 +2333,23 @@
   "moreStorageDocumentHtml": "{owner} HTML（{count}）",
   "@moreStorageDocumentHtml": {
     "placeholders": {
-      "owner": {"type": "String"},
-      "count": {"type": "int"}
+      "owner": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "moreStorageSnapshot": "{snapshotType}快照（{count}）",
   "@moreStorageSnapshot": {
     "placeholders": {
-      "snapshotType": {"type": "String"},
-      "count": {"type": "int"}
+      "snapshotType": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "moreStorageSnapshotForumHome": "论坛首页",
@@ -1528,7 +2358,11 @@
   "moreStorageSnapshotUnknown": "页面解析",
   "moreStorageComposerDraft": "发帖/回复草稿（{count}）",
   "@moreStorageComposerDraft": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "moreStorageDownloadComics": "漫画离线缓存",
   "moreStorageDownloadNovels": "小说离线内容",
@@ -1537,8 +2371,12 @@
   "moreStorageLibraryCount": "{kind}：{count}",
   "@moreStorageLibraryCount": {
     "placeholders": {
-      "kind": {"type": "String"},
-      "count": {"type": "int"}
+      "kind": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "moreStorageLibraryComics": "漫画作品",
@@ -1551,9 +2389,12 @@
   "moreStorageHistoryDatabase": "记录数据库",
   "moreStorageHistoryEntries": "浏览记录：{count}",
   "@moreStorageHistoryEntries": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "threadControlsTitle": "帖子悬浮操作",
   "threadControlsCompact": "紧凑操作栏",
   "threadControlsSide": "紧凑栏停靠位置",
@@ -1572,12 +2413,26 @@
   "threadControlsNextPost": "下一楼",
   "threadControlsFirstPost": "回到首楼",
   "threadControlsPageSummary": "第 {page} / {total} 页",
-  "@threadControlsPageSummary": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "@threadControlsPageSummary": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "threadControlsPageUnknown": "第 {page} 页，总页数未知",
-  "@threadControlsPageUnknown": {"placeholders": {"page": {"type": "int"}}},
+  "@threadControlsPageUnknown": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
   "threadControlsPageInput": "输入页码",
   "threadControlsInvalidPage": "请输入有效页码",
-
   "threadDetailTitle": "帖子详情",
   "threadDetailLoading": "正在读取帖子",
   "threadDetailRefresh": "刷新帖子详情",
@@ -1587,7 +2442,11 @@
   "threadDetailNormalOrder": "正序浏览",
   "threadDetailReplyCount": "回复 {count}",
   "@threadDetailReplyCount": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadDetailReplyOrder": "回复顺序",
   "threadDetailAscendingOrder": "正序",
@@ -1597,7 +2456,11 @@
   "threadDetailNoMore": "没有更多",
   "threadDetailPage": "第{page}页",
   "@threadDetailPage": {
-    "placeholders": {"page": {"type": "int"}}
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
   },
   "threadDetailReply": "回复",
   "threadDetailReplyPost": "回复帖子",
@@ -1613,7 +2476,11 @@
   "threadDetailReplyLink": "楼层回复链接",
   "threadDetailCopySuccess": "{target}已复制",
   "@threadDetailCopySuccess": {
-    "placeholders": {"target": {"type": "String"}}
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailFavorite": "收藏帖子",
   "threadDetailUnfavorite": "已收藏",
@@ -1629,12 +2496,16 @@
   "blacklistAuthorGateViewOnce": "本次查看",
   "@threadBlacklistCollapsed": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "@threadBlacklistCollapsedFloor": {
     "placeholders": {
-      "number": { "type": "int" }
+      "number": {
+        "type": "int"
+      }
     }
   },
   "threadDetailBackHome": "返回首页",
@@ -1642,15 +2513,27 @@
   "threadDetailCopyAll": "全部复制",
   "threadDetailLoadFailed": "帖子详情加载失败：{error}",
   "@threadDetailLoadFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailRefreshFailed": "刷新帖子详情失败：{error}",
   "@threadDetailRefreshFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailPageLoadFailed": "页面加载失败：{error}",
   "@threadDetailPageLoadFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailFloorLocatorFailed": "楼层定位失败，已打开帖子",
   "threadDetailUidMissing": "用户 UID 缺失",
@@ -1658,7 +2541,11 @@
   "threadFavoriteSuccessSyncFailed": "收藏成功，但收藏书架同步失败",
   "threadFavoriteFailed": "收藏操作失败：{error}",
   "@threadFavoriteFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadLoginRequired": "请先登录后再操作",
   "threadPermissionDenied": "没有执行此操作的权限",
@@ -1678,15 +2565,27 @@
   "threadPollSubmitting": "投票中…",
   "threadPollSelectedCount": "已选 {count} 项",
   "@threadPollSelectedCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadPollParticipants": "{count} 人参与",
   "@threadPollParticipants": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadPollMaxChoices": "最多可选 {count} 项",
   "@threadPollMaxChoices": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadPollSelectOption": "请选择投票选项",
   "threadPollVoteSuccess": "投票成功",
@@ -1700,11 +2599,19 @@
   "threadPollVoteOutcomeUnknown": "无法确认投票结果，请刷新帖子后再决定是否重试",
   "threadPollVoteFailed": "投票失败：{error}",
   "@threadPollVoteFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadPollVotes": "{count, plural, =0 {0 票} other {{count} 票}}",
   "@threadPollVotes": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadRatingTitle": "评分",
   "threadRatingSubmit": "确定",
@@ -1714,25 +2621,41 @@
   "threadRatingRange": "范围 {min}~{max}",
   "@threadRatingRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "threadRatingRangeWithRemaining": "{range}，今日剩余 {remaining, plural, =0 {0} other {{remaining}}}",
   "@threadRatingRangeWithRemaining": {
     "placeholders": {
-      "range": {"type": "String"},
-      "remaining": {"type": "int"}
+      "range": {
+        "type": "String"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "threadRatingRemaining": "今日剩余 {count}",
   "@threadRatingRemaining": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadRatingParticipants": "参与人数",
   "threadRatingParticipantsCount": "{count, plural, =0 {参与人数 0} other {参与人数 {count}}}",
   "@threadRatingParticipantsCount": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadRatingPoints": "积分",
   "threadRatingReason": "理由",
@@ -1744,7 +2667,11 @@
   "threadRatingOutcomeUnknown": "评分结果暂时无法确认，请刷新后查看",
   "threadRatingFailed": "评分失败：{error}",
   "@threadRatingFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadCommentTitle": "点评",
   "threadCommentLoadMore": "加载更多点评",
@@ -1760,13 +2687,21 @@
   "threadCommentOutcomeUnknown": "点评结果暂时无法确认，请刷新后查看",
   "threadCommentFailed": "点评失败：{error}",
   "@threadCommentFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadReplyContentRequired": "请输入回复内容",
   "threadReplySuccess": "回复成功",
   "threadReplyFailed": "回复失败：{error}",
   "@threadReplyFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadAttachmentOpen": "打开附件",
   "threadImageSave": "保存图片",
@@ -1833,16 +2768,52 @@
   "composerRestoredDraft": "已恢复未发送草稿",
   "postingRestoredDraftWithTags": "已恢复未发送的草稿，请注意已恢复的主题标签",
   "composerPendingAttachment": "{count, plural, =0 {图片已上传，请选择位置后点击图片按钮重新插入} other {{count} 张图片已上传，请选择位置后点击图片按钮重新插入}}",
-  "@composerPendingAttachment": {"placeholders": {"count": {"type": "int"}}},
+  "@composerPendingAttachment": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "composerPendingAttachmentSelectionExpired": "当前选区无法安全恢复，请重新选择位置",
   "composerUploadingImages": "正在上传图片 {current}/{total}",
-  "@composerUploadingImages": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@composerUploadingImages": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "composerImageUploaded": "{fileName} 已上传",
-  "@composerImageUploaded": {"placeholders": {"fileName": {"type": "String"}}},
+  "@composerImageUploaded": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
   "composerImageUploadFailed": "{fileName} 上传失败，请重试",
-  "@composerImageUploadFailed": {"placeholders": {"fileName": {"type": "String"}}},
+  "@composerImageUploadFailed": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
   "composerImageUploadFailedWithReason": "{fileName} 上传失败：{reason}",
-  "@composerImageUploadFailedWithReason": {"placeholders": {"fileName": {"type": "String"}, "reason": {"type": "String"}}},
+  "@composerImageUploadFailedWithReason": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "composerImagePickerFailed": "选择图片失败，请重试",
   "composerImageFileMissing": "图片文件不存在，无法上传",
   "composerImageInvalidFileType": "只能上传图片文件",
@@ -1861,9 +2832,21 @@
   "composerImageUploadServer": "上传服务异常，请稍后重试",
   "composerImageUploadUnknown": "图片上传失败，请重试",
   "composerLoadDraftFailed": "加载草稿失败：{error}",
-  "@composerLoadDraftFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@composerLoadDraftFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "composerStickerLoadFailed": "表情加载失败：{error}",
-  "@composerStickerLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@composerStickerLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "composerStickerNetworkRequired": "需要联网加载表情包",
   "composerStickerAllGroup": "表情",
   "composerStickerDefaultGroup": "默认表情",
@@ -1871,7 +2854,13 @@
   "composerImageRetentionHint": "草稿图片本地副本最多保留 14 天，打开草稿时会联网校验",
   "composerDraftImageVerificationFailed": "草稿图片校验失败，图片预览已暂时隐藏。你仍可编辑和发送，联网后可重试",
   "composerDraftImagesInvalidated": "{count, plural, =0 {没有失效的草稿图片} other {发现 {count} 张已失效的草稿图片，正文代码已保留}}",
-  "@composerDraftImagesInvalidated": {"placeholders": {"count": {"type": "int"}}},
+  "@composerDraftImagesInvalidated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "unusedImagesPageTitle": "未使用图片管理",
   "unusedImagesEmpty": "没有尚未用于帖子的上传图片",
   "unusedImagesLoadFailed": "未能读取未使用图片，请检查网络或登录状态后重试",
@@ -1894,20 +2883,56 @@
   "composerClearBackgroundColor": "清除背景",
   "composerAuthenticationRequired": "登录状态已失效，请重新登录后再试",
   "composerCredentialExpired": "{kind, select, newThread {发帖凭证已失效，请刷新登录态后重试} reply {回复凭证已失效，请刷新登录态后重试} other {提交凭证已失效，请刷新登录态后重试}}",
-  "@composerCredentialExpired": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerCredentialExpired": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerRateLimited": "{kind, select, newThread {发帖过于频繁，请稍后再试} reply {回复太频繁了，请稍后再试} other {操作过于频繁，请稍后再试}}",
-  "@composerRateLimited": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerRateLimited": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerPermissionDenied": "{kind, select, newThread {当前账号权限不足，无法发帖} reply {当前账号权限不足，无法发送回复} other {当前账号权限不足}}",
-  "@composerPermissionDenied": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerPermissionDenied": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionTypeRequired": "该版块要求选择主题分类，请先选择",
   "composerSubmissionSubjectTooShort": "标题过短，请补充后重试",
   "composerSubmissionSubjectTooLong": "标题过长，请缩短后重试",
   "composerSubmissionContentTooShort": "{kind, select, newThread {正文内容过短，请补充后重试} reply {回复内容过短，请补充后重试} other {提交内容过短，请补充后重试}}",
-  "@composerSubmissionContentTooShort": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerSubmissionContentTooShort": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionContentTooLong": "{kind, select, newThread {正文内容过长，请缩短后重试} reply {回复内容过长，请缩短后重试} other {提交内容过长，请缩短后重试}}",
-  "@composerSubmissionContentTooLong": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerSubmissionContentTooLong": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionTargetUnavailable": "{kind, select, newThread {目标版块不可用，请刷新后重试} reply {目标帖子或楼层不可用，请刷新后重试} other {提交目标不可用，请刷新后重试}}",
-  "@composerSubmissionTargetUnavailable": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerSubmissionTargetUnavailable": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionThreadClosed": "该帖子已关闭，无法继续回复",
   "composerCaptchaRequired": "需要验证码，请暂时改用网页发布",
   "composerPollInvalid": "投票配置无效，请检查选项与截止时间",
@@ -1917,18 +2942,42 @@
   "composerNetworkFailure": "网络异常，请稍后重试",
   "composerServerFailure": "服务异常，请稍后重试",
   "composerUnknownFailure": "{kind, select, newThread {发帖失败，请稍后重试} reply {发送回复失败，请稍后重试} other {提交失败，请稍后重试}}",
-  "@composerUnknownFailure": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerUnknownFailure": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerOutcomeUnknown": "{kind, select, newThread {发帖结果无法确认，请先检查版块，避免重复发送} reply {回复结果无法确认，请先检查帖子，避免重复发送} other {提交结果无法确认，请先检查目标内容，避免重复发送}}",
-  "@composerOutcomeUnknown": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerOutcomeUnknown": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "postingTitle": "发帖",
   "postingTitleWithForum": "发帖 — {forumName}",
-  "@postingTitleWithForum": {"placeholders": {"forumName": {"type": "String"}}},
+  "@postingTitleWithForum": {
+    "placeholders": {
+      "forumName": {
+        "type": "String"
+      }
+    }
+  },
   "postingSend": "发布",
   "postingSubjectHint": "输入标题",
   "postingBodyHint": "请输入正文",
   "postingFormLoading": "正在加载发帖表单",
   "postingFormLoadFailed": "加载发帖表单失败：{error}",
-  "@postingFormLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@postingFormLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "postingType": "主题分类",
   "postingTypeRequired": "主题分类（必选）",
   "postingTypeNone": "无分类",
@@ -1937,28 +2986,76 @@
   "postingTagsHint": "输入标签，回车或英文逗号确认",
   "postingTagDelete": "删除标签",
   "postingTagsLimit": "最多 {maxTags} 个；单个标签 ≤ {maxLength} 字符",
-  "@postingTagsLimit": {"placeholders": {"maxTags": {"type": "int"}, "maxLength": {"type": "int"}}},
+  "@postingTagsLimit": {
+    "placeholders": {
+      "maxTags": {
+        "type": "int"
+      },
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
   "postingNormalThread": "普通帖",
   "postingPoll": "投票",
   "postingPollConfig": "投票配置",
   "postingThreadKind": "帖子类型",
   "postingPollConstraints": "至少 {min} 个选项；最多 {max} 个，单项 ≤ {maxLength} 字符",
-  "@postingPollConstraints": {"placeholders": {"min": {"type": "int"}, "max": {"type": "int"}, "maxLength": {"type": "int"}}},
+  "@postingPollConstraints": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      },
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollSummary": "{count, plural, =0 {尚未填写选项 / {mode}} other {已填 {count} 项 / {mode}}}",
-  "@postingPollSummary": {"placeholders": {"count": {"type": "int"}, "mode": {"type": "String"}}},
+  "@postingPollSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
   "postingPollSingle": "单选",
   "postingPollMultipleMode": "多选",
   "postingPollOption": "选项 {index}",
-  "@postingPollOption": {"placeholders": {"index": {"type": "int"}}},
+  "@postingPollOption": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollAddOption": "添加选项",
   "postingPollRemoveOption": "删除选项",
   "postingPollMultiple": "允许多选",
   "postingPollMaxChoices": "{count, plural, =0 {不可选择选项} other {最多可选 {count} 项}}",
-  "@postingPollMaxChoices": {"placeholders": {"count": {"type": "int"}}},
+  "@postingPollMaxChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollDeadline": "截止天数",
   "postingPollNeverExpires": "不限期",
   "postingPollDays": "{count, plural, =0 {不限期} other {{count} 天}}",
-  "@postingPollDays": {"placeholders": {"count": {"type": "int"}}},
+  "@postingPollDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollPublicVoters": "公开投票人",
   "postingPollPublicVotersDescription": "开启后所有人可看到谁投了哪一项",
   "postingPollShowResultsAfterVote": "投票后才显示结果",
@@ -1972,49 +3069,123 @@
   "postingBodyRequired": "请输入正文",
   "postingFormStillLoading": "发帖表单还在加载，请稍候再试",
   "postingSubjectTooLong": "标题超出版块上限（最多 {limit} 字符）",
-  "@postingSubjectTooLong": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingSubjectTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingBodyTooLong": "正文超出版块上限（最多 {limit} 字符）",
-  "@postingBodyTooLong": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingBodyTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollMissing": "投票配置缺失，请添加选项",
   "postingPollTooFewOptions": "投票至少需要 {limit} 个非空选项",
-  "@postingPollTooFewOptions": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingPollTooFewOptions": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollOptionTooLong": "单个投票选项不能超过 {limit} 字符",
-  "@postingPollOptionTooLong": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingPollOptionTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollMultipleInvalid": "多选投票的最大选择数至少为 {limit}",
-  "@postingPollMultipleInvalid": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingPollMultipleInvalid": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingSubmitSuccess": "发布成功",
   "postingSubmitSuccessWithDetail": "发布成功：{detail}",
-  "@postingSubmitSuccessWithDetail": {"placeholders": {"detail": {"type": "String"}}},
+  "@postingSubmitSuccessWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "replyThreadTitle": "回复帖子",
   "replyFloorTitle": "回复楼层",
   "replySubmit": "发送",
   "replyMessageHint": "输入回复内容",
   "replyPreparingQuote": "正在准备楼层引用",
   "replyPreparationFailed": "楼层回复引用准备失败：{error}",
-  "@replyPreparationFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@replyPreparationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "replyLeaveTitle": "保存草稿并离开？",
   "replyLeaveBody": "当前回复还没有发送，离开前会保存为草稿。",
   "replyContentRequired": "请输入回复内容",
   "replyReferenceUnavailable": "楼层回复引用准备失败，请重试",
   "replySubmitSuccess": "回复成功",
   "replySubmitSuccessWithDetail": "回复成功：{detail}",
-  "@replySubmitSuccessWithDetail": {"placeholders": {"detail": {"type": "String"}}},
+  "@replySubmitSuccessWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "composerPrototypeTitle": "Quill Composer 原型",
   "composerPrototypeSourceTitle": "源码微调",
   "composerPrototypeAttachmentInserted": "已插入测试附件 {aid}",
-  "@composerPrototypeAttachmentInserted": {"placeholders": {"aid": {"type": "String"}}},
+  "@composerPrototypeAttachmentInserted": {
+    "placeholders": {
+      "aid": {
+        "type": "String"
+      }
+    }
+  },
   "composerAttachmentFallback": "图片 {aid}",
-  "@composerAttachmentFallback": {"placeholders": {"aid": {"type": "String"}}},
+  "@composerAttachmentFallback": {
+    "placeholders": {
+      "aid": {
+        "type": "String"
+      }
+    }
+  },
   "composerLinkUrlHint": "https://example.com",
-
   "commonSearch": "搜索",
   "commonMenu": "菜单",
   "commonPreviousPage": "上一页",
   "commonNextPage": "下一页",
   "commonPage": "第{page}页",
-  "@commonPage": {"placeholders": {"page": {"type": "int"}}},
+  "@commonPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
   "commonPageOf": "第 {page} / {total} 页",
-  "@commonPageOf": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "@commonPageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "commonImageLoading": "图片加载中",
   "commonNetworkError": "网络连接失败",
   "commonTimeoutError": "请求超时",
@@ -2022,7 +3193,6 @@
   "commonServerError": "服务器暂时不可用",
   "commonParseError": "内容解析失败",
   "commonRequestError": "请求失败",
-
   "authLoginTitle": "登录",
   "authUsername": "用户名",
   "authUsernameHint": "请输入论坛账号",
@@ -2032,15 +3202,44 @@
   "authLoginTimeout": "登录超时，请检查网络后重试",
   "authLoginRejected": "账号或密码错误",
   "authLoginFailed": "登录失败：{error}",
-  "@authLoginFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@authLoginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "authLoginWelcome": "欢迎回来，{username}",
-  "@authLoginWelcome": {"placeholders": {"username": {"type": "String"}}},
+  "@authLoginWelcome": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "authWebViewVerificationFailed": "登录校验失败：{error}",
-  "@authWebViewVerificationFailed": {"placeholders": {"error": {"type": "String"}}},
-
+  "@authWebViewVerificationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "appUpdateDialogTitle": "发现新版本",
   "appUpdateDialogBody": "{appName} v{latestVersion} 已发布，当前版本为 v{installedVersion}",
-  "@appUpdateDialogBody": {"placeholders": {"appName": {"type": "String"}, "latestVersion": {"type": "String"}, "installedVersion": {"type": "String"}}},
+  "@appUpdateDialogBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      },
+      "latestVersion": {
+        "type": "String"
+      },
+      "installedVersion": {
+        "type": "String"
+      }
+    }
+  },
   "appUpdateDialogPrompt": "是否立即更新？",
   "appUpdateDialogReleaseNotes": "更新说明",
   "appUpdateDialogIgnore": "忽略",
@@ -2049,7 +3248,13 @@
   "appUpdateCheck": "检查更新",
   "appUpdateVersionLoading": "当前版本：读取中",
   "appUpdateCurrentVersion": "当前版本：{version}",
-  "@appUpdateCurrentVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@appUpdateCurrentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "appUpdateUpToDate": "已是最新版本",
   "appUpdateReleaseNotesEmpty": "当前版本暂无更新日志",
   "appUpdateReleaseNotesUnavailable": "更新日志暂不可用",
@@ -2067,37 +3272,97 @@
   "appUpdateBrowserUnavailable": "无法打开下载链接，请确认设备已安装浏览器",
   "appUpdateOpenUrlFailed": "打开下载链接失败，请稍后重试",
   "appUpdateLaunchFailed": "打开更新下载链接失败，请稍后重试",
-
   "searchTitle": "搜索",
   "searchInputHint": "输入关键词",
   "searchLoadMore": "查看更多",
   "searchRetryAfter": "请 {seconds} 秒后重试",
-  "@searchRetryAfter": {"placeholders": {"seconds": {"type": "int"}}},
+  "@searchRetryAfter": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "searchNoResults": "未找到结果",
   "searchFailed": "搜索失败：{error}",
-  "@searchFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@searchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "searchLoadMoreFailed": "加载更多失败：{error}",
-  "@searchLoadMoreFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@searchLoadMoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "searchForumFallback": "论坛搜索",
   "searchQueueWaiting": "{subject} 正在等待搜索，预计 {seconds} 秒",
-  "@searchQueueWaiting": {"placeholders": {"subject": {"type": "String"}, "seconds": {"type": "String"}}},
+  "@searchQueueWaiting": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
   "searchResultTid": "TID：{tid}",
-  "@searchResultTid": {"placeholders": {"tid": {"type": "String"}}},
-
+  "@searchResultTid": {
+    "placeholders": {
+      "tid": {
+        "type": "String"
+      }
+    }
+  },
   "tagTitleFallback": "标签",
   "tagLoadFailed": "标签页加载失败：{error}",
-  "@tagLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@tagLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "tagRelatedThreads": "{count, plural, =0 {暂无相关帖子} other {{count} 个相关帖子}}",
-  "@tagRelatedThreads": {"placeholders": {"count": {"type": "int"}}},
+  "@tagRelatedThreads": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagReplies": "回复 {count}",
-  "@tagReplies": {"placeholders": {"count": {"type": "int"}}},
+  "@tagReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagViews": "查看 {count}",
-  "@tagViews": {"placeholders": {"count": {"type": "int"}}},
+  "@tagViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagLastPost": "最后发表 {value}",
-  "@tagLastPost": {"placeholders": {"value": {"type": "String"}}},
+  "@tagLastPost": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "tagMore": "更多",
   "tagEmpty": "暂无相关帖子",
-
   "profileMyContent": "我的内容",
   "profileUserContent": "发表的内容",
   "profileAccountTools": "账号与工具",
@@ -2106,7 +3371,13 @@
   "profileLoginToInteract": "登录后发私信或加好友",
   "profileOnline": "在线",
   "profileUid": "UID {uid}",
-  "@profileUid": {"placeholders": {"uid": {"type": "String"}}},
+  "@profileUid": {
+    "placeholders": {
+      "uid": {
+        "type": "String"
+      }
+    }
+  },
   "profileCopyUid": "复制 UID",
   "profileUidCopied": "UID 已复制",
   "profileSendMessage": "发私信",
@@ -2122,15 +3393,20 @@
   "profileFriendApproveExplanation": "确认接受这位用户的好友申请。",
   "profileFriendRemoveExplanation": "解除后，你们将不再是好友。",
   "profileFriendOperationUnknown": "操作结果暂未确认，请关闭并核对好友状态后再操作",
-
   "profileFriendRequestSent": "好友申请已发送，等待对方确认",
   "profileFriendApproved": "已接受申请，你们现在是好友了",
   "profileFriendRemoved": "已解除好友关系",
-
   "profileTitle": "个人资料",
   "profileMyTitle": "我的资料",
   "profileUserTitle": "{username}的资料",
-  "@profileUserTitle": {"description": "服务器未提供资料页标题时由应用生成的标题；username 保持原文", "placeholders": {"username": {"type": "String"}}},
+  "@profileUserTitle": {
+    "description": "服务器未提供资料页标题时由应用生成的标题；username 保持原文",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "profileHome": "首页",
   "profileLoginRequired": "请先登录后查看个人资料",
   "profileMyBlogs": "我的日志",
@@ -2146,9 +3422,21 @@
   "profileThreadsLoginRequired": "登录后查看我的主题和回复",
   "profileThreadsReadFailed": "主题和回复加载失败",
   "profileThreadViews": "浏览 {count}",
-  "@profileThreadViews": {"placeholders": {"count": {"type": "int"}}},
+  "@profileThreadViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileThreadReplies": "回复 {count}",
-  "@profileThreadReplies": {"placeholders": {"count": {"type": "int"}}},
+  "@profileThreadReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileForumFavorites": "论坛收藏",
   "profileFriends": "好友",
   "profileSettings": "资料设置",
@@ -2158,7 +3446,13 @@
   "profileDetails": "个人资料",
   "profileLoading": "正在读取资料",
   "profileLoadFailed": "资料加载失败：{error}",
-  "@profileLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@profileLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "forumWebViewAccountChanged": "账号已变更，请关闭此页面后重新打开",
   "profileBlogOpenWeb": "在网页中打开",
   "profileBlogWebInputNotice": "当前输入不会自动带入网页。你可以取消并先复制内容，再打开网页继续操作。",
@@ -2192,9 +3486,21 @@
   "profileBlogCommentDeleted": "评论已删除",
   "profileBlogCommentContent": "评论内容",
   "profileBlogCommentReplyTo": "回复 {author}",
-  "@profileBlogCommentReplyTo": {"placeholders": {"author": {"type": "String"}}},
+  "@profileBlogCommentReplyTo": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogCommentSmileyLabel": "表情 {index}",
-  "@profileBlogCommentSmileyLabel": {"placeholders": {"index": {"type": "int"}}},
+  "@profileBlogCommentSmileyLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogSubmitComment": "发布",
   "profileBlogPreparingComment": "正在准备评论…",
   "profileBlogSubmittingComment": "正在提交…",
@@ -2206,78 +3512,272 @@
   "profileBlogComment": "评论",
   "profileBlogReply": "回复日志",
   "profileBlogViews": "浏览 {count}",
-  "@profileBlogViews": {"placeholders": {"count": {"type": "int"}}},
+  "@profileBlogViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogCommentCount": "评论 {count}",
-  "@profileBlogCommentCount": {"placeholders": {"count": {"type": "int"}}},
+  "@profileBlogCommentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogLoadFailed": "日志加载失败：{error}",
-  "@profileBlogLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@profileBlogLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profileMessageCenterTitle": "消息提醒",
   "profileNotificationsTab": "提醒 {count}",
-  "@profileNotificationsTab": {"placeholders": {"count": {"type": "int"}}},
+  "@profileNotificationsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileMessagesTab": "消息 {count}",
-  "@profileMessagesTab": {"placeholders": {"count": {"type": "int"}}},
+  "@profileMessagesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileNoNotifications": "暂无提醒",
   "profileSystemNotification": "系统提醒",
   "profileNoMessages": "暂无消息",
   "profilePrivateMessage": "私信",
   "profileMessageTo": "发给 {name}",
-  "@profileMessageTo": {"placeholders": {"name": {"type": "String"}}},
+  "@profileMessageTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "profileNewBadge": "新",
   "profileMessagesLoadFailed": "消息加载失败：{error}",
-  "@profileMessagesLoadFailed": {"placeholders": {"error": {"type": "String"}}},
-
+  "@profileMessagesLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeTitle": "HTML 正文渲染原型",
   "threadPrototypeLoadFailed": "样例加载失败：{error}",
-  "@threadPrototypeLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@threadPrototypeLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeEmptyResult": "样例加载失败：结果为空",
   "threadPrototypeMissingAsset": "本地样例未找到，请从 {sourcePath} 复制到 {assetPath}",
-  "@threadPrototypeMissingAsset": {"placeholders": {"sourcePath": {"type": "String"}, "assetPath": {"type": "String"}}},
+  "@threadPrototypeMissingAsset": {
+    "placeholders": {
+      "sourcePath": {
+        "type": "String"
+      },
+      "assetPath": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeLink": "链接：{url}",
-  "@threadPrototypeLink": {"placeholders": {"url": {"type": "String"}}},
+  "@threadPrototypeLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeThemeLight": "浅色",
   "threadPrototypeThemeDark": "深色",
   "threadPrototypeJitterCopied": "{count, plural, =0 {未复制抖动日志} other {已复制 {count} 条抖动日志}}",
-  "@threadPrototypeJitterCopied": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeJitterCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeImageOpened": "{postNumber}# 图片：{index}",
-  "@threadPrototypeImageOpened": {"placeholders": {"postNumber": {"type": "int"}, "index": {"type": "int"}}},
+  "@threadPrototypeImageOpened": {
+    "placeholders": {
+      "postNumber": {
+        "type": "int"
+      },
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeActionUnsupported": "原型页暂不执行该帖子操作",
   "threadPrototypeJitterTitle": "记录抖动日志",
   "threadPrototypeJitterRecording": "记录中，关闭后复制日志",
   "threadPrototypeJitterCount": "{count, plural, =0 {尚未记录} other {已记录 {count} 条}}",
-  "@threadPrototypeJitterCount": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeJitterCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeCopyLog": "复制日志",
   "threadPrototypeThreadSummarySemantics": "HTML 原型帖子样例摘要",
   "threadPrototypeSummarySemantics": "HTML 原型样例摘要",
   "threadPrototypeSample": "样例：{sample}",
-  "@threadPrototypeSample": {"placeholders": {"sample": {"type": "String"}}},
+  "@threadPrototypeSample": {
+    "placeholders": {
+      "sample": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeThread": "帖子：{subject}",
-  "@threadPrototypeThread": {"placeholders": {"subject": {"type": "String"}}},
+  "@threadPrototypeThread": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypePage": "页码：{page}/{total}",
-  "@threadPrototypePage": {"placeholders": {"page": {"type": "int"}, "total": {"type": "String"}}},
+  "@threadPrototypePage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypePosts": "{count, plural, =0 {楼层：0 个} other {楼层：{count} 个}}",
-  "@threadPrototypePosts": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypePosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeConversionMode": "转换模式：{mode}",
-  "@threadPrototypeConversionMode": {"placeholders": {"mode": {"type": "String"}}},
+  "@threadPrototypeConversionMode": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeConverter": "转换器：{converterId}",
-  "@threadPrototypeConverter": {"placeholders": {"converterId": {"type": "String"}}},
+  "@threadPrototypeConverter": {
+    "placeholders": {
+      "converterId": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeConvertedNodes": "{count, plural, =0 {转换文本节点：0 个} other {转换文本节点：{count} 个}}",
-  "@threadPrototypeConvertedNodes": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeConvertedNodes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypePreviewTheme": "预览主题：{theme}",
-  "@threadPrototypePreviewTheme": {"placeholders": {"theme": {"type": "String"}}},
+  "@threadPrototypePreviewTheme": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeTypography": "字号 {fontScale}% / 间隔 {lineHeight}×",
-  "@threadPrototypeTypography": {"placeholders": {"fontScale": {"type": "int"}, "lineHeight": {"type": "String"}}},
+  "@threadPrototypeTypography": {
+    "placeholders": {
+      "fontScale": {
+        "type": "int"
+      },
+      "lineHeight": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeThemeAdaptation": "{authorFontMode, select, preserved {主题适配：始终启用 / 作者字号保留} unified {主题适配：始终启用 / 作者字号统一} other {主题适配：始终启用}}",
-  "@threadPrototypeThemeAdaptation": {"placeholders": {"authorFontMode": {"type": "String"}}},
+  "@threadPrototypeThemeAdaptation": {
+    "placeholders": {
+      "authorFontMode": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeRawHtmlLength": "{count, plural, =0 {原 HTML：0 字符} other {原 HTML：{count} 字符}}",
-  "@threadPrototypeRawHtmlLength": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeRawHtmlLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeFragmentLength": "{count, plural, =0 {正文 fragment：0 字符} other {正文 fragment：{count} 字符}}",
-  "@threadPrototypeFragmentLength": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeFragmentLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeAdaptedColors": "适配前景：{remappedForeground}/{explicitForeground} · 适配背景：{remappedBackground}/{explicitBackground}",
-  "@threadPrototypeAdaptedColors": {"placeholders": {"remappedForeground": {"type": "int"}, "explicitForeground": {"type": "int"}, "remappedBackground": {"type": "int"}, "explicitBackground": {"type": "int"}}},
+  "@threadPrototypeAdaptedColors": {
+    "placeholders": {
+      "remappedForeground": {
+        "type": "int"
+      },
+      "explicitForeground": {
+        "type": "int"
+      },
+      "remappedBackground": {
+        "type": "int"
+      },
+      "explicitBackground": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeAdaptationFallbacks": "语义回退：{semanticFallback} · 不支持：{unsupported} · 隐藏：{concealed}",
-  "@threadPrototypeAdaptationFallbacks": {"placeholders": {"semanticFallback": {"type": "int"}, "unsupported": {"type": "int"}, "concealed": {"type": "int"}}},
+  "@threadPrototypeAdaptationFallbacks": {
+    "placeholders": {
+      "semanticFallback": {
+        "type": "int"
+      },
+      "unsupported": {
+        "type": "int"
+      },
+      "concealed": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeMinimumContrast": "最低可见对比度：{value}",
-  "@threadPrototypeMinimumContrast": {"placeholders": {"value": {"type": "String"}}},
+  "@threadPrototypeMinimumContrast": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "postEditTitle": "编辑帖子",
   "postEditMessageHint": "帖子内容",
   "postEditSave": "保存",
@@ -2310,7 +3810,13 @@
   "postEditAuthenticationRequired": "登录状态已失效，请重新登录后再试",
   "postEditSubmitFailed": "帖子保存失败，当前内容已保留",
   "postEditLoadFailed": "读取帖子编辑表单失败：{error}",
-  "@postEditLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@postEditLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "postEditServerVersion": "服务器版本",
   "postEditLocalVersion": "本地版本",
   "profileBlogEdit": "编辑日志",
@@ -2335,7 +3841,13 @@
   "profileBlogTags": "标签",
   "profileBlogPublishFeed": "发布到动态",
   "profileBlogAccessPolicy": "访问范围：{value}",
-  "@profileBlogAccessPolicy": {"placeholders": {"value": {"type": "String"}}},
+  "@profileBlogAccessPolicy": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogCommentsAllowed": "允许评论",
   "profileBlogCommentsClosed": "不允许评论",
   "profileBlogAccessScope": "访问范围",
@@ -2351,9 +3863,24 @@
   "profileBlogNewCategory": "新建个人分类",
   "profileBlogChooseCategory": "请选择分类",
   "profileBlogServerCategories": "站点分类：{site}\n个人分类：{personal}",
-  "@profileBlogServerCategories": {"placeholders": {"site": {"type": "String"}, "personal": {"type": "String"}}},
+  "@profileBlogServerCategories": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      },
+      "personal": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogServerTags": "标签：{tags}",
-  "@profileBlogServerTags": {"placeholders": {"tags": {"type": "String"}}},
+  "@profileBlogServerTags": {
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogVisibilityPublic": "公开",
   "profileBlogVisibilityFriends": "好友可见",
   "profileBlogVisibilitySelected": "指定好友可见",
@@ -2386,7 +3913,13 @@
   "profileBlogDraftImagesChecking": "正在校验草稿图片…",
   "profileBlogDraftImagesUnavailable": "部分草稿图片未能确认可用。请重试校验，或移除并替换这些图片后发布",
   "moreStorageBlogDraft": "日志草稿（{count}）",
-  "@moreStorageBlogDraft": {"placeholders": {"count": {"type": "int"}}},
+  "@moreStorageBlogDraft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogDraftSettingsChanged": "分类或发布权限已变化，请调整发布设置。已保留你的内容和原有选择",
   "profileBlogDraftCleanupFailed": "日志已发布，但本地草稿清理失败。再次打开时请先检查“我的日志”，避免重复发布",
   "composerReadAccess": "阅读权限",
@@ -2485,11 +4018,24 @@
   "profileFriendsAnonymous": "匿名访客",
   "profileFriendsOnlineStatus": "在线",
   "profileFriendsVisitedAt": "访问于 {time}",
-  "@profileFriendsVisitedAt": {"description": "好友页面显示的访问时间；time 保留服务器原文", "placeholders": {"time": {"type": "String"}}},
+  "@profileFriendsVisitedAt": {
+    "description": "好友页面显示的访问时间；time 保留服务器原文",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "profileFriendsRemove": "删除好友",
   "profileFriendRemoveTitle": "确认删除好友？",
   "profileFriendRemoveBody": "删除 {username} 后，对方将从你的好友列表中移除。",
-  "@profileFriendRemoveBody": {"placeholders": {"username": {"type": "String"}}},
+  "@profileFriendRemoveBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "profileFriendsRemoved": "好友已删除",
   "profileFriendRemovalUnknown": "删除结果无法确认，请刷新好友列表核对后再操作",
   "profileFriendRemovalVerify": "刷新核对",
@@ -2510,9 +4056,13 @@
   "fontSelectorSystemDefault": "系统默认",
   "fontSelectorPreview": "预览",
   "fontSelectorSample": "正文字体预览",
-  "@fontSelectorSample": {"description": "字体选择器中的简短正文样文"},
+  "@fontSelectorSample": {
+    "description": "字体选择器中的简短正文样文"
+  },
   "fontSelectorGlyphSample": "简体中文 · 繁體中文 · Aa 0123",
-  "@fontSelectorGlyphSample": {"description": "字体预览中的补充字形样文，保留简繁中文、拉丁字母和数字以便对照"},
+  "@fontSelectorGlyphSample": {
+    "description": "字体预览中的补充字形样文，保留简繁中文、拉丁字母和数字以便对照"
+  },
   "fontSelectorLoading": "正在读取字体…",
   "fontSelectorUnsupportedFormat": "请选择 TTF 或 OTF 字体文件",
   "fontSelectorInvalidFont": "字体文件损坏或无法识别",
@@ -2525,7 +4075,17 @@
   "librarySelectionActionParse": "解析",
   "librarySelectionParseQueued": "新增 {enqueued} 项，已在队列 {existing} 项，未能加入 {failed} 项",
   "@librarySelectionParseQueued": {
-    "placeholders": {"enqueued": {"type": "int"}, "existing": {"type": "int"}, "failed": {"type": "int"}}
+    "placeholders": {
+      "enqueued": {
+        "type": "int"
+      },
+      "existing": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
   },
   "threadFavoriteParseQueued": "收藏成功，已加入解析队列",
   "threadFavoriteParseQueueFailed": "收藏成功，但未能加入解析队列，可在收藏页手动解析",
@@ -2632,7 +4192,9 @@
   "@appearanceResetFailed": {
     "description": "恢复默认外观失败提示；error 是安全的外部错误摘要",
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "settingsSearchTooltip": "搜索设置",
@@ -2801,5 +4363,7 @@
   },
   "threadControlsGroupDisplay": "显示",
   "threadControlsGroupNavigation": "导航",
-  "threadControlsGroupScrolling": "滚动"
+  "threadControlsGroupScrolling": "滚动",
+  "readerHardwarePageKeys": "硬件键翻页",
+  "readerHardwarePageKeysSubtitle": "使用音量键或侧边翻页键翻页，仅在阅读器内生效"
 }

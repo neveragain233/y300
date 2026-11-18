@@ -19,6 +19,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
     required this.onPageSpacingChanged,
     required this.onShowPageIndicatorChanged,
     this.backgroundNote,
+    this.hardwarePageKeysEnabled = false,
+    this.onHardwarePageKeysChanged,
   });
 
   final ReaderPreferences preferences;
@@ -31,6 +33,10 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
   /// 横向模式下背景选项的补充说明；null 不占位。
   final String? backgroundNote;
 
+  /// 硬件键翻页开关；持久化由上层阅读器负责。
+  final bool hardwarePageKeysEnabled;
+  final ValueChanged<bool>? onHardwarePageKeysChanged;
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -42,6 +48,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
         onPageSpacingChanged: onPageSpacingChanged,
         onShowPageIndicatorChanged: onShowPageIndicatorChanged,
         backgroundNote: backgroundNote,
+        hardwarePageKeysEnabled: hardwarePageKeysEnabled,
+        onHardwarePageKeysChanged: onHardwarePageKeysChanged,
       ),
     );
   }
@@ -131,6 +139,8 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
     required this.onPageSpacingChanged,
     required this.onShowPageIndicatorChanged,
     required this.backgroundNote,
+    required this.hardwarePageKeysEnabled,
+    required this.onHardwarePageKeysChanged,
   });
 
   final ReaderPreferences preferences;
@@ -140,6 +150,8 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
   final ValueChanged<double> onPageSpacingChanged;
   final ValueChanged<bool> onShowPageIndicatorChanged;
   final String? backgroundNote;
+  final bool hardwarePageKeysEnabled;
+  final ValueChanged<bool>? onHardwarePageKeysChanged;
 
   @override
   State<_ReaderDisplaySettingsContent> createState() =>
@@ -258,6 +270,13 @@ class _ReaderDisplaySettingsContentState
             );
             widget.onShowPageIndicatorChanged(value);
           },
+        ),
+        AppSwitchRow(
+          key: const Key('comic-reader-hardware-page-keys-switch'),
+          title: l10n.readerHardwarePageKeys,
+          subtitle: l10n.readerHardwarePageKeysSubtitle,
+          value: widget.hardwarePageKeysEnabled,
+          onChanged: widget.onHardwarePageKeysChanged,
         ),
       ],
     );

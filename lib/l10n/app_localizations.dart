@@ -10800,6 +10800,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'滚动'**
   String get threadControlsGroupScrolling;
+
+  /// No description provided for @readerHardwarePageKeys.
+  ///
+  /// In zh, this message translates to:
+  /// **'硬件键翻页'**
+  String get readerHardwarePageKeys;
+
+  /// No description provided for @readerHardwarePageKeysSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用音量键或侧边翻页键翻页，仅在阅读器内生效'**
+  String get readerHardwarePageKeysSubtitle;
 }
 
 class _AppLocalizationsDelegate

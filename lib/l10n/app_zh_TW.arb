@@ -4,16 +4,13 @@
   "comicRatingUnavailable": "目前帖子暫不支援評分",
   "comicReplyUnavailable": "目前帖子暫不支援回覆",
   "comicCommentRefreshFailed": "評論重新整理失敗，已保留原有評論",
-
   "navigationStartupPage": "啟動頁面",
   "@@locale": "zh_TW",
-
   "clipboardLinkFoundThread": "發現百合會帖子連結",
   "clipboardLinkFoundPost": "發現百合會樓層連結",
   "clipboardLinkFoundForum": "發現百合會版塊連結",
   "clipboardLinkFoundBlog": "發現百合會日誌連結",
   "clipboardLinkOpen": "開啟",
-
   "appLanguageSectionTitle": "介面語言",
   "appLanguageSystem": "跟隨系統",
   "appLanguageSimplifiedChinese": "簡體中文",
@@ -33,11 +30,23 @@
   "messageChooseRecipients": "請選擇收件人",
   "messageRecipientSearchHint": "搜尋好友或輸入完整使用者名稱",
   "messageRecipientCountCompact": "{count}/20",
-  "@messageRecipientCountCompact": {"placeholders": {"count": {"type": "int"}}},
+  "@messageRecipientCountCompact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageComposeEmptyHint": "從上方選擇收件人，在下方輸入私訊",
   "messageComposeSelectedHint": "私訊會分別傳送給所選收件人",
   "messageRecipientSelectedCount": "已選 {count}/20 人",
-  "@messageRecipientSelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@messageRecipientSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageRecipientAlreadySelected": "此收件人已新增",
   "messageRecipientLimitReached": "最多選擇 20 位收件人",
   "messageFriendSearch": "搜尋好友使用者名稱",
@@ -47,7 +56,13 @@
   "messageBatchResultTitle": "傳送結果",
   "messageBatchOnlyFriends": "目前帳號只能向好友群發私訊，請從好友中選擇收件人",
   "messageBatchReportedAccepted": "論壇回報已受理 {count} 位收件人",
-  "@messageBatchReportedAccepted": {"placeholders": {"count": {"type": "int"}}},
+  "@messageBatchReportedAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageBatchExcluded": "明確未提交的收件人",
   "messageBatchUnproven": "送達未逐一證實的收件人",
   "messageBatchSubmittedMessage": "已提交的訊息",
@@ -69,7 +84,9 @@
   "messageYesterdayTime": "昨天 {time}",
   "@messageYesterdayTime": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "messageDetails": "訊息詳情與複製",
@@ -77,7 +94,9 @@
   "messageOpenProfile": "查看{name}的資料",
   "@messageOpenProfile": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "messageHistoryChanged": "對話歷史發生變化，請重新整理後繼續查看",
@@ -108,7 +127,9 @@
   "messageRepeatedNotifications": "另有 {count} 則相同提醒未重複顯示",
   "@messageRepeatedNotifications": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "contentFilterEntry": "內容屏蔽",
@@ -117,7 +138,9 @@
   "contentFilterCount": "共 {count} 條",
   "@contentFilterCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "contentFilterThreadsEmpty": "還沒有屏蔽任何帖子。在版塊、搜尋或標籤頁的帖子選單中可以選擇「屏蔽此帖」。",
@@ -126,19 +149,25 @@
   "contentFilterUnblocked": "已恢復「{subject}」",
   "@contentFilterUnblocked": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "String"
+      }
     }
   },
   "contentFilterBlocked": "已屏蔽「{subject}」",
   "@contentFilterBlocked": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "String"
+      }
     }
   },
   "contentFilterAlreadyBlocked": "「{subject}」已在屏蔽列表",
   "@contentFilterAlreadyBlocked": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "String"
+      }
     }
   },
   "contentFilterSaveFailed": "屏蔽設定儲存失敗",
@@ -176,29 +205,39 @@
   "blacklistReviewList": "查看名單",
   "@blacklistBlockApplied": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "@blacklistBlockAlready": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "contentFilterWebBlacklistOpen": "開啟網頁名單",
   "contentFilterWebBlacklistMemberUid": "UID：{uid}",
   "@contentFilterWebBlacklistLastSync": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "@contentFilterWebBlacklistCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "@contentFilterWebBlacklistMemberUid": {
     "placeholders": {
-      "uid": { "type": "String" }
+      "uid": {
+        "type": "String"
+      }
     }
   },
   "recentSearchTitle": "最近搜尋",
@@ -206,7 +245,9 @@
   "searchScopeSummary": "搜尋範圍：{scope}",
   "@searchScopeSummary": {
     "placeholders": {
-      "scope": { "type": "String" }
+      "scope": {
+        "type": "String"
+      }
     }
   },
   "searchScopeAllForums": "全站",
@@ -222,11 +263,9 @@
   "commonDelete": "刪除",
   "commonRemove": "移除",
   "commonUnknownError": "未知錯誤",
-
   "networkSecurityVerificationTitle": "安全驗證",
   "networkSecurityVerificationPreparing": "正在完成網站安全驗證…",
   "networkSecurityVerificationFailed": "安全驗證未完成，請重試",
-
   "forumHomeTitle": "論壇首頁",
   "forumHomeSearch": "搜尋論壇",
   "forumHomeRefresh": "重新整理論壇首頁",
@@ -234,12 +273,20 @@
   "forumHomeLoadFailed": "論壇首頁載入失敗：{error}",
   "@forumHomeLoadFailed": {
     "description": "論壇首頁首屏載入失敗；error 是 presentation 層清理後的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumHomeRefreshFailed": "重新整理論壇首頁失敗：{error}",
   "@forumHomeRefreshFailed": {
     "description": "論壇首頁重新整理失敗；error 是 presentation 層清理後的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumHomeFavoriteForums": "我收藏的版塊",
   "forumHomeUncategorized": "未分類",
@@ -259,20 +306,32 @@
   "forumDisplayPage": "第{page}頁",
   "@forumDisplayPage": {
     "description": "論壇列表目前頁按鈕；page 是目前頁碼",
-    "placeholders": {"page": {"type": "int"}}
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
   },
   "forumDisplayEmpty": "目前沒有帖子",
   "forumDisplayLoadFailed": "帖子列表載入失敗：{error}",
   "@forumDisplayLoadFailed": {
     "description": "論壇列表載入失敗；error 是 presentation 層清理後的安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumDisplayCopiedLink": "已複製帖子連結",
   "forumWebViewLoading": "正在載入論壇頁面",
   "forumWebViewLoadFailed": "論壇頁面載入失敗：{error}",
   "@forumWebViewLoadFailed": {
     "description": "受管論壇 WebView 載入失敗；error 是安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumWebViewRetry": "重試載入",
   "forumWebViewOpenExternal": "在外部開啟",
@@ -290,13 +349,21 @@
   "forumActionFailed": "操作失敗，請稍後重試：{error}",
   "@forumActionFailed": {
     "description": "論壇收藏或重新整理操作失敗；error 是安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumFavoriteForumsTitle": "取消收藏",
   "forumFavoriteForumsLoadFailed": "載入收藏版塊失敗：{error}",
   "@forumFavoriteForumsLoadFailed": {
     "description": "收藏版塊列表載入失敗；error 是安全摘要",
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "forumNoFavoriteForums": "目前沒有收藏版塊",
   "forumWebViewAuthorOnly": "只看樓主",
@@ -310,15 +377,22 @@
   "forumWebViewForumSearch": "{board}搜尋",
   "@forumWebViewForumSearch": {
     "description": "目前版塊搜尋頁標題；board 是伺服器返回的版塊名稱",
-    "placeholders": {"board": {"type": "String"}}
+    "placeholders": {
+      "board": {
+        "type": "String"
+      }
+    }
   },
   "forumWebViewSearchForum": "論壇搜尋",
   "forumForumByFid": "fid={fid}",
   "@forumForumByFid": {
     "description": "無法解析版塊名稱時的安全標題；fid 是原始版塊 ID",
-    "placeholders": {"fid": {"type": "String"}}
+    "placeholders": {
+      "fid": {
+        "type": "String"
+      }
+    }
   },
-
   "historyTitle": "記錄",
   "historySearchHint": "搜尋記錄",
   "historySearchOpen": "搜尋記錄",
@@ -361,14 +435,12 @@
   "historyWorkUnavailable": "該{type}作品已從本機移除",
   "historyNativeUnavailable": "目前無法開啟原生頁面",
   "historyLoginRequired": "請先登入後再開啟此記錄",
-
   "appNavigationForum": "論壇",
   "appNavigationFavorites": "收藏",
   "appNavigationComic": "漫畫",
   "appNavigationNovel": "小說",
   "appNavigationHistory": "記錄",
   "appNavigationMore": "更多",
-
   "librarySelectionSelectedCount": "{count, plural, =0 {未選擇項目} other {已選 {count} 項}}",
   "librarySelectionExit": "退出多選",
   "librarySelectionSelectAll": "全選目前分類",
@@ -390,8 +462,16 @@
   "librarySelectionKeepCurrentCategory": "保持不變",
   "librarySelectionMixedSourceHint": "所選作品包含漫畫和小說，請分別為每個來源選擇目標分類；未選擇來源的作品保持原分類。",
   "librarySelectionSourceSection": "{source}作品（{count} 項）",
-  "@librarySelectionSourceSection": {"placeholders": {"source": {"type": "String"}, "count": {"type": "int"}}},
-
+  "@librarySelectionSourceSection": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "librarySelectionCategoryAssigned": "{count, plural, =0 {沒有項目設定分類} other {已為 {count} 項設定分類}}",
   "librarySelectionCategoryAssignedPartial": "{succeededCount, plural, =0 {沒有項目設定分類} other {已為 {succeededCount} 項設定分類}}；{failedCount, plural, =0 {沒有失敗項目} other {失敗 {failedCount} 項}}",
   "librarySelectionCategoryRemoved": "{count, plural, =0 {沒有項目移出分類} other {已將 {count} 項移出分類}}",
@@ -410,7 +490,6 @@
   "librarySelectionMissingTargetCategory": "請選擇目標分類",
   "librarySelectionNoValidItems": "沒有可處理的項目",
   "librarySelectionNoChange": "沒有可執行的{action}",
-
   "libraryShelfTitle": "{module, select, comic {漫畫} novel {小說} favorite {收藏} other {書架}}",
   "libraryShelfLoadFailed": "載入書架失敗：{error}",
   "libraryShelfEmpty": "書架為空",
@@ -426,7 +505,13 @@
   "libraryShelfComicBadge": "漫",
   "libraryShelfNovelBadge": "文",
   "libraryShelfUnreadBadgeSemantics": "未讀 {count} 章",
-  "@libraryShelfUnreadBadgeSemantics": {"placeholders": {"count": {"type": "int"}}},
+  "@libraryShelfUnreadBadgeSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryShelfCategoryOperationFailed": "分類操作失敗",
   "libraryShelfCreateCategoryNeedsSource": "請先切換到漫畫或小說分類，再新增分類",
   "libraryShelfRemoveFromCategory": "移出分類",
@@ -461,7 +546,6 @@
   "libraryShelfMergeDuplicatesSuccess": "已合併 {count, plural, =0 {0 個重複作品} other {{count} 個重複作品}}",
   "libraryShelfMergeDuplicatesNoChange": "沒有可合併的重複作品",
   "libraryShelfActionUnsupported": "目前書架不支援此操作",
-
   "libraryTaskCoverWarmup": "正在準備封面",
   "libraryTaskFavoriteSyncFetching": "正在取得收藏列表",
   "libraryTaskFavoriteSyncSaving": "正在儲存收藏資料",
@@ -480,7 +564,6 @@
   "libraryTaskFavoriteSyncNotificationTitle": "收藏同步",
   "libraryTaskComicSearchNotificationTitle": "漫畫搜尋",
   "libraryTaskNotificationTitle": "書架工作",
-
   "libraryDetailDownload": "快取",
   "libraryDetailFilterAndSort": "篩選與排序",
   "libraryDetailRefresh": "重新整理",
@@ -495,7 +578,9 @@
   "libraryDetailUseTagAsCatalogMessage": "將「{tag}」設為目錄並重新整理章節？該標籤可能包含討論、番外或其他作品。",
   "@libraryDetailUseTagAsCatalogMessage": {
     "placeholders": {
-      "tag": { "type": "String" }
+      "tag": {
+        "type": "String"
+      }
     }
   },
   "libraryDetailUseTagAsCatalogFailed": "設定目錄失敗",
@@ -589,7 +674,6 @@
   "libraryDetailCoverUpdated": "封面已更新",
   "libraryDetailCoverRemoveFailed": "取消封面失敗：{error}",
   "libraryDetailCoverRemoved": "已取消封面",
-
   "libraryChapterCount": "{count, plural, =0 {共 0 章} other {共 {count} 章}}",
   "libraryChapterFallbackTitle": "章節 {tid}",
   "libraryChapterBookmarkSemantics": "已加入書籤",
@@ -655,23 +739,19 @@
   "libraryChapterManual": "手動",
   "libraryChapterParsed": "解析",
   "libraryChapterLoadFailed": "讀取章節失敗：{error}",
-
   "libraryCoverFocalTitle": "調整封面焦點",
   "libraryCoverFocalHelp": "拖曳選框以選擇封面取景區域，原圖不會被裁切",
   "libraryCoverImageLoadFailed": "圖片載入失敗",
   "libraryCoverRetry": "重試",
   "libraryCoverLoadFailed": "封面載入失敗，點按重試",
   "libraryCoverCenter": "置中",
-
   "libraryErrorRedactedLink": "[連結已隱藏]",
   "libraryErrorRedactedSecret": "[敏感資訊已隱藏]",
-
   "readerBack": "返回",
   "readerPrevious": "上一章",
   "readerNext": "下一章",
   "readerSelectedSemantics": "{label}，已選取",
   "readerProgressSemantics": "閱讀進度：{current} / {total}",
-
   "moreTitle": "更多",
   "moreMyProfile": "我的資料",
   "moreMyMessages": "我的訊息",
@@ -689,15 +769,48 @@
   "moreAccountReplies": "回覆",
   "moreAccountCreditLabel": "積分",
   "moreAccountStatistic": "{label}：{value}",
-  "@moreAccountStatistic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" } } },
-  "@moreAccountCredits": { "placeholders": { "value": { "type": "String" } } },
+  "@moreAccountStatistic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@moreAccountCredits": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountUnavailable": "—",
   "moreAccountGroup": "使用者群組：{name}",
-  "@moreAccountGroup": { "placeholders": { "name": { "type": "String" } } },
+  "@moreAccountGroup": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountAvatar": "{name}的頭像",
-  "@moreAccountAvatar": { "placeholders": { "name": { "type": "String" } } },
+  "@moreAccountAvatar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountOpenProfile": "查看{name}的資料",
-  "@moreAccountOpenProfile": { "placeholders": { "name": { "type": "String" } } },
+  "@moreAccountOpenProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "moreAccountLoadFailed": "資料暫時無法載入",
   "moreLoginSubtitle": "登入論壇帳號並同步登入狀態",
   "moreLogout": "登出",
@@ -749,8 +862,12 @@
   "moreThemeSummary": "{family} · {mode}",
   "@moreThemeSummary": {
     "placeholders": {
-      "family": {"type": "String"},
-      "mode": {"type": "String"}
+      "family": {
+        "type": "String"
+      },
+      "mode": {
+        "type": "String"
+      }
     }
   },
   "moreThemeLight": "日間",
@@ -878,7 +995,6 @@
   "moreStorageLibraryEpisodeState": "章節狀態",
   "moreStorageHistoryDatabase": "記錄資料庫",
   "moreStorageHistoryEntries": "瀏覽記錄：{count}",
-
   "readerModeVertical": "垂直",
   "readerModeLtr": "由左至右",
   "readerModeRtl": "由右至左",
@@ -900,7 +1016,16 @@
   "readerPageIndicator": "頁碼浮層",
   "readerPagedBackgroundBlackNote": "翻頁模式固定黑色背景；背景選擇在捲動模式生效。",
   "readerThumbnailPageSemantics": "第 {current} 頁，共 {total} 頁",
-  "@readerThumbnailPageSemantics": {"placeholders":{"current":{"type":"int"},"total":{"type":"int"}}},
+  "@readerThumbnailPageSemantics": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "readerNoImages": "沒有可閱讀圖片",
   "readerImageLoadFailed": "圖片載入失敗",
   "readerTailContent": "末尾內容",
@@ -1111,9 +1236,6 @@
   "novelPagedWaitingForPage": "正在準備目標頁…",
   "novelPagedWaitTimedOut": "目標頁尚未準備好，請重試",
   "novelPagedBackgroundPaused": "後續分頁已暫停，目前頁面仍可閱讀",
-  "novelPagedWaitingForPage": "正在準備目標頁…",
-  "novelPagedWaitTimedOut": "目標頁尚未準備好，請重試",
-  "novelPagedBackgroundPaused": "後續分頁已暫停，目前頁面仍可閱讀",
   "novelReturnToScroll": "回到滾動",
   "novelPages": "{count, plural, =0 {0 頁} other {{count} 頁}}",
   "novelPageSemantics": "{chapterTitle}，第 {currentPage} 頁，共 {totalPages}",
@@ -1122,17 +1244,65 @@
   "novelPreviousPageSemantics": "上一頁，第 {page} 頁",
   "novelPageIndicator": "{currentPage} / {totalPages}",
   "novelReadingStatusChapter": "第 {current} / {total} 章",
-  "@novelReadingStatusChapter": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@novelReadingStatusChapter": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusVertical": "本章 {percent}% · 剩 {count} 頁",
-  "@novelReadingStatusVertical": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "@novelReadingStatusVertical": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusVerticalApprox": "本章 {percent}% · 約剩 {count} 頁",
-  "@novelReadingStatusVerticalApprox": {"placeholders": {"percent": {"type": "int"}, "count": {"type": "int"}}},
+  "@novelReadingStatusVerticalApprox": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusVerticalEnd": "本章 {percent}% · 本章完",
-  "@novelReadingStatusVerticalEnd": {"placeholders": {"percent": {"type": "int"}}},
+  "@novelReadingStatusVerticalEnd": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusPaged": "第 {current} / {total} 頁",
-  "@novelReadingStatusPaged": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@novelReadingStatusPaged": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "novelReadingStatusPagedPending": "第 {current} 頁 · 計算中",
-  "@novelReadingStatusPagedPending": {"placeholders": {"current": {"type": "int"}}},
+  "@novelReadingStatusPagedPending": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      }
+    }
+  },
   "novelChapterTurnContinue": "{direction, select, next {繼續滑動進入下一章} previous {繼續滑動進入上一章} other {繼續滑動切換章節}}",
   "novelChapterTurnRelease": "{direction, select, next {鬆手進入下一章 · {title}} previous {鬆手進入上一章 · {title}} other {鬆手切換章節 · {title}}}",
   "novelPageOfTotalSemantics": "第 {page} 頁，共 {total} 頁",
@@ -1141,7 +1311,6 @@
   "libraryOperationUnsupported": "目前模組不支援此操作",
   "libraryOperationCacheWriteFailed": "快取寫入失敗，請重試",
   "libraryOperationDefaultCategoryImmutable": "系統分類不能修改或刪除",
-
   "threadControlsTitle": "帖子懸浮操作",
   "threadControlsCompact": "精簡操作列",
   "threadControlsSide": "精簡列停靠位置",
@@ -1160,12 +1329,26 @@
   "threadControlsNextPost": "下一樓",
   "threadControlsFirstPost": "回到首樓",
   "threadControlsPageSummary": "第 {page} / {total} 頁",
-  "@threadControlsPageSummary": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "@threadControlsPageSummary": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "threadControlsPageUnknown": "第 {page} 頁，總頁數未知",
-  "@threadControlsPageUnknown": {"placeholders": {"page": {"type": "int"}}},
+  "@threadControlsPageUnknown": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
   "threadControlsPageInput": "輸入頁碼",
   "threadControlsInvalidPage": "請輸入有效頁碼",
-
   "threadDetailTitle": "帖子詳情",
   "threadDetailLoading": "正在讀取帖子",
   "threadDetailRefresh": "重新整理帖子詳情",
@@ -1175,7 +1358,11 @@
   "threadDetailNormalOrder": "正序瀏覽",
   "threadDetailReplyCount": "回覆 {count}",
   "@threadDetailReplyCount": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadDetailReplyOrder": "回覆順序",
   "threadDetailAscendingOrder": "正序",
@@ -1185,7 +1372,11 @@
   "threadDetailNoMore": "沒有更多",
   "threadDetailPage": "第{page}頁",
   "@threadDetailPage": {
-    "placeholders": {"page": {"type": "int"}}
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
   },
   "threadDetailReply": "回覆",
   "threadDetailReplyPost": "回覆帖子",
@@ -1201,7 +1392,11 @@
   "threadDetailReplyLink": "樓層回覆連結",
   "threadDetailCopySuccess": "{target}已複製",
   "@threadDetailCopySuccess": {
-    "placeholders": {"target": {"type": "String"}}
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailFavorite": "收藏帖子",
   "threadDetailUnfavorite": "已收藏",
@@ -1217,12 +1412,16 @@
   "blacklistAuthorGateViewOnce": "本次查看",
   "@threadBlacklistCollapsed": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "@threadBlacklistCollapsedFloor": {
     "placeholders": {
-      "number": { "type": "int" }
+      "number": {
+        "type": "int"
+      }
     }
   },
   "threadDetailBackHome": "返回首頁",
@@ -1230,15 +1429,27 @@
   "threadDetailCopyAll": "全部複製",
   "threadDetailLoadFailed": "帖子詳情載入失敗：{error}",
   "@threadDetailLoadFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailRefreshFailed": "重新整理帖子詳情失敗：{error}",
   "@threadDetailRefreshFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailPageLoadFailed": "頁面載入失敗：{error}",
   "@threadDetailPageLoadFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadDetailFloorLocatorFailed": "樓層定位失敗，已開啟帖子",
   "threadDetailUidMissing": "使用者 UID 缺失",
@@ -1246,7 +1457,11 @@
   "threadFavoriteSuccessSyncFailed": "收藏成功，但收藏書架同步失敗",
   "threadFavoriteFailed": "收藏操作失敗：{error}",
   "@threadFavoriteFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadLoginRequired": "請先登入後再操作",
   "threadPermissionDenied": "沒有執行此操作的權限",
@@ -1266,15 +1481,27 @@
   "threadPollSubmitting": "投票中…",
   "threadPollSelectedCount": "已選 {count} 項",
   "@threadPollSelectedCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadPollParticipants": "{count} 人參與",
   "@threadPollParticipants": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadPollMaxChoices": "最多可選 {count} 項",
   "@threadPollMaxChoices": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadPollSelectOption": "請選擇投票選項",
   "threadPollVoteSuccess": "投票成功",
@@ -1288,11 +1515,19 @@
   "threadPollVoteOutcomeUnknown": "無法確認投票結果，請重新整理帖子後再決定是否重試",
   "threadPollVoteFailed": "投票失敗：{error}",
   "@threadPollVoteFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadPollVotes": "{count, plural, =0 {0 票} other {{count} 票}}",
   "@threadPollVotes": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadRatingTitle": "評分",
   "threadRatingSubmit": "確定",
@@ -1302,25 +1537,41 @@
   "threadRatingRange": "範圍 {min}~{max}",
   "@threadRatingRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "threadRatingRangeWithRemaining": "{range}，今日剩餘 {remaining, plural, =0 {0} other {{remaining}}}",
   "@threadRatingRangeWithRemaining": {
     "placeholders": {
-      "range": {"type": "String"},
-      "remaining": {"type": "int"}
+      "range": {
+        "type": "String"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "threadRatingRemaining": "今日剩餘 {count}",
   "@threadRatingRemaining": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadRatingParticipants": "參與人數",
   "threadRatingParticipantsCount": "{count, plural, =0 {參與人數 0} other {參與人數 {count}}}",
   "@threadRatingParticipantsCount": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "threadRatingPoints": "積分",
   "threadRatingReason": "理由",
@@ -1332,7 +1583,11 @@
   "threadRatingOutcomeUnknown": "評分結果暫時無法確認，請重新整理後查看",
   "threadRatingFailed": "評分失敗：{error}",
   "@threadRatingFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadCommentTitle": "點評",
   "threadCommentLoadMore": "載入更多點評",
@@ -1348,13 +1603,21 @@
   "threadCommentOutcomeUnknown": "點評結果暫時無法確認，請重新整理後查看",
   "threadCommentFailed": "點評失敗：{error}",
   "@threadCommentFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadReplyContentRequired": "請輸入回覆內容",
   "threadReplySuccess": "回覆成功",
   "threadReplyFailed": "回覆失敗：{error}",
   "@threadReplyFailed": {
-    "placeholders": {"error": {"type": "String"}}
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "threadAttachmentOpen": "開啟附件",
   "threadImageSave": "儲存圖片",
@@ -1421,16 +1684,52 @@
   "composerRestoredDraft": "已復原未送出草稿",
   "postingRestoredDraftWithTags": "已復原未送出的草稿，請注意已復原的主題標籤",
   "composerPendingAttachment": "{count, plural, =0 {圖片已上傳，請選擇位置後點選圖片按鈕重新插入} other {{count} 張圖片已上傳，請選擇位置後點選圖片按鈕重新插入}}",
-  "@composerPendingAttachment": {"placeholders": {"count": {"type": "int"}}},
+  "@composerPendingAttachment": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "composerPendingAttachmentSelectionExpired": "目前選取範圍無法安全復原，請重新選擇位置",
   "composerUploadingImages": "正在上傳圖片 {current}/{total}",
-  "@composerUploadingImages": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@composerUploadingImages": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "composerImageUploaded": "{fileName} 已上傳",
-  "@composerImageUploaded": {"placeholders": {"fileName": {"type": "String"}}},
+  "@composerImageUploaded": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
   "composerImageUploadFailed": "{fileName} 上傳失敗，請重試",
-  "@composerImageUploadFailed": {"placeholders": {"fileName": {"type": "String"}}},
+  "@composerImageUploadFailed": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
   "composerImageUploadFailedWithReason": "{fileName} 上傳失敗：{reason}",
-  "@composerImageUploadFailedWithReason": {"placeholders": {"fileName": {"type": "String"}, "reason": {"type": "String"}}},
+  "@composerImageUploadFailedWithReason": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "composerImagePickerFailed": "選擇圖片失敗，請重試",
   "composerImageFileMissing": "圖片檔案不存在，無法上傳",
   "composerImageInvalidFileType": "只能上傳圖片檔案",
@@ -1449,9 +1748,21 @@
   "composerImageUploadServer": "上傳服務異常，請稍後重試",
   "composerImageUploadUnknown": "圖片上傳失敗，請重試",
   "composerLoadDraftFailed": "載入草稿失敗：{error}",
-  "@composerLoadDraftFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@composerLoadDraftFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "composerStickerLoadFailed": "表情載入失敗：{error}",
-  "@composerStickerLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@composerStickerLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "composerStickerNetworkRequired": "需要連線載入表情包",
   "composerStickerAllGroup": "表情",
   "composerStickerDefaultGroup": "預設表情",
@@ -1481,20 +1792,56 @@
   "composerClearBackgroundColor": "清除背景",
   "composerAuthenticationRequired": "登入狀態已失效，請重新登入後再試",
   "composerCredentialExpired": "{kind, select, newThread {發帖憑證已失效，請重新整理登入狀態後重試} reply {回覆憑證已失效，請重新整理登入狀態後重試} other {送出憑證已失效，請重新整理登入狀態後重試}}",
-  "@composerCredentialExpired": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerCredentialExpired": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerRateLimited": "{kind, select, newThread {發帖過於頻繁，請稍後再試} reply {回覆太頻繁，請稍後再試} other {操作過於頻繁，請稍後再試}}",
-  "@composerRateLimited": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerRateLimited": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerPermissionDenied": "{kind, select, newThread {目前帳號權限不足，無法發帖} reply {目前帳號權限不足，無法送出回覆} other {目前帳號權限不足}}",
-  "@composerPermissionDenied": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerPermissionDenied": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionTypeRequired": "該看板要求選擇主題分類，請先選擇",
   "composerSubmissionSubjectTooShort": "標題過短，請補充後重試",
   "composerSubmissionSubjectTooLong": "標題過長，請縮短後重試",
   "composerSubmissionContentTooShort": "{kind, select, newThread {正文內容過短，請補充後重試} reply {回覆內容過短，請補充後重試} other {送出內容過短，請補充後重試}}",
-  "@composerSubmissionContentTooShort": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerSubmissionContentTooShort": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionContentTooLong": "{kind, select, newThread {正文內容過長，請縮短後重試} reply {回覆內容過長，請縮短後重試} other {送出內容過長，請縮短後重試}}",
-  "@composerSubmissionContentTooLong": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerSubmissionContentTooLong": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionTargetUnavailable": "{kind, select, newThread {目標看板無法使用，請重新整理後再試} reply {目標帖子或樓層無法使用，請重新整理後再試} other {送出目標無法使用，請重新整理後再試}}",
-  "@composerSubmissionTargetUnavailable": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerSubmissionTargetUnavailable": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerSubmissionThreadClosed": "該帖子已關閉，無法繼續回覆",
   "composerCaptchaRequired": "需要驗證碼，請暫時改用網頁發佈",
   "composerPollInvalid": "投票設定無效，請檢查選項與截止時間",
@@ -1504,18 +1851,42 @@
   "composerNetworkFailure": "網路異常，請稍後重試",
   "composerServerFailure": "服務異常，請稍後重試",
   "composerUnknownFailure": "{kind, select, newThread {發帖失敗，請稍後重試} reply {送出回覆失敗，請稍後重試} other {送出失敗，請稍後重試}}",
-  "@composerUnknownFailure": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerUnknownFailure": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "composerOutcomeUnknown": "{kind, select, newThread {發帖結果無法確認，請先檢查版塊，避免重複送出} reply {回覆結果無法確認，請先檢查帖子，避免重複送出} other {送出結果無法確認，請先檢查目標內容，避免重複送出}}",
-  "@composerOutcomeUnknown": {"placeholders": {"kind": {"type": "String"}}},
+  "@composerOutcomeUnknown": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
   "postingTitle": "發帖",
   "postingTitleWithForum": "發帖 — {forumName}",
-  "@postingTitleWithForum": {"placeholders": {"forumName": {"type": "String"}}},
+  "@postingTitleWithForum": {
+    "placeholders": {
+      "forumName": {
+        "type": "String"
+      }
+    }
+  },
   "postingSend": "發佈",
   "postingSubjectHint": "輸入標題",
   "postingBodyHint": "請輸入正文",
   "postingFormLoading": "正在載入發帖表單",
   "postingFormLoadFailed": "載入發帖表單失敗：{error}",
-  "@postingFormLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@postingFormLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "postingType": "主題分類",
   "postingTypeRequired": "主題分類（必選）",
   "postingTypeNone": "無分類",
@@ -1524,28 +1895,76 @@
   "postingTagsHint": "輸入標籤，按 Enter 或英文逗號確認",
   "postingTagDelete": "刪除標籤",
   "postingTagsLimit": "最多 {maxTags} 個；單個標籤 ≤ {maxLength} 個字",
-  "@postingTagsLimit": {"placeholders": {"maxTags": {"type": "int"}, "maxLength": {"type": "int"}}},
+  "@postingTagsLimit": {
+    "placeholders": {
+      "maxTags": {
+        "type": "int"
+      },
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
   "postingNormalThread": "一般帖",
   "postingPoll": "投票",
   "postingPollConfig": "投票設定",
   "postingThreadKind": "帖子類型",
   "postingPollConstraints": "至少 {min} 個選項；最多 {max} 個，單項 ≤ {maxLength} 個字",
-  "@postingPollConstraints": {"placeholders": {"min": {"type": "int"}, "max": {"type": "int"}, "maxLength": {"type": "int"}}},
+  "@postingPollConstraints": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      },
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollSummary": "{count, plural, =0 {尚未填寫選項 / {mode}} other {已填 {count} 項 / {mode}}}",
-  "@postingPollSummary": {"placeholders": {"count": {"type": "int"}, "mode": {"type": "String"}}},
+  "@postingPollSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
   "postingPollSingle": "單選",
   "postingPollMultipleMode": "複選",
   "postingPollOption": "選項 {index}",
-  "@postingPollOption": {"placeholders": {"index": {"type": "int"}}},
+  "@postingPollOption": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollAddOption": "新增選項",
   "postingPollRemoveOption": "刪除選項",
   "postingPollMultiple": "允許複選",
   "postingPollMaxChoices": "{count, plural, =0 {不可選擇選項} other {最多可選 {count} 項}}",
-  "@postingPollMaxChoices": {"placeholders": {"count": {"type": "int"}}},
+  "@postingPollMaxChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollDeadline": "截止天數",
   "postingPollNeverExpires": "不限期",
   "postingPollDays": "{count, plural, =0 {不限期} other {{count} 天}}",
-  "@postingPollDays": {"placeholders": {"count": {"type": "int"}}},
+  "@postingPollDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollPublicVoters": "公開投票人",
   "postingPollPublicVotersDescription": "開啟後所有人可看到誰投了哪一項",
   "postingPollShowResultsAfterVote": "投票後才顯示結果",
@@ -1559,49 +1978,123 @@
   "postingBodyRequired": "請輸入正文",
   "postingFormStillLoading": "發帖表單還在載入，請稍候再試",
   "postingSubjectTooLong": "標題超出看板上限（最多 {limit} 個字）",
-  "@postingSubjectTooLong": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingSubjectTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingBodyTooLong": "正文超出看板上限（最多 {limit} 個字）",
-  "@postingBodyTooLong": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingBodyTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollMissing": "缺少投票設定，請新增選項",
   "postingPollTooFewOptions": "投票至少需要 {limit} 個非空選項",
-  "@postingPollTooFewOptions": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingPollTooFewOptions": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollOptionTooLong": "單個投票選項不能超過 {limit} 個字",
-  "@postingPollOptionTooLong": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingPollOptionTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingPollMultipleInvalid": "複選投票的最大選擇數至少為 {limit}",
-  "@postingPollMultipleInvalid": {"placeholders": {"limit": {"type": "int"}}},
+  "@postingPollMultipleInvalid": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "postingSubmitSuccess": "發佈成功",
   "postingSubmitSuccessWithDetail": "發佈成功：{detail}",
-  "@postingSubmitSuccessWithDetail": {"placeholders": {"detail": {"type": "String"}}},
+  "@postingSubmitSuccessWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "replyThreadTitle": "回覆帖子",
   "replyFloorTitle": "回覆樓層",
   "replySubmit": "送出",
   "replyMessageHint": "輸入回覆內容",
   "replyPreparingQuote": "正在準備樓層引用",
   "replyPreparationFailed": "樓層回覆引用準備失敗：{error}",
-  "@replyPreparationFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@replyPreparationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "replyLeaveTitle": "儲存草稿並離開？",
   "replyLeaveBody": "目前回覆還沒有送出，離開前會儲存為草稿。",
   "replyContentRequired": "請輸入回覆內容",
   "replyReferenceUnavailable": "樓層回覆引用準備失敗，請重試",
   "replySubmitSuccess": "回覆成功",
   "replySubmitSuccessWithDetail": "回覆成功：{detail}",
-  "@replySubmitSuccessWithDetail": {"placeholders": {"detail": {"type": "String"}}},
+  "@replySubmitSuccessWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "composerPrototypeTitle": "Quill Composer 原型",
   "composerPrototypeSourceTitle": "原始碼微調",
   "composerPrototypeAttachmentInserted": "已插入測試附件 {aid}",
-  "@composerPrototypeAttachmentInserted": {"placeholders": {"aid": {"type": "String"}}},
+  "@composerPrototypeAttachmentInserted": {
+    "placeholders": {
+      "aid": {
+        "type": "String"
+      }
+    }
+  },
   "composerAttachmentFallback": "圖片 {aid}",
-  "@composerAttachmentFallback": {"placeholders": {"aid": {"type": "String"}}},
+  "@composerAttachmentFallback": {
+    "placeholders": {
+      "aid": {
+        "type": "String"
+      }
+    }
+  },
   "composerLinkUrlHint": "https://example.com",
-
   "commonSearch": "搜尋",
   "commonMenu": "選單",
   "commonPreviousPage": "上一頁",
   "commonNextPage": "下一頁",
   "commonPage": "第{page}頁",
-  "@commonPage": {"placeholders": {"page": {"type": "int"}}},
+  "@commonPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
   "commonPageOf": "第 {page} / {total} 頁",
-  "@commonPageOf": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "@commonPageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "commonImageLoading": "圖片載入中",
   "commonNetworkError": "網路連線失敗",
   "commonTimeoutError": "請求逾時",
@@ -1609,7 +2102,6 @@
   "commonServerError": "伺服器目前無法使用",
   "commonParseError": "內容解析失敗",
   "commonRequestError": "請求失敗",
-
   "authLoginTitle": "登入",
   "authUsername": "使用者名稱",
   "authUsernameHint": "請輸入論壇帳號",
@@ -1619,15 +2111,44 @@
   "authLoginTimeout": "登入逾時，請檢查網路後重試",
   "authLoginRejected": "帳號或密碼錯誤",
   "authLoginFailed": "登入失敗：{error}",
-  "@authLoginFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@authLoginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "authLoginWelcome": "歡迎回來，{username}",
-  "@authLoginWelcome": {"placeholders": {"username": {"type": "String"}}},
+  "@authLoginWelcome": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "authWebViewVerificationFailed": "登入驗證失敗：{error}",
-  "@authWebViewVerificationFailed": {"placeholders": {"error": {"type": "String"}}},
-
+  "@authWebViewVerificationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "appUpdateDialogTitle": "發現新版本",
   "appUpdateDialogBody": "{appName} v{latestVersion} 已發佈，目前版本為 v{installedVersion}",
-  "@appUpdateDialogBody": {"placeholders": {"appName": {"type": "String"}, "latestVersion": {"type": "String"}, "installedVersion": {"type": "String"}}},
+  "@appUpdateDialogBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      },
+      "latestVersion": {
+        "type": "String"
+      },
+      "installedVersion": {
+        "type": "String"
+      }
+    }
+  },
   "appUpdateDialogPrompt": "是否立即更新？",
   "appUpdateDialogReleaseNotes": "更新說明",
   "appUpdateDialogIgnore": "忽略",
@@ -1636,7 +2157,13 @@
   "appUpdateCheck": "檢查更新",
   "appUpdateVersionLoading": "目前版本：讀取中",
   "appUpdateCurrentVersion": "目前版本：{version}",
-  "@appUpdateCurrentVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@appUpdateCurrentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "appUpdateUpToDate": "已是最新版本",
   "appUpdateReleaseNotesEmpty": "目前版本沒有更新日誌",
   "appUpdateReleaseNotesUnavailable": "更新日誌目前無法使用",
@@ -1654,37 +2181,97 @@
   "appUpdateBrowserUnavailable": "無法開啟下載連結，請確認裝置已安裝瀏覽器",
   "appUpdateOpenUrlFailed": "開啟下載連結失敗，請稍後重試",
   "appUpdateLaunchFailed": "開啟更新下載連結失敗，請稍後重試",
-
   "searchTitle": "搜尋",
   "searchInputHint": "輸入關鍵字",
   "searchLoadMore": "查看更多",
   "searchRetryAfter": "請在 {seconds} 秒後重試",
-  "@searchRetryAfter": {"placeholders": {"seconds": {"type": "int"}}},
+  "@searchRetryAfter": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "searchNoResults": "找不到結果",
   "searchFailed": "搜尋失敗：{error}",
-  "@searchFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@searchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "searchLoadMoreFailed": "載入更多失敗：{error}",
-  "@searchLoadMoreFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@searchLoadMoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "searchForumFallback": "論壇搜尋",
   "searchQueueWaiting": "{subject} 正在等待搜尋，預計 {seconds} 秒",
-  "@searchQueueWaiting": {"placeholders": {"subject": {"type": "String"}, "seconds": {"type": "String"}}},
+  "@searchQueueWaiting": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
   "searchResultTid": "TID：{tid}",
-  "@searchResultTid": {"placeholders": {"tid": {"type": "String"}}},
-
+  "@searchResultTid": {
+    "placeholders": {
+      "tid": {
+        "type": "String"
+      }
+    }
+  },
   "tagTitleFallback": "標籤",
   "tagLoadFailed": "標籤頁載入失敗：{error}",
-  "@tagLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@tagLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "tagRelatedThreads": "{count, plural, =0 {目前沒有相關帖子} other {{count} 個相關帖子}}",
-  "@tagRelatedThreads": {"placeholders": {"count": {"type": "int"}}},
+  "@tagRelatedThreads": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagReplies": "回覆 {count}",
-  "@tagReplies": {"placeholders": {"count": {"type": "int"}}},
+  "@tagReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagViews": "瀏覽 {count}",
-  "@tagViews": {"placeholders": {"count": {"type": "int"}}},
+  "@tagViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagLastPost": "最後發表 {value}",
-  "@tagLastPost": {"placeholders": {"value": {"type": "String"}}},
+  "@tagLastPost": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "tagMore": "更多",
   "tagEmpty": "目前沒有相關帖子",
-
   "profileMyContent": "我的內容",
   "profileUserContent": "發表的內容",
   "profileAccountTools": "帳號與工具",
@@ -1693,7 +2280,13 @@
   "profileLoginToInteract": "登入後發私訊或加好友",
   "profileOnline": "在線",
   "profileUid": "UID {uid}",
-  "@profileUid": {"placeholders": {"uid": {"type": "String"}}},
+  "@profileUid": {
+    "placeholders": {
+      "uid": {
+        "type": "String"
+      }
+    }
+  },
   "profileCopyUid": "複製 UID",
   "profileUidCopied": "UID 已複製",
   "profileSendMessage": "發私訊",
@@ -1709,15 +2302,20 @@
   "profileFriendApproveExplanation": "確認接受這位使用者的好友申請。",
   "profileFriendRemoveExplanation": "解除後，你們將不再是好友。",
   "profileFriendOperationUnknown": "操作結果暫未確認，請關閉並核對好友狀態後再操作",
-
   "profileFriendRequestSent": "好友申請已送出，等待對方確認",
   "profileFriendApproved": "已接受申請，你們現在是好友了",
   "profileFriendRemoved": "已解除好友關係",
-
   "profileTitle": "個人資料",
   "profileMyTitle": "我的資料",
   "profileUserTitle": "{username} 的資料",
-  "@profileUserTitle": {"description": "伺服器未提供資料頁標題時由應用程式產生的標題；username 保持原文", "placeholders": {"username": {"type": "String"}}},
+  "@profileUserTitle": {
+    "description": "伺服器未提供資料頁標題時由應用程式產生的標題；username 保持原文",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "profileHome": "首頁",
   "profileLoginRequired": "請先登入後查看個人資料",
   "profileMyBlogs": "我的日誌",
@@ -1733,9 +2331,21 @@
   "profileThreadsLoginRequired": "登入後查看我的主題和回覆",
   "profileThreadsReadFailed": "主題和回覆載入失敗",
   "profileThreadViews": "瀏覽 {count}",
-  "@profileThreadViews": {"placeholders": {"count": {"type": "int"}}},
+  "@profileThreadViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileThreadReplies": "回覆 {count}",
-  "@profileThreadReplies": {"placeholders": {"count": {"type": "int"}}},
+  "@profileThreadReplies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileForumFavorites": "論壇收藏",
   "profileFriends": "好友",
   "profileSettings": "資料設定",
@@ -1745,7 +2355,13 @@
   "profileDetails": "個人資料",
   "profileLoading": "正在讀取資料",
   "profileLoadFailed": "資料載入失敗：{error}",
-  "@profileLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@profileLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "forumWebViewAccountChanged": "帳號已變更，請關閉此頁面後重新開啟",
   "profileBlogOpenWeb": "在網頁中開啟",
   "profileBlogWebInputNotice": "目前輸入不會自動帶入網頁。你可以取消並先複製內容，再開啟網頁繼續操作。",
@@ -1779,9 +2395,21 @@
   "profileBlogCommentDeleted": "留言已刪除",
   "profileBlogCommentContent": "留言內容",
   "profileBlogCommentReplyTo": "回覆 {author}",
-  "@profileBlogCommentReplyTo": {"placeholders": {"author": {"type": "String"}}},
+  "@profileBlogCommentReplyTo": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogCommentSmileyLabel": "表情 {index}",
-  "@profileBlogCommentSmileyLabel": {"placeholders": {"index": {"type": "int"}}},
+  "@profileBlogCommentSmileyLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogSubmitComment": "發佈",
   "profileBlogPreparingComment": "正在準備留言…",
   "profileBlogSubmittingComment": "正在提交…",
@@ -1793,78 +2421,272 @@
   "profileBlogComment": "留言",
   "profileBlogReply": "回覆日誌",
   "profileBlogViews": "瀏覽 {count}",
-  "@profileBlogViews": {"placeholders": {"count": {"type": "int"}}},
+  "@profileBlogViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogCommentCount": "留言 {count}",
-  "@profileBlogCommentCount": {"placeholders": {"count": {"type": "int"}}},
+  "@profileBlogCommentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogLoadFailed": "日誌載入失敗：{error}",
-  "@profileBlogLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@profileBlogLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profileMessageCenterTitle": "訊息提醒",
   "profileNotificationsTab": "提醒 {count}",
-  "@profileNotificationsTab": {"placeholders": {"count": {"type": "int"}}},
+  "@profileNotificationsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileMessagesTab": "訊息 {count}",
-  "@profileMessagesTab": {"placeholders": {"count": {"type": "int"}}},
+  "@profileMessagesTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileNoNotifications": "目前沒有提醒",
   "profileSystemNotification": "系統提醒",
   "profileNoMessages": "目前沒有訊息",
   "profilePrivateMessage": "私人訊息",
   "profileMessageTo": "傳送給 {name}",
-  "@profileMessageTo": {"placeholders": {"name": {"type": "String"}}},
+  "@profileMessageTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "profileNewBadge": "新",
   "profileMessagesLoadFailed": "訊息載入失敗：{error}",
-  "@profileMessagesLoadFailed": {"placeholders": {"error": {"type": "String"}}},
-
+  "@profileMessagesLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeTitle": "HTML 正文渲染原型",
   "threadPrototypeLoadFailed": "範例載入失敗：{error}",
-  "@threadPrototypeLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@threadPrototypeLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeEmptyResult": "範例載入失敗：結果為空",
   "threadPrototypeMissingAsset": "找不到本機範例，請從 {sourcePath} 複製到 {assetPath}",
-  "@threadPrototypeMissingAsset": {"placeholders": {"sourcePath": {"type": "String"}, "assetPath": {"type": "String"}}},
+  "@threadPrototypeMissingAsset": {
+    "placeholders": {
+      "sourcePath": {
+        "type": "String"
+      },
+      "assetPath": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeLink": "連結：{url}",
-  "@threadPrototypeLink": {"placeholders": {"url": {"type": "String"}}},
+  "@threadPrototypeLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeThemeLight": "淺色",
   "threadPrototypeThemeDark": "深色",
   "threadPrototypeJitterCopied": "{count, plural, =0 {未複製抖動記錄} other {已複製 {count} 筆抖動記錄}}",
-  "@threadPrototypeJitterCopied": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeJitterCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeImageOpened": "{postNumber}# 圖片：{index}",
-  "@threadPrototypeImageOpened": {"placeholders": {"postNumber": {"type": "int"}, "index": {"type": "int"}}},
+  "@threadPrototypeImageOpened": {
+    "placeholders": {
+      "postNumber": {
+        "type": "int"
+      },
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeActionUnsupported": "原型頁目前不執行該帖子操作",
   "threadPrototypeJitterTitle": "記錄抖動資訊",
   "threadPrototypeJitterRecording": "記錄中，關閉後可複製記錄",
   "threadPrototypeJitterCount": "{count, plural, =0 {尚未記錄} other {已記錄 {count} 筆}}",
-  "@threadPrototypeJitterCount": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeJitterCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeCopyLog": "複製記錄",
   "threadPrototypeThreadSummarySemantics": "HTML 原型帖子範例摘要",
   "threadPrototypeSummarySemantics": "HTML 原型範例摘要",
   "threadPrototypeSample": "範例：{sample}",
-  "@threadPrototypeSample": {"placeholders": {"sample": {"type": "String"}}},
+  "@threadPrototypeSample": {
+    "placeholders": {
+      "sample": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeThread": "帖子：{subject}",
-  "@threadPrototypeThread": {"placeholders": {"subject": {"type": "String"}}},
+  "@threadPrototypeThread": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypePage": "頁碼：{page}/{total}",
-  "@threadPrototypePage": {"placeholders": {"page": {"type": "int"}, "total": {"type": "String"}}},
+  "@threadPrototypePage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypePosts": "{count, plural, =0 {樓層：0 個} other {樓層：{count} 個}}",
-  "@threadPrototypePosts": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypePosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeConversionMode": "轉換模式：{mode}",
-  "@threadPrototypeConversionMode": {"placeholders": {"mode": {"type": "String"}}},
+  "@threadPrototypeConversionMode": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeConverter": "轉換器：{converterId}",
-  "@threadPrototypeConverter": {"placeholders": {"converterId": {"type": "String"}}},
+  "@threadPrototypeConverter": {
+    "placeholders": {
+      "converterId": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeConvertedNodes": "{count, plural, =0 {轉換文字節點：0 個} other {轉換文字節點：{count} 個}}",
-  "@threadPrototypeConvertedNodes": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeConvertedNodes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypePreviewTheme": "預覽主題：{theme}",
-  "@threadPrototypePreviewTheme": {"placeholders": {"theme": {"type": "String"}}},
+  "@threadPrototypePreviewTheme": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeTypography": "字型大小 {fontScale}% / 行距 {lineHeight}×",
-  "@threadPrototypeTypography": {"placeholders": {"fontScale": {"type": "int"}, "lineHeight": {"type": "String"}}},
+  "@threadPrototypeTypography": {
+    "placeholders": {
+      "fontScale": {
+        "type": "int"
+      },
+      "lineHeight": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeThemeAdaptation": "{authorFontMode, select, preserved {主題調整：一律啟用 / 保留作者字型大小} unified {主題調整：一律啟用 / 統一作者字型大小} other {主題調整：一律啟用}}",
-  "@threadPrototypeThemeAdaptation": {"placeholders": {"authorFontMode": {"type": "String"}}},
+  "@threadPrototypeThemeAdaptation": {
+    "placeholders": {
+      "authorFontMode": {
+        "type": "String"
+      }
+    }
+  },
   "threadPrototypeRawHtmlLength": "{count, plural, =0 {原始 HTML：0 個字元} other {原始 HTML：{count} 個字元}}",
-  "@threadPrototypeRawHtmlLength": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeRawHtmlLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeFragmentLength": "{count, plural, =0 {正文 fragment：0 個字元} other {正文 fragment：{count} 個字元}}",
-  "@threadPrototypeFragmentLength": {"placeholders": {"count": {"type": "int"}}},
+  "@threadPrototypeFragmentLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeAdaptedColors": "調整前景：{remappedForeground}/{explicitForeground} · 調整背景：{remappedBackground}/{explicitBackground}",
-  "@threadPrototypeAdaptedColors": {"placeholders": {"remappedForeground": {"type": "int"}, "explicitForeground": {"type": "int"}, "remappedBackground": {"type": "int"}, "explicitBackground": {"type": "int"}}},
+  "@threadPrototypeAdaptedColors": {
+    "placeholders": {
+      "remappedForeground": {
+        "type": "int"
+      },
+      "explicitForeground": {
+        "type": "int"
+      },
+      "remappedBackground": {
+        "type": "int"
+      },
+      "explicitBackground": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeAdaptationFallbacks": "語意回退：{semanticFallback} · 不支援：{unsupported} · 隱藏：{concealed}",
-  "@threadPrototypeAdaptationFallbacks": {"placeholders": {"semanticFallback": {"type": "int"}, "unsupported": {"type": "int"}, "concealed": {"type": "int"}}},
+  "@threadPrototypeAdaptationFallbacks": {
+    "placeholders": {
+      "semanticFallback": {
+        "type": "int"
+      },
+      "unsupported": {
+        "type": "int"
+      },
+      "concealed": {
+        "type": "int"
+      }
+    }
+  },
   "threadPrototypeMinimumContrast": "最低可見對比度：{value}",
-  "@threadPrototypeMinimumContrast": {"placeholders": {"value": {"type": "String"}}},
+  "@threadPrototypeMinimumContrast": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "postEditTitle": "編輯帖子",
   "postEditMessageHint": "帖子內容",
   "postEditSave": "儲存",
@@ -1897,7 +2719,13 @@
   "postEditAuthenticationRequired": "登入狀態已失效，請重新登入後再試",
   "postEditSubmitFailed": "帖子儲存失敗，目前內容已保留",
   "postEditLoadFailed": "讀取帖子編輯表單失敗：{error}",
-  "@postEditLoadFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@postEditLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "postEditServerVersion": "伺服器版本",
   "postEditLocalVersion": "本地版本",
   "profileBlogEdit": "編輯日誌",
@@ -1922,7 +2750,13 @@
   "profileBlogTags": "標籤",
   "profileBlogPublishFeed": "發佈到動態",
   "profileBlogAccessPolicy": "存取範圍：{value}",
-  "@profileBlogAccessPolicy": {"placeholders": {"value": {"type": "String"}}},
+  "@profileBlogAccessPolicy": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogCommentsAllowed": "允許評論",
   "profileBlogCommentsClosed": "不允許評論",
   "profileBlogAccessScope": "存取範圍",
@@ -1938,9 +2772,24 @@
   "profileBlogNewCategory": "新增個人分類",
   "profileBlogChooseCategory": "請選擇分類",
   "profileBlogServerCategories": "網站分類：{site}\n個人分類：{personal}",
-  "@profileBlogServerCategories": {"placeholders": {"site": {"type": "String"}, "personal": {"type": "String"}}},
+  "@profileBlogServerCategories": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      },
+      "personal": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogServerTags": "標籤：{tags}",
-  "@profileBlogServerTags": {"placeholders": {"tags": {"type": "String"}}},
+  "@profileBlogServerTags": {
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
   "profileBlogVisibilityPublic": "公開",
   "profileBlogVisibilityFriends": "好友可見",
   "profileBlogVisibilitySelected": "指定好友可見",
@@ -1973,7 +2822,13 @@
   "profileBlogDraftImagesChecking": "正在驗證草稿圖片…",
   "profileBlogDraftImagesUnavailable": "部分草稿圖片未能確認可用。請重試驗證，或移除並替換這些圖片後發佈",
   "moreStorageBlogDraft": "日誌草稿（{count}）",
-  "@moreStorageBlogDraft": {"placeholders": {"count": {"type": "int"}}},
+  "@moreStorageBlogDraft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profileBlogDraftSettingsChanged": "分類或發佈權限已變化，請調整發佈設定。已保留你的內容和原有選擇",
   "profileBlogDraftCleanupFailed": "日誌已發佈，但本機草稿清理失敗。再次開啟時請先檢查「我的日誌」，避免重複發佈",
   "composerReadAccess": "閱讀權限",
@@ -2072,11 +2927,24 @@
   "profileFriendsAnonymous": "匿名訪客",
   "profileFriendsOnlineStatus": "線上",
   "profileFriendsVisitedAt": "造訪於 {time}",
-  "@profileFriendsVisitedAt": {"description": "好友頁面顯示的造訪時間；time 保留伺服器原文", "placeholders": {"time": {"type": "String"}}},
+  "@profileFriendsVisitedAt": {
+    "description": "好友頁面顯示的造訪時間；time 保留伺服器原文",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "profileFriendsRemove": "刪除好友",
   "profileFriendRemoveTitle": "確認刪除好友？",
   "profileFriendRemoveBody": "刪除 {username} 後，對方將從你的好友列表中移除。",
-  "@profileFriendRemoveBody": {"placeholders": {"username": {"type": "String"}}},
+  "@profileFriendRemoveBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "profileFriendsRemoved": "好友已刪除",
   "profileFriendRemovalUnknown": "刪除結果無法確認，請重新整理好友列表核對後再操作",
   "profileFriendRemovalVerify": "重新整理核對",
@@ -2110,7 +2978,17 @@
   "librarySelectionActionParse": "解析",
   "librarySelectionParseQueued": "新增 {enqueued} 項，已在佇列 {existing} 項，未能加入 {failed} 項",
   "@librarySelectionParseQueued": {
-    "placeholders": {"enqueued": {"type": "int"}, "existing": {"type": "int"}, "failed": {"type": "int"}}
+    "placeholders": {
+      "enqueued": {
+        "type": "int"
+      },
+      "existing": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
   },
   "threadFavoriteParseQueued": "收藏成功，已加入解析佇列",
   "threadFavoriteParseQueueFailed": "收藏成功，但未能加入解析佇列，可在收藏頁手動解析",
@@ -2215,5 +3093,7 @@
   "settingsSectionDebug": "偵錯",
   "threadControlsGroupDisplay": "顯示",
   "threadControlsGroupNavigation": "導覽",
-  "threadControlsGroupScrolling": "捲動"
+  "threadControlsGroupScrolling": "捲動",
+  "readerHardwarePageKeys": "硬體鍵翻頁",
+  "readerHardwarePageKeysSubtitle": "使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效"
 }

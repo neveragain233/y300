@@ -6408,6 +6408,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get threadControlsGroupScrolling => '滚动';
+
+  @override
+  String get readerHardwarePageKeys => '硬件键翻页';
+
+  @override
+  String get readerHardwarePageKeysSubtitle => '使用音量键或侧边翻页键翻页，仅在阅读器内生效';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -12816,4 +12822,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get threadControlsGroupScrolling => '捲動';
+
+  @override
+  String get readerHardwarePageKeys => '硬體鍵翻頁';
+
+  @override
+  String get readerHardwarePageKeysSubtitle => '使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效';
 }

@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
+import 'package:y300/core/eink/eink_hardware_page_keys.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/forum/domain/services/yamibo_forum_link_resolver.dart';
@@ -29,6 +30,7 @@ import 'package:y300/features/library_shared/presentation/reader/reader_corner_d
 import 'package:y300/features/novel/application/novel_reader_display_preferences_coordinator.dart';
 import 'package:y300/features/novel/application/novel_reader_vertical_session_coordinator.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_vertical_tap_turn_coordinator.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_document.dart';
 import 'package:y300/features/novel/domain/models/novel_episode_open_policy.dart';
 import 'package:y300/features/novel/domain/models/novel_source_reading_context.dart';
@@ -139,6 +141,9 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   late final NovelReaderPagedNavigationController _pagedNavigationController;
   late final NovelReaderVerticalTapTurnCoordinator _verticalTapTurn;
   late final ReaderSystemUiController _systemUiController;
+  late final EInkHardwarePageKeysService _hardwarePageKeysService;
+  StreamSubscription<HardwarePageKeyDirection>? _hardwarePageKeysSubscription;
+  ProviderSubscription<AsyncValue<bool>>? _hardwarePageKeysSetting;
   final NovelReaderThemeResolver _themeResolver =
       const NovelReaderThemeResolver();
   final NovelReaderTypographyResolver _typographyResolver =
@@ -219,9 +224,44 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       scrollController: _scrollController,
     );
     _systemUiController = ref.read(readerSystemUiControllerProvider);
+    _hardwarePageKeysService = ref.read(einkHardwarePageKeysServiceProvider);
+    _hardwarePageKeysSetting = ref.listenManual<AsyncValue<bool>>(
+      hardwarePageKeysEnabledProvider,
+      (previous, next) => _syncHardwarePageKeys(next.value ?? false),
+      fireImmediately: true,
+    );
     _resumed =
         WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+  }
+
+  void _syncHardwarePageKeys(bool enabled) {
+    unawaited(_hardwarePageKeysSubscription?.cancel());
+    _hardwarePageKeysSubscription = null;
+    unawaited(_hardwarePageKeysService.setEnabled(enabled));
+    if (enabled) {
+      _hardwarePageKeysSubscription = _hardwarePageKeysService.directions
+          .listen(_onHardwarePageKey);
+    }
+  }
+
+  void _onHardwarePageKey(HardwarePageKeyDirection direction) {
+    if (!mounted) {
+      return;
+    }
+    final current = ref
+        .read(novelReaderControllerProvider(_args))
+        .asData
+        ?.value;
+    if (current == null || current.transition != null) {
+      return;
+    }
+    final backward = direction == HardwarePageKeyDirection.previous;
+    if (current.preferences.flowMode == NovelReaderFlowMode.vertical) {
+      _turnVerticalByTap(backward: backward);
+      return;
+    }
+    _turnPaged(backward: backward);
   }
 
   @override
@@ -260,6 +300,11 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
 
   @override
   void dispose() {
+    _hardwarePageKeysSetting?.close();
+    unawaited(_hardwarePageKeysSubscription?.cancel());
+    unawaited(
+      _hardwarePageKeysService.setEnabled(false).catchError((Object _) {}),
+    );
     unawaited(_systemUiController.restore().catchError((Object _) {}));
     _verticalPageMetrics.dispose();
     _paginationSessionCache.dispose();
@@ -678,23 +723,41 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         .read(novelReaderControllerProvider(_args))
         .asData
         ?.value;
-    if (current == null ||
-        current.transition != null ||
-        current.preferences.flowMode == NovelReaderFlowMode.vertical ||
-        _readerSurfaceIdentity(current) != surfaceIdentity) {
+    if (current == null) {
       return;
     }
     final isRtl = current.preferences.flowMode == NovelReaderFlowMode.pagedRtl;
-    final isPrevious = isRtl ? !isLeftTap : isLeftTap;
+    _turnPaged(
+      backward: isRtl ? !isLeftTap : isLeftTap,
+      expectedSurfaceIdentity: surfaceIdentity,
+    );
+  }
+
+  /// 分页翻页的统一入口：触摸点按与硬件键只负责把方向翻译成 backward。
+  void _turnPaged({required bool backward, String? expectedSurfaceIdentity}) {
+    if (!mounted) {
+      return;
+    }
+    final current = ref
+        .read(novelReaderControllerProvider(_args))
+        .asData
+        ?.value;
+    if (current == null ||
+        current.transition != null ||
+        current.preferences.flowMode == NovelReaderFlowMode.vertical ||
+        (expectedSurfaceIdentity != null &&
+            _readerSurfaceIdentity(current) != expectedSurfaceIdentity)) {
+      return;
+    }
     unawaited(
       ref
           .read(einkPageRippleServiceProvider)
           .triggerPageRipple(
-            forward: !isPrevious,
+            forward: !backward,
             speed: EInkRippleSpeed.standard,
           ),
     );
-    if (isPrevious) {
+    if (backward) {
       _pagedNavigationController.turnPrevious();
     } else {
       _pagedNavigationController.turnNext();

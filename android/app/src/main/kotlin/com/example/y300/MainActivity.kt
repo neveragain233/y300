@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.KeyEvent
 import android.view.Surface
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -26,6 +27,7 @@ class MainActivity : FlutterActivity() {
         const val EXPORT_CHANNEL = "com.adws.y300/reader_image_export"
         const val DEVICE_MEMORY_CHANNEL = "com.adws.y300/device_memory"
         const val EPDC_CHANNEL = "com.adws.y300/epdc"
+        const val EINK_KEYS_CHANNEL = "com.adws.y300/eink_keys"
         const val STORAGE_PERMISSION_REQUEST = 7301
 
         // 掌阅 SmartOS 的 EPDC 翻页模式；方向码按屏幕旋转各取一档。
@@ -44,6 +46,11 @@ class MainActivity : FlutterActivity() {
     }
 
     private var pendingPermissionExport: PendingExport? = null
+    private var einkKeysChannel: MethodChannel? = null
+
+    // 仅在阅读器前台且用户开启时拦截音量键/翻页键。
+    @Volatile
+    private var volumePagingEnabled: Boolean = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -65,6 +72,40 @@ class MainActivity : FlutterActivity() {
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EPDC_CHANNEL)
             .setMethodCallHandler(::handleEpdcCall)
+        val keysChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            EINK_KEYS_CHANNEL,
+        )
+        keysChannel.setMethodCallHandler { call, result ->
+            if (call.method == "setVolumePagingEnabled") {
+                volumePagingEnabled = call.arguments as? Boolean ?: false
+                result.success(null)
+            } else {
+                result.notImplemented()
+            }
+        }
+        einkKeysChannel = keysChannel
+    }
+
+    /**
+     * 阅读器开启硬件键翻页时，把音量键与翻页键转成翻页方向；只处理首次按下，
+     * 长按重复交给阅读器自己决定，不在这里连续翻页。
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (volumePagingEnabled) {
+            val direction = when (event.keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_PAGE_UP -> "up"
+                KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> "down"
+                else -> null
+            }
+            if (direction != null) {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    einkKeysChannel?.invokeMethod("onHardwarePageKey", direction)
+                }
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun handleEpdcCall(call: MethodCall, result: MethodChannel.Result) {

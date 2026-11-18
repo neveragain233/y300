@@ -9,6 +9,7 @@ import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_spacing.dart';
 import 'package:y300/features/novel/presentation/novel_text_resolver.dart';
 import 'package:y300/features/novel/presentation/controllers/novel_chapter_interactions_dock_controller.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 
@@ -241,6 +242,32 @@ class _NovelReaderDisplaySettingsSheetState
                     onChanged: (value) => _applyPreferences(
                       _draft.copyWith(safeAreaEnabled: value),
                     ),
+                  ),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final enabled = ref.watch(
+                        hardwarePageKeysEnabledProvider,
+                      );
+                      return _PanelSwitchRow(
+                        controlKey: const Key(
+                          'novel-reader-hardware-page-keys-switch',
+                        ),
+                        title: l10n.readerHardwarePageKeys,
+                        value: enabled.value ?? false,
+                        onChanged: enabled.value == null
+                            ? null
+                            : (value) {
+                                unawaited(
+                                  ref
+                                      .read(
+                                        hardwarePageKeysEnabledProvider
+                                            .notifier,
+                                      )
+                                      .setEnabled(value),
+                                );
+                              },
+                      );
+                    },
                   ),
                   Consumer(
                     builder: (context, ref, _) {

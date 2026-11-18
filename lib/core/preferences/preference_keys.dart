@@ -76,6 +76,11 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.legacyImageReaderShowPageIndicator,
   );
 
+  /// 阅读器硬件键翻页（音量键/侧边翻页键）开关，漫画与小说阅读器共用。
+  static const readerHardwarePageKeys = PreferenceKey<bool>(
+    PreferenceKeyNames.readerHardwarePageKeys,
+  );
+
   static const novelReaderSnapshotV1 = PreferenceKey<String>(
     PreferenceKeyNames.novelReaderSnapshotV1,
   );

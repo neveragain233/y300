@@ -4,6 +4,7 @@ import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:y300/app/theme/app_system_ui.dart';
+import 'package:y300/core/eink/eink_hardware_page_keys.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
@@ -35,6 +36,7 @@ import 'package:y300/features/reader_shared/presentation/engine/reader_vertical_
 import 'package:y300/features/reader_shared/presentation/engine/reader_vertical_compensation_coordinator.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_zoomable_image.dart';
 import 'package:y300/features/reader_shared/presentation/reader_preferences/reader_preferences_provider.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
 import 'package:y300/features/reader_shared/presentation/reader_text_resolver.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_preload_coordinator.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
@@ -197,6 +199,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   int _verticalViewportRevision = 0;
   ({int index, String itemId, double fraction})? _viewportAnchor;
 
+  late final EInkHardwarePageKeysService _hardwarePageKeysService;
+  StreamSubscription<HardwarePageKeyDirection>? _hardwarePageKeysSubscription;
+  ProviderSubscription<AsyncValue<bool>>? _hardwarePageKeysSetting;
+  bool _hardwarePageKeysEnabled = false;
+  bool _hardwarePageKeysArmed = false;
+  ReaderPreferences? _lastKnownReaderPreferences;
+  int _lastKnownImageTotal = 0;
+
   ReaderCapability get _capability => widget.capability;
 
   ReaderTailSurface? get _tailSurface => _capability.tailSurface;
@@ -229,10 +239,56 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       exactOffset: _resolveExactVerticalOffset,
       waitForLayout: _waitForVerticalLayout,
     );
+    _hardwarePageKeysService = ref.read(einkHardwarePageKeysServiceProvider);
+    _hardwarePageKeysSetting = ref.listenManual<AsyncValue<bool>>(
+      hardwarePageKeysEnabledProvider,
+      (previous, next) => _setHardwarePageKeysEnabled(next.value ?? false),
+      fireImmediately: true,
+    );
+  }
+
+  void _setHardwarePageKeysEnabled(bool enabled) {
+    _hardwarePageKeysEnabled = enabled;
+    unawaited(_hardwarePageKeysSubscription?.cancel());
+    _hardwarePageKeysSubscription = null;
+    if (enabled) {
+      _hardwarePageKeysSubscription = _hardwarePageKeysService.directions
+          .listen(_onHardwarePageKey);
+    }
+    _syncHardwareKeysArmed();
+  }
+
+  /// 只在横向翻页模式拦截实体键；垂直滚动模式不占用音量键。
+  void _syncHardwareKeysArmed() {
+    final preferences = _lastKnownReaderPreferences;
+    final armed =
+        _hardwarePageKeysEnabled &&
+        preferences != null &&
+        _readerMode(preferences) != ContinuousImageReaderMode.vertical;
+    if (armed == _hardwarePageKeysArmed) {
+      return;
+    }
+    _hardwarePageKeysArmed = armed;
+    unawaited(_hardwarePageKeysService.setEnabled(armed));
+  }
+
+  void _onHardwarePageKey(HardwarePageKeyDirection direction) {
+    if (!mounted) {
+      return;
+    }
+    _turnPage(
+      forward: direction == HardwarePageKeyDirection.next,
+      total: _lastKnownImageTotal,
+    );
   }
 
   @override
   void dispose() {
+    _hardwarePageKeysSetting?.close();
+    unawaited(_hardwarePageKeysSubscription?.cancel());
+    unawaited(
+      _hardwarePageKeysService.setEnabled(false).catchError((Object _) {}),
+    );
     _verticalCompensation.close();
     _readerSession.close();
     _restoreCoordinator.close();
@@ -312,6 +368,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _restorePositionIfNeeded(mode, preferences.readerMode, content);
 
     final total = content.length;
+    _lastKnownReaderPreferences = preferences;
+    _lastKnownImageTotal = total;
+    _syncHardwareKeysArmed();
     final engineContext = _engineContext(preferences, total);
     final tail = _tailSurface;
     final actionSurface = tail is ReaderTailActionSurface
@@ -1987,6 +2046,13 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     required int total,
     required bool isLeftTap,
   }) {
+    final isRtl = mode == ReaderModePreference.rtl;
+    final isPreviousAction = isRtl ? !isLeftTap : isLeftTap;
+    _turnPage(forward: !isPreviousAction, total: total);
+  }
+
+  /// 横向翻页的统一入口：触摸点按与硬件键只负责把方向翻译成 forward。
+  void _turnPage({required bool forward, required int total}) {
     if (_zoomGate.value) {
       return;
     }
@@ -1997,9 +2063,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final current =
         pageController.page?.round() ??
         _pagedPageForPosition(_pagedPosition, total);
-    final isRtl = mode == ReaderModePreference.rtl;
-    final isPreviousAction = isRtl ? !isLeftTap : isLeftTap;
-    final delta = isPreviousAction ? -1 : 1;
+    final delta = forward ? 1 : -1;
     final target = (current + delta)
         .clamp(0, _pagedPageCount(total) - 1)
         .toInt();
@@ -2012,10 +2076,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     unawaited(
       ref
           .read(einkPageRippleServiceProvider)
-          .triggerPageRipple(
-            forward: delta > 0,
-            speed: EInkRippleSpeed.standard,
-          ),
+          .triggerPageRipple(forward: forward, speed: EInkRippleSpeed.standard),
     );
     _animatePagedTurn(pageController, target);
   }
@@ -2635,6 +2696,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
             unawaited(controller.setPageSpacing(value)),
         onShowPageIndicatorChanged: (value) =>
             unawaited(controller.setShowPageIndicator(value)),
+        hardwarePageKeysEnabled: _hardwarePageKeysEnabled,
+        onHardwarePageKeysChanged: (value) => unawaited(
+          ref.read(hardwarePageKeysEnabledProvider.notifier).setEnabled(value),
+        ),
       ),
     );
   }
