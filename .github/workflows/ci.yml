@@ -14,9 +14,9 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  # Match the hosted source already recorded in the app lockfile.
-  PUB_HOSTED_URL: https://pub.flutter-io.cn
+# 锁文件里的包地址记录为 pub.dev；若在 CI 覆盖 PUB_HOSTED_URL，pub 会把它当成
+# 另一个源并重新解析，把依赖升级到最新版本，静态检查会因新弃用告警失败。
+# 这里保持默认源，让 CI 复用锁定的版本。
 
 jobs:
   test:
