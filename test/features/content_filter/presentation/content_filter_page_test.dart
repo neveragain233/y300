@@ -12,12 +12,57 @@ import 'package:y300/features/blacklist/domain/repositories/blacklist_repository
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/repositories/blocked_thread_repository.dart';
+import 'package:y300/features/content_filter/presentation/blocked_threads_page.dart';
 import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
+import 'package:y300/features/content_filter/presentation/web_blacklist_page.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
 void main() {
+  testWidgets('content filter entry lists two submenus without content', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          blockedThreadRepositoryProvider.overrideWithValue(
+            _MemoryRepository(const <BlockedThread>[]),
+          ),
+          blacklistRepositoryProvider.overrideWithValue(
+            _EmptyBlacklistRepository(),
+          ),
+          blacklistAutoSyncProvider.overrideWithValue(false),
+          verifiedSessionOwnerProvider.overrideWithValue(null),
+        ],
+        child: const LocalizedTestApp(home: ContentFilterPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('content-filter-blocked-threads-entry')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('content-filter-web-blacklist-entry')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('content-filter-blocked-thread-12')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('content-filter-blacklist-refresh')),
+      findsNothing,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('content-filter-blocked-threads-entry')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('blocked-threads-page')), findsOneWidget);
+  });
   testWidgets('shows the synced web blacklist for the current account', (
     tester,
   ) async {
@@ -59,7 +104,7 @@ void main() {
           )),
           yamiboSessionStoreProvider.overrideWithValue(sessionStore),
         ],
-        child: const LocalizedTestApp(home: ContentFilterPage()),
+        child: const LocalizedTestApp(home: WebBlacklistPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -91,7 +136,7 @@ void main() {
           blacklistAutoSyncProvider.overrideWithValue(false),
           verifiedSessionOwnerProvider.overrideWithValue(null),
         ],
-        child: const LocalizedTestApp(home: ContentFilterPage()),
+        child: const LocalizedTestApp(home: WebBlacklistPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -128,7 +173,7 @@ void main() {
           blacklistAutoSyncProvider.overrideWithValue(false),
           verifiedSessionOwnerProvider.overrideWithValue(null),
         ],
-        child: const LocalizedTestApp(home: ContentFilterPage()),
+        child: const LocalizedTestApp(home: BlockedThreadsPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -139,7 +184,13 @@ void main() {
     );
     expect(find.text('被屏蔽的帖子'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('content-filter-unblock-12')));
+    final unblock = find.byKey(const Key('content-filter-unblock-12'));
+    final unblockSize = tester.getSize(unblock);
+    expect(unblockSize.width, greaterThanOrEqualTo(72));
+    expect(unblockSize.height, greaterThanOrEqualTo(48));
+    // 行尾危险操作在屏幕右缘也必须有完整命中区：点按钮最右侧2像素仍生效。
+    final rect = tester.getRect(unblock);
+    await tester.tapAt(rect.centerRight - const Offset(2, 0));
     await tester.pumpAndSettle();
 
     expect(

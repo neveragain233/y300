@@ -134,7 +134,7 @@ void main() {
     );
     await tester.tap(find.text(l10n.blacklistReviewList));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('content-filter-list')), findsOneWidget);
+    expect(find.byKey(const Key('content-filter-menu')), findsOneWidget);
   });
 
   testWidgets('hides the author action without a usable entry state', (
