@@ -60,7 +60,7 @@ python3 tool/build_apk.py
 
 ## CI
 
-面向 `main` 的 PR、`main` push 和手动运行会触发 `.github/workflows/ci.yml`。一个 Job 使用 Flutter 3.47.7 和 Ubuntu 24.04，执行 App 与协议包的静态分析和全部测试；依赖来源沿用现有锁文件的镜像配置。测试样本随仓库提交，不依赖本地 `docs/html` 或签名资料。
+面向 `main` 与 `personal` 的 PR、这两个分支的 push 和手动运行会触发 `.github/workflows/ci.yml`。一个 Job 使用 Flutter 3.47.7 和 Ubuntu 24.04，执行 App 与协议包的静态分析和全部测试；依赖来源沿用现有锁文件的镜像配置。测试样本随仓库提交，不依赖本地 `docs/html` 或签名资料。
 
 原有 `Android arm64 release` 手动 APK 构建入口保持独立，同样固定 Flutter 3.47.7。CI 只执行检查，GitHub 与 Gitee Release 由维护者手动创建。
 
