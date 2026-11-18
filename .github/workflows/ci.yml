@@ -101,13 +101,13 @@ jobs:
         run: flutter analyze --no-pub
 
   fast-tests:
-    name: Fast tests (shard ${{ matrix.shard }}/2)
+    name: Fast tests (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -122,13 +122,14 @@ jobs:
       - name: Install app dependencies
         run: flutter pub get
       - name: Run fast tier shard
-        run: python3 tool/test_tiers.py fast --shard ${{ matrix.shard }}/2 --timings .test-timings/fast-${{ matrix.shard }}.json
+        run: python3 tool/test_tiers.py fast --shard ${{ matrix.shard }}/3 --timings .test-timings/fast-${{ matrix.shard }}.json
       - name: Upload fast timing report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fast-timings-${{ matrix.shard }}
           path: .test-timings/
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 14
 
@@ -201,5 +202,6 @@ jobs:
         with:
           name: full-timings-${{ matrix.shard }}
           path: .test-timings/
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 14
