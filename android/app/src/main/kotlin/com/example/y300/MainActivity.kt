@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.view.KeyEvent
@@ -46,6 +47,13 @@ class MainActivity : FlutterActivity() {
     }
 
     private var pendingPermissionExport: PendingExport? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 关闭 Activity 层窗口转场，避免墨水屏上多一次整屏重绘。
+        window.setWindowAnimations(0)
+    }
+
     private var einkKeysChannel: MethodChannel? = null
 
     // 仅在阅读器前台且用户开启时拦截音量键/翻页键。

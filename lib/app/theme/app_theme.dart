@@ -80,6 +80,7 @@ final class AppTheme {
       useMaterial3: true,
       brightness: palette.brightness,
       colorScheme: colorScheme,
+      pageTransitionsTheme: eInk ? _eInkPageTransitions : null,
       scaffoldBackgroundColor: palette.scaffoldBackground,
       appBarTheme: AppComponentThemeBuilder.appBarTheme(palette),
       navigationBarTheme: AppComponentThemeBuilder.navigationBarTheme(palette),
@@ -193,10 +194,37 @@ final class AppTheme {
     return style.copyWith(fontWeight: next);
   }
 
+  /// eink 构建没有路由过渡：页面直接切换，避免每次导航整屏渐变重绘。
+  static const PageTransitionsTheme _eInkPageTransitions = PageTransitionsTheme(
+    builders: <TargetPlatform, PageTransitionsBuilder>{
+      TargetPlatform.android: _NoTransitionsBuilder(),
+      TargetPlatform.iOS: _NoTransitionsBuilder(),
+      TargetPlatform.macOS: _NoTransitionsBuilder(),
+      TargetPlatform.linux: _NoTransitionsBuilder(),
+      TargetPlatform.windows: _NoTransitionsBuilder(),
+    },
+  );
+
   static ColorScheme _buildColorScheme(AppThemePalette palette) {
     return ColorScheme.fromSeed(
       seedColor: palette.seedColor,
       brightness: palette.brightness,
     );
+  }
+}
+
+/// 无过渡的页面构建器，供墨水屏变体使用。
+final class _NoTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
   }
 }

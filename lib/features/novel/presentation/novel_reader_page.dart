@@ -15,6 +15,7 @@ import 'package:y300/features/thread/data/providers/thread_repository_providers.
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/app/settings/app_edition.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
@@ -764,6 +765,16 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     }
   }
 
+  /// eink 构建禁用卷曲与整页纹理过渡，退回淡入，保留页面切换动画。
+  NovelReaderPreferences _effectiveRenderPreferences(
+    NovelReaderPreferences preferences,
+  ) {
+    if (!AppEdition.isEInk) {
+      return preferences;
+    }
+    return preferences.copyWith(pageEffect: NovelReaderPageEffect.fade);
+  }
+
   void _turnVerticalByTap({required bool backward}) {
     final current = ref
         .read(novelReaderControllerProvider(_args))
@@ -795,7 +806,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     }
     _overlayController.hideMenu();
     final animationsDisabled = MediaQuery.disableAnimationsOf(context);
-    final effect = current.preferences.pageEffect;
+    final effect = _effectiveRenderPreferences(current.preferences).pageEffect;
     unawaited(
       ref
           .read(einkPageRippleServiceProvider)
@@ -1284,7 +1295,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         preparedChapterCache: _preparedChapterCache,
         rawHtml: viewState.currentContent.rawHtml,
         episode: viewState.currentEpisode,
-        preferences: viewState.renderPreferences,
+        preferences: _effectiveRenderPreferences(viewState.renderPreferences),
         typography: typography,
         theme: htmlTheme,
         imageReferer: _imageRefererFor(viewState),
@@ -1421,7 +1432,9 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
               preparedChapterCache: _preparedChapterCache,
               rawHtml: viewState.currentContent.rawHtml,
               episode: viewState.currentEpisode,
-              preferences: viewState.renderPreferences,
+              preferences: _effectiveRenderPreferences(
+                viewState.renderPreferences,
+              ),
               typography: typography,
               theme: htmlTheme,
               imageReferer: _imageRefererFor(viewState),
