@@ -81,6 +81,11 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.readerHardwarePageKeys,
   );
 
+  /// 全应用加粗字体；墨水屏阅读器与普通界面共用同一份设置。
+  static const readerBoldFont = PreferenceKey<bool>(
+    PreferenceKeyNames.readerBoldFont,
+  );
+
   static const novelReaderSnapshotV1 = PreferenceKey<String>(
     PreferenceKeyNames.novelReaderSnapshotV1,
   );

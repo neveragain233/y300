@@ -3095,5 +3095,10 @@
   "threadControlsGroupNavigation": "導覽",
   "threadControlsGroupScrolling": "捲動",
   "readerHardwarePageKeys": "硬體鍵翻頁",
-  "readerHardwarePageKeysSubtitle": "使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效"
+  "readerHardwarePageKeysSubtitle": "使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效",
+  "appearanceTextSectionTitle": "文字",
+  "appearanceBoldFontTitle": "加粗字體",
+  "appearanceBoldFontSubtitle": "整體提升一檔字重，墨水屏和戶外更易辨認",
+  "settingsSearchSummaryBoldFont": "全應用加粗字體",
+  "settingsSearchKeywordsBoldFont": "加粗 字體 字重 bold font"
 }

@@ -8,6 +8,7 @@ import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/settings/app_navigation_lens_motion.dart';
+import 'package:y300/app/settings/bold_font_provider.dart';
 import 'package:y300/app/theme/app_dynamic_colors.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
@@ -75,6 +76,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     final settingsState = ref.watch(appAppearanceControllerProvider);
     final settings =
         settingsState.asData?.value ?? AppAppearanceSettings.defaults();
+    final boldFont = ref.watch(boldFontEnabledProvider).value ?? false;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final dynamicColors = AppDynamicColors.maybeOf(context);
@@ -281,6 +283,29 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                                 settings.themeFamily,
                               ),
                             ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _anchor(
+                    SettingsSearchTarget.appearanceBoldFont,
+                    _AppearanceGroup(
+                      title: l10n.appearanceTextSectionTitle,
+                      child: AppGroupedSection(
+                        children: [
+                          AppSwitchRow(
+                            key: const Key('appearance-bold-font-switch'),
+                            title: l10n.appearanceBoldFontTitle,
+                            subtitle: l10n.appearanceBoldFontSubtitle,
+                            value: boldFont,
+                            onChanged: (value) => _commit(
+                              () => ref
+                                  .read(boldFontEnabledProvider.notifier)
+                                  .setEnabled(value),
+                              failure: (error) =>
+                                  l10n.moreThemeSaveFailed('$error'),
+                            ),
+                          ),
                         ],
                       ),
                     ),

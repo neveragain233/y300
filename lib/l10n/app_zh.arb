@@ -4365,5 +4365,10 @@
   "threadControlsGroupNavigation": "导航",
   "threadControlsGroupScrolling": "滚动",
   "readerHardwarePageKeys": "硬件键翻页",
-  "readerHardwarePageKeysSubtitle": "使用音量键或侧边翻页键翻页，仅在阅读器内生效"
+  "readerHardwarePageKeysSubtitle": "使用音量键或侧边翻页键翻页，仅在阅读器内生效",
+  "appearanceTextSectionTitle": "文字",
+  "appearanceBoldFontTitle": "加粗字体",
+  "appearanceBoldFontSubtitle": "整体提升一档字重，墨水屏和户外更易辨认",
+  "settingsSearchSummaryBoldFont": "全应用加粗字体",
+  "settingsSearchKeywordsBoldFont": "加粗 字体 字重 bold font"
 }

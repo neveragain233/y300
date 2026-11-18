@@ -7,6 +7,7 @@ import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/app/settings/bold_font_provider.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/startup/blacklist_sync_host.dart';
 import 'package:y300/app/startup/message_attention_visibility_host.dart';
@@ -41,6 +42,7 @@ class Y300App extends ConsumerWidget {
           data: (settings) => settings,
           orElse: AppAppearanceSettings.defaults,
         );
+    final boldFont = ref.watch(boldFontEnabledProvider).value ?? false;
     return AppDynamicColorBuilder(
       builder: (light, dark) => AppDynamicColors(
         light: light,
@@ -53,12 +55,14 @@ class Y300App extends ConsumerWidget {
             brightness: Brightness.light,
             colorSource: settings.colorSource,
             dynamicScheme: light,
+            boldFont: boldFont,
           ),
           darkTheme: AppTheme.build(
             family: settings.themeFamily,
             brightness: Brightness.dark,
             colorSource: settings.colorSource,
             dynamicScheme: dark,
+            boldFont: boldFont,
           ),
           themeMode: settings.themeMode,
           localizationsDelegates: const [

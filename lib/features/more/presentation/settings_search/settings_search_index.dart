@@ -16,6 +16,7 @@ enum SettingsSearchTarget {
   appearanceThemeMode,
   appearanceColorTheme,
   appearanceGlass,
+  appearanceBoldFont,
   appearanceNavigation,
   appearanceLanguage,
   appearanceReset,
@@ -39,6 +40,7 @@ enum SettingsSearchTarget {
     appearanceThemeMode ||
     appearanceColorTheme ||
     appearanceGlass ||
+    appearanceBoldFont ||
     appearanceNavigation ||
     appearanceLanguage ||
     appearanceReset => SettingsSearchPageKind.appearance,
@@ -178,6 +180,13 @@ List<SettingsSearchEntry> buildSettingsSearchIndex(
       title: l10n.moreColorThemeSectionTitle,
       summary: l10n.settingsSearchSummaryColorTheme,
       keywords: l10n.settingsSearchKeywordsColorTheme,
+    ),
+    SettingsSearchEntry(
+      id: 'appearance-bold-font',
+      target: SettingsSearchTarget.appearanceBoldFont,
+      title: l10n.appearanceTextSectionTitle,
+      summary: l10n.settingsSearchSummaryBoldFont,
+      keywords: l10n.settingsSearchKeywordsBoldFont,
     ),
     SettingsSearchEntry(
       id: 'appearance-glass',

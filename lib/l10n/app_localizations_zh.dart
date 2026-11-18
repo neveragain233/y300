@@ -6414,6 +6414,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerHardwarePageKeysSubtitle => '使用音量键或侧边翻页键翻页，仅在阅读器内生效';
+
+  @override
+  String get appearanceTextSectionTitle => '文字';
+
+  @override
+  String get appearanceBoldFontTitle => '加粗字体';
+
+  @override
+  String get appearanceBoldFontSubtitle => '整体提升一档字重，墨水屏和户外更易辨认';
+
+  @override
+  String get settingsSearchSummaryBoldFont => '全应用加粗字体';
+
+  @override
+  String get settingsSearchKeywordsBoldFont => '加粗 字体 字重 bold font';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -12828,4 +12843,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerHardwarePageKeysSubtitle => '使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效';
+
+  @override
+  String get appearanceTextSectionTitle => '文字';
+
+  @override
+  String get appearanceBoldFontTitle => '加粗字體';
+
+  @override
+  String get appearanceBoldFontSubtitle => '整體提升一檔字重，墨水屏和戶外更易辨認';
+
+  @override
+  String get settingsSearchSummaryBoldFont => '全應用加粗字體';
+
+  @override
+  String get settingsSearchKeywordsBoldFont => '加粗 字體 字重 bold font';
 }

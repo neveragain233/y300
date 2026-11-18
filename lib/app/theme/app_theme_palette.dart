@@ -72,6 +72,56 @@ final class AppThemePalette {
     };
   }
 
+  /// 墨水屏变体：浅灰纸面、纯白卡片、深灰正文、单档描边。
+  ///
+  /// 与手机端三套预设无关；eink 构建固定使用这套色板，避免彩色表面和
+  /// 大面积米黄/紫色底在低刷新率设备上产生残影。
+  factory AppThemePalette.eInk() {
+    return const AppThemePalette(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.light,
+      seedColor: AppThemeTokens.seedColor,
+      scaffoldBackground: Color(0xFFF4F4F4),
+      appBarBackground: Color(0xFFFFFFFF),
+      appBarForeground: Color(0xFF1F1F1F),
+      navigationBarBackground: Color(0xFFFFFFFF),
+      primary: AppThemeTokens.seedColor,
+      onPrimary: Color(0xFFFFFFFF),
+      surface: Color(0xFFFFFFFF),
+      onSurface: Color(0xFF1F1F1F),
+      surfaceContainerLowest: Color(0xFFFFFFFF),
+      surfaceContainer: Color(0xFFFFFFFF),
+      surfaceContainerHighest: Color(0xFFEDEDED),
+      onSurfaceVariant: Color(0xFF444444),
+      outlineVariant: Color(0xFFCCCCCC),
+      secondaryContainer: Color(0xFFEDEDED),
+      onSecondaryContainer: Color(0xFF1F1F1F),
+    );
+  }
+
+  factory AppThemePalette.eInkDark() {
+    return const AppThemePalette(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.dark,
+      seedColor: AppThemeTokens.seedColor,
+      scaffoldBackground: Color(0xFF101010),
+      appBarBackground: Color(0xFF1A1A1A),
+      appBarForeground: Color(0xFFE8E8E8),
+      navigationBarBackground: Color(0xFF1A1A1A),
+      primary: AppThemeTokens.seedColor,
+      onPrimary: Color(0xFFFFFFFF),
+      surface: Color(0xFF1A1A1A),
+      onSurface: Color(0xFFE8E8E8),
+      surfaceContainerLowest: Color(0xFF0C0C0C),
+      surfaceContainer: Color(0xFF1A1A1A),
+      surfaceContainerHighest: Color(0xFF242424),
+      onSurfaceVariant: Color(0xFFB8B8B8),
+      outlineVariant: Color(0xFF3A3A3A),
+      secondaryContainer: Color(0xFF242424),
+      onSecondaryContainer: Color(0xFFE8E8E8),
+    );
+  }
+
   factory AppThemePalette.light() {
     return const AppThemePalette(
       family: AppThemeFamily.warmPaper,

@@ -10812,6 +10812,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'使用音量键或侧边翻页键翻页，仅在阅读器内生效'**
   String get readerHardwarePageKeysSubtitle;
+
+  /// No description provided for @appearanceTextSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'文字'**
+  String get appearanceTextSectionTitle;
+
+  /// No description provided for @appearanceBoldFontTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'加粗字体'**
+  String get appearanceBoldFontTitle;
+
+  /// No description provided for @appearanceBoldFontSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'整体提升一档字重，墨水屏和户外更易辨认'**
+  String get appearanceBoldFontSubtitle;
+
+  /// No description provided for @settingsSearchSummaryBoldFont.
+  ///
+  /// In zh, this message translates to:
+  /// **'全应用加粗字体'**
+  String get settingsSearchSummaryBoldFont;
+
+  /// No description provided for @settingsSearchKeywordsBoldFont.
+  ///
+  /// In zh, this message translates to:
+  /// **'加粗 字体 字重 bold font'**
+  String get settingsSearchKeywordsBoldFont;
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_component_theme_builder.dart';
+import 'package:y300/app/settings/app_edition.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';
@@ -27,19 +28,39 @@ final class AppTheme {
     required Brightness brightness,
     AppThemeColorSource colorSource = AppThemeColorSource.preset,
     ColorScheme? dynamicScheme,
+    bool boldFont = false,
   }) {
+    // 墨水屏变体固定使用灰阶色板，忽略手机主题预设和动态色。
+    if (AppEdition.isEInk) {
+      return _buildTheme(
+        brightness == Brightness.dark
+            ? AppThemePalette.eInkDark()
+            : AppThemePalette.eInk(),
+        boldFont: boldFont,
+        eInk: true,
+      );
+    }
     if (colorSource == AppThemeColorSource.dynamic &&
         dynamicScheme != null &&
         dynamicScheme.brightness == brightness) {
       return _buildTheme(
         AppThemePalette.dynamic(dynamicScheme, family),
         scheme: dynamicScheme,
+        boldFont: boldFont,
       );
     }
-    return _buildTheme(AppThemePalette.resolve(family, brightness));
+    return _buildTheme(
+      AppThemePalette.resolve(family, brightness),
+      boldFont: boldFont,
+    );
   }
 
-  static ThemeData _buildTheme(AppThemePalette palette, {ColorScheme? scheme}) {
+  static ThemeData _buildTheme(
+    AppThemePalette palette, {
+    ColorScheme? scheme,
+    bool boldFont = false,
+    bool eInk = false,
+  }) {
     final colorScheme =
         scheme ??
         _buildColorScheme(palette).copyWith(
@@ -55,7 +76,7 @@ final class AppTheme {
           secondaryContainer: palette.secondaryContainer,
           onSecondaryContainer: palette.onSecondaryContainer,
         );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       brightness: palette.brightness,
       colorScheme: colorScheme,
@@ -98,6 +119,78 @@ final class AppTheme {
             : Y300ThemeExtension.light(palette),
       ],
     );
+    var result = theme;
+    if (eInk) {
+      result = _flattenEInkSurfaces(result);
+    }
+    if (boldFont) {
+      result = result.copyWith(textTheme: _boldTextTheme(result.textTheme));
+    }
+    return result;
+  }
+
+  /// 墨水屏上阴影与抬升会产生整块重绘和残影，统一压平为实色描边表面。
+  static ThemeData _flattenEInkSurfaces(ThemeData theme) {
+    const shadow = Colors.transparent;
+    return theme.copyWith(
+      appBarTheme: theme.appBarTheme.copyWith(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        shadowColor: shadow,
+      ),
+      bottomSheetTheme: theme.bottomSheetTheme.copyWith(
+        elevation: 0,
+        modalElevation: 0,
+      ),
+      cardTheme: theme.cardTheme.copyWith(elevation: 0, shadowColor: shadow),
+      dialogTheme: theme.dialogTheme.copyWith(
+        elevation: 0,
+        shadowColor: shadow,
+      ),
+      popupMenuTheme: theme.popupMenuTheme.copyWith(
+        elevation: 0,
+        shadowColor: shadow,
+      ),
+    );
+  }
+
+  /// 全局加粗：逐级提升现有字重，保留字号、行高与字体族。
+  static TextTheme _boldTextTheme(TextTheme base) {
+    return base.copyWith(
+      displayLarge: _bumpWeight(base.displayLarge),
+      displayMedium: _bumpWeight(base.displayMedium),
+      displaySmall: _bumpWeight(base.displaySmall),
+      headlineLarge: _bumpWeight(base.headlineLarge),
+      headlineMedium: _bumpWeight(base.headlineMedium),
+      headlineSmall: _bumpWeight(base.headlineSmall),
+      titleLarge: _bumpWeight(base.titleLarge),
+      titleMedium: _bumpWeight(base.titleMedium),
+      titleSmall: _bumpWeight(base.titleSmall),
+      bodyLarge: _bumpWeight(base.bodyLarge),
+      bodyMedium: _bumpWeight(base.bodyMedium),
+      bodySmall: _bumpWeight(base.bodySmall),
+      labelLarge: _bumpWeight(base.labelLarge),
+      labelMedium: _bumpWeight(base.labelMedium),
+      labelSmall: _bumpWeight(base.labelSmall),
+    );
+  }
+
+  static TextStyle? _bumpWeight(TextStyle? style) {
+    if (style == null) {
+      return null;
+    }
+    final next = switch (style.fontWeight ?? FontWeight.w400) {
+      FontWeight.w100 => FontWeight.w200,
+      FontWeight.w200 => FontWeight.w300,
+      FontWeight.w300 => FontWeight.w400,
+      FontWeight.w400 => FontWeight.w500,
+      FontWeight.w500 => FontWeight.w600,
+      FontWeight.w600 => FontWeight.w700,
+      FontWeight.w700 => FontWeight.w800,
+      FontWeight.w800 || FontWeight.w900 => FontWeight.w900,
+      _ => FontWeight.w900,
+    };
+    return style.copyWith(fontWeight: next);
   }
 
   static ColorScheme _buildColorScheme(AppThemePalette palette) {

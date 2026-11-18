@@ -1,7 +1,9 @@
+import 'dart:collection';
 import 'dart:io' as io;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:y300/app/settings/app_edition.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:y300/core/media/image_display_provider.dart';
@@ -20,6 +22,32 @@ import 'package:y300/shared/widgets/forum_default_avatar.dart';
 /// 网络分支用 `CachedNetworkImageProvider` + 共享的 `flutter_cache_manager`
 /// 实例，按规范化 URL 做 key（同一张图同一份缓存）。缓存层始终保存原文件，
 /// 显示层再通过 [ResizeImage] 降采样，避免缓存库额外解析并重编码原图。
+/// 本地文件存在性的有界同步缓存。
+///
+/// 滚动时同一个路径会在每帧 build 里被查询，直接 `File.existsSync()` 会
+/// 反复做磁盘 stat；这里记住最近 512 个结果，首次之后不再触碰文件系统。
+final class _LocalFileExistenceCache {
+  const _LocalFileExistenceCache._();
+
+  static const int _maxEntries = 512;
+  static final LinkedHashMap<String, bool> _cache =
+      LinkedHashMap<String, bool>();
+
+  static bool check(String path) {
+    final cached = _cache.remove(path);
+    if (cached != null) {
+      _cache[path] = cached;
+      return cached;
+    }
+    final exists = io.File(path).existsSync();
+    if (_cache.length >= _maxEntries) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[path] = exists;
+    return exists;
+  }
+}
+
 class AppImage extends ConsumerStatefulWidget {
   const AppImage({
     super.key,
@@ -65,6 +93,41 @@ class _AppImageState extends ConsumerState<AppImage> {
   bool _networkResolved = false;
   String? _reportedFailureIdentity;
 
+  /// 墨水屏变体用 Rec.709 灰度矩阵合成位图，避免彩色图片在灰阶面板上
+  /// 出现不可预期的明度；普通构建不增加合成层。
+  static const List<double> _eInkGrayscale = <double>[
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+  ];
+
+  Widget _applyEInkFilter(Widget child) {
+    if (!AppEdition.isEInk) {
+      return child;
+    }
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix(_eInkGrayscale),
+      child: child,
+    );
+  }
+
   @override
   void didUpdateWidget(covariant AppImage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -87,7 +150,7 @@ class _AppImageState extends ConsumerState<AppImage> {
           _finiteOr(widget.height, constraints.maxHeight),
         );
         _devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-        return _buildContent(context);
+        return _applyEInkFilter(_buildContent(context));
       },
     );
   }
@@ -97,7 +160,7 @@ class _AppImageState extends ConsumerState<AppImage> {
     final local = widget.localPath?.trim();
     if (local != null && local.isNotEmpty) {
       final file = io.File(local);
-      if (file.existsSync()) {
+      if (_LocalFileExistenceCache.check(file.path)) {
         final fileProvider = FileImage(file);
         // cover 用 cover 感知降采样修复横长竖短图模糊；其它 fit 走宽度优先策略。
         final displayProvider = resolveDownscaledImageProvider(
