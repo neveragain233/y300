@@ -6,6 +6,8 @@ import 'package:y300/app/localization/app_locale_resolution.dart';
 import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_edition.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/startup/blacklist_sync_host.dart';
 import 'package:y300/app/startup/message_attention_visibility_host.dart';
 import 'package:y300/app/startup/message_attention_probe_host.dart';
@@ -79,7 +81,9 @@ class Y300App extends ConsumerWidget {
                 // 玻璃来源包住 Navigator，普通路由、根页菜单、模态和分栏
                 // 详情共用同一宿主；WAF、消息与黑名单 host 仍是应用根职责。
                 child: AppGlassEnvironment(
-                  glassLevel: settings.glassLevel,
+                  glassLevel: AppEdition.isEInk
+                      ? AppGlassLevel.off
+                      : settings.glassLevel,
                   child: child ?? const SizedBox.shrink(),
                 ),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:y300/app/settings/app_edition.dart';
 
 abstract final class AppLayoutTokens {
   static const double compactSpacing = 8;
@@ -10,8 +11,12 @@ abstract final class AppLayoutTokens {
   static const double imageReadingMaxWidth = 960;
   static const Duration feedbackDuration = Duration(milliseconds: 200);
 
-  static Duration motionDuration(BuildContext context) =>
-      MediaQuery.disableAnimationsOf(context)
-      ? Duration.zero
-      : feedbackDuration;
+  static Duration motionDuration(BuildContext context) {
+    if (AppEdition.isEInk) {
+      return Duration.zero;
+    }
+    return MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : feedbackDuration;
+  }
 }

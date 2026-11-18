@@ -24,6 +24,8 @@ RECORD_DIR = Path("build/apk-builds")
 LOCK_FILE = Path("build/.apk-build.lock")
 GRADLE_FILE = Path("android/app/build.gradle.kts")
 ARTIFACT_GLOB = "y300-v*-android-arm64-v8a.apk"
+FLAVOR_SUFFIXES = {"full": "", "eink": ".eink"}
+EINK_DART_DEFINE = "Y300_EINK=true"
 BUILD_MODE = "release"
 COMPANION_SUFFIXES = (".sha256", ".sha1", ".idsig")
 
@@ -78,8 +80,8 @@ def android_tools(root):
     return max(candidates, key=lambda path: tuple(map(int, path.name.split("."))))
 
 
-def application_id(root):
-    """解析构建实际使用的应用标识。
+def application_id_base(root):
+    """解析 Gradle 实际使用的应用标识基名。
 
     本机可以在 android/local.properties 写入 `y300.applicationId` 覆盖 Gradle
     默认值（用于继续覆盖安装已有的自用版本），因此先读该文件，再回落到
@@ -101,6 +103,11 @@ def application_id(root):
     return quoted.group(1)
 
 
+def application_id(root, flavor="full"):
+    """eink 变体在基名后追加独立后缀，两个安装包可以共存。"""
+    return f"{application_id_base(root)}{FLAVOR_SUFFIXES[flavor]}"
+
+
 def android_version(root):
     """版本名与内部版本号以 pubspec.yaml 为唯一来源。"""
     text = (root / "pubspec.yaml").read_text(encoding="utf-8")
@@ -109,9 +116,10 @@ def android_version(root):
     return match.group(1), int(match.group(2))
 
 
-def artifact_name(version_name):
+def artifact_name(version_name, flavor="full"):
     # 与安卓 Gradle 的 archivesName 保持同一命名，便于识别产物来源。
-    return f"y300-v{version_name}-android-arm64-v8a.apk"
+    edition = "-eink" if flavor == "eink" else ""
+    return f"y300-v{version_name}{edition}-android-arm64-v8a.apk"
 
 
 def package_info(apk, tools, root):
@@ -124,12 +132,17 @@ def package_info(apk, tools, root):
     }, badging
 
 
-def delivery_apks(root):
-    return sorted((root / OUTPUT_DIR).glob(ARTIFACT_GLOB))
+def delivery_apks(root, flavor=None):
+    paths = sorted((root / OUTPUT_DIR).glob(ARTIFACT_GLOB))
+    if flavor == "eink":
+        return [path for path in paths if "-eink-android-" in path.name]
+    if flavor == "full":
+        return [path for path in paths if "-eink-android-" not in path.name]
+    return paths
 
 
-def latest_apk(root, tools):
-    candidates = delivery_apks(root)
+def latest_apk(root, tools, flavor="full"):
+    candidates = delivery_apks(root, flavor)
     require(candidates, "没有可保留的安装包，请先运行构建")
     return max(candidates, key=lambda path: package_info(path, tools, root)[0]["versionCode"])
 
@@ -141,9 +154,10 @@ def certificate_sha256(apk, tools, root):
     return match.group(1)
 
 
-def verify_apk(apk, tools, root, expected=None):
+def verify_apk(apk, tools, root, expected=None, expected_app_id=None):
     info, badging = package_info(apk, tools, root)
-    require(info["applicationId"] == application_id(root), "应用标识与 Gradle 配置不一致")
+    target_id = expected_app_id or (expected or {}).get("applicationId") or application_id(root)
+    require(info["applicationId"] == target_id, "应用标识与 Gradle 配置不一致")
     require("application-debuggable" not in badging, "发布包不能启用调试标志")
     for key, value in (expected or {}).items():
         if key in info:
@@ -191,15 +205,24 @@ def verify_apk(apk, tools, root, expected=None):
 def prune_apks(root, keep):
     """只清理本仓库 build/ 下的 APK，校验通过的交付包不在删除范围内。"""
     root = root.resolve()
-    keep = keep.resolve(strict=True)
-    require(keep.is_relative_to(root) and keep.suffix == ".apk" and keep.is_file(), "保留包必须位于当前仓库")
+    keeps = [
+        path.resolve(strict=True)
+        for path in (keep if isinstance(keep, (list, tuple)) else [keep])
+    ]
+    require(
+        keeps and all(
+            path.is_relative_to(root) and path.suffix == ".apk" and path.is_file()
+            for path in keeps
+        ),
+        "保留包必须位于当前仓库",
+    )
     removed = []
     # 不跟随目录链接，不进入 Git 对象库；清理范围只覆盖构建输出。
     for directory, directories, files in os.walk(root / "build", followlinks=False):
         directories[:] = [name for name in directories if name != ".git" and not (Path(directory) / name).is_symlink()]
         for name in files:
             path = Path(directory) / name
-            if path.suffix != ".apk" or path.resolve() == keep:
+            if path.suffix != ".apk" or path.resolve() in keeps:
                 continue
             length = path.lstat().st_size
             path.unlink()
@@ -215,91 +238,150 @@ def prune_apks(root, keep):
                 if not name.endswith(".apk" + suffix):
                     continue
                 base = path.with_name(name[: -len(suffix)])
-                if base == keep or base.exists():
+                if base in keeps or base.exists():
                     break
                 path.unlink(missing_ok=True)
                 break
     return removed
 
 
-def publish_apk(source, output, tools, root, expected):
+def publish_apk(source, output, tools, root, expected, expected_app_id=None):
     """先在同一目录校验临时副本，通过后再替换同名交付包，失败保留旧包。"""
     temporary = output.with_suffix(".apk.pending")
     try:
         shutil.copyfile(source, temporary)
-        info, evidence = verify_apk(temporary, tools, root, expected)
+        info, evidence = verify_apk(
+            temporary, tools, root, expected, expected_app_id=expected_app_id,
+        )
         temporary.replace(output)
         return info, evidence
     finally:
         temporary.unlink(missing_ok=True)
 
 
-def previous_artifact(root, output):
-    candidates = [path for path in delivery_apks(root) if path.resolve() != output.resolve()]
+def previous_artifact(root, output, flavor="full"):
+    candidates = [
+        path for path in delivery_apks(root, flavor)
+        if path.resolve() != output.resolve()
+    ]
     return candidates
 
 
-def run(root, keep_latest=False):
+def requested_flavors(value):
+    return ["full", "eink"] if value == "both" else [value]
+
+
+def build_flavor(root, tools, flavor, version_name, version_code, record_dir, now):
+    app_id = application_id(root, flavor)
+    output = root / OUTPUT_DIR / artifact_name(version_name, flavor)
+    previous = previous_artifact(root, output, flavor)
+    expected = {
+        "applicationId": app_id, "versionCode": version_code,
+        "versionName": version_name,
+    }
+    if previous:
+        latest_previous = max(
+            previous,
+            key=lambda path: package_info(path, tools, root)[0]["versionCode"],
+        )
+        expected["certificateSha256"] = certificate_sha256(latest_previous, tools, root)
+    metadata = {
+        "startedAt": now.isoformat(), "versionName": version_name,
+        "versionCode": version_code, "applicationId": app_id,
+        "flavor": flavor,
+        "buildMode": BUILD_MODE, "entrypoint": "lib/main.dart",
+        "gitHead": capture(["git", "rev-parse", "HEAD"], root).strip(),
+        "includesUncommittedChanges": bool(capture(["git", "status", "--porcelain"], root).strip()),
+    }
+    command = [
+        "flutter", "build", "apk", "--release", "--no-pub", "--target-platform", "android-arm64",
+        "--flavor", flavor,
+        "--build-name", version_name, "--build-number", str(version_code), "-t", "lib/main.dart",
+    ]
+    if flavor == "eink":
+        command.append(f"--dart-define={EINK_DART_DEFINE}")
+    log_path = record_dir / f"build-{flavor}.log"
+    write_json(record_dir / f"request-{flavor}.json", {**metadata, "command": command})
+    print(f"正在构建 y300 {version_name}（{version_code}）{flavor}，日志：{log_path}", flush=True)
+    with log_path.open("w", encoding="utf-8") as log:
+        subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True)
+    source = root / OUTPUT_DIR / f"app-{flavor}-release.apk"
+    info, evidence = publish_apk(
+        source, output, tools, root, expected, expected_app_id=app_id,
+    )
+    return output, info, evidence, metadata
+
+
+def run(root, keep_latest=False, flavor="full"):
+    flavors = requested_flavors(flavor)
     tools = android_tools(root)
     version_name, version_code = android_version(root)
-    app_id = application_id(root)
     state_dir = root / RECORD_DIR
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
     record_dir = state_dir / now.strftime("%Y%m%d-%H%M%S-%f")
     record_dir.mkdir(parents=True)
+    output_records = []
     if keep_latest:
-        output = latest_apk(root, tools)
-        info, evidence = verify_apk(output, tools, root)
-        metadata = {"verifiedAt": now.isoformat(), "action": "keep-latest"}
-    else:
-        output = root / OUTPUT_DIR / artifact_name(version_name)
-        previous = previous_artifact(root, output)
-        expected = {
-            "applicationId": app_id, "versionCode": version_code,
-            "versionName": version_name,
-        }
-        if previous:
-            latest_previous = max(
-                previous,
-                key=lambda path: package_info(path, tools, root)[0]["versionCode"],
+        for current in flavors:
+            app_id = application_id(root, current)
+            output = latest_apk(root, tools, current)
+            info, evidence = verify_apk(output, tools, root, expected_app_id=app_id)
+            metadata = {"verifiedAt": now.isoformat(), "action": "keep-latest", "flavor": current}
+            metadata.update(info)
+            metadata["apk"] = str(output)
+            for name, contents in evidence.items():
+                (record_dir / f"{current}-{name}").write_text(contents, encoding="utf-8")
+            metadata_path = record_dir / f"metadata-{current}.json"
+            write_json(metadata_path, metadata)
+            output_records.append(
+                {"flavor": current, "apk": str(output), "metadata": str(metadata_path)},
             )
-            expected["certificateSha256"] = certificate_sha256(latest_previous, tools, root)
-        metadata = {
-            "startedAt": now.isoformat(), "versionName": version_name,
-            "versionCode": version_code, "applicationId": app_id,
-            "buildMode": BUILD_MODE, "entrypoint": "lib/main.dart",
-            "gitHead": capture(["git", "rev-parse", "HEAD"], root).strip(),
-            "includesUncommittedChanges": bool(capture(["git", "status", "--porcelain"], root).strip()),
-        }
-        command = [
-            "flutter", "build", "apk", "--release", "--no-pub", "--target-platform", "android-arm64",
-            "--build-name", version_name, "--build-number", str(version_code), "-t", "lib/main.dart",
-        ]
-        write_json(record_dir / "request.json", {**metadata, "command": command})
-        print(f"正在构建 y300 {version_name}（{version_code}），日志：{record_dir / 'build.log'}", flush=True)
-        with (record_dir / "build.log").open("w", encoding="utf-8") as log:
-            subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True)
-        info, evidence = publish_apk(root / OUTPUT_DIR / "app-release.apk", output, tools, root, expected)
-    metadata.update(info)
-    metadata["apk"] = str(output)
-    for name, contents in evidence.items():
-        (record_dir / name).write_text(contents, encoding="utf-8")
-    output.with_suffix(".apk.sha256").write_text(f"{info['sha256']}  {output.name}\n", encoding="utf-8")
-    write_json(record_dir / "metadata.json", metadata)
-    # 只有校验通过的交付包才更新指针；清理失败可用 --keep-latest 重试。
-    write_json(state_dir / "latest.json", {"apk": str(output), "metadata": str(record_dir / "metadata.json")})
-    removed = prune_apks(root, output)
+    else:
+        for current in flavors:
+            output, info, evidence, metadata = build_flavor(
+                root, tools, current, version_name, version_code, record_dir, now,
+            )
+            metadata.update(info)
+            metadata["apk"] = str(output)
+            for name, contents in evidence.items():
+                (record_dir / f"{current}-{name}").write_text(contents, encoding="utf-8")
+            output.with_suffix(".apk.sha256").write_text(
+                f"{info['sha256']}  {output.name}\n", encoding="utf-8",
+            )
+            metadata_path = record_dir / f"metadata-{current}.json"
+            write_json(metadata_path, metadata)
+            output_records.append(
+                {"flavor": current, "apk": str(output), "metadata": str(metadata_path)},
+            )
+    removed = prune_apks(root, [Path(record["apk"]) for record in output_records])
     write_json(record_dir / "cleanup.json", removed)
-    print(f"保留：{output}\n版本：{info['versionName']}（{info['versionCode']}）\n已删除旧包和副本：{len(removed)} 个\n记录：{record_dir}")
+    write_json(
+        state_dir / "latest.json",
+        {
+            "apk": output_records[-1]["apk"],
+            "metadata": output_records[-1]["metadata"],
+            "apks": output_records,
+        },
+    )
+    for record in output_records:
+        print(f"保留：{record['apk']}")
+    print(
+        f"版本：{version_name}（{version_code}）\n"
+        f"已删除旧包和副本：{len(removed)} 个\n记录：{record_dir}"
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--flavor", choices=("full", "eink", "both"), default="full",
+        help="构建哪个安装包：full（手机全量）、eink（墨水屏裁剪）或 both",
+    )
     parser.add_argument("--keep-latest", action="store_true", help="校验已有最新安装包并清理其余 APK，不重新构建")
     args = parser.parse_args()
     try:
         with build_lock(ROOT):
-            run(ROOT, args.keep_latest)
+            run(ROOT, args.keep_latest, args.flavor)
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError, zipfile.BadZipFile) as error:
         print(f"安装包任务失败：{error}", file=sys.stderr)
         return 1

@@ -35,18 +35,19 @@ class BuildApkTests(unittest.TestCase):
             old.write_bytes(b"previous-good")
 
             def flutter_build(command, **kwargs):
-                self.assertEqual(command[:8], [
+                self.assertEqual(command[:10], [
                     "flutter", "build", "apk", "--release", "--no-pub",
-                    "--target-platform", "android-arm64", "--build-name",
+                    "--target-platform", "android-arm64", "--flavor", "full",
+                    "--build-name",
                 ])
-                self.assertEqual(command[8], "2.0.0")
+                self.assertEqual(command[10], "2.0.0")
                 self.assertEqual(
-                    command[9:], ["--build-number", "86", "-t", "lib/main.dart"],
+                    command[11:], ["--build-number", "86", "-t", "lib/main.dart"],
                 )
                 self.assertTrue(old.exists())
-                (output_dir / "app-release.apk").write_bytes(b"new-good")
+                (output_dir / "app-full-release.apk").write_bytes(b"new-good")
 
-            def verify(apk, tools, unused_root, expected):
+            def verify(apk, tools, unused_root, expected, expected_app_id=None):
                 self.assertEqual(apk.read_bytes(), b"new-good")
                 self.assertEqual(expected["certificateSha256"], "cert")
                 return {**expected, "sha256": "hash", "sizeBytes": 8}, {}
@@ -69,6 +70,7 @@ class BuildApkTests(unittest.TestCase):
             self.assertEqual(metadata["versionCode"], 86)
             self.assertEqual(metadata["applicationId"], "com.adws.y300.fork")
             self.assertEqual(metadata["buildMode"], "release")
+            self.assertEqual(metadata["flavor"], "full")
 
     def test_failed_build_does_not_publish_or_prune(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -97,6 +99,11 @@ class BuildApkTests(unittest.TestCase):
             self.assertEqual(
                 build.artifact_name("3.1.4"), "y300-v3.1.4-android-arm64-v8a.apk",
             )
+            self.assertEqual(build.application_id(root, "eink"), "com.example.app.eink")
+            self.assertEqual(
+                build.artifact_name("3.1.4", "eink"),
+                "y300-v3.1.4-eink-android-arm64-v8a.apk",
+            )
 
     def test_local_properties_overrides_application_id(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -109,6 +116,43 @@ class BuildApkTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(build.application_id(root), "com.adws.y300.personal")
+
+    def test_eink_flavor_uses_suffix_and_dart_define(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            write_gradle(root)
+            (root / "pubspec.yaml").write_text("version: 2.0.0+86\n", encoding="utf-8")
+            output_dir = root / build.OUTPUT_DIR
+            output_dir.mkdir(parents=True)
+            commands = []
+
+            def flutter_build(command, **kwargs):
+                commands.append(command)
+                (output_dir / "app-eink-release.apk").write_bytes(b"eink-good")
+
+            def verify(apk, tools, unused_root, expected, expected_app_id=None):
+                self.assertEqual(apk.read_bytes(), b"eink-good")
+                self.assertEqual(expected_app_id, "com.adws.y300.fork.eink")
+                self.assertEqual(expected["applicationId"], "com.adws.y300.fork.eink")
+                return {**expected, "sha256": "hash", "sizeBytes": 9}, {}
+
+            with patch.object(build, "android_tools", return_value=root), \
+                    patch.object(build, "capture", return_value="head"), \
+                    patch.object(build, "package_info", return_value=({"versionCode": 86}, "")), \
+                    patch.object(build.subprocess, "run", side_effect=flutter_build), \
+                    patch.object(build, "verify_apk", side_effect=verify), \
+                    patch("builtins.print"):
+                build.run(root, flavor="eink")
+
+            self.assertIn("--flavor", commands[0])
+            self.assertIn("eink", commands[0])
+            self.assertIn("--dart-define=Y300_EINK=true", commands[0])
+            latest = json.loads((root / build.RECORD_DIR / "latest.json").read_text(encoding="utf-8"))
+            kept = Path(latest["apk"])
+            self.assertEqual(kept.name, "y300-v2.0.0-eink-android-arm64-v8a.apk")
+            metadata = json.loads(Path(latest["metadata"]).read_text(encoding="utf-8"))
+            self.assertEqual(metadata["flavor"], "eink")
+            self.assertEqual(metadata["applicationId"], "com.adws.y300.fork.eink")
 
     def test_cleanup_keeps_delivery_and_never_follows_directory_links(self):
         with tempfile.TemporaryDirectory() as folder:
