@@ -49,4 +49,4 @@ python3 tool/test_tiers.py check         # 清单与测试树一致性
 
 每次 `fast`、`ui`、`all` 运行都可以加 `--timings <path>`：脚本用 `--file-reporter json:` 同时写机器报告，结束后打印最慢文件、超过 2 秒的用例、超过 60 秒的待拆文件以及失败列表，并生成 `<name>-summary.json`。CI 把 `.test-timings/*.json` 作为 artifact 上传。时间预算只按 Actions 的 4 核 ubuntu-24.04 判断，本机 macOS 的耗时只用于相对比较。
 
-`packages` 逐包在包目录运行 `dart test` 或 `flutter test --no-pub`，不经过 app 的测试分层。本机默认门禁是 `fast` 加 `packages`；推送和 PR 的 CI 分别跑 Analyze、Fast tests、Package tests 三个并行 job，全量测试只在 Actions 手动勾选 `full_tests` 后按 4 片执行。visual 档包含只有 Linux/Windows 基线的金色测试，macOS 本机会报渲染差异，按需执行，不放进默认门禁。
+`packages` 逐包在包目录运行 `dart test` 或 `flutter test --no-pub`，不经过 app 的测试分层。本机默认门禁是 `fast` 加 `packages`；推送和 PR 的 CI 并行跑 Analyze、Fast tests 三片与 Package tests，全量测试只在 Actions 手动勾选 `full_tests` 后按 4 片执行。visual 档包含只有 Linux/Windows 基线的金色测试，macOS 本机会报渲染差异，按需执行，不放进默认门禁。

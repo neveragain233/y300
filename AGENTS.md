@@ -55,7 +55,7 @@ Flutter 系列命令和dart系列指令是无法在Codex沙箱内跑的，
 - 涉及异步、帧调度和手势的测试先核对驱动方式。出现挂起或超时，定位重复 `setState`、无效通知、未完成 Future 或无限帧来源，不得靠加大超时、整文件重跑或反复重试掩盖。
 - 验证优先定向执行：单个测试文件、`--name` 或 `--plain-name`。不反复跑已经很大的测试文件的全量；确实需要大范围回归时，先说明范围和预计耗时，并按目录分片执行。
 - 分层入口是 `python3 tool/test_tiers.py <fast|ui|perf|visual>`：`fast` 是默认门禁，只含纯 Dart 单元/数据测试与 app、shared 公共组件契约；`ui` 含页面流程与 feature 级 Widget/交互测试；`perf`、`visual` 按需执行。按 feature 加 `--feature`，全量按 4 片用 `all --shard i/4`，包内测试用 `packages`。测试清单在 `tool/test_tiers.json`，新增文件默认归 fast，跨层或例外必须改清单并运行 `python3 tool/test_tiers.py check`。
-- 时间预算以 GitHub Actions 的 4 核 `ubuntu-24.04` 为准；本机 macOS 耗时只作相对比较。`fast`、`ui`、`all` 运行时加 `--timings <path>` 收集每文件耗时，先看超过 2 秒的用例和超过 60 秒的文件，不得用加大超时或把页面测试塞回 fast 掩盖慢点。GitHub Actions 默认并行跑 Analyze、Fast tests（2 片）与 Package tests；全量测试在 Actions 手动勾选 `full_tests` 后按 4 片执行。
+- 时间预算以 GitHub Actions 的 4 核 `ubuntu-24.04` 为准；本机 macOS 耗时只作相对比较。`fast`、`ui`、`all` 运行时加 `--timings <path>` 收集每文件耗时，先看超过 2 秒的用例和超过 60 秒的文件，不得用加大超时或把页面测试塞回 fast 掩盖慢点。GitHub Actions 默认并行跑 Analyze、Fast tests（3 片）与 Package tests；全量测试在 Actions 手动勾选 `full_tests` 后按 4 片执行。
 - 控制测试文件规模。单文件上限 1500 行；超过或接近上限的文件只删不增，新增场景放进同 feature 的小文件。现有超过 2000 行的文件按行为拆分，不继续堆叠。
 - 已知失败用例不允许长期留在默认套件。要么修复，要么单独隔离并记录原因、跟踪位置和解除条件。
 - 生产代码不得为测试方便加入调试开关、无限等待、跳过正常流程或仅测试可用的分支。
