@@ -31,3 +31,22 @@ python3 tool/build_apk.py --keep-latest
 ```bash
 python3 -m unittest discover -s tool/tests
 ```
+
+## 测试分层入口
+
+`python3 tool/test_tiers.py` 是测试分层入口，读取 `tool/test_tiers.json` 的有序规则与例外，把 `test/**/*_test.dart` 分成 fast、ui、perf、visual 四档：
+
+```bash
+python3 tool/test_tiers.py fast          # 默认门禁：单元、数据与公共组件契约
+python3 tool/test_tiers.py ui --feature novel
+python3 tool/test_tiers.py all --shard 2/4
+python3 tool/test_tiers.py packages      # packages/* 与 renderer example
+python3 tool/test_tiers.py list ui
+python3 tool/test_tiers.py check         # 清单与测试树一致性
+```
+
+规则按顺序匹配，`defaultTier` 是 fast；新增测试文件自动进入 fast，纯 Dart 控制器/数据测试无需标注。页面测试由 `*_page_test.dart` 规则归 ui，`test/features/*/presentation/widgets/` 下的 Widget 测试也自动归 ui；其它 feature 级 Widget/交互测试需要显式加进 ui 清单。性能和金色基线显式列出。改名或删除测试后 `check` 会报出失效规则与缺失路径，CI 也跑这个检查。
+
+每次 `fast`、`ui`、`all` 运行都可以加 `--timings <path>`：脚本用 `--file-reporter json:` 同时写机器报告，结束后打印最慢文件、超过 2 秒的用例、超过 60 秒的待拆文件以及失败列表，并生成 `<name>-summary.json`。CI 把 `.test-timings/*.json` 作为 artifact 上传。时间预算只按 Actions 的 4 核 ubuntu-24.04 判断，本机 macOS 的耗时只用于相对比较。
+
+`packages` 逐包在包目录运行 `dart test` 或 `flutter test --no-pub`，不经过 app 的测试分层。本机默认门禁是 `fast` 加 `packages`；推送和 PR 的 CI 分别跑 Analyze、Fast tests、Package tests 三个并行 job，全量测试只在 Actions 手动勾选 `full_tests` 后按 4 片执行。visual 档包含只有 Linux/Windows 基线的金色测试，macOS 本机会报渲染差异，按需执行，不放进默认门禁。
