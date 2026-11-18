@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
+import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/forum/domain/services/yamibo_forum_link_resolver.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_external_launcher.dart';
@@ -685,6 +686,14 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     }
     final isRtl = current.preferences.flowMode == NovelReaderFlowMode.pagedRtl;
     final isPrevious = isRtl ? !isLeftTap : isLeftTap;
+    unawaited(
+      ref
+          .read(einkPageRippleServiceProvider)
+          .triggerPageRipple(
+            forward: !isPrevious,
+            speed: EInkRippleSpeed.standard,
+          ),
+    );
     if (isPrevious) {
       _pagedNavigationController.turnPrevious();
     } else {
@@ -724,6 +733,14 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     _overlayController.hideMenu();
     final animationsDisabled = MediaQuery.disableAnimationsOf(context);
     final effect = current.preferences.pageEffect;
+    unawaited(
+      ref
+          .read(einkPageRippleServiceProvider)
+          .triggerPageRipple(
+            forward: !backward,
+            speed: EInkRippleSpeed.standard,
+          ),
+    );
     _verticalTapTurn.turn(
       direction: backward
           ? NovelReaderVerticalTurnDirection.backward

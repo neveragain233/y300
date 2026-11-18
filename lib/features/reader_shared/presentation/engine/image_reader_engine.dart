@@ -4,6 +4,7 @@ import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:y300/app/theme/app_system_ui.dart';
+import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
     show RenderAbstractViewport, ScrollCacheExtent;
@@ -2008,6 +2009,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (target < total) {
       _promoteSessionSeekTarget(target);
     }
+    unawaited(
+      ref
+          .read(einkPageRippleServiceProvider)
+          .triggerPageRipple(
+            forward: delta > 0,
+            speed: EInkRippleSpeed.standard,
+          ),
+    );
     _animatePagedTurn(pageController, target);
   }
 

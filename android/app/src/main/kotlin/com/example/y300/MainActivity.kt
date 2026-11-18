@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.Surface
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -17,12 +18,29 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 class MainActivity : FlutterActivity() {
     private companion object {
         const val EXPORT_CHANNEL = "com.adws.y300/reader_image_export"
         const val DEVICE_MEMORY_CHANNEL = "com.adws.y300/device_memory"
+        const val EPDC_CHANNEL = "com.adws.y300/epdc"
         const val STORAGE_PERMISSION_REQUEST = 7301
+
+        // 掌阅 SmartOS 的 EPDC 翻页模式；方向码按屏幕旋转各取一档。
+        private const val EPDC_FORCE_MODE_PAGE_TURN = 0x01000063
+        private val EPDC_FORWARD_DIRECTIONS = intArrayOf(1, 3, 2, 4)
+        private val EPDC_BACKWARD_DIRECTIONS = intArrayOf(2, 4, 1, 3)
+
+        @Volatile
+        private var epdcProbed = false
+
+        @Volatile
+        private var epdcAvailable = false
+        private var epdcPostMethod: Method? = null
+        private var epdcForceMethod: Method? = null
+        private var epdcTarget: Any? = null
     }
 
     private var pendingPermissionExport: PendingExport? = null
@@ -45,6 +63,177 @@ class MainActivity : FlutterActivity() {
                     ),
                 )
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EPDC_CHANNEL)
+            .setMethodCallHandler(::handleEpdcCall)
+    }
+
+    private fun handleEpdcCall(call: MethodCall, result: MethodChannel.Result) {
+        if (call.method != "triggerPageRipple") {
+            result.notImplemented()
+            return
+        }
+        val forward = call.argument<Boolean>("forward") ?: true
+        val speed = call.argument<String>("speed")
+        result.success(triggerIreaderPageRipple(forward = forward, speed = speed))
+    }
+
+    /**
+     * 反射调用掌阅 SmartOS 的 `android.eink.EPDCDevice`，为下一次屏幕提交挂上
+     * 翻页水波纹。非掌阅设备首次探测失败后缓存结果，后续调用零开销。
+     */
+    private fun triggerIreaderPageRipple(forward: Boolean, speed: String?): Boolean {
+        return try {
+            ensureEpdcProbed()
+            if (!epdcAvailable) {
+                return false
+            }
+            val postMethod = epdcPostMethod ?: return false
+            val target = if (Modifier.isStatic(postMethod.modifiers)) null else epdcTarget
+            val rotation = currentDisplayRotation().coerceIn(0, 3)
+            val directionCode = if (forward) {
+                EPDC_FORWARD_DIRECTIONS[rotation]
+            } else {
+                EPDC_BACKWARD_DIRECTIONS[rotation]
+            }
+            val speedBit = when (speed?.lowercase()) {
+                "slow" -> 128
+                "fast" -> 0
+                else -> 64
+            }
+            postMethod.invoke(target, "next-effect-type ${directionCode or speedBit}")
+            epdcForceMethod?.let { forceMethod ->
+                val forceTarget = if (Modifier.isStatic(forceMethod.modifiers)) {
+                    null
+                } else {
+                    epdcTarget
+                }
+                forceMethod.invoke(forceTarget, EPDC_FORCE_MODE_PAGE_TURN)
+            }
+            true
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun currentDisplayRotation(): Int {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display?.rotation ?: Surface.ROTATION_0
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay.rotation
+            }
+        } catch (_: Throwable) {
+            Surface.ROTATION_0
+        }
+    }
+
+    private fun ensureEpdcProbed() {
+        if (epdcProbed) return
+        synchronized(MainActivity::class.java) {
+            if (epdcProbed) return
+            try {
+                val epdcClass = Class.forName("android.eink.EPDCDevice")
+                val allMethods = (epdcClass.methods.toList() + epdcClass.declaredMethods.toList())
+                    .distinctBy { method ->
+                        "${method.name}:${method.parameterTypes.joinToString(",") { it.name }}"
+                    }
+
+                val postMethod =
+                    findExactMethod(epdcClass, "nativePostCommand", String::class.java)
+                        ?: allMethods.firstOrNull { method ->
+                            Modifier.isStatic(method.modifiers) &&
+                                method.parameterTypes.size == 1 &&
+                                method.parameterTypes[0] == String::class.java &&
+                                isPostMethodName(method.name)
+                        }
+                        ?: allMethods.firstOrNull { method ->
+                            method.parameterTypes.size == 1 &&
+                                method.parameterTypes[0] == String::class.java &&
+                                isPostMethodName(method.name)
+                        }
+
+                val forceMethod =
+                    findExactMethod(epdcClass, "setForceNextPostMode", Int::class.javaPrimitiveType!!)
+                        ?: allMethods.firstOrNull { method ->
+                            Modifier.isStatic(method.modifiers) &&
+                                method.parameterTypes.size == 1 &&
+                                method.parameterTypes[0] == Int::class.javaPrimitiveType &&
+                                method.name.lowercase().contains("force")
+                        }
+                        ?: allMethods.firstOrNull { method ->
+                            method.parameterTypes.size == 1 &&
+                                method.parameterTypes[0] == Int::class.javaPrimitiveType &&
+                                method.name.lowercase().contains("force")
+                        }
+
+                var target: Any? = null
+                if ((postMethod != null && !Modifier.isStatic(postMethod.modifiers)) ||
+                    (forceMethod != null && !Modifier.isStatic(forceMethod.modifiers))
+                ) {
+                    target = resolveEpdcSingleton(epdcClass, allMethods)
+                }
+
+                postMethod?.isAccessible = true
+                forceMethod?.isAccessible = true
+                epdcPostMethod = postMethod
+                epdcForceMethod = forceMethod
+                epdcTarget = target
+                epdcAvailable = postMethod != null &&
+                    (Modifier.isStatic(postMethod.modifiers) || target != null)
+            } catch (_: Throwable) {
+                epdcAvailable = false
+                epdcPostMethod = null
+                epdcForceMethod = null
+                epdcTarget = null
+            } finally {
+                epdcProbed = true
+            }
+        }
+    }
+
+    private fun findExactMethod(
+        clazz: Class<*>,
+        name: String,
+        vararg paramTypes: Class<*>,
+    ): Method? {
+        return try {
+            clazz.getMethod(name, *paramTypes)
+        } catch (_: Throwable) {
+            try {
+                clazz.getDeclaredMethod(name, *paramTypes)
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    }
+
+    private fun isPostMethodName(name: String): Boolean {
+        val lower = name.lowercase()
+        return lower.contains("postcommand") || lower.contains("post")
+    }
+
+    private fun resolveEpdcSingleton(epdcClass: Class<*>, methods: List<Method>): Any? {
+        val getter = methods.firstOrNull { method ->
+            Modifier.isStatic(method.modifiers) &&
+                method.parameterTypes.isEmpty() &&
+                epdcClass.isAssignableFrom(method.returnType)
+        }
+        if (getter != null) {
+            return try {
+                getter.isAccessible = true
+                getter.invoke(null)
+            } catch (_: Throwable) {
+                null
+            }
+        }
+        return try {
+            val constructor = epdcClass.getDeclaredConstructor()
+            constructor.isAccessible = true
+            constructor.newInstance()
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     private fun handleExportCall(call: MethodCall, result: MethodChannel.Result) {
