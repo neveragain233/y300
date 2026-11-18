@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本机自用开发请同时阅读 [AGENTS.local.md](AGENTS.local.md)（存在时）。该文件补充本地协作、交接与试装约定。
+个人本地约定（交接、试装、文档入口）写在 [AGENTS.local.md](AGENTS.local.md)。该文件只存在于维护者本机，由 `.git/info/exclude` 排除，克隆后缺失属于正常情况；公开协作者按本文件与 README 执行即可。
 
 全部编写工作请用UTF-8，你全部的读取代码的工作也是UTF-8编码
 
