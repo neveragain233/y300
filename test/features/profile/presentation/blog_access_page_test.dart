@@ -12,6 +12,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
+import '../../../test_support/page_flow_test_support.dart';
 import '../test_support/blog_navigation_fixture.dart';
 
 void main() {
@@ -78,8 +79,13 @@ void main() {
         expect(launches.single.initialUri, navigation.uri);
         expect(launches.single.expectedAccountId, '101');
         expect(launches.single.popOnRootBack, isTrue);
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
+        await tapBack(
+          tester,
+          within: find.ancestor(
+            of: find.text('browser fixture'),
+            matching: find.byType(Scaffold),
+          ),
+        );
         expect(repository.requests, hasLength(1));
         expect(find.text(message), findsNothing);
         expect(find.byIcon(Icons.error_outline), findsNothing);

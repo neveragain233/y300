@@ -11,6 +11,7 @@ import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
+import '../../../test_support/page_flow_test_support.dart';
 import '../test_support/blog_operation_fixture.dart';
 
 void main() {
@@ -86,8 +87,7 @@ void main() {
     expect(find.byKey(const Key('blog-action-retry')), findsNothing);
     expect(find.byKey(const Key('blog-action-open-web')), findsNothing);
     expect(host.container.read(blogMutationBusProvider).last, isNull);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await tapBack(tester, within: find.byType(BlogActionPage));
     expect(await host.receipt, isNull);
   });
 
@@ -101,8 +101,7 @@ void main() {
           await tester.tap(find.byKey(const Key('blog-action-submit')));
           await tester.pump();
         }
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
+        await tapBack(tester, within: find.byType(BlogActionPage));
         expect(await host.receipt, isNull);
         final token = submitting
             ? service.submissions.last.cancellation

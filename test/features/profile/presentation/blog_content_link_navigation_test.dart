@@ -28,6 +28,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client.dart';
 
 import '../../../test_support/localized_test_app.dart';
+import '../../../test_support/page_flow_test_support.dart';
 import '../test_support/blog_detail_fixture.dart';
 import '../test_support/blog_directory_fixture.dart';
 import '../test_support/profile_repository_fixture.dart';
@@ -71,8 +72,7 @@ void main() {
         expect(host.directory.queries.single, query);
         expect(host.webLaunches, isEmpty);
         expect(host.external.uris, isEmpty);
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
+        await tapBack(tester, within: find.byType(ProfileBlogPage));
         expect(find.byType(ProfileBlogDetailPage), findsOneWidget);
         expect(category, findsOneWidget);
         expect(host.details.queries, hasLength(1));
@@ -347,8 +347,7 @@ void main() {
         expect(host.directory.queries.single, query);
         expect(host.webLaunches, isEmpty);
         expect(host.external.uris, isEmpty);
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
+        await tapBack(tester, within: find.byType(ProfileBlogPage));
         expect(find.byKey(const Key('open-content-link')), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -424,8 +423,7 @@ void main() {
     button.onPressed!();
     button.onPressed!();
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await tapBack(tester, within: find.byType(UserProfilePage));
     expect(find.byKey(const Key('open-content-link')), findsOneWidget);
   });
 
@@ -550,8 +548,7 @@ void main() {
             .dy,
         inInclusiveRange(56, 90),
       );
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
+      await tapBack(tester, within: find.byType(ProfileBlogDetailPage).last);
       expect(_detailScroll(tester).position.pixels, before);
       expect(host.details.queries, hasLength(2));
       expect(host.webLaunches, isEmpty);
@@ -576,8 +573,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(UserProfilePage), findsOneWidget);
     expect(host.profiles.queries.single.userId, '202');
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await tapBack(tester, within: find.byType(UserProfilePage));
     expect(host.details.queries, hasLength(1));
   });
 
@@ -623,14 +619,15 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(UserProfilePage), findsOneWidget);
         expect(host.profiles.queries.single.userId, '202');
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
+        await tapBack(tester, within: find.byType(UserProfilePage));
         expect(
           find.byKey(const Key('blog-selection-copy-page')),
           findsOneWidget,
         );
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
+        await tapBack(
+          tester,
+          within: find.byKey(const Key('blog-selection-copy-page')),
+        );
         expect(_detailScroll(tester).position.pixels, before);
         expect(host.details.queries, hasLength(1));
         expect(host.webLaunches, isEmpty);

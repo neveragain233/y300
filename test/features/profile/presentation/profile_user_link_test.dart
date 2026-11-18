@@ -10,6 +10,7 @@ import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
+import '../../../test_support/page_flow_test_support.dart';
 import '../test_support/blog_directory_fixture.dart';
 import '../test_support/profile_repository_fixture.dart';
 
@@ -56,12 +57,10 @@ void main() {
       expect(find.byType(ProfileBlogPage), findsOneWidget);
       expect(blogs.queries.single.scope, UserBlogFeedScope.self);
       expect(blogs.queries.single.ownerUserId, '101');
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
+      await tapBack(tester, within: find.byType(ProfileBlogPage));
       expect(find.byType(UserProfilePage), findsOneWidget);
       expect(profiles.queries, hasLength(1));
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
+      await tapBack(tester, within: find.byType(UserProfilePage));
       expect(find.text('author link'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

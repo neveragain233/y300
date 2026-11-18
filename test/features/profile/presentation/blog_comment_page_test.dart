@@ -23,6 +23,7 @@ import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
+import '../../../test_support/page_flow_test_support.dart';
 import '../test_support/blog_comment_fixture.dart';
 import '../test_support/blog_navigation_fixture.dart';
 
@@ -75,8 +76,13 @@ void main() {
       expect(await host.receipt, isNull);
       expect(find.byType(BlogCommentPage), findsNothing);
       expect(service.submissions, isEmpty);
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
+      await tapBack(
+        tester,
+        within: find.ancestor(
+          of: find.text('browser fixture'),
+          matching: find.byType(Scaffold),
+        ),
+      );
       expect(find.byType(BlogCommentPage), findsNothing);
     },
   );
@@ -136,8 +142,7 @@ void main() {
       findsOneWidget,
     );
     expect(service.submissions, isEmpty);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await tapBack(tester, within: find.byType(BlogCommentPage));
     expect(service.preparations.single.cancellation!.isCancelled, isTrue);
     service.prepared();
     await tester.pumpAndSettle();
@@ -217,8 +222,7 @@ void main() {
     expect(find.byKey(const Key('blog-comment-retry')), findsNothing);
     expect(find.byKey(const Key('blog-comment-submit')), findsNothing);
     expect(find.byKey(const Key('blog-comment-open-web')), findsNothing);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await tapBack(tester, within: find.byType(BlogCommentPage));
     expect(find.text(l10n.profileBlogLeavePendingCommentBody), findsOneWidget);
     await tester.tap(find.byKey(const Key('blog-comment-leave')));
     await tester.pumpAndSettle();
@@ -233,8 +237,7 @@ void main() {
     final l10n = _l10n(tester);
     await _enter(tester, '尚未提交');
     await tester.pump();
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    await tapBack(tester, within: find.byType(BlogCommentPage));
     expect(find.text(l10n.profileBlogLeaveCommentBody), findsOneWidget);
     await tester.tap(find.text(l10n.commonCancel));
     await tester.pumpAndSettle();
@@ -250,7 +253,11 @@ void main() {
       final l10n = _l10n(tester);
       await _enter(tester, '成功发送');
       await _submit(tester);
-      await tester.tap(find.byType(BackButton));
+      await tapBack(
+        tester,
+        within: find.byType(BlogCommentPage),
+        settle: false,
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       service.applied();
@@ -271,7 +278,11 @@ void main() {
       final host = await _open(tester, service);
       await _enter(tester, '等待发送');
       await _submit(tester);
-      await tester.tap(find.byType(BackButton));
+      await tapBack(
+        tester,
+        within: find.byType(BlogCommentPage),
+        settle: false,
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.byKey(const Key('blog-comment-leave')));
@@ -307,8 +318,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(BlogCommentPage), findsOneWidget);
       expect(find.byType(QuillEditor), findsNothing);
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
+      await tapBack(tester, within: find.byType(BlogCommentPage));
       expect(await host.receipt, isNull);
     },
   );
