@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:y300/app/theme/app_system_ui.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
+import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
@@ -113,7 +114,7 @@ class _ImageReaderEngineContent extends ConsumerStatefulWidget {
 }
 
 class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
-    implements ReaderEngineActions {
+    implements ReaderEngineActions, EInkPageHandler {
   late ScrollController _scrollController;
   int _scrollControllerSessionGeneration = -1;
   PageController? _pageController;
@@ -199,8 +200,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   int _verticalViewportRevision = 0;
   ({int index, String itemId, double fraction})? _viewportAnchor;
 
-  late final EInkHardwarePageKeysService _hardwarePageKeysService;
-  StreamSubscription<HardwarePageKeyDirection>? _hardwarePageKeysSubscription;
+  late final EInkPagingRouter _hardwarePageKeysRouter;
   ProviderSubscription<AsyncValue<bool>>? _hardwarePageKeysSetting;
   bool _hardwarePageKeysEnabled = false;
   bool _hardwarePageKeysArmed = false;
@@ -239,7 +239,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       exactOffset: _resolveExactVerticalOffset,
       waitForLayout: _waitForVerticalLayout,
     );
-    _hardwarePageKeysService = ref.read(einkHardwarePageKeysServiceProvider);
+    _hardwarePageKeysRouter = ref.read(eInkPagingRouterProvider);
+    _hardwarePageKeysRouter.register(this, this);
     _hardwarePageKeysSetting = ref.listenManual<AsyncValue<bool>>(
       hardwarePageKeysEnabledProvider,
       (previous, next) => _setHardwarePageKeysEnabled(next.value ?? false),
@@ -249,12 +250,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
   void _setHardwarePageKeysEnabled(bool enabled) {
     _hardwarePageKeysEnabled = enabled;
-    unawaited(_hardwarePageKeysSubscription?.cancel());
-    _hardwarePageKeysSubscription = null;
-    if (enabled) {
-      _hardwarePageKeysSubscription = _hardwarePageKeysService.directions
-          .listen(_onHardwarePageKey);
-    }
+    _hardwarePageKeysRouter.setHardwareKeysEnabled(enabled);
     _syncHardwareKeysArmed();
   }
 
@@ -269,8 +265,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       return;
     }
     _hardwarePageKeysArmed = armed;
-    unawaited(_hardwarePageKeysService.setEnabled(armed));
+    _hardwarePageKeysRouter.setVisible(this, armed);
   }
+
+  @override
+  void pageUp() => _onHardwarePageKey(HardwarePageKeyDirection.previous);
+
+  @override
+  void pageDown() => _onHardwarePageKey(HardwarePageKeyDirection.next);
 
   void _onHardwarePageKey(HardwarePageKeyDirection direction) {
     if (!mounted) {
@@ -285,10 +287,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   @override
   void dispose() {
     _hardwarePageKeysSetting?.close();
-    unawaited(_hardwarePageKeysSubscription?.cancel());
-    unawaited(
-      _hardwarePageKeysService.setEnabled(false).catchError((Object _) {}),
-    );
+    _hardwarePageKeysRouter.unregister(this);
     _verticalCompensation.close();
     _readerSession.close();
     _restoreCoordinator.close();

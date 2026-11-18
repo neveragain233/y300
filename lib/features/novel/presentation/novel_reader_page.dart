@@ -19,6 +19,7 @@ import 'package:y300/app/settings/app_edition.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
+import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/forum/domain/services/yamibo_forum_link_resolver.dart';
@@ -127,7 +128,8 @@ class _NovelReaderContent extends ConsumerStatefulWidget {
 }
 
 class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver
+    implements EInkPageHandler {
   late final NovelReaderScrollController _scrollController;
   NovelReadingBodyGeometry? _bodyGeometry;
   String? _bodyGeometryOwner;
@@ -142,8 +144,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   late final NovelReaderPagedNavigationController _pagedNavigationController;
   late final NovelReaderVerticalTapTurnCoordinator _verticalTapTurn;
   late final ReaderSystemUiController _systemUiController;
-  late final EInkHardwarePageKeysService _hardwarePageKeysService;
-  StreamSubscription<HardwarePageKeyDirection>? _hardwarePageKeysSubscription;
+  late final EInkPagingRouter _hardwarePageKeysRouter;
   ProviderSubscription<AsyncValue<bool>>? _hardwarePageKeysSetting;
   final NovelReaderThemeResolver _themeResolver =
       const NovelReaderThemeResolver();
@@ -225,7 +226,8 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       scrollController: _scrollController,
     );
     _systemUiController = ref.read(readerSystemUiControllerProvider);
-    _hardwarePageKeysService = ref.read(einkHardwarePageKeysServiceProvider);
+    _hardwarePageKeysRouter = ref.read(eInkPagingRouterProvider);
+    _hardwarePageKeysRouter.register(this, this);
     _hardwarePageKeysSetting = ref.listenManual<AsyncValue<bool>>(
       hardwarePageKeysEnabledProvider,
       (previous, next) => _syncHardwarePageKeys(next.value ?? false),
@@ -237,14 +239,14 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   }
 
   void _syncHardwarePageKeys(bool enabled) {
-    unawaited(_hardwarePageKeysSubscription?.cancel());
-    _hardwarePageKeysSubscription = null;
-    unawaited(_hardwarePageKeysService.setEnabled(enabled));
-    if (enabled) {
-      _hardwarePageKeysSubscription = _hardwarePageKeysService.directions
-          .listen(_onHardwarePageKey);
-    }
+    _hardwarePageKeysRouter.setHardwareKeysEnabled(enabled);
   }
+
+  @override
+  void pageUp() => _onHardwarePageKey(HardwarePageKeyDirection.previous);
+
+  @override
+  void pageDown() => _onHardwarePageKey(HardwarePageKeyDirection.next);
 
   void _onHardwarePageKey(HardwarePageKeyDirection direction) {
     if (!mounted) {
@@ -302,10 +304,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   @override
   void dispose() {
     _hardwarePageKeysSetting?.close();
-    unawaited(_hardwarePageKeysSubscription?.cancel());
-    unawaited(
-      _hardwarePageKeysService.setEnabled(false).catchError((Object _) {}),
-    );
+    _hardwarePageKeysRouter.unregister(this);
     unawaited(_systemUiController.restore().catchError((Object _) {}));
     _verticalPageMetrics.dispose();
     _paginationSessionCache.dispose();

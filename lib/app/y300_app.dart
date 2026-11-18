@@ -20,6 +20,7 @@ import 'package:y300/features/startup/presentation/daily_sign_in_automation_host
 import 'package:y300/features/startup/presentation/main_shell_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_glass_environment.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 
 /// 应用根组件，仅负责主题与路由入口。
 class Y300App extends ConsumerWidget {
@@ -50,6 +51,9 @@ class Y300App extends ConsumerWidget {
         child: MaterialApp(
           title: 'Y300',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: AppEdition.isEInk
+              ? const EInkScrollBehavior()
+              : null,
           theme: AppTheme.build(
             family: settings.themeFamily,
             brightness: Brightness.light,
