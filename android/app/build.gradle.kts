@@ -18,6 +18,15 @@ if (hasReleaseKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// 本机私有安装包可以在 android/local.properties 里用 `y300.applicationId`
+// 覆盖应用标识，用于继续覆盖安装已有的自用版本；仓库默认仍是对外发布的标识。
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+val applicationIdOverride = localProperties.getProperty("y300.applicationId")
+
 
 // Y300 publishes one arm64 APK. Keep the canonical Gradle artifact
 // self-describing without `--split-per-abi`, which would rewrite the
@@ -42,7 +51,7 @@ android {
         // 本 fork 的独立应用标识：与上游 com.adws.y300 区分，官方安装包与本项目
         // 安装包不会因为签名不同而互相顶掉。发布后不要修改，否则无法覆盖升级。
         // （上面的 Kotlin `namespace` 是内部命名，与本标识无关。）
-        applicationId = "com.adws.y300.fork"
+        applicationId = applicationIdOverride ?: "com.adws.y300.fork"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

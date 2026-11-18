@@ -2,7 +2,7 @@
 
 固定入口为 `python3 tool/build_apk.py`，在仓库根目录运行。需要 Python 3.9 以上、已配置的 Flutter（与 CI 一致的 3.47.7）、Android SDK，以及带 `aapt`、`apksigner`、`zipalign` 的 build-tools。签名配置放在 `android/key.properties`，该文件不进入版本控制；缺少时 Gradle 回落到调试签名，`flutter run` 和本地构建仍可继续。
 
-脚本读取两份工程配置作为唯一来源：`android/app/build.gradle.kts` 的 `applicationId` 是应用标识，`pubspec.yaml` 的 `version: <版本名>+<内部版本号>` 是显示版本与 versionCode。构建命令固定为发布模式、`lib/main.dart`、`android-arm64` 和 `--no-pub`，不修改 pubspec，不安装应用，不启动模拟器：
+脚本读取两份工程配置作为唯一来源：`android/app/build.gradle.kts` 的 `applicationId` 是应用标识，`pubspec.yaml` 的 `version: <版本名>+<内部版本号>` 是显示版本与 versionCode。应用标识默认取 Gradle 配置里的字面量；本机如果要在 `android/local.properties` 写入 `y300.applicationId`，脚本按覆盖后的标识校验，这条覆盖只用于继续覆盖安装既有自用版本，不进入版本控制。构建命令固定为发布模式、`lib/main.dart`、`android-arm64` 和 `--no-pub`，不修改 pubspec，不安装应用，不启动模拟器：
 
 ```bash
 python3 tool/build_apk.py

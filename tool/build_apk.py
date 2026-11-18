@@ -79,11 +79,26 @@ def android_tools(root):
 
 
 def application_id(root):
-    """应用标识以 Gradle 配置为唯一来源，脚本不再维护第二份常量。"""
+    """解析构建实际使用的应用标识。
+
+    本机可以在 android/local.properties 写入 `y300.applicationId` 覆盖 Gradle
+    默认值（用于继续覆盖安装已有的自用版本），因此先读该文件，再回落到
+    Gradle 配置里的默认标识。
+    """
+    local = root / "android/local.properties"
+    if local.exists():
+        match = re.search(
+            r"^y300\.applicationId=(\S+)\s*$",
+            local.read_text(encoding="utf-8"), re.M,
+        )
+        if match:
+            return match.group(1)
     text = (root / GRADLE_FILE).read_text(encoding="utf-8")
-    match = re.search(r'^\s*applicationId\s*=\s*"([^"]+)"\s*$', text, re.M)
+    match = re.search(r"^\s*applicationId\s*=\s*(.+)$", text, re.M)
     require(match, f"无法从 {GRADLE_FILE} 读取 applicationId")
-    return match.group(1)
+    quoted = re.search(r'"([^"]+)"', match.group(1))
+    require(quoted, f"{GRADLE_FILE} 的 applicationId 不是字符串字面量")
+    return quoted.group(1)
 
 
 def android_version(root):

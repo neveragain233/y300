@@ -98,6 +98,18 @@ class BuildApkTests(unittest.TestCase):
                 build.artifact_name("3.1.4"), "y300-v3.1.4-android-arm64-v8a.apk",
             )
 
+    def test_local_properties_overrides_application_id(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            write_gradle(root)
+            local = root / "android/local.properties"
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(
+                "sdk.dir=/tmp/sdk\ny300.applicationId=com.adws.y300.personal\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(build.application_id(root), "com.adws.y300.personal")
+
     def test_cleanup_keeps_delivery_and_never_follows_directory_links(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder) / "repo"
