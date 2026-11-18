@@ -117,6 +117,7 @@ part 'thread_detail_page_forum_variants_cases.dart';
 part 'thread_detail_page_profile_and_social_cases.dart';
 part 'thread_detail_page_blacklist_cases.dart';
 part 'thread_detail_page_page_keys_cases.dart';
+part 'thread_detail_page_post_load_reconcile_cases.dart';
 
 void main() {
   setUp(() {
@@ -136,5 +137,6 @@ void main() {
     _profileAndSocialCases();
     _blacklistCases();
     _pageKeysCases();
+    _postLoadReconcileCases();
   });
 }

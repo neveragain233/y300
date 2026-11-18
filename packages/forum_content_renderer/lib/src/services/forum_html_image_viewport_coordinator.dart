@@ -3,6 +3,7 @@ import '../contracts/forum_html_display_image.dart';
 import '../contracts/forum_html_image_predecode_host.dart';
 import 'forum_html_image_predecode_policy.dart';
 import 'forum_html_image_viewport_geometry.dart';
+import 'forum_html_image_visibility_metrics.dart';
 
 enum ForumHtmlImageViewportMode {
   dormant,
@@ -26,6 +27,7 @@ final class ForumHtmlImageViewportCoordinator {
     this.maxPrefetchCandidates = 1,
     this.maxConcurrentOptionalWork = 1,
     this.predecodePolicy,
+    this.visibilityObserver,
   }) : assert(maxConcurrentOptionalWork >= 0);
 
   final double prefetchExtentFactor;
@@ -33,6 +35,7 @@ final class ForumHtmlImageViewportCoordinator {
   final int maxPrefetchCandidates;
   final int maxConcurrentOptionalWork;
   final ForumHtmlImagePredecodePolicy? predecodePolicy;
+  final ForumHtmlImageVisibilityObserver? visibilityObserver;
   final Set<ForumHtmlImageViewportWork> _runningWork = {};
   final Set<ForumHtmlImageViewportHandle> _handles =
       <ForumHtmlImageViewportHandle>{};
@@ -46,8 +49,8 @@ final class ForumHtmlImageViewportCoordinator {
   @visibleForTesting
   int get registeredImageCount => _handles.length;
 
-  ForumHtmlImageViewportHandle register() {
-    final handle = ForumHtmlImageViewportHandle._(this);
+  ForumHtmlImageViewportHandle register({Object? observationIdentity}) {
+    final handle = ForumHtmlImageViewportHandle._(this, observationIdentity);
     if (!_disposed) {
       _handles.add(handle);
       _scheduleEvaluation();
@@ -99,6 +102,25 @@ final class ForumHtmlImageViewportCoordinator {
       return;
     }
     handle._context = context;
+    if (visibilityObserver != null) {
+      final positions = <ScrollPosition>{};
+      context.visitAncestorElements((element) {
+        if (element is StatefulElement && element.state is ScrollableState) {
+          positions.add((element.state as ScrollableState).position);
+        }
+        return true;
+      });
+      positions.remove(
+        Scrollable.maybeOf(context, axis: Axis.vertical)?.position,
+      );
+      for (final old in handle._observedPositions.difference(positions)) {
+        old.removeListener(_scheduleEvaluation);
+      }
+      for (final added in positions.difference(handle._observedPositions)) {
+        added.addListener(_scheduleEvaluation);
+      }
+      handle._observedPositions = positions;
+    }
     // HTML tables introduce horizontal scrollables. Image scheduling follows
     // the containing body column, so those inner scrollables cannot own it.
     final scrollable = Scrollable.maybeOf(context, axis: Axis.vertical);
@@ -171,11 +193,17 @@ final class ForumHtmlImageViewportCoordinator {
     }
     for (final handle in _handles) {
       if (!placedHandles.contains(handle)) {
+        handle._observe(false);
         handle._setWindow(false);
         handle._applyMode(ForumHtmlImageViewportMode.dormant);
       }
     }
-    placements.sort((left, right) => left.distance.compareTo(right.distance));
+    placements.sort((left, right) {
+      // A long image's center can be far outside the screen while its pixels
+      // fill most of it. Spend first-frame slots on actual visible coverage.
+      final coverage = right.visibleExtent.compareTo(left.visibleExtent);
+      return coverage != 0 ? coverage : left.distance.compareTo(right.distance);
+    });
 
     var waitingVisible = 0;
     final modes = <ForumHtmlImageViewportHandle, ForumHtmlImageViewportMode>{};
@@ -183,10 +211,12 @@ final class ForumHtmlImageViewportCoordinator {
       final handle = placement.handle;
       var mode = ForumHtmlImageViewportMode.dormant;
       if (placement.visible) {
-        if (handle._firstFrameSettled ||
-            waitingVisible < maxVisibleFirstFrames) {
+        // Decode admission belongs to the current binding/window. A prepared
+        // frame needs no cold-load slot, even before its first paint callback.
+        final ready = handle._firstFrameSettled || handle._decoded;
+        if (ready || waitingVisible < maxVisibleFirstFrames) {
           mode = ForumHtmlImageViewportMode.display;
-          if (!handle._firstFrameSettled) {
+          if (!ready) {
             waitingVisible += 1;
           }
         }
@@ -225,6 +255,9 @@ final class ForumHtmlImageViewportCoordinator {
     }
     // Commit once: an unchanged prefetch must not emit dormant/prefetch on
     // every scroll tick and rebuild its image placeholder again.
+    for (final placement in placements) {
+      placement.handle._observe(placement.observedVisible);
+    }
     for (final entry in modes.entries) {
       entry.key._applyMode(entry.value);
     }
@@ -371,7 +404,10 @@ final class ForumHtmlImageViewportCoordinator {
     }
     final lower = bounds.top < bounds.bottom ? bounds.top : bounds.bottom;
     final upper = bounds.top < bounds.bottom ? bounds.bottom : bounds.top;
-    final visible = upper >= viewportStart && lower <= viewportEnd;
+    final visibleExtent =
+        upper.clamp(viewportStart, viewportEnd) -
+        lower.clamp(viewportStart, viewportEnd);
+    final visible = visibleExtent > 0;
     final near =
         upper >= viewportStart - prefetchExtent &&
         lower <= viewportEnd + prefetchExtent;
@@ -380,26 +416,58 @@ final class ForumHtmlImageViewportCoordinator {
     return _ForumHtmlImagePlacement(
       handle: handle,
       visible: visible,
+      visibleExtent: visibleExtent,
+      observedVisible:
+          visibilityObserver != null &&
+          visible &&
+          _hasVisiblePaint(renderObject, viewport, bounds),
       near: near,
       distance: (imageCenter - viewportCenter).abs(),
-      below: lower > viewportEnd,
+      below: lower >= viewportEnd,
       edgeDistance: visible
           ? 0
-          : lower > viewportEnd
+          : lower >= viewportEnd
           ? lower - viewportEnd
           : viewportStart - upper,
     );
+  }
+
+  bool _hasVisiblePaint(
+    RenderObject target,
+    RenderObject viewport,
+    Rect bounds,
+  ) {
+    var intersection = bounds.intersect(viewport.paintBounds);
+    RenderObject child = target;
+    // Include intermediate table/overflow clips and non-painting ancestors.
+    // The scheduler's vertical look-ahead geometry remains independent.
+    for (var parent = child.parent; parent != null; parent = child.parent) {
+      if (!parent.paintsChild(child)) return false;
+      final clip = parent.describeApproximatePaintClip(child);
+      if (clip != null) {
+        intersection = intersection.intersect(
+          MatrixUtils.transformRect(parent.getTransformTo(viewport), clip),
+        );
+      }
+      if (identical(parent, viewport)) break;
+      child = parent;
+    }
+    return intersection.width > 0 && intersection.height > 0;
   }
 }
 
 final class ForumHtmlImageViewportHandle
     extends ValueNotifier<ForumHtmlImageViewportMode> {
-  ForumHtmlImageViewportHandle._(this._coordinator)
+  ForumHtmlImageViewportHandle._(this._coordinator, this._observationIdentity)
     : super(ForumHtmlImageViewportMode.dormant);
 
   final ForumHtmlImageViewportCoordinator _coordinator;
+  Object? _observationIdentity;
+  bool _painted = false;
+  bool _failed = false;
   BuildContext? _context;
   ScrollableState? _scrollable;
+  Set<ScrollPosition> _observedPositions = {};
   bool _firstFrameSettled = false;
   bool _disposed = false;
   Object? _workIdentity;
@@ -410,6 +478,52 @@ final class ForumHtmlImageViewportHandle
   bool _decoded = false;
   int _generation = 0;
   ForumHtmlImageViewportWork? _work;
+
+  bool get observesVisibility => _coordinator.visibilityObserver != null;
+
+  /// Owner lifetime is independent of the last published admission mode.
+  bool get isActive =>
+      !_disposed && !_coordinator._disposed && _coordinator._active;
+
+  void configureObservation(Object identity) {
+    if (_observationIdentity == identity) return;
+    _retireObservation();
+    _observationIdentity = identity;
+    _painted = false;
+    _failed = false;
+  }
+
+  /// Called after the image-containing render layer has painted real pixels.
+  void reportFramePainted() {
+    if (_disposed || _painted || !value.keepsImageMounted) return;
+    _painted = true;
+    _coordinator._scheduleEvaluation();
+  }
+
+  void _observe(bool visible) {
+    final identity = _observationIdentity;
+    if (identity == null) return;
+    try {
+      _coordinator.visibilityObserver?.observe(
+        identity,
+        visible: visible,
+        painted: _painted,
+        failed: _failed,
+      );
+    } catch (_) {
+      // Diagnostics must never change admission or image display.
+    }
+  }
+
+  void _retireObservation() {
+    final identity = _observationIdentity;
+    if (identity == null) return;
+    try {
+      _coordinator.visibilityObserver?.retire(identity);
+    } catch (_) {
+      // Observers are optional and cannot prevent lifecycle cleanup.
+    }
+  }
 
   int get maxDecodedBytes =>
       _coordinator.predecodePolicy?.maxDecodedBytesPerImage ?? 0;
@@ -494,6 +608,8 @@ final class ForumHtmlImageViewportHandle
   void reportImageFailed() {
     if (_disposed) return;
     _decoded = false;
+    _painted = false;
+    _failed = true;
     // A display failure must not become a new automatic look-ahead retry.
     _diskFinished = true;
     _decodeFinished = true;
@@ -506,6 +622,8 @@ final class ForumHtmlImageViewportHandle
       return;
     }
     _decoded = false;
+    _painted = false;
+    _failed = false;
     _firstFrameSettled = false;
     _coordinator._scheduleEvaluation();
   }
@@ -516,6 +634,7 @@ final class ForumHtmlImageViewportHandle
     }
     if (!next.keepsImageMounted) {
       _firstFrameSettled = false;
+      _painted = false;
     }
     if (_work?.mode != next) _work?.cancel();
     value = next;
@@ -526,6 +645,9 @@ final class ForumHtmlImageViewportHandle
       return;
     }
     _firstFrameSettled = false;
+    _retireObservation();
+    _painted = false;
+    _failed = false;
     _clearWork();
     _applyMode(ForumHtmlImageViewportMode.dormant);
   }
@@ -536,6 +658,11 @@ final class ForumHtmlImageViewportHandle
       return;
     }
     _disposed = true;
+    _retireObservation();
+    for (final position in _observedPositions) {
+      position.removeListener(_coordinator._scheduleEvaluation);
+    }
+    _observedPositions.clear();
     _clearWork();
     _context = null;
     _scrollable = null;
@@ -548,6 +675,8 @@ final class _ForumHtmlImagePlacement {
   const _ForumHtmlImagePlacement({
     required this.handle,
     required this.visible,
+    required this.visibleExtent,
+    required this.observedVisible,
     required this.near,
     required this.distance,
     required this.below,
@@ -556,6 +685,8 @@ final class _ForumHtmlImagePlacement {
 
   final ForumHtmlImageViewportHandle handle;
   final bool visible;
+  final double visibleExtent;
+  final bool observedVisible;
   final bool near;
   final double distance;
   final bool below;

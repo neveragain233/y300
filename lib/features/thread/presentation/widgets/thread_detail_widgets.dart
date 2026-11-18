@@ -24,6 +24,7 @@ import '../services/thread_body_preparation_handoff.dart';
 import '../services/thread_body_chunk_preparation.dart';
 import '../services/thread_body_presentation.dart';
 import '../services/thread_floor_navigation_coordinator.dart';
+import '../services/thread_image_visibility_diagnostics.dart';
 import '../services/thread_detail_quick_scroll_coordinator.dart';
 
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
@@ -94,6 +95,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     required this.onOpenPostActions,
     this.onOpenPollOptionActions,
     this.htmlImagePrecacheService,
+    this.imageVisibilityObserver,
     this.onPostBuilt,
     this.onScrollStabilizerEvent,
     required this.onTogglePollOption,
@@ -163,6 +165,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
   final ValueChanged<ThreadPost> onOpenPostActions;
   final ThreadPollOptionActionCallback? onOpenPollOptionActions;
   final ForumImagePrecacheService? htmlImagePrecacheService;
+  final ForumHtmlImageVisibilityObserver? imageVisibilityObserver;
   final ValueChanged<int>? onPostBuilt;
 
   final ValueChanged<ThreadDetailScrollStabilizerEvent>?
@@ -220,6 +223,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   @override
   late ThreadPostViewportAnchorCoordinator _projectionAnchorCoordinator;
   ForumHtmlImageViewportCoordinator? _imageViewportCoordinator;
+  final _imageVisibilityDiagnostics = ThreadImageVisibilityDiagnostics();
   late final _imagePreloadPolicy = ThreadImagePreloadPolicy(
     imageCacheBudgetBytes: PaintingBinding.instance.imageCache.maximumSizeBytes,
     isLowRamDevice: _isLowRamDevice,
@@ -271,6 +275,15 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   @override
   void didUpdateWidget(covariant ThreadDetailContent oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.tid != widget.state.tid ||
+        oldWidget.state.currentPage != widget.state.currentPage ||
+        oldWidget.state.queryParameters['authorid'] !=
+            widget.state.queryParameters['authorid'] ||
+        oldWidget.state.queryParameters['ordertype'] !=
+            widget.state.queryParameters['ordertype']) {
+      _imageVisibilityDiagnostics.reset();
+      _imageViewportCoordinator?.reset();
+    }
     _updateEndpointNavigation(oldWidget);
     _updateFloorNavigation(oldWidget);
     if (oldWidget.state.tid != widget.state.tid ||
@@ -358,11 +371,13 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         widget.scrollController,
       );
     }
-    if (!identical(
-      oldWidget.htmlImagePrecacheService,
-      widget.htmlImagePrecacheService,
-    )) {
+    if (oldWidget.imageVisibilityObserver != widget.imageVisibilityObserver ||
+        !identical(
+          oldWidget.htmlImagePrecacheService,
+          widget.htmlImagePrecacheService,
+        )) {
       _imageViewportCoordinator?.dispose();
+      _imageVisibilityDiagnostics.reset();
       _imageViewportCoordinator = null;
       _syncImageViewportCoordinator();
     }
@@ -383,6 +398,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     _chunkPreparation.dispose();
     _tickerModeNotifier?.removeListener(_handleTickerModeChanged);
     _imageViewportCoordinator?.dispose();
+    _imageVisibilityDiagnostics.dispose();
     _scrollStabilizer.dispose();
     _projectionAnchorCoordinator.dispose();
     super.dispose();
@@ -1211,6 +1227,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       maxVisibleFirstFrames: _imagePreloadPolicy.maxVisibleFirstFrames,
       maxConcurrentOptionalWork: _imagePreloadPolicy.maxConcurrentOptionalWork,
       predecodePolicy: _imagePreloadPolicy.predecode,
+      visibilityObserver:
+          widget.imageVisibilityObserver ??
+          _imageVisibilityDiagnostics.observer,
     );
   }
 
@@ -1218,6 +1237,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     _imageViewportCoordinator?.setActive(
       _tickerModeNotifier?.value.enabled ?? true,
     );
+    if (!(_tickerModeNotifier?.value.enabled ?? true)) {
+      _imageVisibilityDiagnostics.checkpoint('inactive');
+    }
   }
 
   Widget _buildEntry(

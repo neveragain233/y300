@@ -315,3 +315,31 @@ ThreadDetailData _threadDetailData({
     posts: posts,
   );
 }
+
+ThreadDetailData _postLoadingTestData(
+  String tid,
+  int page,
+) => _threadDetailData(
+  tid: tid,
+  currentPage: page,
+  lastPage: 2,
+  posts: [
+    ThreadPost(
+      pid: page == 1 ? '200' : '201',
+      author: 'test',
+      authorId: '1',
+      number: page,
+      isFirst: page == 1,
+      message: '<p>body</p>',
+      dateline: '',
+      commentNextPage: 2,
+      ratingSummary: ThreadPostRatingSummary(
+        participantText: '1',
+        scoreText: '+1',
+        ratings: const [],
+        viewAllUrl:
+            'https://bbs.yamibo.com/forum.php?mod=misc&action=viewratings&tid=$tid&pid=${page == 1 ? '200' : '201'}',
+      ),
+    ),
+  ],
+);

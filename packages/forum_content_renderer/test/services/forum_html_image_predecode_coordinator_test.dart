@@ -3,6 +3,63 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:forum_content_renderer/forum_content_renderer.dart';
 
 void main() {
+  testWidgets('a prepared frame enters without waiting behind cold images', (
+    tester,
+  ) async {
+    final fixture = await _Fixture.mount(tester, heights: [350, 20, 20, 250]);
+    fixture.settleVisible();
+    await tester.pump();
+    expect(fixture.mode(1), ForumHtmlImageViewportMode.predecode);
+    fixture.handles[1].beginWork().complete(
+      ForumHtmlImagePreparationOutcome.decoded,
+    );
+    // Move before the retained widget can report its first painted frame.
+    fixture.controller.jumpTo(350);
+    await tester.pump();
+
+    expect(fixture.mode(1), ForumHtmlImageViewportMode.display);
+    expect(fixture.mode(2), ForumHtmlImageViewportMode.display);
+    expect(fixture.mode(3), ForumHtmlImageViewportMode.display);
+  });
+
+  testWidgets('visible work prioritizes the largest on-screen image area', (
+    tester,
+  ) async {
+    final fixture = await _Fixture.mount(tester, heights: [30, 30, 2400]);
+
+    expect(fixture.mode(2), ForumHtmlImageViewportMode.display);
+    expect(
+      fixture.handles.where(
+        (h) => h.value == ForumHtmlImageViewportMode.display,
+      ),
+      hasLength(2),
+    );
+  });
+
+  for (final edge in ['leading', 'trailing']) {
+    testWidgets(
+      'an image touching the $edge edge does not take a visible slot',
+      (tester) async {
+        final fixture = await _Fixture.mount(
+          tester,
+          heights: edge == 'leading' ? [300, 3000] : [3000, 100],
+          maxVisibleFirstFrames: 1,
+        );
+        fixture.controller.jumpTo(edge == 'leading' ? 300 : 2700);
+        await tester.pump();
+
+        expect(
+          fixture.mode(edge == 'leading' ? 1 : 0),
+          ForumHtmlImageViewportMode.display,
+        );
+        expect(
+          fixture.mode(edge == 'leading' ? 0 : 1),
+          isNot(ForumHtmlImageViewportMode.display),
+        );
+      },
+    );
+  }
+
   testWidgets('a displayed admitted frame survives either side of the edge', (
     tester,
   ) async {
