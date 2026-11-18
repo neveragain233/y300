@@ -32,6 +32,8 @@ class AppToolbarActions extends StatelessWidget {
                 ? foreground.withValues(alpha: .38)
                 : foreground,
           ),
+          // 胶囊里的动作统一至少48逻辑像素命中区，右侧动作不因视觉收紧变小。
+          minimumSize: const WidgetStatePropertyAll(Size.square(48)),
         ),
       ),
     );
@@ -52,7 +54,8 @@ class AppToolbarActions extends StatelessWidget {
       ),
     );
     return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 8),
+      // 右侧动作与屏幕边缘留出可单手触达的余量，也避免最右键压到手势区。
+      padding: const EdgeInsetsDirectional.only(end: 12),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
