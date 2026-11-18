@@ -56,19 +56,14 @@ information/
 .information/
 docs/
 ios/
-android/
-!/android/
-/android/**
-!/android/**/
-# Generated launcher resources accompany their tracked generator and manifest.
-!android/app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml
-!android/app/src/main/res/mipmap-anydpi-v33/ic_launcher*.xml
-!android/app/src/main/res/mipmap-night-anydpi-v26/ic_launcher*.xml
-!android/app/src/main/res/mipmap-night-anydpi-v33/ic_launcher*.xml
-!android/app/src/main/res/mipmap-*/ic_launcher*.png
-!android/app/src/main/res/drawable-*/ic_launcher_foreground.png
-!android/app/src/main/res/drawable-*/ic_launcher_monochrome.png
-!android/app/src/main/res/values*/y300_icon_colors.xml
+# Android 源码与资源随仓库跟踪；只排除构建产物和本机配置，避免新增的
+# manifest、资源或 Gradle 文件被静默忽略。本机签名配置见 android/.gitignore。
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/app/src/main/java/
+# flutter gen-l10n 的输出，按需重新生成。
+/l10n_untranslated.json
 .qoder/
 .claude/
 .loacl/
