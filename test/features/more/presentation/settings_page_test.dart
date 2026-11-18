@@ -64,6 +64,7 @@ void main() {
       'more-navigation-management-entry',
       'more-content-filter-entry',
       'more-thread-controls-entry',
+      'more-data-storage-entry',
       'more-about-entry',
     ]) {
       final row = find.byKey(Key(key));
@@ -74,16 +75,6 @@ void main() {
         reason: key,
       );
     }
-
-    final dataStorage = find.byKey(const Key('more-data-storage-entry'));
-    await _scrollTo(tester, dataStorage);
-    expect(
-      find.descendant(
-        of: dataStorage,
-        matching: find.byIcon(Icons.chevron_right),
-      ),
-      findsNothing,
-    );
   });
 
   testWidgets('settings rows open the original pages', (tester) async {

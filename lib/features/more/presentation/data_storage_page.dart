@@ -8,9 +8,10 @@ import 'package:y300/features/more/presentation/more_text_resolver.dart';
 import 'package:y300/features/storage/domain/storage_root_migration.dart';
 import 'package:y300/features/storage/presentation/storage_root_migration_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
-class DataStorageSheet extends ConsumerWidget {
-  const DataStorageSheet({super.key});
+class DataStoragePage extends ConsumerWidget {
+  const DataStoragePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,113 +20,119 @@ class DataStorageSheet extends ConsumerWidget {
     final pathPreview = ref.watch(dataStoragePathPreviewProvider);
     final l10n = AppLocalizations.of(context);
 
-    return SafeArea(
-      child: migration.when(
-        loading: () =>
-            _StorageMigrationOnlyView(pathPreview: pathPreview, l10n: l10n),
-        error: (_, _) => _StorageMigrationOnlyView(
-          pathPreview: pathPreview,
-          l10n: l10n,
-          failureCode: StorageRootMigrationFailureCode.unknown,
-          onRetry: () =>
-              ref.read(storageRootMigrationControllerProvider.notifier).retry(),
-        ),
-        data: (migrationResult) => state.when(
-          // 抽屉按内容收缩，加载态用固定高度避免撑满全屏。
-          loading: () => const SizedBox(
-            height: 96,
-            child: Center(child: CircularProgressIndicator()),
+    return Scaffold(
+      key: const Key('data-storage-page'),
+      appBar: AppPageAppBar(title: l10n.moreDataAndStorage),
+      body: SafeArea(
+        top: false,
+        child: migration.when(
+          loading: () =>
+              _StorageMigrationOnlyView(pathPreview: pathPreview, l10n: l10n),
+          error: (_, _) => _StorageMigrationOnlyView(
+            pathPreview: pathPreview,
+            l10n: l10n,
+            failureCode: StorageRootMigrationFailureCode.unknown,
+            onRetry: () => ref
+                .read(storageRootMigrationControllerProvider.notifier)
+                .retry(),
           ),
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              l10n.moreStorageLoadFailed('$error'),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          data: (viewState) {
-            return ListView(
-              key: const Key('data-storage-sheet'),
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                if (migrationResult.status.phase ==
-                        StorageRootMigrationPhase.blocked ||
-                    migrationResult.status.phase ==
-                        StorageRootMigrationPhase.cleanupPending) ...[
-                  _StorageMigrationStatusCard(
-                    status: migrationResult.status,
-                    currentPath:
-                        migrationResult.status.phase ==
-                            StorageRootMigrationPhase.blocked
-                        ? viewState.customStoragePath
-                        : null,
-                    targetPath:
-                        migrationResult.status.phase ==
-                            StorageRootMigrationPhase.blocked
-                        ? viewState.defaultStoragePath
-                        : null,
-                    retrying: false,
-                    onRetry: () => ref
-                        .read(storageRootMigrationControllerProvider.notifier)
-                        .retry(),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                ...buildDataStorageDebugActionWidgets(
-                  enabled: !viewState.isUpdating,
-                  l10n: l10n,
-                  onReloadUsage: () => ref
-                      .read(dataStorageControllerProvider.notifier)
-                      .reloadUsage(),
-                  onExportDiagnostics: () => ref
-                      .read(dataStorageControllerProvider.notifier)
-                      .exportCacheDiagnostics(),
+          data: (migrationResult) => state.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  l10n.moreStorageLoadFailed('$error'),
+                  textAlign: TextAlign.center,
                 ),
-                ListTile(
-                  key: const Key('data-storage-cache-usage'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    l10n.moreStorageClearCache,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+              ),
+            ),
+            data: (viewState) {
+              return ListView(
+                key: const Key('data-storage-page-list'),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  if (migrationResult.status.phase ==
+                          StorageRootMigrationPhase.blocked ||
+                      migrationResult.status.phase ==
+                          StorageRootMigrationPhase.cleanupPending) ...[
+                    _StorageMigrationStatusCard(
+                      status: migrationResult.status,
+                      currentPath:
+                          migrationResult.status.phase ==
+                              StorageRootMigrationPhase.blocked
+                          ? viewState.customStoragePath
+                          : null,
+                      targetPath:
+                          migrationResult.status.phase ==
+                              StorageRootMigrationPhase.blocked
+                          ? viewState.defaultStoragePath
+                          : null,
+                      retrying: false,
+                      onRetry: () => ref
+                          .read(storageRootMigrationControllerProvider.notifier)
+                          .retry(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  ...buildDataStorageDebugActionWidgets(
+                    enabled: !viewState.isUpdating,
+                    l10n: l10n,
+                    onReloadUsage: () => ref
+                        .read(dataStorageControllerProvider.notifier)
+                        .reloadUsage(),
+                    onExportDiagnostics: () => ref
+                        .read(dataStorageControllerProvider.notifier)
+                        .exportCacheDiagnostics(),
+                  ),
+                  ListTile(
+                    key: const Key('data-storage-cache-usage'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      l10n.moreStorageClearCache,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    trailing: FilledButton(
+                      key: const Key('data-storage-clear-cache-button'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(64, 48),
+                      ),
+                      onPressed: viewState.isUpdating
+                          ? null
+                          : () => ref
+                                .read(dataStorageControllerProvider.notifier)
+                                .clearCache(),
+                      child: Text(l10n.moreStorageClear),
                     ),
                   ),
-                  trailing: FilledButton(
-                    key: const Key('data-storage-clear-cache-button'),
-                    onPressed: viewState.isUpdating
-                        ? null
-                        : () => ref
-                              .read(dataStorageControllerProvider.notifier)
-                              .clearCache(),
-                    child: Text(l10n.moreStorageClear),
+                  const SizedBox(height: 4),
+                  Text(
+                    formatDataStorageBytes(viewState.clearableCacheBytes),
+                    key: const Key('data-storage-clearable-cache-size'),
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatDataStorageBytes(viewState.clearableCacheBytes),
-                  key: const Key('data-storage-clearable-cache-size'),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                buildDataStorageDebugOverview(viewState.usageReport, l10n),
-                const SizedBox(height: 8),
-                _CacheLimitControl(
-                  valueBytes: viewState.cacheMaxBytes,
-                  enabled: !viewState.isUpdating,
-                  onCommit: (bytes) => ref
-                      .read(dataStorageControllerProvider.notifier)
-                      .updateCacheMaxBytes(bytes),
-                ),
-                Text(
-                  l10n.moreStorageCacheDescription,
-                  key: const Key('data-storage-cache-hint'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            );
-          },
+                  const SizedBox(height: 12),
+                  buildDataStorageDebugOverview(viewState.usageReport, l10n),
+                  const SizedBox(height: 8),
+                  _CacheLimitControl(
+                    valueBytes: viewState.cacheMaxBytes,
+                    enabled: !viewState.isUpdating,
+                    onCommit: (bytes) => ref
+                        .read(dataStorageControllerProvider.notifier)
+                        .updateCacheMaxBytes(bytes),
+                  ),
+                  Text(
+                    l10n.moreStorageCacheDescription,
+                    key: const Key('data-storage-cache-hint'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

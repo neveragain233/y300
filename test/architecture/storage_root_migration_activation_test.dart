@@ -26,9 +26,8 @@ void main() {
   });
 
   test('shared storage service is decorated with migration gating', () {
-    final providers = File(
-      'lib/features/storage/data/storage_providers.dart',
-    ).readAsStringSync();
+    final providers = File('lib/features/storage/data/storage_providers.dart')
+        .readAsStringSync();
 
     expect(providers, contains('MigrationGatedDownloadStorageService'));
     expect(providers, contains('storageRootAccessGateProvider'));
@@ -47,9 +46,8 @@ void main() {
     final accounting = File(
       'lib/features/storage/data/download_storage_accounting_adapter.dart',
     ).readAsStringSync();
-    final startup = File(
-      'lib/app/startup/main_shell_startup_providers.dart',
-    ).readAsStringSync();
+    final startup = File('lib/app/startup/main_shell_startup_providers.dart')
+        .readAsStringSync();
 
     expect(queue, contains('_storageRootAccessGate.runWithAccess'));
     expect(comicStorage, contains('MigrationGatedComicDownloadService'));
@@ -60,9 +58,8 @@ void main() {
   });
 
   test('custom path UI is hidden while rollback implementation remains', () {
-    final sheet = File(
-      'lib/features/more/presentation/data_storage_sheet.dart',
-    ).readAsStringSync();
+    final sheet = File('lib/features/more/presentation/data_storage_page.dart')
+        .readAsStringSync();
     final controller = File(
       'lib/features/more/presentation/data_storage_controller.dart',
     ).readAsStringSync();

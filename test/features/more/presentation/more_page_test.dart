@@ -689,7 +689,7 @@ void main() {
         of: find.byKey(const Key('more-data-storage-entry')),
         matching: find.byIcon(Icons.chevron_right),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     await expectVisible(find.byKey(const Key('more-about-entry')));
     await expectVisible(find.text(l10n.settingsSectionDebug));

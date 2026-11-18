@@ -8,7 +8,7 @@ import 'package:y300/features/forum/presentation/webview/forum_webview_driver.da
 import 'package:y300/features/forum/presentation/webview/forum_webview_route_factory.dart';
 import 'package:y300/features/more/presentation/about_page.dart';
 import 'package:y300/features/more/presentation/appearance_page.dart';
-import 'package:y300/features/more/presentation/data_storage_sheet.dart';
+import 'package:y300/features/more/presentation/data_storage_page.dart';
 import 'package:y300/features/more/presentation/more_debug_tools.dart';
 import 'package:y300/features/more/presentation/navigation_management_page.dart';
 import 'package:y300/features/more/presentation/settings_search/settings_search_anchor.dart';
@@ -16,13 +16,12 @@ import 'package:y300/features/more/presentation/settings_search/settings_search_
 import 'package:y300/features/more/presentation/settings_search/settings_search_page.dart';
 import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// 全屏设置主页：把原先散在“我的”里的应用偏好收敛为四个分组。
 ///
-/// 进入下级页的行显示箭头，数据与存储仍是弹层、不显示箭头；调试分组只
+/// 进入下级页的行显示箭头；数据与存储进入独立全屏页；调试分组只
 /// 在 Debug 构建出现。外观、导航管理等沿用原页面和原保存路径，这里只负责
 /// 入口和路由。
 ///
@@ -64,6 +63,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           IconButton(
             key: const Key('settings-search-entry'),
             tooltip: l10n.settingsSearchTooltip,
+            style: IconButton.styleFrom(minimumSize: const Size.square(48)),
             onPressed: () => _openSearch(includeDebug: debugTiles.isNotEmpty),
             icon: const Icon(Icons.search),
           ),
@@ -142,7 +142,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           key: const Key('more-data-storage-entry'),
                           leading: const Icon(Icons.storage_outlined),
                           title: l10n.moreDataAndStorage,
-                          onTap: () => _showDataStorageSheet(context),
+                          showChevron: true,
+                          onTap: () => _pushPage(const DataStoragePage()),
                         ),
                         AppGroupedRow(
                           key: const Key('more-about-entry'),
@@ -216,7 +217,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       case SettingsSearchTarget.threadControls:
         await _pushPage(const ThreadControlsSettingsPage());
       case SettingsSearchTarget.dataStorage:
-        await _showDataStorageSheet(context);
+        await _pushPage(const DataStoragePage());
       case SettingsSearchTarget.about:
         await _pushPage(const AboutPage());
       default:
@@ -256,16 +257,5 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       );
     };
-  }
-
-  // 内容含迁移状态卡与总览，可能超过默认半屏高度，允许抽屉撑满。
-  // 面板宿主统一走 showAdaptivePanel：窄屏仍是底部抽屉，宽屏为侧面板；
-  // 本页由根导航压入，返回与关闭仍归同一路由。
-  Future<void> _showDataStorageSheet(BuildContext context) {
-    return showAdaptivePanel<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const DataStorageSheet(),
-    );
   }
 }

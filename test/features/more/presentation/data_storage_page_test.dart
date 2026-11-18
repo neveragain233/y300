@@ -18,7 +18,7 @@ import 'package:y300/features/cache/domain/services/image_cache_service.dart';
 import 'package:y300/features/more/data/data_storage_settings_repository.dart';
 import 'package:y300/features/more/presentation/data_storage_controller.dart';
 import 'package:y300/features/more/presentation/data_storage_formatters.dart';
-import 'package:y300/features/more/presentation/data_storage_sheet.dart';
+import 'package:y300/features/more/presentation/data_storage_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/features/storage/data/storage_providers.dart';
 import 'package:y300/features/storage/domain/download_storage_models.dart';
@@ -34,7 +34,7 @@ void main() {
       'font usage is localized and excluded from cache size for $locale',
       (tester) async {
         final strings = await AppLocalizations.delegate.load(locale);
-        await pumpDataStorageSheet(
+        await pumpDataStoragePage(
           tester,
           locale: locale,
           overrides: _overridesWith(
@@ -99,10 +99,10 @@ void main() {
     );
   }
 
-  testWidgets('DataStorageSheet builds dark theme chrome', (tester) async {
-    await pumpDataStorageSheet(tester, overrides: _overridesWith());
+  testWidgets('DataStoragePage builds dark theme chrome', (tester) async {
+    await pumpDataStoragePage(tester, overrides: _overridesWith());
 
-    expect(find.byKey(const Key('data-storage-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('data-storage-page')), findsOneWidget);
     expect(
       find.byKey(const Key('data-storage-cache-max-slider')),
       findsOneWidget,
@@ -113,38 +113,37 @@ void main() {
     );
   });
 
+  testWidgets('DataStoragePage commits cache limit once after slider release', (
+    tester,
+  ) async {
+    final repo = _FakeDataStorageSettingsRepository(
+      defaultPath: '/tmp/default-downloads',
+      customPath: null,
+    );
+
+    await pumpDataStoragePage(tester, overrides: _overridesWith(repo: repo));
+
+    final slider = find.byKey(const Key('data-storage-cache-max-slider'));
+    final gesture = await tester.startGesture(tester.getCenter(slider));
+    await gesture.moveBy(const Offset(80, 0));
+    await tester.pump();
+
+    expect(repo.setCacheMaxBytesCalls, 0);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(repo.setCacheMaxBytesCalls, 1);
+  });
+
   testWidgets(
-    'DataStorageSheet commits cache limit once after slider release',
+    'DataStoragePage hides path controls after migration is complete',
     (tester) async {
       final repo = _FakeDataStorageSettingsRepository(
         defaultPath: '/tmp/default-downloads',
         customPath: null,
       );
 
-      await pumpDataStorageSheet(tester, overrides: _overridesWith(repo: repo));
-
-      final slider = find.byKey(const Key('data-storage-cache-max-slider'));
-      final gesture = await tester.startGesture(tester.getCenter(slider));
-      await gesture.moveBy(const Offset(80, 0));
-      await tester.pump();
-
-      expect(repo.setCacheMaxBytesCalls, 0);
-
-      await gesture.up();
-      await tester.pumpAndSettle();
-      expect(repo.setCacheMaxBytesCalls, 1);
-    },
-  );
-
-  testWidgets(
-    'DataStorageSheet hides path controls after migration is complete',
-    (tester) async {
-      final repo = _FakeDataStorageSettingsRepository(
-        defaultPath: '/tmp/default-downloads',
-        customPath: null,
-      );
-
-      await pumpDataStorageSheet(tester, overrides: _overridesWith(repo: repo));
+      await pumpDataStoragePage(tester, overrides: _overridesWith(repo: repo));
 
       expect(
         find.byKey(const Key('data-storage-effective-directory')),
@@ -169,7 +168,7 @@ void main() {
     },
   );
 
-  testWidgets('DataStorageSheet separates clearable cache from total storage', (
+  testWidgets('DataStoragePage separates clearable cache from total storage', (
     tester,
   ) async {
     final repo = _FakeDataStorageSettingsRepository(
@@ -177,7 +176,7 @@ void main() {
       customPath: null,
     );
 
-    await pumpDataStorageSheet(
+    await pumpDataStoragePage(
       tester,
       overrides: _overridesWith(
         repo: repo,
@@ -351,7 +350,7 @@ void main() {
     );
   });
 
-  testWidgets('DataStorageSheet does not mount custom path mutation controls', (
+  testWidgets('DataStoragePage does not mount custom path mutation controls', (
     tester,
   ) async {
     final repo = _FakeDataStorageSettingsRepository(
@@ -359,7 +358,7 @@ void main() {
       customPath: null,
       pickedPath: '/mnt/y300-downloads',
     );
-    await pumpDataStorageSheet(tester, overrides: _overridesWith(repo: repo));
+    await pumpDataStoragePage(tester, overrides: _overridesWith(repo: repo));
 
     expect(
       find.byKey(const Key('data-storage-choose-directory-button')),
@@ -368,7 +367,7 @@ void main() {
     expect(repo.customPath, isNull);
   });
 
-  testWidgets('DataStorageSheet keeps legacy custom path controls hidden', (
+  testWidgets('DataStoragePage keeps legacy custom path controls hidden', (
     tester,
   ) async {
     final repo = _FakeDataStorageSettingsRepository(
@@ -376,7 +375,7 @@ void main() {
       customPath: '/mnt/y300-downloads',
     );
 
-    await pumpDataStorageSheet(tester, overrides: _overridesWith(repo: repo));
+    await pumpDataStoragePage(tester, overrides: _overridesWith(repo: repo));
 
     expect(repo.customPath, '/mnt/y300-downloads');
     expect(
@@ -401,7 +400,7 @@ void main() {
       retryResult: ReadyStorageRootAccessGate.result,
     );
 
-    await pumpDataStorageSheet(
+    await pumpDataStoragePage(
       tester,
       overrides: _overridesWith(repo: repo, gate: gate),
     );
@@ -432,7 +431,7 @@ void main() {
       customPath: null,
     );
 
-    await pumpDataStorageSheet(
+    await pumpDataStoragePage(
       tester,
       overrides: _overridesWith(
         repo: repo,
@@ -454,7 +453,7 @@ void main() {
     expect(find.text('/tmp/default-downloads'), findsNothing);
   });
 
-  testWidgets('DataStorageSheet reloads usage report', (tester) async {
+  testWidgets('DataStoragePage reloads usage report', (tester) async {
     final repo = _FakeDataStorageSettingsRepository(
       defaultPath: '/tmp/default-downloads',
       customPath: null,
@@ -473,7 +472,7 @@ void main() {
     );
     final maintenance = _FakeCacheMaintenanceService(clearableBytes: 1024);
 
-    await pumpDataStorageSheet(
+    await pumpDataStoragePage(
       tester,
       overrides: _overridesWith(
         repo: repo,
@@ -507,14 +506,14 @@ void main() {
     expect(find.text('2.0 KB'), findsOneWidget);
   });
 
-  testWidgets('DataStorageSheet exports cache diagnostics', (tester) async {
+  testWidgets('DataStoragePage exports cache diagnostics', (tester) async {
     final repo = _FakeDataStorageSettingsRepository(
       defaultPath: '/tmp/default-downloads',
       customPath: null,
     );
     final exporter = _FakeCacheDiagnosticExportService();
 
-    await pumpDataStorageSheet(
+    await pumpDataStoragePage(
       tester,
       overrides: _overridesWith(repo: repo, exporter: exporter),
     );
@@ -539,8 +538,8 @@ void main() {
   });
 }
 
-/// 在宿主页中通过 [showModalBottomSheet] 打开抽屉，模拟真实入口路径。
-Future<void> pumpDataStorageSheet(
+/// 全屏数据与存储页：直接挂载页面，验证真实页面壳与内容。
+Future<void> pumpDataStoragePage(
   WidgetTester tester, {
   required List<riverpod_misc.Override> overrides,
   Locale locale = const Locale('zh'),
@@ -548,35 +547,10 @@ Future<void> pumpDataStorageSheet(
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: LocalizedTestApp(
-        locale: locale,
-        home: const _DataStorageSheetHost(),
-      ),
+      child: LocalizedTestApp(locale: locale, home: const DataStoragePage()),
     ),
   );
-  await tester.tap(find.byKey(const Key('data-storage-sheet-opener')));
   await tester.pumpAndSettle();
-}
-
-class _DataStorageSheetHost extends StatelessWidget {
-  const _DataStorageSheetHost();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: FilledButton(
-          key: const Key('data-storage-sheet-opener'),
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => const DataStorageSheet(),
-          ),
-          child: const Text('open data storage sheet'),
-        ),
-      ),
-    );
-  }
 }
 
 List<riverpod_misc.Override> _overridesWith({
