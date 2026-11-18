@@ -39,10 +39,10 @@ android {
     }
 
     defaultConfig {
-        // Public application identity used by the Play Store / sideloaded installs
-        // for update matching. Fixed at release — do not change once distributed.
-        // (The Kotlin `namespace` above stays internal and need not match this.)
-        applicationId = "com.adws.y300.personal"
+        // 本 fork 的独立应用标识：与上游 com.adws.y300 区分，官方安装包与本项目
+        // 安装包不会因为签名不同而互相顶掉。发布后不要修改，否则无法覆盖升级。
+        // （上面的 Kotlin `namespace` 是内部命名，与本标识无关。）
+        applicationId = "com.adws.y300.fork"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -64,12 +64,6 @@ android {
     }
 
     buildTypes {
-        debug {
-            // 自用调试包与已交付版本共用证书，以支持覆盖安装。
-            if (hasReleaseKeystore) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-        }
         release {
             // Use the real release keystore when configured; otherwise fall back to
             // debug signing so `flutter run --release` still works without a keystore.
