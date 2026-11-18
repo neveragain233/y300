@@ -5083,6 +5083,12 @@ abstract class AppLocalizations {
   /// **'梅紫'**
   String get moreThemeFamilyPlumPurple;
 
+  /// No description provided for @moreThemeFamilyEink.
+  ///
+  /// In zh, this message translates to:
+  /// **'水墨'**
+  String get moreThemeFamilyEink;
+
   /// No description provided for @moreThemeFamilyWarmPaperDescription.
   ///
   /// In zh, this message translates to:
@@ -5100,6 +5106,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'温润沉静的烟粉与梅紫配色'**
   String get moreThemeFamilyPlumPurpleDescription;
+
+  /// No description provided for @moreThemeFamilyEinkDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'高对比度黑白配色并关闭动画'**
+  String get moreThemeFamilyEinkDescription;
 
   /// No description provided for @moreThemeSummary.
   ///

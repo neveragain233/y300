@@ -3066,6 +3066,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moreThemeFamilyPlumPurple => '梅紫';
 
   @override
+  String get moreThemeFamilyEink => '水墨';
+
+  @override
   String get moreThemeFamilyWarmPaperDescription => '温暖柔和的米色与褐色配色';
 
   @override
@@ -3073,6 +3076,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get moreThemeFamilyPlumPurpleDescription => '温润沉静的烟粉与梅紫配色';
+
+  @override
+  String get moreThemeFamilyEinkDescription => '高对比度黑白配色并关闭动画';
 
   @override
   String moreThemeSummary(String family, String mode) {
@@ -9471,6 +9477,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get moreThemeFamilyPlumPurple => '梅紫';
 
   @override
+  String get moreThemeFamilyEink => '水墨';
+
+  @override
   String get moreThemeFamilyWarmPaperDescription => '溫暖柔和的米色與褐色配色';
 
   @override
@@ -9478,6 +9487,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get moreThemeFamilyPlumPurpleDescription => '溫潤沉靜的煙粉與梅紫配色';
+
+  @override
+  String get moreThemeFamilyEinkDescription => '高對比度黑白配色並關閉動畫';
 
   @override
   String moreThemeSummary(String family, String mode) {

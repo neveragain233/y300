@@ -1,1 +1,1 @@
-enum AppThemeFamily { warmPaper, moonWhite, plumPurple }
+enum AppThemeFamily { warmPaper, moonWhite, plumPurple, eink }

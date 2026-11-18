@@ -69,6 +69,8 @@ final class AppThemePalette {
         AppThemePalette.plumPurpleLight(),
       (AppThemeFamily.plumPurple, Brightness.dark) =>
         AppThemePalette.plumPurpleDark(),
+      (AppThemeFamily.eink, Brightness.light) => AppThemePalette.einkLight(),
+      (AppThemeFamily.eink, Brightness.dark) => AppThemePalette.einkDark(),
     };
   }
 
@@ -207,6 +209,52 @@ final class AppThemePalette {
       outlineVariant: Color(0xFF5A414B),
       secondaryContainer: Color(0xFF49323C),
       onSecondaryContainer: Color(0xFFF2DCE5),
+    );
+  }
+
+  factory AppThemePalette.einkLight() {
+    return const AppThemePalette(
+      family: AppThemeFamily.eink,
+      brightness: Brightness.light,
+      seedColor: Color(0xFF111111),
+      scaffoldBackground: Color(0xFFFFFFFF),
+      appBarBackground: Color(0xFF111111),
+      appBarForeground: Color(0xFFFFFFFF),
+      navigationBarBackground: Color(0xFFF4F4F4),
+      primary: Color(0xFF111111),
+      onPrimary: Color(0xFFFFFFFF),
+      surface: Color(0xFFFFFFFF),
+      onSurface: Color(0xFF111111),
+      surfaceContainerLowest: Color(0xFFFFFFFF),
+      surfaceContainer: Color(0xFFF4F4F4),
+      surfaceContainerHighest: Color(0xFFE8E8E8),
+      onSurfaceVariant: Color(0xFF333333),
+      outlineVariant: Color(0xFFCCCCCC),
+      secondaryContainer: Color(0xFFE6E6E6),
+      onSecondaryContainer: Color(0xFF111111),
+    );
+  }
+
+  factory AppThemePalette.einkDark() {
+    return const AppThemePalette(
+      family: AppThemeFamily.eink,
+      brightness: Brightness.dark,
+      seedColor: Color(0xFFFFFFFF),
+      scaffoldBackground: Color(0xFF000000),
+      appBarBackground: Color(0xFF141414),
+      appBarForeground: Color(0xFFFFFFFF),
+      navigationBarBackground: Color(0xFF141414),
+      primary: Color(0xFFFFFFFF),
+      onPrimary: Color(0xFF000000),
+      surface: Color(0xFF000000),
+      onSurface: Color(0xFFFFFFFF),
+      surfaceContainerLowest: Color(0xFF000000),
+      surfaceContainer: Color(0xFF141414),
+      surfaceContainerHighest: Color(0xFF222222),
+      onSurfaceVariant: Color(0xFFCCCCCC),
+      outlineVariant: Color(0xFF444444),
+      secondaryContainer: Color(0xFF262626),
+      onSecondaryContainer: Color(0xFFFFFFFF),
     );
   }
 

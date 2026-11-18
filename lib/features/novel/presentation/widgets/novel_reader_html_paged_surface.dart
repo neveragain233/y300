@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/app/eink/eink_epdc_channel.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_document.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_marks.dart';
@@ -2171,6 +2172,11 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
     _forwardAnimationTarget = confirmOnArrival ? target : null;
     try {
       if (MediaQuery.disableAnimationsOf(context)) {
+        if (target != _currentPage) {
+          unawaited(
+            EInkEpdcChannel.triggerPageRipple(forward: target > _currentPage),
+          );
+        }
         _pageController.jumpToPage(target);
         return;
       }
@@ -2236,6 +2242,11 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
     _retirePendingForwardAnimation();
     widget.onCancelPendingForwardPage();
     _hasUserNavigated = true;
+    if (MediaQuery.disableAnimationsOf(context) && index != _currentPage) {
+      unawaited(
+        EInkEpdcChannel.triggerPageRipple(forward: index > _currentPage),
+      );
+    }
     _pageController.jumpToPage(index);
     if (_currentPage != index) {
       setState(() {

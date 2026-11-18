@@ -40,7 +40,8 @@ final class AppTheme {
   }
 
   static ThemeData _buildTheme(AppThemePalette palette, {ColorScheme? scheme}) {
-    final colorScheme =
+    final isEink = !palette.isDynamic && palette.family == AppThemeFamily.eink;
+    final baseScheme =
         scheme ??
         _buildColorScheme(palette).copyWith(
           primary: palette.primary,
@@ -55,6 +56,14 @@ final class AppTheme {
           secondaryContainer: palette.secondaryContainer,
           onSecondaryContainer: palette.onSecondaryContainer,
         );
+    final colorScheme = isEink
+        ? baseScheme.copyWith(
+            outline: palette.outlineVariant,
+            surfaceTint: Colors.transparent,
+            shadow: Colors.transparent,
+            scrim: Colors.transparent,
+          )
+        : baseScheme;
     return ThemeData(
       useMaterial3: true,
       brightness: palette.brightness,

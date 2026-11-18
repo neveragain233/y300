@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
+import 'package:y300/app/eink/eink_epdc_channel.dart';
 import 'package:y300/app/theme/app_system_ui.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
@@ -956,7 +957,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (target < content.length) {
       _promoteSessionSeekTarget(target);
     }
-    _animatePagedTurn(expectedPageController, target);
+    _animatePagedTurn(expectedPageController, target, forward: delta > 0);
   }
 
   void _syncVerticalItemAnchors(List<ContinuousImageItem> items) {
@@ -2147,10 +2148,19 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (target < total) {
       _promoteSessionSeekTarget(target);
     }
-    _animatePagedTurn(pageController, target);
+    _animatePagedTurn(pageController, target, forward: delta > 0);
   }
 
-  void _animatePagedTurn(PageController pageController, int target) {
+  void _animatePagedTurn(
+    PageController pageController,
+    int target, {
+    required bool forward,
+  }) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      unawaited(EInkEpdcChannel.triggerPageRipple(forward: forward));
+      pageController.jumpToPage(target);
+      return;
+    }
     unawaited(
       pageController.animateToPage(
         target,
