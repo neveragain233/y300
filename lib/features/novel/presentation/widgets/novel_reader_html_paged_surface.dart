@@ -368,9 +368,11 @@ class _NovelReaderHtmlPagedSurfaceState
           // uses the full reading window instead of reserving an in-page
           // indicator band.
           final paginationHeight = availableHeight;
-          final contentMaxWidth = widget.typography.contentMaxWidth < 160
-              ? 160
-              : widget.typography.contentMaxWidth;
+          final contentMaxWidth = EInkEpdcChannel.enabled
+              ? availableWidth
+              : (widget.typography.contentMaxWidth < 160
+                    ? 160
+                    : widget.typography.contentMaxWidth);
           final pageWidth = math
               .min(availableWidth, contentMaxWidth)
               .toDouble();

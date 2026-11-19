@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/eink/eink_epdc_channel.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chapter_panel.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
@@ -2967,6 +2968,9 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   }
 
   double _safeContentMaxWidth(NovelReaderTypography typography) {
+    if (EInkEpdcChannel.enabled) {
+      return double.infinity;
+    }
     return typography.contentMaxWidth < 160 ? 160 : typography.contentMaxWidth;
   }
 }

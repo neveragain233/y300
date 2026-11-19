@@ -783,13 +783,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       item,
       initialLocalPath: _capability.initialLocalPathFor(item),
     );
+    final effectiveFit = _effectivePageFit(preferences, paged: paged);
     final image = _capability.buildImageContent(
       context,
       ReaderImageBuildSpec(
         item: item,
         index: index,
         paged: paged,
-        fit: _imageFitFor(preferences.pageFit),
+        fit: _imageFitFor(effectiveFit),
         sessionBinding: sessionBinding,
         expectedDisplaySize: _expectedImageDisplaySize(
           preferences,
@@ -817,12 +818,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final fittedImage = ReaderPagedImageFitSurface(
       key: ValueKey<String>(
         'reader-paged-fit-$ownerId-${item.id}-'
-        '${preferences.pageFit.name}-${preferences.readerMode.name}',
+        '${effectiveFit.name}-${preferences.readerMode.name}',
       ),
       ownerId: ownerId,
       itemId: item.id,
       pageIndex: index,
-      pageFit: preferences.pageFit,
+      pageFit: effectiveFit,
       readerMode: preferences.readerMode,
       aspectRatio: aspectRatio!,
       onHorizontalOverflowChanged: (hasOverflow) {
@@ -1238,6 +1239,18 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       );
     }
     return false;
+  }
+
+  ReaderPageFitPreference _effectivePageFit(
+    ReaderPreferences preferences, {
+    required bool paged,
+  }) {
+    if (paged &&
+        EInkEpdcChannel.enabled &&
+        preferences.pageFit == ReaderPageFitPreference.fitWidth) {
+      return ReaderPageFitPreference.contain;
+    }
+    return preferences.pageFit;
   }
 
   BoxFit _imageFitFor(ReaderPageFitPreference fit) {
