@@ -3,6 +3,7 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState;
 
 import 'package:flutter/widgets.dart';
 import 'package:y300/core/config/app_edition.dart';
+import 'package:y300/core/media/device_display_profile.dart';
 
 /// 所有坐标均属于宿主的可用窗口；[globalOrigin] 把系统分隔投影到该窗口。
 class AppWindowLayout {
@@ -18,9 +19,22 @@ class AppWindowLayout {
   final List<Rect> regions;
 
   bool get hasSeparator => regions.length > 1;
+
+  /// 墨水屏大屏判定的短边阈值：7 寸 4:3 约 4.2 英寸，手机短边通常低于 3。
+  static const double eInkLargeScreenShortSideInches = 3.5;
+
+  /// 有物理画像时按短边英寸判断，读不到时回退 600dp 逻辑宽度。
+  bool get _eInkLargeScreen {
+    final inches = DeviceDisplayProfileStore.current?.shortestSideInches;
+    if (inches != null) {
+      return inches >= eInkLargeScreenShortSideInches;
+    }
+    return size.width >= 600;
+  }
+
   bool get useNavigationRail =>
       !hasSeparator &&
-      size.width >= (AppEdition.isEInk ? 600 : 720) &&
+      (AppEdition.isEInk ? _eInkLargeScreen : size.width >= 720) &&
       size.height >= 360;
 
   Rect get readingRegion => regions.reduce(

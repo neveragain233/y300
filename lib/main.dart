@@ -3,6 +3,7 @@ import 'package:intl/date_symbol_data_local.dart' as date_symbol_data;
 import 'package:y300/app/y300_app.dart';
 import 'package:y300/app/startup/app_bootstrap.dart';
 import 'package:y300/core/media/global_image_cache_tuner.dart';
+import 'package:y300/core/media/device_display_profile.dart';
 import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:y300/core/preferences/legacy_cache_root_preference_migrator.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
@@ -15,6 +16,9 @@ Future<void> main() async {
   final deviceMemoryProfile = await const DeviceMemoryProfileResolver()
       .resolve();
   DeviceMemoryProfileStore.current = deviceMemoryProfile;
+  // 墨水屏的大屏判定依赖物理英寸；逻辑 dp 会被厂商 density 左右。
+  DeviceDisplayProfileStore.current = await const DeviceDisplayProfileResolver()
+      .resolve();
   PlatformImageCacheTuner(deviceProfile: deviceMemoryProfile)
       .applyTo(PaintingBinding.instance.imageCache);
   final preferencesStore = SharedPreferencesStore();

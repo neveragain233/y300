@@ -29,6 +29,7 @@ class MainActivity : FlutterActivity() {
         const val DEVICE_MEMORY_CHANNEL = "com.adws.y300/device_memory"
         const val EPDC_CHANNEL = "com.adws.y300/epdc"
         const val EINK_KEYS_CHANNEL = "com.adws.y300/eink_keys"
+        const val DISPLAY_METRICS_CHANNEL = "com.adws.y300/display_metrics"
         const val STORAGE_PERMISSION_REQUEST = 7301
 
         // 掌阅 SmartOS 的 EPDC 翻页模式；方向码按屏幕旋转各取一档。
@@ -80,6 +81,27 @@ class MainActivity : FlutterActivity() {
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EPDC_CHANNEL)
             .setMethodCallHandler(::handleEpdcCall)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DISPLAY_METRICS_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "getProfile") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            // displayMetrics 随方向变化，但短边像素与 dpi 不受旋转影响。
+            val metrics = resources.displayMetrics
+            result.success(
+                mapOf(
+                    "widthPixels" to metrics.widthPixels,
+                    "heightPixels" to metrics.heightPixels,
+                    "xdpi" to metrics.xdpi.toDouble(),
+                    "ydpi" to metrics.ydpi.toDouble(),
+                    "densityDpi" to metrics.densityDpi,
+                    "density" to metrics.density.toDouble(),
+                ),
+            )
+        }
         val keysChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             EINK_KEYS_CHANNEL,
