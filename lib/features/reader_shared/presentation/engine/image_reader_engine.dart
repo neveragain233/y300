@@ -4,6 +4,7 @@ import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:y300/app/theme/app_system_ui.dart';
+import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
 import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
@@ -773,13 +774,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       item,
       initialLocalPath: _capability.initialLocalPathFor(item),
     );
+    final effectiveFit = _effectivePageFit(preferences, paged: paged);
     final image = _capability.buildImageContent(
       context,
       ReaderImageBuildSpec(
         item: item,
         index: index,
         paged: paged,
-        fit: _imageFitFor(preferences.pageFit),
+        fit: _imageFitFor(effectiveFit),
         sessionBinding: sessionBinding,
         expectedDisplaySize: _expectedImageDisplaySize(
           preferences,
@@ -807,12 +809,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final fittedImage = ReaderPagedImageFitSurface(
       key: ValueKey<String>(
         'reader-paged-fit-$ownerId-${item.id}-'
-        '${preferences.pageFit.name}-${preferences.readerMode.name}',
+        '${effectiveFit.name}-${preferences.readerMode.name}',
       ),
       ownerId: ownerId,
       itemId: item.id,
       pageIndex: index,
-      pageFit: preferences.pageFit,
+      pageFit: effectiveFit,
       readerMode: preferences.readerMode,
       aspectRatio: aspectRatio!,
       onHorizontalOverflowChanged: (hasOverflow) {
@@ -1228,6 +1230,20 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       );
     }
     return false;
+  }
+
+  /// eink 构建在横向翻页下把 `fitWidth` 收成 `contain`，4:3 屏不再裁掉
+  /// 两侧内容；滚动模式保持原适配。
+  ReaderPageFitPreference _effectivePageFit(
+    ReaderPreferences preferences, {
+    required bool paged,
+  }) {
+    if (paged &&
+        AppEdition.isEInk &&
+        preferences.pageFit == ReaderPageFitPreference.fitWidth) {
+      return ReaderPageFitPreference.contain;
+    }
+    return preferences.pageFit;
   }
 
   BoxFit _imageFitFor(ReaderPageFitPreference fit) {

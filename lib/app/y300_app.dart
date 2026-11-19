@@ -51,9 +51,7 @@ class Y300App extends ConsumerWidget {
         child: MaterialApp(
           title: 'Y300',
           debugShowCheckedModeBanner: false,
-          scrollBehavior: AppEdition.isEInk
-              ? const EInkScrollBehavior()
-              : null,
+          scrollBehavior: AppEdition.isEInk ? const EInkScrollBehavior() : null,
           theme: AppTheme.build(
             family: settings.themeFamily,
             brightness: Brightness.light,
@@ -69,6 +67,9 @@ class Y300App extends ConsumerWidget {
             boldFont: boldFont,
           ),
           themeMode: settings.themeMode,
+          themeAnimationDuration: AppEdition.isEInk
+              ? Duration.zero
+              : kThemeAnimationDuration,
           localizationsDelegates: const [
             ...AppLocalizations.localizationsDelegates,
             FlutterQuillLocalizations.delegate,

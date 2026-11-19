@@ -76,10 +76,19 @@ final class AppTheme {
           secondaryContainer: palette.secondaryContainer,
           onSecondaryContainer: palette.onSecondaryContainer,
         );
+    // 墨水屏构建去掉 Material 3 的表面着色与阴影色，避免灰阶上叠出偏色。
+    final resolvedScheme = eInk
+        ? colorScheme.copyWith(
+            outline: palette.outlineVariant,
+            surfaceTint: Colors.transparent,
+            shadow: Colors.transparent,
+            scrim: Colors.transparent,
+          )
+        : colorScheme;
     final theme = ThemeData(
       useMaterial3: true,
       brightness: palette.brightness,
-      colorScheme: colorScheme,
+      colorScheme: resolvedScheme,
       pageTransitionsTheme: eInk ? _eInkPageTransitions : null,
       scaffoldBackgroundColor: palette.scaffoldBackground,
       appBarTheme: AppComponentThemeBuilder.appBarTheme(palette),
@@ -134,6 +143,9 @@ final class AppTheme {
   static ThemeData _flattenEInkSurfaces(ThemeData theme) {
     const shadow = Colors.transparent;
     return theme.copyWith(
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
       appBarTheme: theme.appBarTheme.copyWith(
         elevation: 0,
         scrolledUnderElevation: 0,
