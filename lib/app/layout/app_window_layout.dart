@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState;
 
 import 'package:flutter/widgets.dart';
+import 'package:y300/app/eink/eink_epdc_channel.dart';
 
 /// 所有坐标均属于宿主的可用窗口；[globalOrigin] 把系统分隔投影到该窗口。
 class AppWindowLayout {
@@ -18,7 +19,9 @@ class AppWindowLayout {
 
   bool get hasSeparator => regions.length > 1;
   bool get useNavigationRail =>
-      !hasSeparator && size.width >= 720 && size.height >= 360;
+      !hasSeparator &&
+      size.width >= (EInkEpdcChannel.enabled ? 600 : 720) &&
+      size.height >= 360;
 
   Rect get readingRegion => regions.reduce(
     (a, b) => a.width * a.height >= b.width * b.height ? a : b,

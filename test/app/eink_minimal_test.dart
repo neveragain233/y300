@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/eink/eink_epdc_channel.dart';
+import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/theme/app_theme.dart';
@@ -93,6 +94,19 @@ void main() {
     await EInkEpdcChannel.triggerPageRipple(forward: true);
     await EInkEpdcChannel.triggerPageRipple(forward: false);
     expect(calls, <bool>[true, false]);
+  });
+
+  test('useNavigationRail lowers landscape threshold to 600dp in eink mode', () {
+    const landscape43 = Size(672, 505);
+    const portrait43 = Size(505, 672);
+
+    EInkEpdcChannel.enabled = false;
+    expect(AppWindowLayout(size: landscape43).useNavigationRail, isFalse);
+    expect(AppWindowLayout(size: portrait43).useNavigationRail, isFalse);
+
+    EInkEpdcChannel.enabled = true;
+    expect(AppWindowLayout(size: landscape43).useNavigationRail, isTrue);
+    expect(AppWindowLayout(size: portrait43).useNavigationRail, isFalse);
   });
 }
 
