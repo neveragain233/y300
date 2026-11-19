@@ -281,6 +281,67 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                                 settings.themeFamily,
                               ),
                             ),
+                          if (settings.colorSource ==
+                                  AppThemeColorSource.preset &&
+                              settings.themeFamily == AppThemeFamily.eink) ...[
+                            const SizedBox(height: 12),
+                            SwitchListTile(
+                              key: const Key('appearance-bold-font-switch'),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              title: const Text('粗体显示'),
+                              value: settings.boldFont,
+                              onChanged: (enabled) => _commit(
+                                () => ref
+                                    .read(appAppearanceControllerProvider.notifier)
+                                    .setBoldFont(enabled),
+                                failure: (error) =>
+                                    l10n.moreThemeSaveFailed('$error'),
+                              ),
+                            ),
+                            SwitchListTile(
+                              key: const Key('appearance-volume-paging-switch'),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              title: const Text('音量键翻页'),
+                              value: settings.volumePaging,
+                              onChanged: (enabled) => _commit(
+                                () => ref
+                                    .read(appAppearanceControllerProvider.notifier)
+                                    .setVolumePaging(enabled),
+                                failure: (error) =>
+                                    l10n.moreThemeSaveFailed('$error'),
+                              ),
+                            ),
+                            SwitchListTile(
+                              key: const Key('appearance-edge-tap-paging-switch'),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              title: const Text('边缘点击翻页'),
+                              value: settings.edgeTapPaging,
+                              onChanged: (enabled) => _commit(
+                                () => ref
+                                    .read(appAppearanceControllerProvider.notifier)
+                                    .setEdgeTapPaging(enabled),
+                                failure: (error) =>
+                                    l10n.moreThemeSaveFailed('$error'),
+                              ),
+                            ),
+                            SwitchListTile(
+                              key: const Key('appearance-ireader-ripple-switch'),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              title: const Text('掌阅水波纹刷新'),
+                              value: settings.ireaderRipple,
+                              onChanged: (enabled) => _commit(
+                                () => ref
+                                    .read(appAppearanceControllerProvider.notifier)
+                                    .setIreaderRipple(enabled),
+                                failure: (error) =>
+                                    l10n.moreThemeSaveFailed('$error'),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

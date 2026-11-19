@@ -31,6 +31,10 @@ class AppAppearanceSettings {
     this.glassLevel = AppGlassLevel.standard,
     this.brightnessPreference = AppBrightnessPreference.light,
     required this.languagePreference,
+    this.boldFont = false,
+    this.volumePaging = true,
+    this.edgeTapPaging = false,
+    this.ireaderRipple = true,
   });
 
   factory AppAppearanceSettings.defaults() {
@@ -42,6 +46,10 @@ class AppAppearanceSettings {
       glassLevel: AppGlassLevel.standard,
       brightnessPreference: AppBrightnessPreference.light,
       languagePreference: AppLanguage.system,
+      boldFont: false,
+      volumePaging: true,
+      edgeTapPaging: false,
+      ireaderRipple: true,
     );
   }
 
@@ -55,6 +63,10 @@ class AppAppearanceSettings {
   final AppGlassLevel glassLevel;
   final AppBrightnessPreference brightnessPreference;
   final AppLanguage languagePreference;
+  final bool boldFont;
+  final bool volumePaging;
+  final bool edgeTapPaging;
+  final bool ireaderRipple;
 
   ThemeMode get themeMode => brightnessPreference.themeMode;
 
@@ -67,6 +79,10 @@ class AppAppearanceSettings {
     AppGlassLevel? glassLevel,
     AppBrightnessPreference? brightnessPreference,
     AppLanguage? languagePreference,
+    bool? boldFont,
+    bool? volumePaging,
+    bool? edgeTapPaging,
+    bool? ireaderRipple,
   }) {
     return AppAppearanceSettings(
       colorSource: colorSource ?? this.colorSource,
@@ -78,6 +94,10 @@ class AppAppearanceSettings {
       glassLevel: glassLevel ?? this.glassLevel,
       brightnessPreference: brightnessPreference ?? this.brightnessPreference,
       languagePreference: languagePreference ?? this.languagePreference,
+      boldFont: boldFont ?? this.boldFont,
+      volumePaging: volumePaging ?? this.volumePaging,
+      edgeTapPaging: edgeTapPaging ?? this.edgeTapPaging,
+      ireaderRipple: ireaderRipple ?? this.ireaderRipple,
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
@@ -398,7 +399,9 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
             if (_recentReadingVisible)
               Positioned(
                 right: 16 + MediaQuery.paddingOf(context).right,
-                bottom: 16 + mainShellBottomScrollInset(context),
+                bottom:
+                    (EInkModeScope.of(context) ? 104 : 16) +
+                    mainShellBottomScrollInset(context),
                 child: _buildRecentReadingButton(),
               ),
           ],
@@ -1504,8 +1507,14 @@ class _WorkGrid extends StatelessWidget {
         final rowExtent = itemWidth * 1.5 + ShelfGridGeometry.itemSpacing;
         return KeyedSubtree(
           key: PageStorageKey<String>('unified-shelf-grid-storage-$categoryId'),
-          child: GridView.builder(
-            key: const Key('unified-shelf-grid-view'),
+          child: EInkScrollablePager(
+            padding: EdgeInsets.only(
+              right: 12,
+              bottom: 16 + mainShellBottomScrollInset(context),
+            ),
+            builder: (context, scrollController) => GridView.builder(
+              controller: scrollController,
+              key: const Key('unified-shelf-grid-view'),
             // 保证短列表也能触发 RefreshIndicator 下拉手势。
             physics: const AlwaysScrollableScrollPhysics(
               parent: ClampingScrollPhysics(),
@@ -1582,6 +1591,7 @@ class _WorkGrid extends StatelessWidget {
                 selected: selectedWorkIds.contains(item.identityKey),
               );
             },
+          ),
           ),
         );
       },
@@ -1709,8 +1719,14 @@ class _WorkList extends StatelessWidget {
   Widget build(BuildContext context) {
     return KeyedSubtree(
       key: PageStorageKey<String>('unified-shelf-list-storage-$categoryId'),
-      child: ListView.separated(
-        key: const Key('unified-shelf-list-view'),
+      child: EInkScrollablePager(
+        padding: EdgeInsets.only(
+          right: 12,
+          bottom: 16 + mainShellBottomScrollInset(context),
+        ),
+        builder: (context, scrollController) => ListView.separated(
+          controller: scrollController,
+          key: const Key('unified-shelf-list-view'),
         // 保证短列表也能触发 RefreshIndicator 下拉手势。
         physics: const AlwaysScrollableScrollPhysics(
           parent: ClampingScrollPhysics(),
@@ -1809,6 +1825,7 @@ class _WorkList extends StatelessWidget {
             ),
           );
         },
+      ),
       ),
     );
   }

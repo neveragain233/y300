@@ -78,6 +78,30 @@ class AppAppearanceController extends AsyncNotifier<AppAppearanceSettings> {
     await _saveOrRollback(previous.copyWith(navigationLensMotion: motion));
   }
 
+  Future<void> setBoldFont(bool enabled) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.boldFont == enabled) return;
+    await _saveOrRollback(previous.copyWith(boldFont: enabled));
+  }
+
+  Future<void> setVolumePaging(bool enabled) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.volumePaging == enabled) return;
+    await _saveOrRollback(previous.copyWith(volumePaging: enabled));
+  }
+
+  Future<void> setEdgeTapPaging(bool enabled) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.edgeTapPaging == enabled) return;
+    await _saveOrRollback(previous.copyWith(edgeTapPaging: enabled));
+  }
+
+  Future<void> setIreaderRipple(bool enabled) async {
+    final previous = state.value ?? AppAppearanceSettings.defaults();
+    if (previous.ireaderRipple == enabled) return;
+    await _saveOrRollback(previous.copyWith(ireaderRipple: enabled));
+  }
+
   /// 恢复默认外观：只重置外观字段，语言与账号数据保持原样。
   Future<void> resetAppearance() async {
     final previous = state.value ?? AppAppearanceSettings.defaults();
@@ -127,7 +151,11 @@ class AppAppearanceController extends AsyncNotifier<AppAppearanceSettings> {
         a.navigationSwipeEnabled == b.navigationSwipeEnabled &&
         a.navigationLensMotion == b.navigationLensMotion &&
         a.glassLevel == b.glassLevel &&
-        a.brightnessPreference == b.brightnessPreference;
+        a.brightnessPreference == b.brightnessPreference &&
+        a.boldFont == b.boldFont &&
+        a.volumePaging == b.volumePaging &&
+        a.edgeTapPaging == b.edgeTapPaging &&
+        a.ireaderRipple == b.ireaderRipple;
   }
 
   Future<void> setLanguagePreference(AppLanguage preference) async {

@@ -16,6 +16,7 @@ import 'package:y300/features/forum/presentation/forum_display_content_projectio
 import 'package:y300/features/forum/presentation/forum_display_state.dart';
 import 'package:y300/features/forum/presentation/forum_text_resolver.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_media_loading_style.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
@@ -105,9 +106,13 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     ];
     final hiddenByRules =
         allDisplayThreads.isNotEmpty && displayThreads.isEmpty;
-    return ColoredBox(
-      color: palette.background,
-      child: CustomScrollView(
+    return EInkScrollHandlerBinding(
+      controller: widget.scrollController,
+      child: Stack(
+        children: [
+          ColoredBox(
+            color: palette.background,
+            child: CustomScrollView(
         key: const Key('forum-display-list'),
         controller: widget.scrollController,
         physics: ForumPullToRefresh.scrollPhysics,
@@ -198,6 +203,20 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
                 onLoadPrevious: widget.onLoadPrevious,
                 onLoadMore: widget.onLoadMore,
                 onSelectPage: widget.onSelectPage,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: EInkCornerPagingButtons(
+              controller: widget.scrollController,
+              padding: EdgeInsets.only(
+                right: 12,
+                bottom: 16 + mainShellBottomScrollInset(context),
               ),
             ),
           ),

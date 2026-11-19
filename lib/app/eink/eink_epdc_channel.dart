@@ -14,6 +14,9 @@ abstract final class EInkEpdcChannel {
   /// Whether EPDC page-turn water-ripple animation is active (enabled in E-Ink mode).
   static bool enabled = false;
 
+  /// Whether E-Ink mode (`AppThemeFamily.eink`) is currently active.
+  static bool isEinkMode = false;
+
   @visibleForTesting
   static void setTestOverride(
     Future<void> Function(bool forward, String speed)? override,
@@ -66,4 +69,24 @@ class EInkScrollBehavior extends MaterialScrollBehavior {
   ScrollPhysics getScrollPhysics(BuildContext context) {
     return const ClampingScrollPhysics();
   }
+}
+
+/// Inherited toggle exposing whether E-Ink mode is currently active.
+class EInkModeScope extends InheritedWidget {
+  const EInkModeScope({
+    super.key,
+    required this.enabled,
+    required super.child,
+  });
+
+  final bool enabled;
+
+  static bool of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<EInkModeScope>()?.enabled ??
+        EInkEpdcChannel.isEinkMode;
+  }
+
+  @override
+  bool updateShouldNotify(EInkModeScope oldWidget) =>
+      enabled != oldWidget.enabled;
 }

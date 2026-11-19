@@ -39,6 +39,7 @@ import 'package:y300/features/library_shared/presentation/widgets/library_sort_o
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 统一详情页骨架（Phase 4）
@@ -633,7 +634,22 @@ class _UnifiedDetailPageState extends State<UnifiedDetailPage> {
                 displacement: 28,
                 elevation: 0,
                 onRefresh: _refreshAndShowFeedback,
-                child: chapterList,
+                child: EInkScrollHandlerBinding(
+                  controller: _scrollController,
+                  child: Stack(
+                    children: [
+                      chapterList,
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: EInkCornerPagingButtons(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.only(right: 12, bottom: 88),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {

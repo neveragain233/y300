@@ -45,6 +45,18 @@ class SharedPrefsAppAppearanceSettingsRepository
               json['brightness'],
             ),
             languagePreference: _parseLanguage(json['language']),
+            boldFont: json['boldFont'] is bool
+                ? json['boldFont'] as bool
+                : false,
+            volumePaging: json['volumePaging'] is bool
+                ? json['volumePaging'] as bool
+                : true,
+            edgeTapPaging: json['edgeTapPaging'] is bool
+                ? json['edgeTapPaging'] as bool
+                : false,
+            ireaderRipple: json['ireaderRipple'] is bool
+                ? json['ireaderRipple'] as bool
+                : true,
           );
         }
       } on FormatException {
@@ -120,6 +132,10 @@ class SharedPrefsAppAppearanceSettingsRepository
     'glass': settings.glassLevel.name,
     'brightness': settings.brightnessPreference.name,
     'language': settings.languagePreference.name,
+    'boldFont': settings.boldFont,
+    'volumePaging': settings.volumePaging,
+    'edgeTapPaging': settings.edgeTapPaging,
+    'ireaderRipple': settings.ireaderRipple,
   });
 
   AppThemeColorSource _parseColorSource(Object? raw) {

@@ -368,7 +368,7 @@ class _NovelReaderHtmlPagedSurfaceState
           // uses the full reading window instead of reserving an in-page
           // indicator band.
           final paginationHeight = availableHeight;
-          final contentMaxWidth = EInkEpdcChannel.enabled
+          final contentMaxWidth = EInkEpdcChannel.isEinkMode
               ? availableWidth
               : (widget.typography.contentMaxWidth < 160
                     ? 160

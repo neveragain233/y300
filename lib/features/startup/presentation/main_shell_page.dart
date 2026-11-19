@@ -27,6 +27,7 @@ import 'package:y300/features/messages/application/message_attention_providers.d
 import 'package:y300/features/messages/presentation/widgets/message_attention_icon.dart';
 import 'package:y300/features/more/presentation/more_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 
 /// 主壳保留可配置入口、独立页面状态与自适应详情导航。
 ///
@@ -213,13 +214,16 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                       ),
                     ),
                     Expanded(
-                      child: MainDestinationStack(
-                        index: MainShellDestination.values.indexOf(
-                          currentDestination,
-                        ),
-                        children: _buildIndexedPages(
-                          settings,
-                          currentDestination: currentDestination,
+                      child: EInkEdgeTapOverlay(
+                        enabled: appearance.edgeTapPaging,
+                        child: MainDestinationStack(
+                          index: MainShellDestination.values.indexOf(
+                            currentDestination,
+                          ),
+                          children: _buildIndexedPages(
+                            settings,
+                            currentDestination: currentDestination,
+                          ),
                         ),
                       ),
                     ),

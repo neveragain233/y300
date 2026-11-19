@@ -1246,7 +1246,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     required bool paged,
   }) {
     if (paged &&
-        EInkEpdcChannel.enabled &&
+        EInkEpdcChannel.isEinkMode &&
         preferences.pageFit == ReaderPageFitPreference.fitWidth) {
       return ReaderPageFitPreference.contain;
     }

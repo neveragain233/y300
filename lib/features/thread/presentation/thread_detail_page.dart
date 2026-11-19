@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -608,11 +609,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                         );
                                       },
                               )
-                            : ForumPullToRefresh(
-                                onRefresh: () => _runReadingViewAction(
-                                  () => controller.refresh(forceNetwork: true),
-                                ),
-                                child: ThreadDetailContent(
+                            : EInkScrollHandlerBinding(
+                                controller: _scrollController,
+                                child: ForumPullToRefresh(
+                                  onRefresh: () => _runReadingViewAction(
+                                    () => controller.refresh(forceNetwork: true),
+                                  ),
+                                  child: ThreadDetailContent(
                                   key: _titleObserver.viewportKey,
                                   firstPostTitleKey: _titleObserver.titleKey,
                                   floorNavigation: _floorNavigation,
@@ -727,8 +730,20 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                       controller.loadMoreComments,
                                 ),
                               ),
+                            ),
                       ),
                     ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: EInkCornerPagingButtons(
+                  controller: _scrollController,
+                  padding: EdgeInsets.only(
+                    right: 12,
+                    bottom: _controlsHeight + 24,
                   ),
                 ),
               ),
@@ -1301,11 +1316,15 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       if ((position.pixels - targetOffset).abs() < 1) {
         return;
       }
-      await _scrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      );
+      if (EInkModeScope.of(context)) {
+        _scrollController.jumpTo(targetOffset);
+      } else {
+        await _scrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        );
+      }
     } finally {
       if (observer != null && ownerRevision == _readingOwnerRevision) {
         _readingSuspensions--;

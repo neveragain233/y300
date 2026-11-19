@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:y300/app/eink/eink_epdc_channel.dart';
+import 'package:y300/features/reader_shared/presentation/widgets/reader_reading_footer.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chapter_panel.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
@@ -525,17 +526,21 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
                               surfaceIdentity: readerSurfaceIdentity,
                               isLeftTap: false,
                             ),
-                      child: Padding(
-                        padding: EdgeInsets.only(top: contentTopInset),
-                        child: _buildReaderList(
-                          viewState,
-                          typography,
-                          const NovelForumHtmlRenderThemeFactory().fromPalette(
-                            palette,
+                      child: EInkScrollHandlerBinding(
+                        controller: _scrollController,
+                        isVisible: isVertical,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: contentTopInset),
+                          child: _buildReaderList(
+                            viewState,
+                            typography,
+                            const NovelForumHtmlRenderThemeFactory().fromPalette(
+                              palette,
+                            ),
+                            imageReferer,
+                            externalLauncher,
+                            surfaceIdentity: readerSurfaceIdentity,
                           ),
-                          imageReferer,
-                          externalLauncher,
-                          surfaceIdentity: readerSurfaceIdentity,
                         ),
                       ),
                     );
@@ -836,8 +841,16 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     NovelReaderPalette palette,
     NovelReaderVerticalPageMetrics? verticalMetrics,
   ) {
+    final status = _buildReadingStatus(viewState, verticalMetrics);
+    if (EInkModeScope.of(context)) {
+      return ReaderReadingFooter(
+        title: viewState.currentEpisode.episodeTitle,
+        progressText: status.trailing,
+        dark: palette.background.computeLuminance() < 0.5,
+      );
+    }
     return ReaderReadingStatusBar(
-      status: _buildReadingStatus(viewState, verticalMetrics),
+      status: status,
       background: palette.background,
       foreground: palette.controlMuted,
     );
@@ -2968,7 +2981,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   }
 
   double _safeContentMaxWidth(NovelReaderTypography typography) {
-    if (EInkEpdcChannel.enabled) {
+    if (EInkEpdcChannel.isEinkMode) {
       return double.infinity;
     }
     return typography.contentMaxWidth < 160 ? 160 : typography.contentMaxWidth;

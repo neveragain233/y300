@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/clipboard/forum_clipboard_runtime.dart';
-import 'package:y300/app/eink/eink_epdc_channel.dart';
 import 'package:y300/app/localization/app_locale_resolution.dart';
 import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
@@ -20,6 +19,7 @@ import 'package:y300/features/startup/presentation/daily_sign_in_automation_host
 import 'package:y300/features/startup/presentation/main_shell_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_glass_environment.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 
 /// Instant zero-animation page transition builder for E-Ink displays.
 class _InstantPageTransitionsBuilder extends PageTransitionsBuilder {
@@ -79,7 +79,11 @@ class Y300App extends ConsumerWidget {
     final isEink =
         settings.colorSource == AppThemeColorSource.preset &&
         settings.themeFamily == AppThemeFamily.eink;
-    EInkEpdcChannel.enabled = isEink;
+    EInkEpdcChannel.isEinkMode = isEink;
+    EInkEpdcChannel.enabled = isEink && settings.ireaderRipple;
+    EInkPageRegistry.instance.setUserVolumePagingEnabled(
+      isEink && settings.volumePaging,
+    );
     return AppDynamicColorBuilder(
       builder: (light, dark) {
         final lightTheme = AppTheme.build(
@@ -134,15 +138,22 @@ class Y300App extends ConsumerWidget {
                   ),
                 ),
               );
-              if (!isEink) {
-                return content;
-              }
               final mediaQuery = MediaQuery.maybeOf(context);
+              final wrapped = EInkModeScope(
+                enabled: isEink,
+                child: content,
+              );
+              if (!isEink) {
+                return wrapped;
+              }
               return mediaQuery == null
-                  ? content
+                  ? wrapped
                   : MediaQuery(
-                      data: mediaQuery.copyWith(disableAnimations: true),
-                      child: content,
+                      data: mediaQuery.copyWith(
+                        disableAnimations: true,
+                        boldText: settings.boldFont,
+                      ),
+                      child: wrapped,
                     );
             },
             home: enableAppUpdatePrompt

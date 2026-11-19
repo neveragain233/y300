@@ -17,6 +17,7 @@ import 'package:y300/features/recent_search/domain/models/recent_search_scope.da
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 
 typedef HistoryEntryOpenCallback = Future<HistoryOpenResult> Function(
@@ -137,7 +138,23 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 onSelected: _applyRecentSearch,
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
               ),
-            Expanded(child: _buildBody(state)),
+            Expanded(
+              child: EInkScrollHandlerBinding(
+                controller: _scrollController,
+                child: Stack(
+                  children: [
+                    _buildBody(state),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: EInkCornerPagingButtons(
+                        controller: _scrollController,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

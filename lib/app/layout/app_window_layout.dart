@@ -20,7 +20,7 @@ class AppWindowLayout {
   bool get hasSeparator => regions.length > 1;
   bool get useNavigationRail =>
       !hasSeparator &&
-      size.width >= (EInkEpdcChannel.enabled ? 600 : 720) &&
+      size.width >= (EInkEpdcChannel.isEinkMode ? 600 : 720) &&
       size.height >= 360;
 
   Rect get readingRegion => regions.reduce(

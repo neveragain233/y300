@@ -30,6 +30,7 @@ import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/profile/presentation/profile_action_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/eink_paging.dart';
 import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 
 class MorePage extends ConsumerStatefulWidget {
@@ -109,12 +110,18 @@ class _MorePageState extends ConsumerState<MorePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              key: const Key('more-page-list'),
-              physics: const AlwaysScrollableScrollPhysics(),
+            child: EInkScrollablePager(
               padding: EdgeInsets.only(
-                bottom: 24 + mainShellBottomScrollInset(context),
+                right: 12,
+                bottom: 16 + mainShellBottomScrollInset(context),
               ),
+              builder: (context, scrollController) => ListView(
+                controller: scrollController,
+                key: const Key('more-page-list'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(
+                  bottom: 24 + mainShellBottomScrollInset(context),
+                ),
               children: [
                 MoreAccountHeader(
                   onOpenProfile: _openingMyProfile
@@ -228,6 +235,7 @@ class _MorePageState extends ConsumerState<MorePage> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
         ),

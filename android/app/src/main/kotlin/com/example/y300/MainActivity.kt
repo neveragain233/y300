@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.KeyEvent
 import android.view.Surface
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -25,6 +26,7 @@ class MainActivity : FlutterActivity() {
     private companion object {
         const val EXPORT_CHANNEL = "com.adws.y300/reader_image_export"
         const val DEVICE_MEMORY_CHANNEL = "com.adws.y300/device_memory"
+        const val EINK_KEYS_CHANNEL = "com.adws.y300/eink_keys"
         const val EPDC_CHANNEL = "com.adws.y300/epdc"
         const val STORAGE_PERMISSION_REQUEST = 7301
         private const val EPDC_FORCE_MODE_PAGE_TURN = 0x01000063
@@ -42,6 +44,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private var pendingPermissionExport: PendingExport? = null
+    private var einkKeysChannel: MethodChannel? = null
+
+    @Volatile
+    private var volumePagingEnabled: Boolean = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -61,8 +67,35 @@ class MainActivity : FlutterActivity() {
                     ),
                 )
             }
+        val keysChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EINK_KEYS_CHANNEL)
+        keysChannel.setMethodCallHandler { call, result ->
+            if (call.method == "setVolumePagingEnabled") {
+                volumePagingEnabled = call.arguments as? Boolean ?: false
+                result.success(null)
+            } else {
+                result.notImplemented()
+            }
+        }
+        einkKeysChannel = keysChannel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EPDC_CHANNEL)
             .setMethodCallHandler(::handleEpdcCall)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (volumePagingEnabled) {
+            val direction = when (event.keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_PAGE_UP -> "up"
+                KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> "down"
+                else -> null
+            }
+            if (direction != null) {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    einkKeysChannel?.invokeMethod("onHardwarePageKey", direction)
+                }
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun handleEpdcCall(call: MethodCall, result: MethodChannel.Result) {
