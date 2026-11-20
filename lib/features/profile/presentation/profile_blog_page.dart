@@ -38,6 +38,7 @@ import 'package:y300/features/profile/presentation/profile_user_link.dart';
 import 'package:y300/features/profile/presentation/widgets/feed_pagination_scroll_controller.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
@@ -185,6 +186,11 @@ class _ProfileBlogFeedPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = Theme.of(context).y300NativeContent;
+    final l10n = AppLocalizations.of(context);
+    final unauthorized = switch (state.failure) {
+      DataReadFailure(kind: DataReadFailureKind.unauthorized) => true,
+      _ => false,
+    };
     return Column(
       children: [
         if (state.query.scope == UserBlogFeedScope.public)
@@ -251,24 +257,36 @@ class _ProfileBlogFeedPage extends ConsumerWidget {
               : !isActive
               ? const SizedBox.expand()
               : state.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _ProfileBlogError(
-                  error: state.failure,
-                  palette: palette,
-                  onRetry: _refresh,
-                  onLogin: () => _whenCurrent(
-                    () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                    ),
+              ? AppLoadingState(label: l10n.commonLoading)
+              : AppErrorState(
+                  message: ProfileTextResolver.blogReadError(
+                    l10n,
+                    state.failure,
                   ),
-                  onOpenWeb: () => _whenCurrent(
-                    () => openBlogWebPage(
-                      context,
-                      ref,
-                      expectedActor: ref.read(blogAccountIdProvider),
-                      destination: (navigation) =>
-                          navigation.directory(state.query),
+                  retryLabel: unauthorized
+                      ? l10n.authLoginTitle
+                      : l10n.commonRetry,
+                  onRetry: unauthorized
+                      ? () => _whenCurrent(
+                          () => Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
+                            ),
+                          ),
+                        )
+                      : _refresh,
+                  secondaryAction: TextButton(
+                    key: const Key('blog-read-open-web'),
+                    onPressed: () => _whenCurrent(
+                      () => openBlogWebPage(
+                        context,
+                        ref,
+                        expectedActor: ref.read(blogAccountIdProvider),
+                        destination: (navigation) =>
+                            navigation.directory(state.query),
+                      ),
                     ),
+                    child: Text(l10n.profileBlogOpenWeb),
                   ),
                 ),
         ),
@@ -404,7 +422,7 @@ class _ProfileBlogDetailPageState extends ConsumerState<ProfileBlogDetailPage> {
                     ),
                   )
                 : state.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? AppLoadingState(label: l10n.commonLoading)
                 : const SizedBox.expand(),
           ),
         ),
@@ -636,10 +654,7 @@ class _ProfileBlogListContentState extends State<_ProfileBlogListContent> {
               return Column(
                 children: [
                   if (data.items.isEmpty)
-                    _ProfileBlogEmptyState(
-                      message: l10n.profileBlogEmpty,
-                      palette: palette,
-                    ),
+                    AppEmptyState(title: l10n.profileBlogEmpty),
                   _PaginationBar(
                     state: state,
                     onLoadPreviousPage: () =>
@@ -912,30 +927,6 @@ class _PaginationBar extends StatelessWidget {
       currentLabel: l10n.commonPage(state.currentPage),
       nextLabel: state.hasMore ? l10n.commonNextPage : l10n.forumDisplayNoMore,
       padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
-    );
-  }
-}
-
-class _ProfileBlogEmptyState extends StatelessWidget {
-  const _ProfileBlogEmptyState({required this.message, required this.palette});
-
-  final String message;
-  final Y300NativeContentColors palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 96, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.article_outlined, size: 40, color: palette.muted),
-            const SizedBox(height: 12),
-            Text(message, style: TextStyle(color: palette.muted)),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -1490,70 +1481,6 @@ class _ProfileBlogAvatar extends StatelessWidget {
         ownerType: ImageCacheOwnerType.profile,
         size: size,
         imageReferer: imageReferer,
-      ),
-    );
-  }
-}
-
-class _ProfileBlogError extends StatelessWidget {
-  const _ProfileBlogError({
-    required this.error,
-    required this.palette,
-    required this.onRetry,
-    required this.onOpenWeb,
-    required this.onLogin,
-  });
-
-  final Object? error;
-  final Y300NativeContentColors palette;
-  final VoidCallback onRetry;
-  final VoidCallback onOpenWeb;
-  final VoidCallback onLogin;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, color: palette.accent, size: 34),
-            const SizedBox(height: 12),
-            Text(
-              ProfileTextResolver.blogReadError(
-                AppLocalizations.of(context),
-                error,
-              ),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: palette.body),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                if (error case DataReadFailure(
-                  kind: DataReadFailureKind.unauthorized,
-                ))
-                  FilledButton(
-                    onPressed: onLogin,
-                    child: Text(AppLocalizations.of(context).authLoginTitle),
-                  )
-                else
-                  FilledButton(
-                    onPressed: onRetry,
-                    child: Text(AppLocalizations.of(context).commonRetry),
-                  ),
-                TextButton(
-                  key: const Key('blog-read-open-web'),
-                  onPressed: onOpenWeb,
-                  child: Text(AppLocalizations.of(context).profileBlogOpenWeb),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

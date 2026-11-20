@@ -346,7 +346,14 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(observer.pushed.single, isA<DialogRoute<dynamic>>());
+    // 恢复框由 prism 浮层承载：路由是浮层而不是页面，键与文案仍定位原对话框。
+    final recoveryRoute = observer.pushed.single;
+    expect(recoveryRoute, isA<PopupRoute<dynamic>>());
+    expect(recoveryRoute.isCurrent, isTrue);
+    expect(
+      find.byKey(const Key('thread-post-route-failure-dialog')),
+      findsOneWidget,
+    );
     expect(find.byType(ThreadDetailPage), findsNothing);
     final l10n = AppLocalizations.of(source);
     expect(find.text(l10n.threadPostLocationNetworkFailed), findsOneWidget);
@@ -440,7 +447,10 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
     clipboard.pending!.completeError(StateError('clipboard unavailable'));
     await tester.pumpAndSettle();
-    expect(find.text(AppLocalizations.of(source).linkCopyFailed), findsOneWidget);
+    expect(
+      find.text(AppLocalizations.of(source).linkCopyFailed),
+      findsOneWidget,
+    );
     expect(launcher.opened, isEmpty);
     expect(observer.pushed, isEmpty);
   });

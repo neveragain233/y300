@@ -18,7 +18,7 @@ void _layoutCases() {
           service.preparedEditor();
         }
         await tester.pumpAndSettle();
-        expect(find.byType(TextField), findsNothing);
+        expect(find.byType(AppTextInput), findsNothing);
         expect(
           find.text(_l10n(tester).forumWebViewAccountChanged),
           findsOneWidget,

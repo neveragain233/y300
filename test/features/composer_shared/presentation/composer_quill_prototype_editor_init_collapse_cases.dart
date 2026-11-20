@@ -71,7 +71,7 @@ void _initCollapseCases() {
     await tester.pumpWidget(_buildEditor(initialBbCode: source));
 
     expect(find.byType(QuillEditor), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(AppTextInput), findsNothing);
     await tester.tap(find.byIcon(Icons.chevron_right).first);
     await tester.pumpAndSettle();
 
@@ -96,7 +96,7 @@ void _initCollapseCases() {
     await tester.pumpAndSettle();
 
     expect(find.byType(QuillEditor), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(AppTextInput), findsNothing);
     expect(find.byType(ForumCollapseChrome), findsNWidgets(2));
     await tester.tap(
       find.byKey(const Key('composer-quill-collapse-edit-collapse-1')),

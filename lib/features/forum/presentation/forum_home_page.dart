@@ -33,6 +33,7 @@ import 'package:y300/features/search/presentation/forum_search_page.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
@@ -316,7 +317,7 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
     );
     final favoriteCommand = ref.read(favoriteForumCommandProvider);
     final l10n = AppLocalizations.of(context);
-    return showModalBottomSheet<void>(
+    return showAdaptivePanel<void>(
       context: context,
       useRootNavigator: true,
       builder: (_) => ForumFavoriteForumPicker(

@@ -27,7 +27,7 @@ void _collapseLifecycleCases() {
         findsOneWidget,
       );
       expect(find.byType(QuillEditor), findsOneWidget);
-      final titleField = tester.widget<TextField>(
+      final titleField = tester.widget<AppTextInput>(
         find.byKey(const Key('test-quill-collapse-editor-title-field')),
       );
       expect(titleField.enableInteractiveSelection, isTrue);
@@ -201,11 +201,13 @@ void _collapseLifecycleCases() {
     final titleFinder = find.byKey(
       const Key('test-quill-collapse-editor-title-field'),
     );
-    final titleController = tester.widget<TextField>(titleFinder).controller!;
+    final titleController = tester
+        .widget<AppTextInput>(titleFinder)
+        .controller!;
     await tester.enterText(titleFinder, '');
     await tester.pump();
     expect(
-      tester.widget<TextField>(titleFinder).controller,
+      tester.widget<AppTextInput>(titleFinder).controller,
       same(titleController),
     );
     final bodyFinder = find.byKey(

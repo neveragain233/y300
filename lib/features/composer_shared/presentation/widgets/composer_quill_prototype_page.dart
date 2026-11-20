@@ -9,11 +9,12 @@ import 'package:y300/features/composer_shared/presentation/bbcode/composer_bbcod
 import 'package:y300/features/composer_shared/presentation/quill/composer_quill_bbcode_codec.dart';
 import 'package:y300/features/composer_shared/domain/services/composer_message_insertion_service.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_bbcode_context_menu.dart';
-import 'package:y300/features/composer_shared/presentation/widgets/composer_bbcode_source_editor.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_bbcode_toolbar.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_quill_prototype_editor.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_sticker_image.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 class ComposerQuillPrototypePage extends ConsumerStatefulWidget {
   const ComposerQuillPrototypePage({super.key});
@@ -204,7 +205,7 @@ class _ComposerQuillPrototypePageState
     if (!context.mounted || stickers.isEmpty) {
       return null;
     }
-    return showModalBottomSheet<StickerItem>(
+    return showAdaptivePanel<StickerItem>(
       context: context,
       builder: (_) => _SourceStickerPicker(stickers: stickers),
     );
@@ -253,9 +254,8 @@ class _ComposerQuillPrototypePageState
       ..showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(
-              context,
-            ).composerPrototypeAttachmentInserted(aid),
+            AppLocalizations.of(context)
+                .composerPrototypeAttachmentInserted(aid),
           ),
         ),
       );
@@ -289,7 +289,7 @@ class _SourceFineTuneView extends StatelessWidget {
           onCommandSelected: onCommandSelected,
         ),
         const SizedBox(height: 12),
-        TextField(
+        AppTextInput(
           key: const Key('composer-quill-prototype-source-input'),
           controller: controller,
           minLines: 12,
@@ -298,9 +298,8 @@ class _SourceFineTuneView extends StatelessWidget {
           textInputAction: TextInputAction.newline,
           contextMenuBuilder: ComposerBbCodeContextMenu.build,
           onChanged: onChanged,
-          decoration: ComposerBbCodeSourceEditor.noBorderDecoration(
-            AppLocalizations.of(context).composerSourceMode,
-          ),
+          hintText: AppLocalizations.of(context).composerSourceMode,
+          variant: AppTextInputVariant.plain,
         ),
       ],
     );

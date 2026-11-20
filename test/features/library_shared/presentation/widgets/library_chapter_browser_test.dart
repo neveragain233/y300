@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
@@ -109,7 +110,7 @@ void main() {
       await tester.tap(find.byKey(const Key('library-chapter-current')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('chapter-750')), findsOneWidget);
-      expect(tester.widget<TextField>(input).controller!.text, isEmpty);
+      expect(tester.widget<AppTextInput>(input).controller!.text, isEmpty);
       await tester.enterText(input, '1499');
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('chapter-1499')));
@@ -177,7 +178,7 @@ void main() {
     await tester.tap(find.byKey(const Key('library-chapter-current')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('chapter-750')), findsOneWidget);
-    expect(tester.widget<TextField>(input).controller!.text, isEmpty);
+    expect(tester.widget<AppTextInput>(input).controller!.text, isEmpty);
     await tester.enterText(input, '1499');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('chapter-1499')));
@@ -211,10 +212,10 @@ void main() {
       );
       expect(find.byTooltip(l10n.libraryChapterLocateCurrent), findsOneWidget);
       expect(
-        tester.widget<TextField>(find.byType(TextField)).autofocus,
+        tester.widget<AppTextInput>(find.byType(AppTextInput)).autofocus,
         isFalse,
       );
-      await tester.enterText(find.byType(TextField), '12');
+      await tester.enterText(find.byType(AppTextInput), '12');
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('chapter-12')), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -232,10 +233,13 @@ void main() {
     await tester.pumpWidget(app(scroll: scroll, onOpen: (_) {}, scale: 1.3));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.enterText(find.byType(TextField), '1499');
+    await tester.enterText(find.byType(AppTextInput), '1499');
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('chapter-1499')), findsOneWidget);
-    expect(tester.getBottomLeft(find.byType(TextField)).dy, lessThan(tester.getCenter(find.byKey(const Key('chapter-1499'))).dy));
+    expect(
+      tester.getBottomLeft(find.byType(AppTextInput)).dy,
+      lessThan(tester.getCenter(find.byKey(const Key('chapter-1499'))).dy),
+    );
   });
 }

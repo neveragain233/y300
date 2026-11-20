@@ -5,6 +5,7 @@ import 'package:y300/features/composer_shared/domain/models/sticker_models.dart'
 import 'package:y300/features/composer_shared/presentation/controllers/composer_sticker_text_controller.dart';
 import 'package:y300/features/composer_shared/presentation/quill/composer_quill_sticker_embed_builder.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/sticker_picker_sheet.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// A bounded plain-text editor whose only authored embeds are forum stickers.
@@ -73,7 +74,7 @@ class _ComposerStickerInputState extends State<ComposerStickerInput> {
     final generation = _controller.generation;
     final selection = _controller.selection;
     _pickerOpen = true;
-    final sticker = await showModalBottomSheet<StickerItem>(
+    final sticker = await showAdaptivePanel<StickerItem>(
       context: context,
       builder: (_) => const StickerPickerSheet(),
     );

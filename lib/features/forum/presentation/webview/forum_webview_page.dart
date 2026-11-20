@@ -33,6 +33,7 @@ import 'package:y300/features/forum/presentation/webview/forum_webview_resource_
 import 'package:y300/features/forum/presentation/webview/forum_webview_state.dart';
 import 'package:y300/features/forum/presentation/webview/forum_webview_session_owner.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_favorite_forum_picker.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/history/data/providers/history_providers.dart';
 import 'package:y300/features/history/domain/models/history_models.dart';
 import 'package:y300/features/posting/domain/models/posting_target.dart';
@@ -1293,7 +1294,7 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     final controller = ref.read(forumWebViewControllerProvider.notifier);
     final navigator = ref.read(forumWebViewNavigatorProvider);
     final messenger = ScaffoldMessenger.of(context);
-    return showModalBottomSheet<void>(
+    return showAdaptivePanel<void>(
       context: context,
       builder: (_) {
         return ForumFavoriteForumPicker(

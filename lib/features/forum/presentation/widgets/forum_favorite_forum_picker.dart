@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/forum/presentation/forum_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 
 class ForumFavoriteForumPicker extends StatefulWidget {
   const ForumFavoriteForumPicker({
@@ -69,8 +70,10 @@ class _ForumFavoriteForumPickerState extends State<ForumFavoriteForumPicker> {
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  return const _ForumFavoriteForumPickerFrame(
-                    body: Center(child: CircularProgressIndicator()),
+                  return _ForumFavoriteForumPickerFrame(
+                    body: AppLoadingState(
+                      label: AppLocalizations.of(context).commonLoading,
+                    ),
                   );
                 }
 
@@ -91,9 +94,8 @@ class _ForumFavoriteForumPickerState extends State<ForumFavoriteForumPicker> {
                     if (forums.isEmpty) {
                       return _ForumFavoriteForumPickerFrame(
                         body: _ForumFavoriteForumPickerEmptyView(
-                          message: AppLocalizations.of(
-                            context,
-                          ).forumNoFavoriteForums,
+                          message: AppLocalizations.of(context)
+                              .forumNoFavoriteForums,
                         ),
                       );
                     }
@@ -220,9 +222,8 @@ class _ForumFavoriteForumPickerFrame extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: Text(
                 l10n.forumFavoriteForumsTitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -304,17 +305,7 @@ class _ForumFavoriteForumPickerEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: colorScheme.onSurfaceVariant),
-        ),
-      ),
-    );
+    return AppEmptyState(title: message);
   }
 }
 
@@ -329,22 +320,11 @@ class _ForumFavoriteForumPickerErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            TextButton(
-              key: const Key('forum-favorite-forum-picker-retry'),
-              onPressed: onRetry,
-              child: Text(AppLocalizations.of(context).commonRetry),
-            ),
-          ],
-        ),
-      ),
+    return AppErrorState(
+      message: message,
+      retryLabel: AppLocalizations.of(context).commonRetry,
+      retryKey: const Key('forum-favorite-forum-picker-retry'),
+      onRetry: onRetry,
     );
   }
 }

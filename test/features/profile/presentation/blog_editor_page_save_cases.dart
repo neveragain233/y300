@@ -29,7 +29,7 @@ void _saveCases() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<TextField>(find.byKey(const Key('blog-editor-subject')))
+          .widget<AppTextInput>(find.byKey(const Key('blog-editor-subject')))
           .controller!
           .text,
       '未发布标题',
@@ -212,7 +212,7 @@ void _saveCases() {
       expect(host.drafts.values, isEmpty);
       expect(
         tester
-            .widget<TextField>(find.byKey(const Key('blog-editor-subject')))
+            .widget<AppTextInput>(find.byKey(const Key('blog-editor-subject')))
             .controller!
             .text,
         isEmpty,
@@ -246,7 +246,7 @@ void _saveCases() {
     await _openSettings(tester);
     expect(
       tester
-          .widget<TextField>(find.byKey(const Key('blog-editor-password')))
+          .widget<AppTextInput>(find.byKey(const Key('blog-editor-password')))
           .controller!
           .text,
       isEmpty,

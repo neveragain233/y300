@@ -125,15 +125,12 @@ class _ThreadPostRateSheetState extends State<ThreadPostRateSheet> {
               ),
             ],
             const SizedBox(height: 12),
-            TextField(
+            AppTextInput(
               key: const Key('thread-post-rate-reason-input'),
               controller: _reasonController,
               minLines: 1,
               maxLines: 3,
-              decoration: InputDecoration(
-                labelText: l10n.threadRatingReasonHint,
-                border: const OutlineInputBorder(),
-              ),
+              label: l10n.threadRatingReasonHint,
               onChanged: (value) {
                 if (_selectedDisplayReason != value) {
                   _selectedRawReason = null;
@@ -244,17 +241,14 @@ class _ThreadPostCommentSheetState extends State<ThreadPostCommentSheet> {
               ],
             ),
             const SizedBox(height: 10),
-            TextField(
+            AppTextInput(
               key: const Key('thread-post-comment-message-input'),
               controller: _messageController,
               autofocus: true,
               minLines: 2,
               maxLines: 5,
               maxLength: maxLength,
-              decoration: InputDecoration(
-                labelText: l10n.threadCommentContent,
-                border: const OutlineInputBorder(),
-              ),
+              label: l10n.threadCommentContent,
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),

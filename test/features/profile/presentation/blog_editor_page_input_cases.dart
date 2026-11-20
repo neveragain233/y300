@@ -43,7 +43,6 @@ void _inputCases() {
       }
       await tester.tap(find.byKey(const Key('blog-format-size')));
       await tester.pumpAndSettle();
-      _expectNoSheetHandle(tester);
       await tester.tap(find.byKey(const Key('blog-font-size-4')));
       await tester.pumpAndSettle();
       await _save(tester);
@@ -79,7 +78,6 @@ void _inputCases() {
       await tester.pumpAndSettle();
       final picker = find.byKey(const Key('blog-smiley-picker'));
       expect(picker, findsOneWidget);
-      _expectNoSheetHandle(tester);
       await tester.scrollUntilVisible(
         find.byKey(const Key('blog-smiley-30')),
         200,

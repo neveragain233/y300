@@ -32,7 +32,7 @@ void _coverAppearanceCases() {
     );
     expect(
       tester
-          .widget<TextField>(
+          .widget<AppTextInput>(
             find.byKey(const Key('unified-detail-catalog-url-input')),
           )
           .controller

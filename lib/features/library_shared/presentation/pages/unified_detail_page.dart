@@ -10,6 +10,8 @@ import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/theme/app_system_ui.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -655,7 +657,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
           ),
         ),
         body: state.isLoading && header == null
-            ? const Center(child: CircularProgressIndicator())
+            ? AppLoadingState(label: AppLocalizations.of(context).commonLoading)
             : RefreshIndicator(
                 // 从屏幕顶部出现刷新指示器。
                 edgeOffset: 0,
@@ -1369,7 +1371,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                     future: adapter.loadSourceTags(workId: _page.workId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState != ConnectionState.done) {
-                        return const Center(child: CircularProgressIndicator());
+                        return AppLoadingState(label: l10n.commonLoading);
                       }
                       if (snapshot.hasError) {
                         return Center(
@@ -1927,40 +1929,38 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
   Future<void> _showEditIntroDialog() async {
     final current = _controller.state.header?.intro ?? '';
     final inputController = TextEditingController(text: current);
-    await showDialog<void>(
+    final l10n = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    await showAppFormDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(l10n.libraryDetailEditIntro),
-          content: TextField(
-            controller: inputController,
-            maxLines: 6,
-            decoration: InputDecoration(hintText: l10n.libraryDetailIntroHint),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () async {
-                await _page.adapter.updateIntro(
-                  workId: _page.workId,
-                  intro: inputController.text.trim(),
-                );
-                await _controller.reload();
-                if (!mounted || !dialogContext.mounted) {
-                  return;
-                }
-                Navigator.of(dialogContext).pop();
-                setState(() {});
-              },
-              child: Text(l10n.commonSave),
-            ),
-          ],
-        );
-      },
+      title: l10n.libraryDetailEditIntro,
+      hasFields: true,
+      content: AppTextInput(
+        controller: inputController,
+        maxLines: 6,
+        hintText: l10n.libraryDetailIntroHint,
+      ),
+      actions: [
+        AppDialogAction(
+          label: l10n.commonCancel,
+          onPressed: () => navigator.pop(),
+        ),
+        AppDialogAction(
+          label: l10n.commonSave,
+          onPressed: () async {
+            await _page.adapter.updateIntro(
+              workId: _page.workId,
+              intro: inputController.text.trim(),
+            );
+            await _controller.reload();
+            if (!mounted || !navigator.mounted) {
+              return;
+            }
+            navigator.pop();
+            setState(() {});
+          },
+        ),
+      ],
     );
   }
 }

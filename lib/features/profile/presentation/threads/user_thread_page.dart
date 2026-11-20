@@ -16,6 +16,7 @@ import 'package:y300/features/thread/domain/services/thread_post_navigation_sess
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
@@ -325,7 +326,7 @@ class _UserThreadFeedState extends State<_UserThreadFeed> {
                   child: !isActive
                       ? const SizedBox.shrink()
                       : state.isBusy
-                      ? const Center(child: CircularProgressIndicator())
+                      ? AppLoadingState(label: l10n.commonLoading)
                       : _UserThreadFailure(
                           failure: state.failure,
                           loginRequiredMessage: widget.loginRequiredMessage,
@@ -337,35 +338,10 @@ class _UserThreadFeedState extends State<_UserThreadFeed> {
               else if (data.items.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            type == UserThreadDirectoryType.threads
-                                ? Icons.article_outlined
-                                : Icons.reply,
-                            size: 40,
-                            color: Theme.of(context).y300NativeContent.muted,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            type == UserThreadDirectoryType.threads
-                                ? l10n.profileNoThreads
-                                : l10n.profileNoReplies,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .y300NativeContent
-                                      .supportingText,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: AppEmptyState(
+                    title: type == UserThreadDirectoryType.threads
+                        ? l10n.profileNoThreads
+                        : l10n.profileNoReplies,
                   ),
                 )
               else
@@ -440,35 +416,20 @@ class _UserThreadFailure extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (failure?.kind == DataReadFailureKind.unauthorized) {
-      return _UserThreadLoginPrompt(message: loginRequiredMessage);
+      return AppErrorState(
+        message: loginRequiredMessage,
+        retryLabel: l10n.authLoginTitle,
+        onRetry: () => Navigator.of(context)
+            .push<void>(MaterialPageRoute(builder: (_) => const LoginPage())),
+      );
     }
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: Theme.of(context).y300NativeContent.accent,
-              size: 34,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              failure == null
-                  ? l10n.profileThreadsReadFailed
-                  : LocalizedErrorSummary.resolve(l10n, failure),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              key: const Key('my-thread-retry'),
-              onPressed: onRetry,
-              child: Text(l10n.commonRetry),
-            ),
-          ],
-        ),
-      ),
+    return AppErrorState(
+      message: failure == null
+          ? l10n.profileThreadsReadFailed
+          : LocalizedErrorSummary.resolve(l10n, failure),
+      retryLabel: l10n.commonRetry,
+      retryKey: const Key('my-thread-retry'),
+      onRetry: onRetry,
     );
   }
 }
@@ -481,22 +442,12 @@ class _UserThreadLoginPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => Navigator.of(context).push<void>(
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              ),
-              child: Text(l10n.authLoginTitle),
-            ),
-          ],
-        ),
+    return AppEmptyState(
+      message: message,
+      action: FilledButton(
+        onPressed: () => Navigator.of(context)
+            .push<void>(MaterialPageRoute(builder: (_) => const LoginPage())),
+        child: Text(l10n.authLoginTitle),
       ),
     );
   }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/dialog.dart' as prism;
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/navigation/message_routes.dart';
@@ -144,7 +146,7 @@ void main() {
         find
             .descendant(
               of: feedList(MessageCenterTab.messages),
-              matching: find.byType(CircularProgressIndicator),
+              matching: find.byType(AppLoadingState),
             )
             .hitTestable(),
         findsOneWidget,
@@ -732,7 +734,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip(l10n(tester).messageIgnore));
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(prism.AlertDialog), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -772,7 +774,7 @@ void main() {
       await tester.pump();
       repository.ignores.single.succeed();
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(prism.AlertDialog), findsNothing);
       expect(find.text(l10n(tester).messageIgnoreApplied), findsOneWidget);
       expect(find.byType(ForumHtmlContentView), findsOneWidget);
       expect(repository.notificationReads, hasLength(1));

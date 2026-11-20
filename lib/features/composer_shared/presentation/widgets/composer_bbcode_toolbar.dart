@@ -3,6 +3,7 @@ import 'package:y300/features/composer_shared/presentation/bbcode/composer_bbcod
 import 'package:y300/features/composer_shared/presentation/widgets/composer_bbcode_color_picker_sheet.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_link_sheet.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class ComposerBbCodeToolbar extends StatelessWidget {
@@ -179,7 +180,7 @@ class ComposerBbCodeToolbar extends StatelessWidget {
   }
 
   Future<void> _showSizeSheet(BuildContext context) async {
-    final size = await showModalBottomSheet<int>(
+    final size = await showAdaptivePanel<int>(
       context: context,
       builder: (_) => _SizeSheet(keyPrefix: keyPrefix),
     );
@@ -192,7 +193,7 @@ class ComposerBbCodeToolbar extends StatelessWidget {
   }
 
   Future<void> _showAlignSheet(BuildContext context) async {
-    final align = await showModalBottomSheet<String>(
+    final align = await showAdaptivePanel<String>(
       context: context,
       builder: (_) => _AlignSheet(keyPrefix: keyPrefix),
     );

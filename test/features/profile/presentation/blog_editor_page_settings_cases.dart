@@ -6,11 +6,11 @@ void _settingsCases() {
     (tester) async {
       final service = BlogOperationFixture();
       final host = await _open(tester, service, create: true);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(AppTextInput), findsNothing);
       expect(_submitButton(tester).onPressed, isNull);
       service.preparedEditor();
       await tester.pumpAndSettle();
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(AppTextInput), findsOneWidget);
       expect(find.byType(QuillEditor), findsOneWidget);
       expect(find.byKey(const Key('blog-body-mode-menu')), findsNothing);
       expect(find.byKey(const Key('blog-editor-save')), findsNothing);
@@ -104,10 +104,9 @@ void _settingsCases() {
       );
       expect(
         tester
-            .widget<TextField>(
+            .widget<AppTextInput>(
               find.byKey(const Key('blog-editor-category-name')),
             )
-            .decoration!
             .errorText,
         l10n.profileBlogNewCategoryNameRequired,
       );
@@ -161,7 +160,7 @@ void _settingsCases() {
       await _openSettings(tester);
       expect(
         tester
-            .widget<TextField>(find.byKey(const Key('blog-editor-tags')))
+            .widget<AppTextInput>(find.byKey(const Key('blog-editor-tags')))
             .controller!
             .text,
         '新的标签, reading',
@@ -247,7 +246,7 @@ void _settingsCases() {
         if (visibility == UserBlogVisibility.passwordProtected) {
           final field = find.byKey(const Key('blog-editor-password'));
           await tester.ensureVisible(field);
-          expect(tester.widget<TextField>(field).obscureText, isTrue);
+          expect(tester.widget<AppTextInput>(field).obscureText, isTrue);
           await tester.enterText(field, password);
         }
         final comments = find.byKey(const Key('blog-editor-comments-enabled'));

@@ -3,16 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 
 Future<int?> showThreadPagePicker(
   BuildContext context, {
   required int currentPage,
   required int? lastPage,
   required bool hasMore,
-}) => showModalBottomSheet<int>(
+}) => showAdaptivePanel<int>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
   builder: (_) => _ThreadPagePicker(
     currentPage: math.max(1, currentPage),
     lastPage: lastPage,
@@ -85,17 +85,15 @@ class _ThreadPagePickerState extends State<_ThreadPagePicker> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: AppTextInput(
                       key: const Key('thread-detail-page-input'),
                       controller: _input,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        labelText: l10n.threadControlsPageInput,
-                        errorText: _invalid
-                            ? l10n.threadControlsInvalidPage
-                            : null,
-                      ),
+                      label: l10n.threadControlsPageInput,
+                      errorText: _invalid
+                          ? l10n.threadControlsInvalidPage
+                          : null,
                       onSubmitted: (_) => _submit(),
                     ),
                   ),

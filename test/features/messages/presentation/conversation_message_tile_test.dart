@@ -45,9 +45,8 @@ void main() {
         child: LocalizedTestApp(
           theme: AppTheme.light(),
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(alwaysUse24HourFormat: use24HourFormat),
+            data: MediaQuery.of(context)
+                .copyWith(alwaysUse24HourFormat: use24HourFormat),
             child: child!,
           ),
           home: Scaffold(
@@ -212,7 +211,12 @@ void main() {
       await tester.longPress(bubble('1'));
       await tester.pumpAndSettle();
       expect(find.text(l10n(tester).messageTimeUnknown), findsOneWidget);
-      await tester.tap(find.byTooltip(l10n(tester).commonClose));
+      final panelClose = find.byKey(const Key('adaptive-panel-close'));
+      await tester.tap(
+        panelClose.evaluate().isNotEmpty
+            ? panelClose
+            : find.byTooltip(l10n(tester).commonClose),
+      );
       await tester.pumpAndSettle();
 
       await pumpTiles(tester, [

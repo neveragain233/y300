@@ -8,6 +8,8 @@ import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_category_name_dialog.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
@@ -225,8 +227,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                     ? Column(
                         children: [
                           _buildTaskProgressBanner(),
-                          const Expanded(
-                            child: Center(child: CircularProgressIndicator()),
+                          Expanded(
+                            child: AppLoadingState(label: l10n.commonLoading),
                           ),
                         ],
                       )
@@ -1208,34 +1210,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   Future<String?> _showCategoryNameDialog({
     required String title,
     String initialValue = '',
-  }) async {
-    final textController = TextEditingController(text: initialValue);
-    return showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: textController,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(dialogContext)
-                  .libraryShelfCategoryNameHint,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(AppLocalizations.of(dialogContext).commonCancel),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(textController.text),
-              child: Text(AppLocalizations.of(dialogContext).commonConfirm),
-            ),
-          ],
-        );
-      },
+  }) {
+    return showLibraryCategoryNameDialog(
+      context,
+      title: title,
+      hintText: AppLocalizations.of(context).libraryShelfCategoryNameHint,
+      initialValue: initialValue,
     );
   }
 
@@ -2032,7 +2012,7 @@ class _AlwaysScrollableEmptyState extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: ClampingScrollPhysics(),
       ),
-      children: [SizedBox(height: 320, child: Center(child: Text(message)))],
+      children: [SizedBox(height: 320, child: AppEmptyState(title: message))],
     );
   }
 }

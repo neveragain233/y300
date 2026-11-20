@@ -1,5 +1,6 @@
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 
 import 'dart:async';
 
@@ -148,12 +149,22 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
         ],
       ),
       body: (asyncState.isLoading && state.threads.isEmpty)
-          ? const ForumDisplayInitialLoading()
+          ? AppLoadingState(
+              key: const Key('forum-display-loading'),
+              label: l10n.commonLoading,
+              indicatorDelay: const Duration(milliseconds: 150),
+            )
           : (state.failure != null || state.errorMessage != null) &&
                 state.threads.isEmpty
-          ? ForumDisplayErrorView(
-              failure: state.failure,
-              legacyDetail: state.errorMessage,
+          ? AppErrorState(
+              message: state.failure == null
+                  ? ForumTextResolver.legacyDisplayFailure(
+                      l10n,
+                      state.errorMessage,
+                    )
+                  : ForumTextResolver.displayFailure(l10n, state.failure!),
+              retryLabel: l10n.commonRetry,
+              retryKey: const Key('forum-display-retry-button'),
               onRetry: () => controller.refresh(forceNetwork: true),
             )
           : ForumPullToRefresh(

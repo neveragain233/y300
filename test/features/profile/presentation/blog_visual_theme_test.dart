@@ -14,6 +14,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -364,8 +366,8 @@ void main() {
           final subject = find.byKey(const Key('blog-editor-subject'));
           await tester.enterText(subject, blogVisualTitle);
           expect(
-            tester.widget<TextField>(subject).decoration!.border,
-            isA<UnderlineInputBorder>(),
+            tester.widget<AppTextInput>(subject).variant,
+            AppTextInputVariant.underline,
           );
           final body = tester
               .widget<QuillEditor>(find.byKey(const Key('blog-editor-body')))
@@ -518,7 +520,7 @@ void main() {
             await tester.ensureVisible(accessInput);
             await tester.pumpAndSettle();
             expect(accessInput.hitTestable(), findsOneWidget);
-            final accessField = tester.widget<TextField>(accessInput);
+            final accessField = tester.widget<AppTextInput>(accessInput);
             expect(accessField.controller!.text, value);
             expect(accessField.readOnly, isFalse);
             expect(accessField.obscureText, snapshot == 'password');
@@ -589,7 +591,7 @@ void main() {
         settle: state != 'loading',
       );
       if (state == 'loading') {
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(AppLoadingState), findsOneWidget);
       }
       if (state == 'error' || state == 'login') {
         expect(find.byKey(const Key('blog-read-open-web')), findsOneWidget);

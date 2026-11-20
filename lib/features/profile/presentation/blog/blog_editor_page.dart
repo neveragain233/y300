@@ -24,6 +24,7 @@ import 'package:y300/features/profile/presentation/blog/blog_editor_settings.dar
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/features/profile/presentation/blog/blog_web_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
@@ -561,12 +562,8 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
     }
     FocusScope.of(context).unfocus();
     _dialogOpen = true;
-    final action = await showModalBottomSheet<String>(
+    final action = await showAdaptivePanel<String>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
-      backgroundColor: Theme.of(context).y300NativeContent.card,
       builder: (sheetContext) => ValueListenableBuilder<BlogEditorState>(
         valueListenable: _controller,
         builder: (context, state, _) {

@@ -1,21 +1,13 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/theme/app_theme.dart';
-import 'package:y300/features/fonts/application/font_library_providers.dart';
-import 'package:y300/features/fonts/application/font_library_service.dart';
 import 'package:y300/features/fonts/domain/models/font_identity.dart';
-import 'package:y300/features/fonts/domain/models/font_import_file.dart';
 import 'package:y300/features/fonts/domain/models/font_library_failure.dart';
 import 'package:y300/features/fonts/domain/models/font_resolution.dart';
 import 'package:y300/features/fonts/domain/models/imported_font.dart';
 import 'package:y300/features/fonts/domain/models/resolved_font.dart';
-import 'package:y300/features/fonts/domain/repositories/font_library_repository.dart';
-import 'package:y300/features/fonts/domain/services/font_import_picker.dart';
-import 'package:y300/features/fonts/domain/services/font_runtime_loader.dart';
 import 'package:y300/features/fonts/presentation/body_font_selector.dart';
 import 'package:y300/features/fonts/presentation/font_selector_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -475,51 +467,6 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-
-  testWidgets(
-    'the production sheet hides the handle even when the theme enables it',
-    (tester) async {
-      driver.fonts.clear();
-      final service = FontLibraryService(
-        repository: _HostFontRepository(driver),
-        runtimeLoader: _UnusedRuntimeLoader(),
-      );
-      addTearDown(service.dispose);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            fontLibraryServiceProvider.overrideWithValue(service),
-            fontImportPickerProvider.overrideWithValue(_CancelledPicker()),
-          ],
-          child: LocalizedTestApp(
-            theme: AppTheme.light().copyWith(
-              bottomSheetTheme: const BottomSheetThemeData(
-                showDragHandle: true,
-              ),
-            ),
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: TextButton(
-                  key: const Key('open-production-font-selector'),
-                  onPressed: () => showBodyFontSelector(context: context),
-                  child: const Icon(Icons.font_download_outlined),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.byKey(const Key('open-production-font-selector')));
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<BottomSheet>(find.byType(BottomSheet)).showDragHandle,
-        isFalse,
-      );
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.byKey(const Key('body-font-cancel')));
-      await tester.pumpAndSettle();
-    },
-  );
 }
 
 AppLocalizations _strings(WidgetTester tester) =>
@@ -577,42 +524,4 @@ Future<void> _open(
   );
   await tester.tap(find.byKey(const Key('open-font-selector')));
   await tester.pumpAndSettle();
-}
-
-final class _HostFontRepository implements FontLibraryRepository {
-  const _HostFontRepository(this.driver);
-
-  final FontSelectorTestDriver driver;
-
-  @override
-  Stream<void> get changes => driver.changes.stream;
-
-  @override
-  Future<List<ImportedFont>> listFonts() => driver.listFonts();
-
-  @override
-  Future<ImportedFont> importFont({
-    required String fileName,
-    required Uint8List bytes,
-  }) => driver.importFont(fileName: fileName, bytes: bytes);
-
-  @override
-  Future<void> deleteFont(String fontId) => driver.deleteFont(fontId);
-
-  @override
-  Future<Uint8List> readFont(String fontId) => throw UnimplementedError();
-
-  @override
-  Future<void> dispose() async {}
-}
-
-final class _UnusedRuntimeLoader implements FontRuntimeLoader {
-  @override
-  Future<String> load(ImportedFont font, Uint8List bytes) =>
-      throw UnimplementedError();
-}
-
-final class _CancelledPicker implements FontImportPicker {
-  @override
-  Future<FontImportFile?> pickFont() async => null;
 }

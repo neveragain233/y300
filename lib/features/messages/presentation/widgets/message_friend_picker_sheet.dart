@@ -10,6 +10,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/message_friend_directory_controller.dart';
 import 'package:y300/features/messages/presentation/widgets/message_avatar.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 /// The caller disposes [controller] when this sheet closes. Selection belongs
 /// to the compose route, so closing or filtering never discards recipients.
@@ -370,13 +371,9 @@ class _MessageFriendPickerSheetState
         l10n.messageRecipientAlreadySelected,
       _ => null,
     };
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide.none,
-    );
     return KeyedSubtree(
       key: const Key('message-friends-search'),
-      child: TextField(
+      child: AppTextInput(
         key: widget.allowManualRecipients
             ? const Key('message-recipient')
             : null,
@@ -393,35 +390,25 @@ class _MessageFriendPickerSheetState
         onSubmitted: widget.allowManualRecipients
             ? (_) => _addUsername()
             : null,
-        decoration: InputDecoration(
-          hintText: widget.allowManualRecipients
-              ? l10n.messageRecipientSearchHint
-              : l10n.messageFriendSearch,
-          isDense: true,
-          filled: true,
-          fillColor: palette.body.withValues(alpha: 0.045),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
-          border: border,
-          enabledBorder: border,
-          focusedBorder: border.copyWith(
-            borderSide: BorderSide(color: palette.accent),
-          ),
-          prefixIcon: Icon(Icons.search, size: 20, color: palette.muted),
-          suffixIcon: widget.allowManualRecipients
-              ? IconButton(
-                  key: const Key('message-recipient-add'),
-                  tooltip: l10n.messageRecipientAdd,
-                  color: palette.accent,
-                  onPressed: _addUsername,
-                  icon: const Icon(Icons.add),
-                )
-              : null,
-          errorText: error,
-          errorMaxLines: 3,
+        hintText: widget.allowManualRecipients
+            ? l10n.messageRecipientSearchHint
+            : l10n.messageFriendSearch,
+        fillColor: palette.body.withValues(alpha: 0.045),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
         ),
+        prefixIcon: Icon(Icons.search, size: 20, color: palette.muted),
+        suffixIcon: widget.allowManualRecipients
+            ? IconButton(
+                key: const Key('message-recipient-add'),
+                tooltip: l10n.messageRecipientAdd,
+                color: palette.accent,
+                onPressed: _addUsername,
+                icon: const Icon(Icons.add),
+              )
+            : null,
+        errorText: error,
       ),
     );
   }

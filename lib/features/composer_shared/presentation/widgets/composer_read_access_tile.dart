@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 
 /// The selection belongs to the caller; closing the sheet changes no state.
 class ComposerReadAccessTile extends StatelessWidget {
@@ -73,9 +74,8 @@ class ComposerReadAccessTile extends StatelessWidget {
                   !access.options.any(
                     (option) => option.value == access.currentValue,
                   );
-              final result = await showModalBottomSheet<int>(
+              final result = await showAdaptivePanel<int>(
                 context: context,
-                isScrollControlled: true,
                 builder: (context) => SafeArea(
                   child: DraggableScrollableSheet(
                     expand: false,

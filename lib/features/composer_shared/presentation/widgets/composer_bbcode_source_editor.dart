@@ -9,6 +9,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_bbco
 import 'package:y300/features/composer_shared/presentation/widgets/sticker_picker_sheet.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class ComposerBbCodeSourceEditor extends StatelessWidget {
@@ -122,17 +123,15 @@ class ComposerBbCodeSourceEditor extends StatelessWidget {
         .clamp(240.0, screenHeight * 0.55)
         .toDouble();
     FocusScope.of(context).unfocus();
-    await showModalBottomSheet<void>(
+    await showAdaptivePanel<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (sheetContext) =>
           SizedBox(height: panelHeight, child: panelBuilder(sheetContext)),
     );
   }
 
   Future<void> _pickSticker(BuildContext context) async {
-    final sticker = await showModalBottomSheet<StickerItem>(
+    final sticker = await showAdaptivePanel<StickerItem>(
       context: context,
       builder: (_) => const StickerPickerSheet(),
     );

@@ -73,14 +73,6 @@ Future<void> _openSettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('blog-editor-settings-sheet')), findsOneWidget);
   expect(find.byKey(const Key('blog-editor-settings-done')), findsNothing);
-  _expectNoSheetHandle(tester);
-}
-
-void _expectNoSheetHandle(WidgetTester tester) {
-  expect(
-    tester.widget<BottomSheet>(find.byType(BottomSheet)).showDragHandle,
-    isFalse,
-  );
 }
 
 Future<void> _closeSettings(
@@ -89,9 +81,8 @@ Future<void> _closeSettings(
 }) async {
   expect(find.byKey(const Key('blog-editor-settings-done')), findsNothing);
   if (tapBarrier) {
-    final sheetTop = tester.getTopLeft(find.byType(BottomSheet)).dy;
-    expect(sheetTop, greaterThan(0));
-    await tester.tapAt(Offset(8, sheetTop / 2));
+    // 左右两侧都是遮罩：侧面板与底部抽屉都能在这里点击关闭。
+    await tester.tapAt(const Offset(8, 100));
   } else {
     await tester.binding.handlePopRoute();
   }

@@ -3,6 +3,7 @@ import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_access_fields.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 class BlogEditorSettingsFields extends StatelessWidget {
@@ -84,34 +85,28 @@ class BlogEditorSettingsFields extends StatelessWidget {
         ),
         if (creatingCategory) ...[
           const SizedBox(height: 12),
-          TextField(
+          AppTextInput(
             key: const Key('blog-editor-category-name'),
             controller: categoryName,
             enabled: enabled,
             readOnly: readOnly,
             style: theme.textTheme.bodyMedium?.copyWith(color: native.body),
-            decoration:
-                _settingDecoration(
-                  context,
-                  label: l10n.profileBlogNewCategoryName,
-                ).copyWith(
-                  errorText: categoryNameRequired
-                      ? l10n.profileBlogNewCategoryNameRequired
-                      : null,
-                  errorMaxLines: 3,
-                ),
+            label: l10n.profileBlogNewCategoryName,
+            errorText: categoryNameRequired
+                ? l10n.profileBlogNewCategoryNameRequired
+                : null,
             onChanged: (text) =>
                 onChanged((draft) => draft.copyWith(newPersonalCategory: text)),
           ),
         ],
         const SizedBox(height: 12),
-        TextField(
+        AppTextInput(
           key: const Key('blog-editor-tags'),
           controller: tags,
           enabled: enabled,
           readOnly: readOnly,
           style: theme.textTheme.bodyMedium?.copyWith(color: native.body),
-          decoration: _settingDecoration(context, label: l10n.profileBlogTags),
+          label: l10n.profileBlogTags,
           onChanged: (text) => onChanged((draft) => draft.copyWith(tags: text)),
         ),
         if (options.canPublishFeed || draft.publishFeed) ...[

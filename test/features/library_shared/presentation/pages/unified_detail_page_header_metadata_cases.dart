@@ -71,7 +71,7 @@ void _headerMetadataCases() {
                 .dy,
           ),
         );
-        expect(tester.widget<TextField>(input).autofocus, isFalse);
+        expect(tester.widget<AppTextInput>(input).autofocus, isFalse);
         await tester.enterText(input, '2');
         await tester.pumpAndSettle();
         expect(adapter.loadChaptersCallCount, reads);
@@ -321,7 +321,7 @@ void _headerMetadataCases() {
       expect(find.text('来源标题：来源标题'), findsOneWidget);
       expect(
         tester
-            .widget<TextField>(
+            .widget<AppTextInput>(
               find.byKey(const Key('unified-detail-custom-title-input')),
             )
             .controller
@@ -330,7 +330,7 @@ void _headerMetadataCases() {
       );
       expect(
         tester
-            .widget<TextField>(
+            .widget<AppTextInput>(
               find.byKey(const Key('unified-detail-custom-author-input')),
             )
             .controller
@@ -339,7 +339,7 @@ void _headerMetadataCases() {
       );
       expect(
         tester
-            .widget<TextField>(
+            .widget<AppTextInput>(
               find.byKey(const Key('unified-detail-custom-group-input')),
             )
             .controller

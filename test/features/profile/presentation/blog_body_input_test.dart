@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/features/profile/presentation/blog/blog_body_input.dart';
 import 'package:y300/features/profile/presentation/blog/blog_quill_html_codec.dart';
 import 'package:y300/features/profile/presentation/blog/blog_rich_text_controller.dart';
+
 import '../../../test_support/localized_test_app.dart';
 
 void main() {
@@ -37,7 +39,7 @@ void main() {
       addTearDown(controller.dispose);
       await _pump(tester, controller);
       expect(find.byType(QuillEditor), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(AppTextInput), findsNothing);
       expect(find.byKey(const Key('blog-body-mode-menu')), findsNothing);
       expect(controller.quill.document.toPlainText(), 'a & b\n第二行\n');
       controller.quill.updateSelection(
@@ -149,9 +151,8 @@ Future<void> _pump(
   await tester.pumpWidget(
     LocalizedTestApp(
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(scale)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
       home: Scaffold(

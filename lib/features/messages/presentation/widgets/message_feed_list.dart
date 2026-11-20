@@ -5,6 +5,7 @@ import 'package:y300/features/messages/presentation/message_feed_controller.dart
 import 'package:y300/features/messages/presentation/widgets/message_feed_view.dart';
 import 'package:y300/features/messages/presentation/widgets/message_read_status.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 
 /// Shared list chrome; private messages and notifications keep separate state.
 class MessageFeedList<P> extends StatelessWidget {
@@ -16,7 +17,6 @@ class MessageFeedList<P> extends StatelessWidget {
     required this.itemCount,
     required this.itemBuilder,
     required this.emptyText,
-    required this.emptyIcon,
   });
   final MessageFeedController<P> controller;
   final bool isActive;
@@ -24,7 +24,6 @@ class MessageFeedList<P> extends StatelessWidget {
   final int Function(P) itemCount;
   final Widget Function(BuildContext, P, int) itemBuilder;
   final String emptyText;
-  final IconData emptyIcon;
 
   @override
   Widget build(BuildContext context) => TickerMode(
@@ -54,32 +53,7 @@ class MessageFeedList<P> extends StatelessWidget {
               else if (count == 0)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            emptyIcon,
-                            size: 40,
-                            color: Theme.of(context).y300NativeContent.muted,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            emptyText,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .y300NativeContent
-                                      .supportingText,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: AppEmptyState(title: emptyText),
                 )
               else
                 SliverPadding(

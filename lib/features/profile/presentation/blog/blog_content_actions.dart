@@ -9,6 +9,7 @@ import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart
 import 'package:y300/features/profile/presentation/blog/blog_selection_copy_page.dart';
 import 'package:y300/features/thread/domain/services/thread_post_body_plain_text_extractor.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/forum_content_action_sheet.dart';
 
 bool blogCanReplyToArticle(
@@ -180,7 +181,7 @@ class _BlogContentActionsState extends ConsumerState<BlogContentActions> {
     final identity = _identity;
     final actions = _actions(AppLocalizations.of(context), _link);
     try {
-      final action = await showModalBottomSheet<_BlogContentAction>(
+      final action = await showAdaptivePanel<_BlogContentAction>(
         context: context,
         builder: (_) => _BlogContentActionSessionSheet(
           accountOwner: owner,
@@ -228,9 +229,8 @@ class _BlogContentActionsState extends ConsumerState<BlogContentActions> {
             imageReferer: widget.imageReferer,
             linkBaseUri: widget.linkBaseUri,
           );
-          await Navigator.of(
-            context,
-          ).push<void>(MaterialPageRoute(builder: (_) => page));
+          await Navigator.of(context)
+              .push<void>(MaterialPageRoute(builder: (_) => page));
         case _BlogContentAction.copyAll:
           final text = const ThreadPostBodyPlainTextExtractor().extractHtml(
             widget.displayHtml,

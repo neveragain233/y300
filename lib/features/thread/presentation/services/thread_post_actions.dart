@@ -17,6 +17,7 @@ import 'package:y300/features/thread/presentation/services/thread_post_rating_fl
 import 'package:y300/features/thread/presentation/services/thread_post_rating_service.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_post_action_sheet.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 enum ThreadPostMutation { post, reply }
@@ -110,7 +111,7 @@ class ThreadPostActions {
         onViewOnlyAuthor != null &&
         authorId.isNotEmpty &&
         target.supports(ThreadDetailCapability.alternateViews);
-    final action = await showModalBottomSheet<ThreadPostAction>(
+    final action = await showAdaptivePanel<ThreadPostAction>(
       context: context,
       builder: (_) => ThreadPostActionSheet(
         post: sourcePost,

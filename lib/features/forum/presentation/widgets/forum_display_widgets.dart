@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +12,6 @@ import 'package:y300/features/content_filter/presentation/widgets/thread_block_m
 import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.dart';
 import 'package:y300/features/forum/presentation/forum_display_content_projection.dart';
 import 'package:y300/features/forum/presentation/forum_display_state.dart';
-import 'package:y300/features/forum/presentation/forum_text_resolver.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_media_loading_style.dart';
@@ -23,6 +20,7 @@ import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/shared/widgets/forum_thread_badges.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 
 class ForumDisplayContent extends StatefulWidget {
   const ForumDisplayContent({
@@ -512,94 +510,6 @@ class _SoftDivider extends StatelessWidget {
       indent: 12,
       endIndent: 12,
       color: palette.outlineSoft,
-    );
-  }
-}
-
-class ForumDisplayInitialLoading extends StatefulWidget {
-  const ForumDisplayInitialLoading({super.key});
-
-  @override
-  State<ForumDisplayInitialLoading> createState() =>
-      _ForumDisplayInitialLoadingState();
-}
-
-class _ForumDisplayInitialLoadingState
-    extends State<ForumDisplayInitialLoading> {
-  late final Timer _indicatorTimer;
-  bool _showIndicator = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Fast cache/network results should not flash a spinner during navigation.
-    // Only delay the indicator: requests and ready content remain immediate.
-    _indicatorTimer = Timer(const Duration(milliseconds: 150), () {
-      setState(() => _showIndicator = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _indicatorTimer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
-    return ColoredBox(
-      color: palette.background,
-      child: Center(
-        child: _showIndicator ? const CircularProgressIndicator() : null,
-      ),
-    );
-  }
-}
-
-class ForumDisplayErrorView extends StatelessWidget {
-  const ForumDisplayErrorView({
-    super.key,
-    this.failure,
-    this.legacyDetail,
-    required this.onRetry,
-  });
-
-  final ForumDisplayFailure? failure;
-  final String? legacyDetail;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
-    final message = failure == null
-        ? ForumTextResolver.legacyDisplayFailure(l10n, legacyDetail)
-        : ForumTextResolver.displayFailure(l10n, failure!);
-    return ColoredBox(
-      color: palette.background,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: palette.title),
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                key: const Key('forum-display-retry-button'),
-                onPressed: onRetry,
-                child: Text(l10n.commonRetry),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1930,6 +1840,9 @@ class _EmptyThreadList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (!hiddenByRules) {
+      return AppEmptyState(title: l10n.forumDisplayEmpty);
+    }
     return _ForumDisplayGroup(
       palette: palette,
       child: Padding(
@@ -1939,14 +1852,12 @@ class _EmptyThreadList extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                hiddenByRules
-                    ? l10n.contentFilterHiddenOnPage
-                    : l10n.forumDisplayEmpty,
+                l10n.contentFilterHiddenOnPage,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium
                     ?.copyWith(color: palette.softText),
               ),
-              if (hiddenByRules && hasMore) ...[
+              if (hasMore) ...[
                 const SizedBox(height: 6),
                 Text(
                   l10n.contentFilterHiddenOnPageHint,

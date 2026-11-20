@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/composer_shared/presentation/bbcode/composer_bbcode_command.dart';
@@ -154,7 +156,8 @@ void main() {
           )
           .first,
     );
-    expect((scrollView.padding! as EdgeInsets).bottom, 296);
+    // 自适应面板宿主已按键盘收缩，面板内容不再重复加一份键盘内边距。
+    expect((scrollView.padding! as EdgeInsets).bottom, 16);
   });
 
   testWidgets('ComposerBbCodeToolbar does not insert size on dismissal', (

@@ -211,7 +211,7 @@ void _mixedRecentCases() {
       find.byKey(const Key('unified-shelf-category-source-comic')),
       findsNothing,
     );
-    await tester.enterText(find.byType(TextField), '共享分类');
+    await tester.enterText(find.byType(AppTextInput), '共享分类');
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
 

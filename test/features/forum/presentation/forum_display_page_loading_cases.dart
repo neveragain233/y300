@@ -30,7 +30,7 @@ void _loadingCases() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(repository.cachePolicies, [CacheLoadPolicy.cacheFirst]);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
 
     response.complete(
       ApiSuccess(
@@ -44,9 +44,9 @@ void _loadingCases() {
     await tester.pump();
     await tester.pump();
     _expectCardFullyVisible(tester, 'entry-0');
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
     await tester.pumpAndSettle();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
   });
 
   testWidgets('slow initial loading still shows progress after the delay', (
@@ -58,15 +58,15 @@ void _loadingCases() {
     );
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pump(const Duration(milliseconds: 149));
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
     await tester.pump(const Duration(milliseconds: 1));
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(AppLoadingState.indicatorKey), findsOneWidget);
 
     response.complete(
       ApiSuccess(_displayData(page: 1, total: 0, threads: const [])),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(AppLoadingState.indicatorKey), findsNothing);
     expect(find.byKey(const Key('forum-display-list')), findsOneWidget);
   });
 

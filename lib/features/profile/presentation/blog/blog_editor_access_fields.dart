@@ -3,6 +3,7 @@ import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
@@ -95,7 +96,7 @@ class BlogEditorAccessFields extends StatelessWidget {
         ),
         if (draft.visibility == UserBlogVisibility.passwordProtected) ...[
           const SizedBox(height: 12),
-          TextField(
+          AppTextInput(
             key: const Key('blog-editor-password'),
             controller: password,
             enabled: enabled,
@@ -105,27 +106,21 @@ class BlogEditorAccessFields extends StatelessWidget {
             enableSuggestions: false,
             enableIMEPersonalizedLearning: false,
             keyboardType: TextInputType.visiblePassword,
-            decoration:
-                _settingDecoration(
-                  context,
-                  label: l10n.profileBlogPassword,
-                ).copyWith(
-                  helperText: options.hasPassword
-                      ? l10n.profileBlogKeepPassword
-                      : null,
-                  helperMaxLines: 3,
-                  errorText: state.issue == BlogEditorIssue.passwordRequired
-                      ? l10n.profileBlogPasswordRequired
-                      : null,
-                  errorMaxLines: 3,
-                ),
+            label: l10n.profileBlogPassword,
+            helperText: options.hasPassword
+                ? l10n.profileBlogKeepPassword
+                : null,
+            helperMaxLines: 3,
+            errorText: state.issue == BlogEditorIssue.passwordRequired
+                ? l10n.profileBlogPasswordRequired
+                : null,
             onChanged: (value) =>
                 onChanged((draft) => draft.copyWith(password: value)),
           ),
         ],
         if (draft.visibility == UserBlogVisibility.selectedFriends) ...[
           const SizedBox(height: 12),
-          TextField(
+          AppTextInput(
             key: const Key('blog-editor-target-names'),
             controller: targetNames,
             enabled: enabled,
@@ -134,18 +129,12 @@ class BlogEditorAccessFields extends StatelessWidget {
             maxLines: 4,
             keyboardType: TextInputType.multiline,
             textInputAction: TextInputAction.newline,
-            decoration:
-                _settingDecoration(
-                  context,
-                  label: l10n.profileBlogTargetNames,
-                ).copyWith(
-                  helperText: l10n.profileBlogTargetNamesHint,
-                  helperMaxLines: 3,
-                  errorText: state.issue == BlogEditorIssue.targetNamesRequired
-                      ? l10n.profileBlogTargetNamesRequired
-                      : null,
-                  errorMaxLines: 3,
-                ),
+            label: l10n.profileBlogTargetNames,
+            helperText: l10n.profileBlogTargetNamesHint,
+            helperMaxLines: 3,
+            errorText: state.issue == BlogEditorIssue.targetNamesRequired
+                ? l10n.profileBlogTargetNamesRequired
+                : null,
             onChanged: (value) =>
                 onChanged((draft) => draft.copyWith(targetNames: value)),
           ),

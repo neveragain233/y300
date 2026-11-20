@@ -9,6 +9,8 @@ import 'package:y300/features/recent_search/application/recent_searches_controll
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 
 typedef ChapterBrowserRowBuilder<T> = Widget Function(
   BuildContext context,
@@ -197,7 +199,7 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
     final container = _providerContainer();
     if (scope == null || container == null) return;
     _focus.unfocus();
-    final keyword = await showModalBottomSheet<String>(
+    final keyword = await showAdaptivePanel<String>(
       context: context,
       builder: (context) => UncontrolledProviderScope(
         container: container,
@@ -253,24 +255,21 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: SizedBox(
                 height: LibraryChapterBrowser.controlsHeight(context) - 56,
-                child: TextField(
+                child: AppTextInput(
                   key: widget.searchFieldKey ?? Key('$prefix-search-field'),
                   controller: _text,
                   focusNode: _focus,
                   textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: l10n.libraryChapterSearchHint,
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _text.text.isNotEmpty
-                        ? IconButton(
-                            key: Key('$prefix-search-clear'),
-                            tooltip: l10n.commonClear,
-                            onPressed: _clear,
-                            icon: const Icon(Icons.close),
-                          )
-                        : _recentButton(l10n),
-                    isDense: true,
-                  ),
+                  hintText: l10n.libraryChapterSearchHint,
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _text.text.isNotEmpty
+                      ? IconButton(
+                          key: Key('$prefix-search-clear'),
+                          tooltip: l10n.commonClear,
+                          onPressed: _clear,
+                          icon: const Icon(Icons.close, size: 20),
+                        )
+                      : _recentButton(l10n),
                   onChanged: _changeQuery,
                   onSubmitted: (_) => _recordSearch(),
                 ),

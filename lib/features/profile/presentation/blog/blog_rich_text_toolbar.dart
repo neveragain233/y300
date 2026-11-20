@@ -6,6 +6,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_stic
 import 'package:y300/features/profile/presentation/blog/blog_rich_text_controller.dart';
 import 'package:y300/features/profile/presentation/blog/blog_rich_text_embeds.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 class BlogRichTextToolbar extends StatelessWidget {
@@ -141,12 +142,8 @@ class BlogRichTextToolbar extends StatelessWidget {
           .attributes[Attribute.size.key]
           ?.value,
     );
-    final size = await showModalBottomSheet<int>(
+    final size = await showAdaptivePanel<int>(
       context: context,
-      useSafeArea: true,
-      showDragHandle: false,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).y300NativeContent.card,
       builder: (context) => SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -198,11 +195,8 @@ class BlogRichTextToolbar extends StatelessWidget {
   Future<void> _chooseSmiley(BuildContext context) async {
     final generation = controller.generation;
     final l10n = AppLocalizations.of(context);
-    final smiley = await showModalBottomSheet<UserBlogSmiley>(
+    final smiley = await showAdaptivePanel<UserBlogSmiley>(
       context: context,
-      useSafeArea: true,
-      showDragHandle: false,
-      backgroundColor: Theme.of(context).y300NativeContent.card,
       builder: (context) => GridView.extent(
         key: const Key('blog-smiley-picker'),
         maxCrossAxisExtent: 64,

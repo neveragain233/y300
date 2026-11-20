@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 final class ComposerLinkDraft {
   const ComposerLinkDraft({required this.url, required this.label});
@@ -12,9 +14,8 @@ Future<ComposerLinkDraft?> showComposerLinkSheet({
   required BuildContext context,
   required String keyPrefix,
 }) {
-  return showModalBottomSheet<ComposerLinkDraft>(
+  return showAdaptivePanel<ComposerLinkDraft>(
     context: context,
-    isScrollControlled: true,
     builder: (_) => _ComposerLinkSheet(keyPrefix: keyPrefix),
   );
 }
@@ -59,31 +60,25 @@ class _ComposerLinkSheetState extends State<_ComposerLinkSheet> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            TextField(
+            AppTextInput(
               key: Key('${widget.keyPrefix}-link-url-input'),
               controller: _urlController,
               autofocus: true,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: l10n.composerLinkUrl,
-                hintText: l10n.composerLinkUrlHint,
-                errorText: _urlErrorText,
-                border: const OutlineInputBorder(),
-              ),
+              label: l10n.composerLinkUrl,
+              hintText: l10n.composerLinkUrlHint,
+              errorText: _urlErrorText,
               onChanged: (_) => _clearUrlError(),
             ),
             const SizedBox(height: 12),
-            TextField(
+            AppTextInput(
               key: Key('${widget.keyPrefix}-link-label-input'),
               controller: _labelController,
               textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: l10n.composerLinkText,
-                hintText: l10n.composerLinkTextHint,
-                errorText: _labelErrorText,
-                border: const OutlineInputBorder(),
-              ),
+              label: l10n.composerLinkText,
+              hintText: l10n.composerLinkTextHint,
+              errorText: _labelErrorText,
               onChanged: (_) => _clearLabelError(),
               onSubmitted: (_) => _submit(),
             ),

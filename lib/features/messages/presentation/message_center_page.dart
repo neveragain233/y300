@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/dialog.dart' as prism;
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -163,7 +164,6 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
                       ),
                       itemCount: (page) => page.items.length,
                       emptyText: l10n.profileNoMessages,
-                      emptyIcon: Icons.chat_bubble_outline,
                       itemBuilder: (context, page, index) => _ConversationRow(
                         key: ValueKey(
                           page.items[index].target ??
@@ -185,7 +185,6 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
                       ),
                       itemCount: (page) => page.items.length,
                       emptyText: l10n.profileNoNotifications,
-                      emptyIcon: Icons.notifications_none,
                       itemBuilder: (context, page, index) => _NotificationRow(
                         key: ValueKey(page.items[index].id),
                         item: page.items[index],
@@ -408,10 +407,10 @@ class _NotificationRow extends ConsumerWidget {
                   color: palette.muted,
                   icon: const Icon(Icons.notifications_off_outlined, size: 20),
                   onPressed: () async {
-                    final receipt =
-                        await showDialog<ForumNotificationIgnoreReceipt>(
+                    final receipt = await prism
+                        .showFloatingDialog<ForumNotificationIgnoreReceipt>(
                           context: context,
-                          builder: (_) => NotificationIgnoreDialog(
+                          child: NotificationIgnoreDialog(
                             accountId: accountId,
                             item: item,
                           ),

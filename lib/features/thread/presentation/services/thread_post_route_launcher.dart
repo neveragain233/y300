@@ -7,6 +7,7 @@ import 'package:y300/features/thread/domain/services/thread_post_navigation_sess
 import 'package:y300/features/thread/domain/services/thread_post_route_resolver.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/features/thread/domain/contracts/thread_body_reading_observer.dart';
 
 enum _FailureChoice { retry, home }
@@ -64,31 +65,28 @@ Future<void> launchThreadPostRoute({
         }
         final l10n = AppLocalizations.of(context);
         final error = result.errorOrNull!;
-        final choice = await showDialog<_FailureChoice>(
+        final navigator = Navigator.of(context);
+        final choice = await showAppFormDialog<_FailureChoice>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
-            key: failureDialogKey,
-            title: Text(l10n.threadPostLocationFailedTitle),
-            content: Text(threadPostLocationFailureText(l10n, error)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(l10n.commonCancel),
+          dialogKey: failureDialogKey,
+          title: l10n.threadPostLocationFailedTitle,
+          content: Text(threadPostLocationFailureText(l10n, error)),
+          actions: [
+            AppDialogAction(
+              label: l10n.commonCancel,
+              onPressed: () => navigator.pop(),
+            ),
+            if (RegExp(r'^[1-9]\d*$').hasMatch(target.tid))
+              AppDialogAction(
+                key: const Key('thread-post-route-open-home'),
+                label: l10n.threadPostOpenHome,
+                onPressed: () => navigator.pop(_FailureChoice.home),
               ),
-              if (RegExp(r'^[1-9]\d*$').hasMatch(target.tid))
-                TextButton(
-                  key: const Key('thread-post-route-open-home'),
-                  onPressed: () =>
-                      Navigator.pop(dialogContext, _FailureChoice.home),
-                  child: Text(l10n.threadPostOpenHome),
-                ),
-              FilledButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, _FailureChoice.retry),
-                child: Text(l10n.commonRetry),
-              ),
-            ],
-          ),
+            AppDialogAction(
+              label: l10n.commonRetry,
+              onPressed: () => navigator.pop(_FailureChoice.retry),
+            ),
+          ],
         );
         if (!context.mounted ||
             !current() ||

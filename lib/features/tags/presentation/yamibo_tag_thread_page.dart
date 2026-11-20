@@ -13,6 +13,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page_controller.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
@@ -72,14 +73,13 @@ class YamiboTagThreadPage extends ConsumerWidget {
         title: appBarTitle,
       ),
       body: asyncState.isLoading && data == null
-          ? const Center(child: CircularProgressIndicator())
+          ? AppLoadingState(label: l10n.commonLoading)
           : data == null
           ? _TagPageErrorView(
               message: l10n.tagLoadFailed(
                 LocalizedErrorSummary.resolve(l10n, state.errorMessage),
               ),
               onRetry: controller.refresh,
-              palette: palette,
             )
           : RefreshIndicator(
               onRefresh: controller.refresh,
@@ -102,7 +102,7 @@ class YamiboTagThreadPage extends ConsumerWidget {
                       palette: palette,
                     ),
                   if (data.topics.isEmpty)
-                    _EmptyTagThreadList(palette: palette)
+                    const _EmptyTagThreadList()
                   else if (hiddenByRules)
                     _BlockedTagThreadList(
                       palette: palette,
@@ -650,28 +650,13 @@ class _InlineError extends StatelessWidget {
 }
 
 class _EmptyTagThreadList extends StatelessWidget {
-  const _EmptyTagThreadList({required this.palette});
-
-  final ForumDisplayThemePalette palette;
+  const _EmptyTagThreadList();
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return AppEmptyState(
       key: const Key('yamibo-tag-empty'),
-      decoration: _tagSurfaceDecoration(palette),
-      child: Material(
-        color: palette.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Text(
-            AppLocalizations.of(context).tagEmpty,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: palette.muted, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
+      title: AppLocalizations.of(context).tagEmpty,
     );
   }
 }
@@ -721,44 +706,18 @@ class _BlockedTagThreadList extends StatelessWidget {
 }
 
 class _TagPageErrorView extends StatelessWidget {
-  const _TagPageErrorView({
-    required this.message,
-    required this.onRetry,
-    required this.palette,
-  });
+  const _TagPageErrorView({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
-  final ForumDisplayThemePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: DecoratedBox(
-          decoration: _tagSurfaceDecoration(palette),
-          child: Material(
-            color: palette.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(message, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  FilledButton.tonal(
-                    key: const Key('yamibo-tag-retry-button'),
-                    onPressed: onRetry,
-                    child: Text(AppLocalizations.of(context).commonRetry),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return AppErrorState(
+      message: message,
+      retryLabel: AppLocalizations.of(context).commonRetry,
+      retryKey: const Key('yamibo-tag-retry-button'),
+      onRetry: onRetry,
     );
   }
 }

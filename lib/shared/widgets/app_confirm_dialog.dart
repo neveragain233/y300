@@ -39,6 +39,90 @@ Future<bool> showAppConfirmDialog({
   return result ?? false;
 }
 
+/// 表单对话框中的一个动作；最后一项是默认动作（prism 对话框的排布规则）。
+class AppDialogAction {
+  const AppDialogAction({
+    required this.label,
+    required this.onPressed,
+    this.key,
+    this.enabled = true,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Key? key;
+  final bool enabled;
+}
+
+/// 应用表单对话框外壳：标题、输入内容与动作排布由 prism 对话框绘制。
+///
+/// 与 [showAppConfirmDialog] 共用同一套浮层路由、遮罩与开合运动；需要输入框、
+/// 多动作或提交中状态的对话框直接构建本组件，由宿主用
+/// [showAppFormDialog] 打开。动作与字段内容仍由调用方持有。
+class AppFormDialog extends StatelessWidget {
+  const AppFormDialog({
+    super.key,
+    required this.title,
+    required this.actions,
+    this.content,
+    this.destructive = false,
+    this.hasFields = false,
+  });
+
+  final String title;
+  final Widget? content;
+  final List<AppDialogAction> actions;
+  final bool destructive;
+
+  /// 输入型对话框把标题居中、字段铺满动作宽度；提示型保持正文层级。
+  final bool hasFields;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPrismTheme(
+      child: prism.AlertDialog(
+        title: title,
+        destructive: destructive,
+        hasFields: hasFields,
+        actions: [
+          for (final action in actions)
+            prism_button.TextButton(
+              key: action.key,
+              onPressed: action.enabled ? action.onPressed : null,
+              child: Text(action.label),
+            ),
+        ],
+        child: content,
+      ),
+    );
+  }
+}
+
+/// 打开表单对话框；返回由动作通过 `Navigator.pop` 给出的结果。
+Future<T?> showAppFormDialog<T>({
+  required BuildContext context,
+  required String title,
+  required List<AppDialogAction> actions,
+  Widget? content,
+  bool destructive = false,
+  bool hasFields = false,
+  bool dismissible = true,
+  Key? dialogKey,
+}) {
+  return prism.showFloatingDialog<T>(
+    context: context,
+    dismissible: dismissible,
+    child: AppFormDialog(
+      key: dialogKey,
+      title: title,
+      actions: actions,
+      content: content,
+      destructive: destructive,
+      hasFields: hasFields,
+    ),
+  );
+}
+
 class _AppConfirmDialog extends StatefulWidget {
   const _AppConfirmDialog({
     required this.title,

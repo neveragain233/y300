@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class ComposerBbCodeColorPickerSheet extends StatefulWidget {
@@ -74,9 +75,8 @@ class _ComposerBbCodeColorPickerSheetState
                 FilledButton(
                   key: Key('${widget.keyPrefix}-use-button'),
                   onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).pop(composerBbCodeColorToHex(_selectedColor));
+                    Navigator.of(context)
+                        .pop(composerBbCodeColorToHex(_selectedColor));
                   },
                   child: Text(l10n.commonUse),
                 ),
@@ -95,9 +95,8 @@ Future<String?> showComposerBbCodeColorPickerSheet({
   required String title,
   required Color initialColor,
 }) {
-  return showModalBottomSheet<String>(
+  return showAdaptivePanel<String>(
     context: context,
-    isScrollControlled: true,
     builder: (_) => ComposerBbCodeColorPickerSheet(
       keyPrefix: keyPrefix,
       title: title,
@@ -117,9 +116,8 @@ String composerBbCodeColorToHex(Color color) {
 
 String? normalizeComposerBbCodeHexColor(String rawColor) {
   final normalized = rawColor.trim();
-  final match = RegExp(
-    r'^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$',
-  ).firstMatch(normalized);
+  final match = RegExp(r'^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')
+      .firstMatch(normalized);
   if (match == null) {
     return null;
   }

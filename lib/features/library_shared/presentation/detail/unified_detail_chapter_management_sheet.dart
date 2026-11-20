@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:prism_ui/dialog.dart' as prism;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
@@ -9,6 +10,8 @@ import 'package:y300/features/recent_search/domain/models/recent_search_scope.da
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 /// 章节管理面板。
 ///
@@ -198,34 +201,31 @@ class _UnifiedDetailChapterManagementSheetState
 
   Widget _buildSearchField() {
     final l10n = AppLocalizations.of(context);
-    return TextField(
+    return AppTextInput(
       key: const Key('unified-detail-chapter-management-search'),
       controller: _searchController,
       enabled: !_loading && _loadError == null,
       onChanged: (value) => setState(() => _searchQuery = value.trim()),
       onSubmitted: _recordRecentSearch,
-      decoration: InputDecoration(
-        labelText: l10n.libraryChapterFilterLabel,
-        hintText: l10n.libraryChapterFilterHint,
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _searchQuery.isEmpty
-            ? null
-            : IconButton(
-                tooltip: l10n.libraryChapterClearFilter,
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = '');
-                },
-              ),
-        isDense: true,
-      ),
+      label: l10n.libraryChapterFilterLabel,
+      hintText: l10n.libraryChapterFilterHint,
+      prefixIcon: const Icon(Icons.search, size: 20),
+      suffixIcon: _searchQuery.isEmpty
+          ? null
+          : IconButton(
+              tooltip: l10n.libraryChapterClearFilter,
+              icon: const Icon(Icons.clear, size: 20),
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+            ),
     );
   }
 
   Widget _buildAddField() {
     final l10n = AppLocalizations.of(context);
-    return TextField(
+    return AppTextInput(
       key: const Key('unified-detail-chapter-management-input'),
       controller: _inputController,
       enabled: !_adding,
@@ -233,30 +233,26 @@ class _UnifiedDetailChapterManagementSheetState
       textInputAction: TextInputAction.done,
       autocorrect: false,
       enableSuggestions: false,
-      decoration: InputDecoration(
-        labelText: l10n.libraryChapterAdd,
-        hintText: l10n.libraryChapterAddHint,
-        helperText: l10n.libraryChapterAddHelp,
-        helperMaxLines: 2,
-        errorText: _inputError,
-        errorMaxLines: 3,
-        isDense: true,
-        suffixIcon: _adding
-            ? const Padding(
-                padding: EdgeInsets.all(12),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            : IconButton(
-                key: const Key('unified-detail-chapter-management-add'),
-                tooltip: l10n.libraryChapterAdd,
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: _addChapter,
+      label: l10n.libraryChapterAdd,
+      hintText: l10n.libraryChapterAddHint,
+      helperText: l10n.libraryChapterAddHelp,
+      helperMaxLines: 2,
+      errorText: _inputError,
+      suffixIcon: _adding
+          ? const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-      ),
+            )
+          : IconButton(
+              key: const Key('unified-detail-chapter-management-add'),
+              tooltip: l10n.libraryChapterAdd,
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _addChapter,
+            ),
       onSubmitted: (_) {
         if (!_adding) {
           _addChapter();
@@ -266,39 +262,20 @@ class _UnifiedDetailChapterManagementSheetState
   }
 
   Widget _buildBody(ThemeData theme, ScrollController scrollController) {
+    final l10n = AppLocalizations.of(context);
     if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return AppLoadingState(label: l10n.commonLoading);
     }
     final loadError = _loadError;
     if (loadError != null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            loadError,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.error,
-            ),
-          ),
-        ),
+      return AppErrorState(
+        message: loadError,
+        retryLabel: l10n.commonRetry,
+        onRetry: _load,
       );
     }
     if (_chapters.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            AppLocalizations.of(context).libraryChapterManagementEmpty,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      );
+      return AppEmptyState(title: l10n.libraryChapterManagementEmpty);
     }
     final query = _searchQuery.toLowerCase();
     final chapters = query.isEmpty
@@ -555,12 +532,12 @@ class _UnifiedDetailChapterManagementSheetState
   Future<void> _promptRename(DetailManagedChapter chapter) async {
     // 取消与「清空以恢复来源名」都会得到空标题，用包装对象区分二者：
     // 返回 null = 用户取消，返回对象且 customTitle 为 null = 用户要求恢复。
-    final result = await showDialog<_ChapterRenameResult>(
+    final result = await prism.showFloatingDialog<_ChapterRenameResult>(
       context: context,
-      builder: (dialogContext) => _ChapterRenameDialog(
+      child: _ChapterRenameDialog(
         chapter: chapter,
         initialTitle: LibraryDetailTextResolver.chapterTitle(
-          AppLocalizations.of(dialogContext),
+          AppLocalizations.of(context),
           chapter.title,
           chapter.sourceTid,
         ),
@@ -714,31 +691,30 @@ class _ChapterRenameDialogState extends State<_ChapterRenameDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final sourceTitle = widget.chapter.sourceTitle;
-    return AlertDialog(
-      title: Text(l10n.libraryChapterRenameTitle),
-      content: TextField(
+    return AppFormDialog(
+      title: l10n.libraryChapterRenameTitle,
+      hasFields: true,
+      content: AppTextInput(
         key: const Key('unified-detail-chapter-management-rename-input'),
         controller: _controller,
         autofocus: true,
         textInputAction: TextInputAction.done,
-        decoration: InputDecoration(
-          labelText: l10n.libraryChapterName,
-          helperText: sourceTitle == null
-              ? l10n.libraryChapterRestoreDefaultTitleHelp
-              : l10n.libraryChapterRestoreSourceTitleHelp(sourceTitle),
-          helperMaxLines: 3,
-        ),
+        label: l10n.libraryChapterName,
+        helperText: sourceTitle == null
+            ? l10n.libraryChapterRestoreDefaultTitleHelp
+            : l10n.libraryChapterRestoreSourceTitleHelp(sourceTitle),
+        helperMaxLines: 3,
         onSubmitted: (_) => _submit(),
       ),
       actions: [
-        TextButton(
+        AppDialogAction(
+          label: l10n.commonCancel,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonCancel),
         ),
-        FilledButton(
+        AppDialogAction(
           key: const Key('unified-detail-chapter-management-rename-confirm'),
+          label: l10n.commonSave,
           onPressed: _submit,
-          child: Text(l10n.commonSave),
         ),
       ],
     );

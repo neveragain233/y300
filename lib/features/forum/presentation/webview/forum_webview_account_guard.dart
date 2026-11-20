@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// A form opened for one actor must not survive an account switch. Replacing
@@ -66,27 +67,15 @@ class _ForumWebViewAccountGuardState
     return Scaffold(
       // 门控页只保留压入页返回外壳，说明与关闭动作仍在正文。
       appBar: const AppPageAppBar(title: ''),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: _expired
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.forumWebViewAccountChanged,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      child: Text(l10n.commonClose),
-                    ),
-                  ],
-                )
-              : const CircularProgressIndicator(),
-        ),
-      ),
+      body: _expired
+          ? AppEmptyState(
+              message: l10n.forumWebViewAccountChanged,
+              action: TextButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: Text(l10n.commonClose),
+              ),
+            )
+          : AppLoadingState(label: l10n.commonLoading),
     );
   }
 }

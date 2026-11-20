@@ -48,6 +48,7 @@ import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 // File split (Phase 5b): cohesive widget groups live in part files under the
 // same library so private members and shared helpers remain accessible without

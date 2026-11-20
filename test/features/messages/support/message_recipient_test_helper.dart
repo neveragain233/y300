@@ -14,9 +14,14 @@ Future<void> addMessageRecipient(WidgetTester tester, String username) async {
 }
 
 Future<void> dismissMessageRecipientPicker(WidgetTester tester) async {
-  final sheet = tester.getRect(find.byType(MessageFriendPickerSheet));
-  expect(sheet.top, greaterThan(0));
-  await tester.tapAt(Offset(sheet.center.dx, sheet.top / 2));
+  final sidePanel = find.byKey(const Key('adaptive-side-panel'));
+  if (sidePanel.evaluate().isNotEmpty) {
+    await tester.tapAt(const Offset(8, 100));
+  } else {
+    final sheet = tester.getRect(find.byType(MessageFriendPickerSheet));
+    expect(sheet.top, greaterThan(0));
+    await tester.tapAt(Offset(sheet.center.dx, sheet.top / 2));
+  }
   await tester.pumpAndSettle();
   expect(find.byType(MessageFriendPickerSheet), findsNothing);
 }

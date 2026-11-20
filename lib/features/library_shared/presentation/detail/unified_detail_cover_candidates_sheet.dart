@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 
 /// 详情页“从帖子图片选择封面”的候选面板。
 class UnifiedDetailCoverCandidatesSheet extends StatelessWidget {
@@ -35,9 +36,9 @@ class UnifiedDetailCoverCandidatesSheet extends StatelessWidget {
                 future: candidates,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
-                    return const SizedBox(
+                    return SizedBox(
                       height: 160,
-                      child: Center(child: CircularProgressIndicator()),
+                      child: AppLoadingState(label: l10n.commonLoading),
                     );
                   }
                   if (snapshot.hasError) {

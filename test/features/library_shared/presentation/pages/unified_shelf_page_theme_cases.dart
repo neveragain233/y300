@@ -187,7 +187,7 @@ void _themeCases() {
     );
 
     expect(find.text('书架为空'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(AppLoadingState), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle();

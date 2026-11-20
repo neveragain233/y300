@@ -10,6 +10,8 @@ import 'package:y300/features/profile/data/providers/profile_read_providers.dart
 import 'package:y300/features/profile/presentation/profile_friend_action_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 
 /// The caller re-reads its profile only after this sheet confirms applied.
@@ -30,11 +32,8 @@ Future<bool> showProfileFriendAction({
     return false;
   }
   if (!_validFriendDestination(actionLink, targetUserId)) return false;
-  final applied = await showModalBottomSheet<bool>(
+  final applied = await showAdaptivePanel<bool>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
     builder: (_) => ProfileFriendActionSheet(
       owner: owner,
       targetUserId: targetUserId,
@@ -107,9 +106,8 @@ class _ProfileFriendActionSheetState
         ForumFriendAction.approve => l10n.profileFriendApproved,
         ForumFriendAction.remove => l10n.profileFriendRemoved,
       };
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
       Navigator.of(context).pop(true);
     }
   }
@@ -210,18 +208,15 @@ class _ProfileFriendActionSheetState
                     }, style: TextStyle(color: scheme.onSurfaceVariant)),
                     if (preparation?.acceptsNote == true) ...[
                       const SizedBox(height: 20),
-                      TextField(
+                      AppTextInput(
                         key: const Key('profile-friend-note'),
                         controller: _note,
                         enabled: ready,
                         maxLength: preparation!.noteMaxLength,
                         minLines: 2,
                         maxLines: 4,
-                        decoration: InputDecoration(
-                          labelText: l10n.profileFriendNote,
-                          hintText: l10n.profileFriendNoteHint,
-                          border: const OutlineInputBorder(),
-                        ),
+                        label: l10n.profileFriendNote,
+                        hintText: l10n.profileFriendNoteHint,
                       ),
                     ],
                     if (preparation?.groups.isNotEmpty == true) ...[

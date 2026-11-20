@@ -1001,8 +1001,9 @@ Finder _scopeList(ForumFriendFeedScope scope) => find.byWidgetPredicate(
       ),
 );
 
-Finder _scopeScrollable(ForumFriendFeedScope scope) =>
-    find.descendant(of: _scopeList(scope), matching: find.byType(Scrollable));
+Finder _scopeScrollable(ForumFriendFeedScope scope) => find
+    .descendant(of: _scopeList(scope), matching: find.byType(Scrollable))
+    .first;
 
 ScrollPosition _scopePosition(
   WidgetTester tester,

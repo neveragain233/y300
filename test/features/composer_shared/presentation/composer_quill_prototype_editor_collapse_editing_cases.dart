@@ -51,16 +51,11 @@ void _collapseEditingCases() {
     final titleFinder = find.byKey(
       const Key('test-quill-collapse-editor-title-field'),
     );
-    final titleField = tester.widget<TextField>(titleFinder);
-    final decoration = titleField.decoration!;
+    final titleField = tester.widget<AppTextInput>(titleFinder);
     final localizations = AppLocalizations.of(tester.element(titleFinder));
-    expect(decoration.hintText, localizations.composerCollapseTitleHint);
-    expect(decoration.labelText, isNull);
-    expect(decoration.filled, isFalse);
-    expect(decoration.border, isA<UnderlineInputBorder>());
-    expect(decoration.enabledBorder, isA<UnderlineInputBorder>());
-    expect(decoration.focusedBorder, isA<UnderlineInputBorder>());
-    expect(decoration.border, isNot(isA<OutlineInputBorder>()));
+    expect(titleField.hintText, localizations.composerCollapseTitleHint);
+    expect(titleField.label, isNull);
+    expect(titleField.variant, AppTextInputVariant.underline);
     final contentColumn = tester.widget<Column>(
       find.byKey(const Key('test-quill-collapse-editor-content-column')),
     );
@@ -107,7 +102,7 @@ void _collapseEditingCases() {
 
     await tester.enterText(titleFinder, '新]题\n\uFFFC');
     await tester.pump();
-    expect(tester.widget<TextField>(titleFinder).controller!.text, '新题');
+    expect(tester.widget<AppTextInput>(titleFinder).controller!.text, '新题');
     saveButton = tester.widget<IconButton>(saveFinder);
     expect(saveButton.onPressed, isNotNull);
 
@@ -209,7 +204,7 @@ void _collapseEditingCases() {
 
     expect(latest, '[collapse=0,标题]\n选中的正文[/collapse]');
     expect(find.byType(QuillEditor), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(AppTextInput), findsNothing);
   });
 
   testWidgets('selection containing an embed is preserved when creating', (

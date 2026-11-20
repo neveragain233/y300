@@ -4,6 +4,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/messages/data/message_repository_provider.dart';
 import 'package:y300/features/messages/presentation/message_feed_providers.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 
 /// The dialog owns one explicit write, even if the originating row scrolls away.
@@ -88,68 +89,75 @@ class _NotificationIgnoreDialogState
     final l10n = AppLocalizations.of(context);
     final ownsAccount = ref.watch(messageAccountIdProvider) == widget.accountId;
     final result = _result;
-    return AlertDialog(
-      title: Text(l10n.messageIgnore),
-      scrollable: true,
+    return AppFormDialog(
+      title: l10n.messageIgnore,
+      hasFields: true,
       content: !ownsAccount
           ? Text(l10n.messageLoginRequired)
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.messageIgnoreExplanation),
-                const SizedBox(height: 12),
-                RadioGroup<ForumNotificationIgnoreScope>(
-                  groupValue: _scope,
-                  onChanged: (scope) {
-                    if (!_busy && scope != null) setState(() => _scope = scope);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_hasAuthor)
+          : Material(
+              // prism 对话框只画表面；单选行仍需 Material 祖先提供墨水层。
+              type: MaterialType.transparency,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.messageIgnoreExplanation),
+                  const SizedBox(height: 12),
+                  RadioGroup<ForumNotificationIgnoreScope>(
+                    groupValue: _scope,
+                    onChanged: (scope) {
+                      if (!_busy && scope != null) {
+                        setState(() => _scope = scope);
+                      }
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_hasAuthor)
+                          RadioListTile<ForumNotificationIgnoreScope>(
+                            value: ForumNotificationIgnoreScope.author,
+                            enabled: !_busy,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.messageIgnoreAuthor),
+                            subtitle: widget.item.authorName.isEmpty
+                                ? null
+                                : Text(widget.item.authorName),
+                          ),
                         RadioListTile<ForumNotificationIgnoreScope>(
-                          value: ForumNotificationIgnoreScope.author,
+                          value: ForumNotificationIgnoreScope.allAuthors,
                           enabled: !_busy,
                           contentPadding: EdgeInsets.zero,
-                          title: Text(l10n.messageIgnoreAuthor),
-                          subtitle: widget.item.authorName.isEmpty
-                              ? null
-                              : Text(widget.item.authorName),
+                          title: Text(l10n.messageIgnoreEveryone),
                         ),
-                      RadioListTile<ForumNotificationIgnoreScope>(
-                        value: ForumNotificationIgnoreScope.allAuthors,
-                        enabled: !_busy,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.messageIgnoreEveryone),
-                      ),
-                    ],
-                  ),
-                ),
-                if (result?.failureOrNull != null)
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      result is DataCommandOutcomeUnknown
-                          ? l10n.messageIgnoreUnknown
-                          : LocalizedErrorSummary.resolve(l10n, result),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                      ],
                     ),
                   ),
-              ],
+                  if (result?.failureOrNull != null)
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        result is DataCommandOutcomeUnknown
+                            ? l10n.messageIgnoreUnknown
+                            : LocalizedErrorSummary.resolve(l10n, result),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
       actions: [
-        TextButton(
+        AppDialogAction(
+          label: l10n.commonClose,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonClose),
         ),
         if (ownsAccount)
-          FilledButton(
+          AppDialogAction(
             key: const Key('notification-ignore-save'),
-            onPressed: _busy ? null : _save,
-            child: Text(_busy ? l10n.messageIgnoreSaving : l10n.commonConfirm),
+            label: _busy ? l10n.messageIgnoreSaving : l10n.commonConfirm,
+            enabled: !_busy,
+            onPressed: _save,
           ),
       ],
     );

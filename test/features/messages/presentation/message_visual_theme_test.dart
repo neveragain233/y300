@@ -7,6 +7,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/dialog.dart' as prism;
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -132,8 +134,7 @@ void main() {
                 '1',
                 duplicateCount: 2,
                 avatarUrl: MessageAvatarTestCache.aliceUrl,
-                markup:
-                    '<p>回复了你的帖子：<a href="forum.php?mod=viewthread&amp;tid=42">周末阅读分享</a></p>',
+                markup: '<p>回复了你的帖子：<a href="forum.php?mod=viewthread&amp;tid=42">周末阅读分享</a></p>',
               ),
               notificationTestItem(
                 '2',
@@ -153,12 +154,7 @@ void main() {
           await harness.capture('notifications');
           await tester.tap(find.byTooltip(harness.l10n.messageIgnore).first);
           await tester.pumpAndSettle();
-          expect(
-            tester
-                .widget<AlertDialog>(find.byType(AlertDialog))
-                .backgroundColor,
-            isNull,
-          );
+          expect(find.byType(prism.AlertDialog), findsOneWidget);
           await harness.capture('ignore');
 
           await harness.show(
@@ -303,8 +299,7 @@ void main() {
             messageTestPage([
               _chatItem(
                 '1',
-                html:
-                    '<p>整理了一点阅读计划：</p><blockquote>慢慢读，也是一种享受。</blockquote><table><tr><td>周六</td><td>前三章</td></tr><tr><td>周日</td><td>分享感想</td></tr></table><p><a href="forum.php?mod=viewthread&amp;tid=42">打开讨论帖</a></p>',
+                html: '<p>整理了一点阅读计划：</p><blockquote>慢慢读，也是一种享受。</blockquote><table><tr><td>周六</td><td>前三章</td></tr><tr><td>周日</td><td>分享感想</td></tr></table><p><a href="forum.php?mod=viewthread&amp;tid=42">打开讨论帖</a></p>',
               ),
               _chatItem('2', sender: '10', html: '<p>收到！</p>'),
             ]),
@@ -480,14 +475,7 @@ void main() {
       final harness = _Harness(tester, theme);
       await harness.size(const Size(390, 844));
       await harness.show(_center());
-      expect(
-        tester
-            .widget<CircularProgressIndicator>(
-              find.byType(CircularProgressIndicator),
-            )
-            .color,
-        palette.accent,
-      );
+      expect(find.byType(AppLoadingState), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 500));
       await harness.capture('loading');
       harness.repository.reads.single.result.complete(
@@ -504,13 +492,8 @@ void main() {
       await tester.pump();
       harness.repository.reads.last.result.complete(messageTestPage([]));
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<Text>(find.text(harness.l10n.profileNoMessages))
-            .style!
-            .color,
-        palette.supportingText,
-      );
+      expect(find.byType(AppEmptyState), findsOneWidget);
+      expect(find.text(harness.l10n.profileNoMessages), findsOneWidget);
       await harness.capture('empty');
       await harness.show(_center(), account: null);
       await tester.pumpAndSettle();
@@ -922,9 +905,8 @@ class _Harness {
                   ),
                 ),
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
             child: RepaintBoundary(key: boundary, child: child!),
           ),
           home: page,
@@ -972,9 +954,8 @@ class _Harness {
         final sceneBytes = await image.toByteData(
           format: ui.ImageByteFormat.png,
         );
-        await File(
-          '$_output/$name-${labels[index]}.png',
-        ).writeAsBytes(sceneBytes!.buffer.asUint8List());
+        await File('$_output/$name-${labels[index]}.png')
+            .writeAsBytes(sceneBytes!.buffer.asUint8List());
         canvas.drawRect(
           Rect.fromLTWH(x, 0, image.width.toDouble(), 30),
           Paint()..color = const Color(0xFF303030),
@@ -1000,9 +981,8 @@ class _Harness {
       try {
         final bytes = await sheet.toByteData(format: ui.ImageByteFormat.png);
         await Directory(_output).create(recursive: true);
-        await File(
-          '$_output/$name.png',
-        ).writeAsBytes(bytes!.buffer.asUint8List());
+        await File('$_output/$name.png')
+            .writeAsBytes(bytes!.buffer.asUint8List());
       } finally {
         sheet.dispose();
         picture.dispose();

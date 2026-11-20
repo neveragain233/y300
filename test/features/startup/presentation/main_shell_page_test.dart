@@ -16,6 +16,8 @@ import '../../../test_support/localized_test_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:prism_ui/dialog.dart' as prism;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';

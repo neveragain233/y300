@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:y300/core/media/cover_crop_geometry.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
+import 'package:prism_ui/context.dart';
+import 'package:prism_ui/dialog.dart' as prism;
+import 'package:prism_ui/shape.dart';
+import 'package:prism_ui/surface.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 /// 封面焦点选区对话框结果。
 typedef CoverFocalPointResult = CoverFocalPoint;
@@ -41,9 +47,9 @@ class CoverFocalPointPicker extends StatefulWidget {
     double aspectRatio = kCoverFocalAspectRatio,
     String? title,
   }) {
-    return showDialog<CoverFocalPoint>(
+    return prism.showFloatingDialog<CoverFocalPoint>(
       context: context,
-      builder: (_) => CoverFocalPointPicker(
+      child: CoverFocalPointPicker(
         image: image,
         initialFocus: initialFocus,
         aspectRatio: aspectRatio,
@@ -126,32 +132,51 @@ class _CoverFocalPointPickerState extends State<CoverFocalPointPicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.title ?? l10n.libraryCoverFocalTitle,
-                style: Theme.of(context).textTheme.titleMedium,
+    return AppPrismTheme(
+      child: Builder(
+        builder: (context) {
+          final scheme = context.colorScheme;
+          return AnimatedPadding(
+            padding:
+                MediaQuery.viewInsetsOf(context) + const EdgeInsets.all(20),
+            duration: Duration.zero,
+            child: Align(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 480,
+                  maxHeight: 640,
+                ),
+                child: Surface(
+                  color: SurfaceLevel.floatingOf(scheme).colorOf(scheme),
+                  shape: AppShape.all(AppCorner.alert),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          widget.title ?? l10n.libraryCoverFocalTitle,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.libraryCoverFocalHelp,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 12),
+                        Flexible(child: _buildStage()),
+                        const SizedBox(height: 12),
+                        _buildActions(context),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.libraryCoverFocalHelp,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              Flexible(child: _buildStage()),
-              const SizedBox(height: 12),
-              _buildActions(context),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -210,17 +235,17 @@ class _CoverFocalPointPickerState extends State<CoverFocalPointPicker> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        TextButton(
+        prism_button.TextButton(
           onPressed: () => setState(() => _focus = CoverFocalPoint.center),
           child: Text(l10n.libraryCoverCenter),
         ),
         const Spacer(),
-        TextButton(
+        prism_button.TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.commonCancel),
         ),
         const SizedBox(width: 8),
-        FilledButton(
+        prism_button.FilledButton(
           onPressed: () => Navigator.of(context).pop(_focus),
           child: Text(l10n.commonConfirm),
         ),

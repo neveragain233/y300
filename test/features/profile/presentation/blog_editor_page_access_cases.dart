@@ -15,7 +15,7 @@ void _accessCases() {
       await _openSettings(tester);
       final field = find.byKey(const Key('blog-editor-password'));
       await tester.ensureVisible(field);
-      final password = tester.widget<TextField>(field);
+      final password = tester.widget<AppTextInput>(field);
       expect(password.obscureText, isTrue);
       expect(password.controller!.text, isEmpty);
       await _save(tester);
@@ -45,7 +45,7 @@ void _accessCases() {
     final field = find.byKey(const Key('blog-editor-password'));
     await tester.ensureVisible(field);
     await tester.enterText(field, 'old-account-private-secret');
-    final input = tester.widget<TextField>(field).controller!;
+    final input = tester.widget<AppTextInput>(field).controller!;
     host.changeActor('202');
     await tester.pumpAndSettle();
     expect(input.text, isEmpty);
@@ -94,7 +94,7 @@ void _accessCases() {
       );
       expect(
         tester
-            .widget<TextField>(find.byKey(const Key('blog-editor-password')))
+            .widget<AppTextInput>(find.byKey(const Key('blog-editor-password')))
             .readOnly,
         isTrue,
       );

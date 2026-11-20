@@ -9,6 +9,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/message_command_text.dart';
 import 'package:y300/features/messages/presentation/widgets/message_composer_row.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 
 enum PrivateMessageEditorLayout { form, conversation }
@@ -223,7 +224,7 @@ class _PrivateMessageEditorState extends ConsumerState<PrivateMessageEditor> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (widget.recipient == null) ...[
-                        TextField(
+                        AppTextInput(
                           key: const Key('message-recipient'),
                           controller: _username,
                           style: theme.textTheme.bodyLarge?.copyWith(
@@ -232,14 +233,11 @@ class _PrivateMessageEditorState extends ConsumerState<PrivateMessageEditor> {
                           readOnly: _busy,
                           autocorrect: false,
                           textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: l10n.messageRecipient,
-                            hintText: l10n.messageRecipientHint,
-                            errorText: _invalidRecipient
-                                ? l10n.messageRecipientInvalid
-                                : null,
-                            errorMaxLines: 3,
-                          ),
+                          label: l10n.messageRecipient,
+                          hintText: l10n.messageRecipientHint,
+                          errorText: _invalidRecipient
+                              ? l10n.messageRecipientInvalid
+                              : null,
                           onChanged: (_) =>
                               setState(() => _invalidRecipient = false),
                         ),

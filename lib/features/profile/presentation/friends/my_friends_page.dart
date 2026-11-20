@@ -15,6 +15,8 @@ import 'package:y300/features/profile/presentation/friends/my_friends_scope_page
 import 'package:y300/features/profile/presentation/widgets/feed_pagination_scroll_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
@@ -115,7 +117,7 @@ class _MyFriendsPageState extends ConsumerState<MyFriendsPage> {
     if (_openingActions || _boundItem(controller, target) == null) return;
     _openingActions = true;
     try {
-      final action = await showModalBottomSheet<FriendAction>(
+      final action = await showAdaptivePanel<FriendAction>(
         context: context,
         builder: (_) => FriendActionSheet(
           target: target,
@@ -413,7 +415,7 @@ class _FriendsFeedState extends State<_FriendsFeed> {
                         child: !widget.isActive
                             ? const SizedBox.shrink()
                             : state.isLoading
-                            ? const Center(child: CircularProgressIndicator())
+                            ? AppLoadingState(label: l10n.commonLoading)
                             : Center(
                                 child: FriendReadFailure(
                                   failure: state.failure,

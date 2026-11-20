@@ -17,6 +17,8 @@ import 'package:y300/features/recent_search/application/recent_searches_controll
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
@@ -221,20 +223,28 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   Widget _buildBody(HistoryViewState state) {
+    final l10n = AppLocalizations.of(context);
     if (state.isInitialLoading && state.items.isEmpty) {
-      return const Center(
-        key: Key('history-initial-loading'),
-        child: CircularProgressIndicator(),
+      return AppLoadingState(
+        key: const Key('history-initial-loading'),
+        label: l10n.commonLoading,
       );
     }
     if (state.errorMessage != null && state.items.isEmpty) {
-      return _HistoryErrorState(
+      return AppErrorState(
+        key: const Key('history-error'),
+        title: l10n.historyLoadFailed,
         message: state.errorMessage!,
+        retryLabel: l10n.commonRetry,
+        retryKey: const Key('history-retry'),
         onRetry: () => _controller.refresh(showLoading: true),
       );
     }
     if (state.items.isEmpty) {
-      return _HistoryEmptyState(searching: state.isSearching);
+      return AppEmptyState(
+        key: Key(state.isSearching ? 'history-search-empty' : 'history-empty'),
+        title: state.isSearching ? l10n.historyNoResults : l10n.historyEmpty,
+      );
     }
 
     final groups = widget.groupingPolicy.group(state.items, now: _clock.now());
@@ -488,26 +498,16 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
 
   Future<void> _confirmClearAll() async {
     final controller = _controller;
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(AppLocalizations.of(context).historyClearAllTitle),
-          content: Text(AppLocalizations.of(context).historyClearAllBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(AppLocalizations.of(context).commonCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(AppLocalizations.of(context).commonClear),
-            ),
-          ],
-        );
-      },
+      title: l10n.historyClearAllTitle,
+      message: l10n.historyClearAllBody,
+      confirmLabel: l10n.commonClear,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
     );
-    if (confirmed != true || !mounted || !identical(controller, _controller)) {
+    if (!confirmed || !mounted || !identical(controller, _controller)) {
       return;
     }
     // Clearing is a new intent: an earlier deletion must not be undoable after it.
@@ -533,61 +533,5 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '$year-$month-$day';
-  }
-}
-
-class _HistoryEmptyState extends StatelessWidget {
-  const _HistoryEmptyState({required this.searching});
-
-  final bool searching;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Center(
-      key: Key(searching ? 'history-search-empty' : 'history-empty'),
-      child: Text(searching ? l10n.historyNoResults : l10n.historyEmpty),
-    );
-  }
-}
-
-class _HistoryErrorState extends StatelessWidget {
-  const _HistoryErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Center(
-      key: const Key('history-error'),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.historyLoadFailed,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const Key('history-retry'),
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: Text(l10n.commonRetry),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

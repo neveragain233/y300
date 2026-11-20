@@ -10,6 +10,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_mess
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/features/image_loading/presentation/app_image.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
+
 import '../../../test_support/localized_test_app.dart';
 
 void main() {
@@ -65,7 +66,7 @@ void main() {
     await tester.tap(find.byKey(const Key('source-panel-action')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byKey(const Key('adaptive-side-panel')), findsOneWidget);
     expect(find.text('first'), findsOneWidget);
     content.value = 'second';
     await tester.pump();
@@ -160,8 +161,7 @@ void main() {
             aid: '1624572',
             availability: ComposerAttachmentAvailability.available,
             preview: ComposerRemoteImagePreview(
-              url:
-                  'https://bbs.yamibo.com/data/attachment/forum/202607/23/example.jpg',
+              url: 'https://bbs.yamibo.com/data/attachment/forum/202607/23/example.jpg',
               referer: referer,
             ),
           ),

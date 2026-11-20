@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/auth/presentation/login_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
@@ -18,28 +19,15 @@ class MessageReadStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final error = failure;
-    final palette = Theme.of(context).y300NativeContent;
     if (error == null) {
-      return Center(child: CircularProgressIndicator(color: palette.accent));
+      return AppLoadingState(label: l10n.commonLoading);
     }
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            error.code == 'message_history_changed'
-                ? l10n.messageHistoryChanged
-                : LocalizedErrorSummary.resolve(l10n, error),
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: palette.supportingText),
-          ),
-          const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: Text(l10n.commonRetry)),
-        ],
-      ),
+    return AppErrorState(
+      message: error.code == 'message_history_changed'
+          ? l10n.messageHistoryChanged
+          : LocalizedErrorSummary.resolve(l10n, error),
+      retryLabel: l10n.commonRetry,
+      onRetry: onRetry,
     );
   }
 }
@@ -67,9 +55,8 @@ class MessageLoginPrompt extends StatelessWidget {
               Text(
                 l10n.messageLoginRequired,
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: palette.supportingText),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: palette.supportingText),
               ),
               const SizedBox(height: 16),
               FilledButton(

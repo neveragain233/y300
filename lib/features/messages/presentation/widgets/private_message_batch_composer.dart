@@ -17,6 +17,7 @@ import 'package:y300/features/messages/presentation/widgets/private_message_batc
 import 'package:y300/features/messages/presentation/widgets/private_message_compose_canvas.dart';
 import 'package:y300/features/messages/presentation/widgets/private_message_recipient_bar.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 
@@ -86,12 +87,8 @@ class _PrivateMessageBatchComposerState
     _friendControllers.add(controller);
     setState(() => _friendSheetOpen = true);
     try {
-      await showModalBottomSheet<void>(
+      await showAdaptivePanel<void>(
         context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        showDragHandle: false,
-        backgroundColor: Theme.of(context).y300NativeContent.background,
         builder: (_) => MessageFriendPickerSheet(
           accountId: widget.accountId,
           controller: controller,

@@ -12,9 +12,10 @@ import 'package:y300/features/composer_shared/presentation/quill/composer_quill_
 import 'package:y300/features/composer_shared/presentation/quill/composer_quill_collapse_editor_models.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_app_bar_action_style.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_quill_prototype_editor.dart';
-import 'package:y300/features/composer_shared/presentation/widgets/composer_title_field_decoration.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
@@ -313,17 +314,15 @@ class _ComposerCollapseEditorPageState
                 ForumContentSpacing.composerPageHorizontal,
                 12,
               ),
-              child: TextField(
+              child: AppTextInput(
                 key: Key('${widget.keyPrefix}-title-field'),
                 controller: _titleController,
                 focusNode: _titleFocusNode,
                 enabled: editorEnabled,
                 maxLines: 1,
                 textInputAction: TextInputAction.next,
-                decoration: composerTitleFieldDecoration(
-                  context,
-                  hintText: localizations.composerCollapseTitleHint,
-                ),
+                hintText: localizations.composerCollapseTitleHint,
+                variant: AppTextInputVariant.underline,
                 inputFormatters: [
                   FilteringTextInputFormatter.deny(RegExp(r'[\]\r\n\uFFFC]')),
                 ],
@@ -432,28 +431,17 @@ class _ComposerCollapseEditorPageState
       return;
     }
     final navigator = Navigator.of(context);
-    final confirmed = await showDialog<bool>(
+    final localizations = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final localizations = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(localizations.composerCollapseDeleteTitle),
-          content: Text(localizations.composerCollapseDeleteBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(localizations.commonCancel),
-            ),
-            FilledButton(
-              key: Key('${widget.keyPrefix}-delete-confirm-button'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(localizations.commonDelete),
-            ),
-          ],
-        );
-      },
+      title: localizations.composerCollapseDeleteTitle,
+      message: localizations.composerCollapseDeleteBody,
+      confirmLabel: localizations.commonDelete,
+      cancelLabel: localizations.commonCancel,
+      destructive: true,
+      confirmKey: Key('${widget.keyPrefix}-delete-confirm-button'),
     );
-    if (!mounted || confirmed != true || !_canMutateParent) {
+    if (!mounted || !confirmed || !_canMutateParent) {
       return;
     }
     FocusScope.of(context).unfocus();
@@ -476,32 +464,21 @@ class _ComposerCollapseEditorPageState
     }
     _isShowingDiscardDialog = true;
     final navigator = Navigator.of(context);
-    final discard = await showDialog<bool>(
+    final localizations = AppLocalizations.of(context);
+    final discard = await showAppConfirmDialog(
       context: context,
-      builder: (dialogContext) {
-        final localizations = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(localizations.composerCollapseDiscardTitle),
-          content: Text(localizations.composerCollapseDiscardBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(localizations.commonCancel),
-            ),
-            FilledButton(
-              key: Key('${widget.keyPrefix}-discard-confirm-button'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(localizations.composerCollapseDiscardConfirm),
-            ),
-          ],
-        );
-      },
+      title: localizations.composerCollapseDiscardTitle,
+      message: localizations.composerCollapseDiscardBody,
+      confirmLabel: localizations.composerCollapseDiscardConfirm,
+      cancelLabel: localizations.commonCancel,
+      destructive: true,
+      confirmKey: Key('${widget.keyPrefix}-discard-confirm-button'),
     );
     if (!mounted) {
       return;
     }
     _isShowingDiscardDialog = false;
-    if (discard == true) {
+    if (discard) {
       if (_isUploadBlocking) {
         _showUploadStatus();
         return;

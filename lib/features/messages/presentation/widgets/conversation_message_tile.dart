@@ -10,6 +10,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/widgets/message_avatar.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 
 class ConversationMessageTile extends StatelessWidget {
   const ConversationMessageTile({
@@ -166,12 +167,8 @@ class ConversationMessageTile extends StatelessWidget {
 
   void _showDetails(BuildContext context) {
     FocusScope.of(context).unfocus();
-    showModalBottomSheet<void>(
+    showAdaptivePanel<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).y300NativeContent.card,
       builder: (context) => Consumer(
         builder: (context, ref, _) {
           if (ref.watch(messageAccountIdProvider) != accountId) {
@@ -216,9 +213,8 @@ class _ConversationAvatar extends StatelessWidget {
     );
     if (!RegExp(r'^[1-9]\d*$').hasMatch(item.fromUserId)) return avatar;
     return Tooltip(
-      message: AppLocalizations.of(
-        context,
-      ).messageOpenProfile(_authorLabel(context, item)),
+      message: AppLocalizations.of(context)
+          .messageOpenProfile(_authorLabel(context, item)),
       child: InkWell(
         key: ValueKey('message-avatar:${item.messageId}'),
         customBorder: const CircleBorder(),
@@ -341,9 +337,8 @@ String _timestampLabel(BuildContext context, ForumPrivateMessageItem item) {
   if (day == DateTime(today.year, today.month, today.day - 1)) {
     return AppLocalizations.of(context).messageYesterdayTime(clock);
   }
-  final date = DateFormat.yMd(
-    AppLocalizations.of(context).localeName,
-  ).format(time);
+  final date = DateFormat.yMd(AppLocalizations.of(context).localeName)
+      .format(time);
   return '$date · $clock';
 }
 

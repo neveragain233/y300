@@ -4,6 +4,7 @@ import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/auth/presentation/login_page.dart';
 import 'package:y300/features/profile/presentation/blog/blog_surface.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 
 class FriendLoginPrompt extends StatelessWidget {
@@ -12,30 +13,13 @@ class FriendLoginPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final palette = Theme.of(context).y300NativeContent;
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.people_outline, size: 40, color: palette.muted),
-            const SizedBox(height: 12),
-            Text(
-              l10n.profileFriendsLoginRequired,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: palette.supportingText),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              key: const Key('my-friends-login'),
-              onPressed: () => Navigator.of(context).push<void>(
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              ),
-              child: Text(l10n.authLoginTitle),
-            ),
-          ],
-        ),
+    return AppEmptyState(
+      message: l10n.profileFriendsLoginRequired,
+      action: FilledButton(
+        key: const Key('my-friends-login'),
+        onPressed: () => Navigator.of(context)
+            .push<void>(MaterialPageRoute(builder: (_) => const LoginPage())),
+        child: Text(l10n.authLoginTitle),
       ),
     );
   }
@@ -58,29 +42,13 @@ class FriendReadFailure extends StatelessWidget {
       return const FriendLoginPrompt();
     }
     final l10n = AppLocalizations.of(context);
-    final palette = Theme.of(context).y300NativeContent;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline, size: 34, color: palette.muted),
-          const SizedBox(height: 12),
-          Text(
-            failure == null
-                ? l10n.profileFriendsLoadFailed
-                : LocalizedErrorSummary.resolve(l10n, failure),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.supportingText),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            key: const Key('my-friends-retry'),
-            onPressed: onRetry,
-            child: Text(l10n.commonRetry),
-          ),
-        ],
-      ),
+    return AppErrorState(
+      message: failure == null
+          ? l10n.profileFriendsLoadFailed
+          : LocalizedErrorSummary.resolve(l10n, failure),
+      retryLabel: l10n.commonRetry,
+      retryKey: const Key('my-friends-retry'),
+      onRetry: onRetry,
     );
   }
 }
@@ -93,27 +61,13 @@ class FriendEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final palette = Theme.of(context).y300NativeContent;
-    final text = switch (scope) {
-      ForumFriendFeedScope.friends => l10n.profileFriendsEmpty,
-      ForumFriendFeedScope.online => l10n.profileFriendsOnlineEmpty,
-      ForumFriendFeedScope.visitors => l10n.profileFriendsVisitorsEmpty,
-      ForumFriendFeedScope.footprints => l10n.profileFriendsFootprintsEmpty,
-    };
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.people_outline, size: 40, color: palette.muted),
-          const SizedBox(height: 12),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: palette.supportingText),
-          ),
-        ],
-      ),
+    return AppEmptyState(
+      title: switch (scope) {
+        ForumFriendFeedScope.friends => l10n.profileFriendsEmpty,
+        ForumFriendFeedScope.online => l10n.profileFriendsOnlineEmpty,
+        ForumFriendFeedScope.visitors => l10n.profileFriendsVisitorsEmpty,
+        ForumFriendFeedScope.footprints => l10n.profileFriendsFootprintsEmpty,
+      },
     );
   }
 }

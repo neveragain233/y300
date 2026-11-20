@@ -9,6 +9,8 @@ import 'package:y300/features/library_shared/presentation/selection/shelf_select
 import 'package:y300/features/library_shared/presentation/services/library_error_summary.dart';
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_category_name_dialog.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 
 /// Shares selection actions between tabbed and independently opened shelves.
@@ -154,7 +156,7 @@ class _ShelfSelectionBottomBarState
               !category.isSystemCategory,
         )
         .toList(growable: false);
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showAdaptivePanel<String>(
       context: context,
       builder: (sheetContext) {
         return SafeArea(
@@ -213,9 +215,13 @@ class _ShelfSelectionBottomBarState
   }
 
   Future<String?> _showCreateCategoryDialog() {
-    return showDialog<String>(
-      context: context,
-      builder: (_) => const _CreateSelectionCategoryDialog(),
+    final l10n = AppLocalizations.of(context);
+    return showLibraryCategoryNameDialog(
+      context,
+      title: l10n.librarySelectionCreateCategory,
+      hintText: l10n.librarySelectionCategoryNameHint,
+      dialogKey: const Key('selection-create-category-dialog'),
+      fieldKey: const Key('selection-create-category-name-field'),
     );
   }
 
@@ -227,57 +233,5 @@ class _ShelfSelectionBottomBarState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(trimmed)));
-  }
-}
-
-class _CreateSelectionCategoryDialog extends StatefulWidget {
-  const _CreateSelectionCategoryDialog();
-
-  @override
-  State<_CreateSelectionCategoryDialog> createState() =>
-      _CreateSelectionCategoryDialogState();
-}
-
-class _CreateSelectionCategoryDialogState
-    extends State<_CreateSelectionCategoryDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      key: const Key('selection-create-category-dialog'),
-      title: Text(l10n.librarySelectionCreateCategory),
-      content: TextField(
-        key: const Key('selection-create-category-name-field'),
-        controller: _controller,
-        autofocus: true,
-        decoration: InputDecoration(
-          hintText: l10n.librarySelectionCategoryNameHint,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonCancel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: Text(l10n.commonConfirm),
-        ),
-      ],
-    );
   }
 }

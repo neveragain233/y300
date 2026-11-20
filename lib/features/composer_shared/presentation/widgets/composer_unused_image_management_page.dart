@@ -8,6 +8,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_imag
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_status_views.dart';
 
 class ComposerUnusedImageManagementPage extends ConsumerWidget {
   const ComposerUnusedImageManagementPage({super.key});
@@ -19,13 +20,12 @@ class ComposerUnusedImageManagementPage extends ConsumerWidget {
     final asyncState = ref.watch(
       composerUnusedImageManagementControllerProvider,
     );
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       key: const Key('composer-unused-image-management-page'),
-      appBar: AppPageAppBar(
-        title: AppLocalizations.of(context).unusedImagesPageTitle,
-      ),
+      appBar: AppPageAppBar(title: l10n.unusedImagesPageTitle),
       body: asyncState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => AppLoadingState(label: l10n.commonLoading),
         error: (_, _) => _UnusedImagesLoadError(
           onRetry: () => ref
               .read(composerUnusedImageManagementControllerProvider.notifier)
@@ -53,28 +53,11 @@ class _UnusedImagesLoadError extends StatelessWidget {
         slivers: [
           SliverFillRemaining(
             hasScrollBody: false,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.cloud_off_outlined, size: 44),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.unusedImagesLoadFailed,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.tonalIcon(
-                      key: const Key('unused-images-retry'),
-                      onPressed: onRetry,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(l10n.commonRetry),
-                    ),
-                  ],
-                ),
-              ),
+            child: AppErrorState(
+              message: l10n.unusedImagesLoadFailed,
+              retryLabel: l10n.commonRetry,
+              retryKey: const Key('unused-images-retry'),
+              onRetry: onRetry,
             ),
           ),
         ],
@@ -102,14 +85,8 @@ class _UnusedImagesCatalog extends ConsumerWidget {
           slivers: [
             SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    AppLocalizations.of(context).unusedImagesEmpty,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              child: AppEmptyState(
+                title: AppLocalizations.of(context).unusedImagesEmpty,
               ),
             ),
           ],

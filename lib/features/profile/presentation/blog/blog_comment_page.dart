@@ -12,6 +12,7 @@ import 'package:y300/features/profile/presentation/blog/blog_composer_layout.dar
 import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart';
 import 'package:y300/features/profile/presentation/blog/blog_web_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
@@ -122,12 +123,8 @@ class _BlogCommentPageState extends ConsumerState<BlogCommentPage> {
     final selection = _input.selection;
     _input.focusNode.unfocus();
     _pickerOpen = true;
-    final smiley = await showModalBottomSheet<UserBlogCommentSmiley>(
+    final smiley = await showAdaptivePanel<UserBlogCommentSmiley>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
-      backgroundColor: Theme.of(context).y300NativeContent.card,
       builder: (context) {
         _smileyRoute = ModalRoute.of(context);
         // Expiry can arrive after push but before the sheet's first frame.

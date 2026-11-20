@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
-import 'package:y300/features/composer_shared/presentation/widgets/composer_title_field_decoration.dart';
 import 'package:y300/features/profile/presentation/blog/blog_body_input.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_settings.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/features/profile/presentation/blog/blog_rich_text_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 class BlogEditorFields extends StatelessWidget {
   const BlogEditorFields({
@@ -44,7 +44,7 @@ class BlogEditorFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
+        AppTextInput(
           key: const Key('blog-editor-subject'),
           controller: subject,
           enabled: !state.busy,
@@ -57,10 +57,9 @@ class BlogEditorFields extends StatelessWidget {
             fontWeight: FontWeight.w700,
             height: 1.35,
           ),
-          decoration: composerTitleFieldDecoration(
-            context,
-            hintText: l10n.profileBlogSubject,
-          ).copyWith(contentPadding: const EdgeInsets.symmetric(vertical: 16)),
+          hintText: l10n.profileBlogSubject,
+          variant: AppTextInputVariant.underline,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
           onChanged: (text) =>
               onChanged((draft) => draft.copyWith(subject: text)),
         ),

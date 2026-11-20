@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 class UnifiedDetailCatalogSheet extends StatefulWidget {
   const UnifiedDetailCatalogSheet({
@@ -59,20 +60,17 @@ class _UnifiedDetailCatalogSheetState extends State<UnifiedDetailCatalogSheet> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
-              TextField(
+              AppTextInput(
                 key: const Key('unified-detail-catalog-url-input'),
                 controller: _catalogController,
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
                 enableSuggestions: false,
-                decoration: InputDecoration(
-                  labelText: l10n.libraryDetailCatalogUrl,
-                  helperText: _sourceText(l10n, widget.sourceCatalogUrl),
-                  helperMaxLines: 3,
-                  errorText: _errorText,
-                  errorMaxLines: 3,
-                ),
+                label: l10n.libraryDetailCatalogUrl,
+                helperText: _sourceText(l10n, widget.sourceCatalogUrl),
+                helperMaxLines: 3,
+                errorText: _errorText,
                 onSubmitted: (_) {
                   if (!_saving) {
                     _save();

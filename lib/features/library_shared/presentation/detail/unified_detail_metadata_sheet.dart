@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 class UnifiedDetailMetadataSheet extends StatefulWidget {
   const UnifiedDetailMetadataSheet({
@@ -216,14 +217,11 @@ class _MetadataTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return AppTextInput(
       key: fieldKey,
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        helperText: sourceText,
-        helperMaxLines: 2,
-      ),
+      label: label,
+      helperText: sourceText,
     );
   }
 }

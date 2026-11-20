@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
@@ -56,16 +59,10 @@ void main() {
       find.byKey(const Key('composer-quill-source-sticker-button')),
       findsOneWidget,
     );
-    var sourceField = tester.widget<TextField>(
+    var sourceField = tester.widget<AppTextInput>(
       find.byKey(const Key('composer-quill-prototype-source-input')),
     );
-    final sourceDecoration = sourceField.decoration;
-    expect(sourceDecoration?.border, InputBorder.none);
-    expect(sourceDecoration?.enabledBorder, InputBorder.none);
-    expect(sourceDecoration?.focusedBorder, InputBorder.none);
-    expect(sourceDecoration?.disabledBorder, InputBorder.none);
-    expect(sourceDecoration?.filled, isFalse);
-    expect(sourceDecoration?.fillColor, isNull);
+    expect(sourceField.variant, AppTextInputVariant.plain);
 
     await tester.enterText(
       find.byKey(const Key('composer-quill-prototype-source-input')),
@@ -98,7 +95,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    sourceField = tester.widget<TextField>(
+    sourceField = tester.widget<AppTextInput>(
       find.byKey(const Key('composer-quill-prototype-source-input')),
     );
     expect(sourceField.controller?.text, '[b]源码[/b]');

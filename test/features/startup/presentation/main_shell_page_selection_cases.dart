@@ -221,7 +221,7 @@ void _selectionCases() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('新建分类'));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOne);
+      expect(find.byType(prism.AlertDialog), findsOne);
 
       await tester.tap(find.text('取消'));
       await tester.pumpAndSettle();
@@ -235,7 +235,7 @@ void _selectionCases() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('新建分类'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '新分类');
+      await tester.enterText(find.byType(AppTextInput), '新分类');
       await tester.tap(find.text('确定'));
       await tester.pumpAndSettle();
 
@@ -368,7 +368,7 @@ void _selectionCases() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('新建分类'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '新共享分类');
+    await tester.enterText(find.byType(AppTextInput), '新共享分类');
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
 

@@ -8,6 +8,7 @@ import 'package:y300/features/fonts/domain/models/font_library_failure.dart';
 import 'package:y300/features/fonts/domain/models/resolved_font.dart';
 import 'package:y300/features/fonts/presentation/font_selector_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 
 Future<ResolvedFont?> showBodyFontSelector({
   required BuildContext context,
@@ -28,11 +29,8 @@ Future<ResolvedFont?> showBodyFontSelector({
   );
   unawaited(controller.initialize());
   try {
-    return await showModalBottomSheet<ResolvedFont>(
+    return await showAdaptivePanel<ResolvedFont>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
       builder: (_) =>
           BodyFontSelector(controller: controller, previewStyle: previewStyle),
     );
