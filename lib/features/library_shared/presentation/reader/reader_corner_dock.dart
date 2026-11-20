@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/domain/models/reader_corner_dock_side.dart';
 
 /// Keeps Scaffold's anchor in layout while only the overlay follows the finger.
@@ -59,7 +60,7 @@ class _ReaderCornerDockState extends State<ReaderCornerDock>
 
   bool get _inFlight => _dragging || _snapping;
   bool get _visible => widget.visible && widget.side != null;
-  bool get _animationsDisabled => MediaQuery.disableAnimationsOf(context);
+  bool get _animationsDisabled => AppMotion.reduceMotion(context);
 
   Offset get _feedbackPosition => _snapStarted
       ? Offset.lerp(
@@ -234,9 +235,8 @@ class _ReaderCornerDockState extends State<ReaderCornerDock>
   Future<void> _saveSide(ReaderCornerDockSide side) async {
     final saved = await widget.onSideChanged(side);
     if (!saved && mounted && ModalRoute.of(context)?.isCurrent != false) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(widget.saveFailedLabel)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(widget.saveFailedLabel)));
     }
   }
 

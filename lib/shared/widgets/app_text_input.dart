@@ -239,14 +239,11 @@ class _UnderlineInputFrameState extends State<_UnderlineInputFrame> {
             child: Align(
               alignment: Alignment.topCenter,
               child: AnimatedContainer(
-                // 下划线过渡沿用全局动效策略；系统要求减少动态效果时直接
-                // 呈现终态，墨水屏再由 AppMotion 统一归零。
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : AppMotion.duration(
-                        context,
-                        const Duration(milliseconds: 167),
-                      ),
+                // 下划线过渡沿用全局动效策略。
+                duration: AppMotion.duration(
+                  context,
+                  const Duration(milliseconds: 167),
+                ),
                 height: _focused ? 2 : 1,
                 color: _focused ? scheme.primary : scheme.outlineVariant,
               ),

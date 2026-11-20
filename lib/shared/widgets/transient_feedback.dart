@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/core/motion/app_motion.dart';
 
 /// 构造与页面表面协调的短时提示。
 ///
@@ -41,7 +43,7 @@ SnackBar buildTransientSnackBar(
           ),
     actionOverflowThreshold: actionOverflowThreshold,
     backgroundColor: background,
-    elevation: 3,
+    elevation: EInkModeScope.of(context) ? 0 : 3,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
       side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
@@ -75,5 +77,8 @@ void showTransientSnackBar(
         snackBarKey: snackBarKey,
         actionOverflowThreshold: actionOverflowThreshold,
       ),
+      snackBarAnimationStyle: AppMotion.reduceMotion(context)
+          ? AnimationStyle.noAnimation
+          : null,
     );
 }

@@ -133,14 +133,23 @@ void main() {
     expect(light.onSurface, Colors.black);
     expect(dark.scaffoldBackground, Colors.black);
     expect(dark.onSurface, Colors.white);
+    final eInkLight = AppTheme.build(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.light,
+      eInkMode: true,
+    );
     expect(
-      AppTheme.build(
-        family: AppThemeFamily.warmPaper,
-        brightness: Brightness.light,
-        eInkMode: true,
-      ).extension<Y300ThemeExtension>()!.contentHighlightBackground,
+      eInkLight.extension<Y300ThemeExtension>()!.contentHighlightBackground,
       const Color(0x22000000),
     );
+    expect(eInkLight.filledButtonTheme.style?.animationDuration, Duration.zero);
+    expect(eInkLight.textButtonTheme.style?.animationDuration, Duration.zero);
+    expect(eInkLight.iconButtonTheme.style?.animationDuration, Duration.zero);
+    expect(
+      eInkLight.expansionTileTheme.expansionAnimationStyle,
+      AnimationStyle.noAnimation,
+    );
+    expect(eInkLight.snackBarTheme.elevation, 0);
     expect(
       AppTheme.build(
         family: AppThemeFamily.warmPaper,

@@ -1,3 +1,4 @@
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_navigation.dart';
 import 'package:y300/features/thread/presentation/services/thread_image_reader_return_coordinator.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_actions.dart';
@@ -1312,6 +1313,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       final position = _scrollController.position;
       final targetOffset = position.minScrollExtent;
       if ((position.pixels - targetOffset).abs() < 1) {
+        return;
+      }
+      if (AppMotion.reduceMotion(context)) {
+        _scrollController.jumpTo(targetOffset);
         return;
       }
       await _scrollController.animateTo(

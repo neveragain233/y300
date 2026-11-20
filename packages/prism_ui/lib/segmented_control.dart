@@ -37,7 +37,9 @@ class SegmentedControl<T> extends StatelessWidget {
         children: [
           if (index >= 0)
             AnimatedAlign(
-              duration: const Duration(milliseconds: 250),
+              duration: context.motionDuration(
+                const Duration(milliseconds: 250),
+              ),
               curve: Curves.easeOutCubic,
               alignment: AlignmentDirectional(
                 count == 1 ? 0 : index * 2 / (count - 1) - 1,
@@ -71,7 +73,9 @@ class SegmentedControl<T> extends StatelessWidget {
                         : () => onChanged(option),
                     child: Center(
                       child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 200),
+                        duration: context.motionDuration(
+                          const Duration(milliseconds: 200),
+                        ),
                         style: AppTextStyle.subheadline
                             .of(context, emphasized: option == value)
                             .copyWith(

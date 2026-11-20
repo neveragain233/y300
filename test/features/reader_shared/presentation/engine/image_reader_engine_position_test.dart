@@ -1,4 +1,5 @@
 import 'package:continuous_image_geometry/continuous_image_geometry.dart';
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/material.dart';
 
 import '../../../../test_support/localized_test_app.dart';
@@ -409,6 +410,58 @@ void main() {
     await pumpReader(eink: true);
     await tapNextPage();
     expect(ripple.forwards, <bool>[true]);
+  });
+
+  testWidgets('eink mode disables horizontal swipe and turns pages instantly', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{
+      'reader_pref_mode': 'ltr',
+      'reader_pref_page_fit': 'fitWidth',
+    });
+    tester.view.physicalSize = const Size(600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final capability = _RecordingPagedCapability();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          forumImagePrecacheServiceProvider.overrideWithValue(
+            _NoopForumImagePrecacheService(),
+          ),
+          einkPageRippleServiceProvider.overrideWithValue(
+            _RecordingRippleService(),
+          ),
+        ],
+        child: EInkModeScope(
+          enabled: true,
+          child: LocalizedTestApp(
+            home: ImageReaderEngine(capability: capability),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    expect(pageView.physics, isA<NeverScrollableScrollPhysics>());
+    final startPage = pageView.controller!.page!.round();
+
+    // 墨水屏模式下横滑拖拽不翻页，只留点左右侧翻页。
+    await tester.drag(find.byType(PageView), const Offset(-400, 0));
+    await tester.pump();
+    expect(pageView.controller!.page, startPage);
+
+    // 点击右侧热区在双击窗口结束后瞬间切到下一页，不播放翻页动画。
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const Key('shared-reader-right-tap-zone'))),
+    );
+    await tester.pump(kDoubleTapTimeout);
+    expect(pageView.controller!.page, startPage + 1);
   });
 }
 

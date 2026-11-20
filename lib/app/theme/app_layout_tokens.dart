@@ -11,10 +11,6 @@ abstract final class AppLayoutTokens {
   static const double imageReadingMaxWidth = 960;
   static const Duration feedbackDuration = Duration(milliseconds: 200);
 
-  static Duration motionDuration(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      return Duration.zero;
-    }
-    return AppMotion.duration(context, feedbackDuration);
-  }
+  static Duration motionDuration(BuildContext context) =>
+      AppMotion.duration(context, feedbackDuration);
 }

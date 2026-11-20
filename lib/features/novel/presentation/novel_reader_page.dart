@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
@@ -825,16 +826,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   /// 运行时墨水屏模式；全量模式下不得触发 EPDC 通道消息。
   bool get _eInkModeEnabled => EInkModeScope.of(context);
 
-  /// eink 构建禁用卷曲与整页纹理过渡，退回淡入，保留页面切换动画。
-  NovelReaderPreferences _effectiveRenderPreferences(
-    NovelReaderPreferences preferences,
-  ) {
-    if (!_eInkModeEnabled) {
-      return preferences;
-    }
-    return preferences.copyWith(pageEffect: NovelReaderPageEffect.fade);
-  }
-
   void _turnVerticalByTap({required bool backward}) {
     final current = ref
         .read(novelReaderControllerProvider(_args))
@@ -865,8 +856,8 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       return;
     }
     _overlayController.hideMenu();
-    final animationsDisabled = MediaQuery.disableAnimationsOf(context);
-    final effect = _effectiveRenderPreferences(current.preferences).pageEffect;
+    final animationsDisabled = AppMotion.reduceMotion(context);
+    final effect = current.preferences.pageEffect;
     if (_eInkModeEnabled) {
       unawaited(
         ref
@@ -1366,7 +1357,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         preparedChapterCache: _preparedChapterCache,
         rawHtml: viewState.currentContent.rawHtml,
         episode: viewState.currentEpisode,
-        preferences: _effectiveRenderPreferences(viewState.renderPreferences),
+        preferences: viewState.renderPreferences,
         typography: typography,
         theme: htmlTheme,
         imageReferer: _imageRefererFor(viewState),
@@ -1503,9 +1494,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
               preparedChapterCache: _preparedChapterCache,
               rawHtml: viewState.currentContent.rawHtml,
               episode: viewState.currentEpisode,
-              preferences: _effectiveRenderPreferences(
-                viewState.renderPreferences,
-              ),
+              preferences: viewState.renderPreferences,
               typography: typography,
               theme: htmlTheme,
               imageReferer: _imageRefererFor(viewState),

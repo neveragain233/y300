@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_bottom_overlay_panel.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_gesture_coordinator.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_models.dart';
@@ -153,10 +154,11 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   }
 
   void _updateAnimationDuration() {
-    _animationController.duration = MediaQuery.disableAnimationsOf(context)
+    final reduce = AppMotion.reduceMotion(context);
+    _animationController.duration = reduce
         ? Duration.zero
         : widget.animationDuration;
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (reduce) {
       _animationController.value = _isMenuVisible ? 1 : 0;
     }
   }

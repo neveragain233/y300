@@ -187,7 +187,7 @@ class _PressSurfaceState extends State<PressSurface>
       }
       return;
     }
-    if (_inScrollView()) {
+    if (_inScrollView() && !context.disableAnimations) {
       _reveal = Timer(_revealDelay, _showPress);
     } else {
       _showPress();
@@ -231,7 +231,9 @@ class _PressSurfaceState extends State<PressSurface>
     _fadeInInk();
   }
 
-  bool get _sparkling => Theme.of(context).platform == TargetPlatform.android;
+  bool get _sparkling =>
+      !context.disableAnimations &&
+      Theme.of(context).platform == TargetPlatform.android;
 
   void _fadeInInk() {
     if (_inkHeld) {

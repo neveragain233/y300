@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
 
@@ -39,7 +40,7 @@ Future<T?> showAdaptivePanel<T>({
       useRootNavigator: useRootNavigator,
       constraints: constraints,
       anchorPoint: anchor,
-      sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+      sheetAnimationStyle: AppMotion.reduceMotion(context)
           ? AnimationStyle.noAnimation
           : null,
       builder: builder,

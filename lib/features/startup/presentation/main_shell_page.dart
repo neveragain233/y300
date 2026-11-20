@@ -306,6 +306,11 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                                   key: const ValueKey<String>(
                                     'main-shell-navigation-bar',
                                   ),
+                                  animationDuration:
+                                      appearance.eInkMode ||
+                                          media.disableAnimations
+                                      ? Duration.zero
+                                      : null,
                                   selectedIndex: selectedIndex,
                                   onDestinationSelected: selectGroup,
                                   destinations: [

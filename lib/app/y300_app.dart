@@ -87,31 +87,34 @@ class Y300App extends ConsumerWidget {
             ref.watch(forumClipboardRouteObserverProvider),
             ref.watch(messageAttentionRouteObserverProvider),
           ],
-          builder: (context, child) => WafChallengeRecoveryHost(
-            onBusyChanged: clipboard.setWafBusy,
-            child: MessageAttentionProbeHost(
-              child: BlacklistSyncHost(
-                // 玻璃来源包住 Navigator，普通路由、根页菜单、模态和分栏
-                // 详情共用同一宿主；WAF、消息与黑名单 host 仍是应用根职责。
-                child: EInkModeScope(
-                  enabled: eInkMode,
-                  child: PrismMotionScope(
-                    reduceMotion: eInkMode,
-                    child: MediaQuery(
-                      data: MediaQuery.of(context)
-                          .copyWith(disableAnimations: eInkMode),
-                      child: AppGlassEnvironment(
-                        glassLevel: eInkMode
-                            ? AppGlassLevel.off
-                            : settings.glassLevel,
-                        child: child ?? const SizedBox.shrink(),
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            final reduceMotion = media.disableAnimations || eInkMode;
+            return WafChallengeRecoveryHost(
+              onBusyChanged: clipboard.setWafBusy,
+              child: MessageAttentionProbeHost(
+                child: BlacklistSyncHost(
+                  // 玻璃来源包住 Navigator，普通路由、根页菜单、模态和分栏
+                  // 详情共用同一宿主；WAF、消息与黑名单 host 仍是应用根职责。
+                  child: EInkModeScope(
+                    enabled: eInkMode,
+                    child: PrismMotionScope(
+                      reduceMotion: reduceMotion,
+                      child: MediaQuery(
+                        data: media.copyWith(disableAnimations: reduceMotion),
+                        child: AppGlassEnvironment(
+                          glassLevel: eInkMode
+                              ? AppGlassLevel.off
+                              : settings.glassLevel,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
           home: enableAppUpdatePrompt
               ? AppUpdateAlertHost(
                   onBlockedChanged: clipboard.setUpdateBlocked,

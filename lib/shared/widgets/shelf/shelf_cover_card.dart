@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
 import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
@@ -105,7 +106,10 @@ class ShelfCoverCard extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: AppMotion.duration(
+          context,
+          const Duration(milliseconds: 180),
+        ),
         padding: const EdgeInsets.all(ShelfGridGeometry.selectionPadding),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(

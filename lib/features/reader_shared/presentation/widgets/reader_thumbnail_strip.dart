@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chrome_palette.dart';
 import 'package:y300/features/reader_shared/domain/continuous_image/continuous_image.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
@@ -557,7 +558,5 @@ class _ReaderThumbnailStripState extends State<ReaderThumbnailStrip> {
     );
   }
 
-  bool _reduceMotion() {
-    return MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-  }
+  bool _reduceMotion() => AppMotion.reduceMotion(context);
 }

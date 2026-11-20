@@ -5,6 +5,7 @@ import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/popup.dart' as prism;
 import 'package:prism_ui/press_region.dart' as prism_press;
 import 'package:prism_ui/theme_data.dart' as prism_theme;
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 /// 应用统一菜单入口：外观、开合运动与来源按钮接续由 prism_ui 锚定菜单提供。
@@ -68,7 +69,7 @@ class AppPopupMenuButton<T> extends StatelessWidget {
       // 顶栏按钮和文字触发控件都没有自己的表面，液滴从透明淡入而不是先铺底色。
       bare: true,
       // 系统减少动态效果时直接开关：不做液滴展开与收回，来源按钮一直可见。
-      reduceMotion: MediaQuery.disableAnimationsOf(context),
+      reduceMotion: AppMotion.reduceMotion(context),
       theme: theme,
       targetBuilder: (open) => customTarget != null
           ? customTarget(context, open)

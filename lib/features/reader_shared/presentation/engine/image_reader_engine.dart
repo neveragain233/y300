@@ -8,6 +8,7 @@ import 'package:y300/core/eink/eink_hardware_page_keys.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:flutter/rendering.dart'
     show RenderAbstractViewport, ScrollCacheExtent;
@@ -652,7 +653,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         items: items,
         mode: ContinuousImageReaderMode.horizontal,
         pageController: pageController,
-        horizontalPhysics: _pagedHorizontalOverflowActive(preferences)
+        horizontalPhysics:
+            EInkModeScope.of(context) ||
+                _pagedHorizontalOverflowActive(preferences)
             ? const NeverScrollableScrollPhysics()
             : const PageScrollPhysics(),
         reverse: preferences.readerMode == ReaderModePreference.rtl,
@@ -2186,6 +2189,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   }
 
   void _animatePagedTurn(PageController pageController, int target) {
+    if (AppMotion.reduceMotion(context)) {
+      pageController.jumpToPage(target);
+      return;
+    }
     unawaited(
       pageController.animateToPage(
         target,

@@ -1,5 +1,6 @@
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:flutter/material.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/posting/domain/models/posting_models.dart';
 import 'package:y300/features/posting/presentation/widgets/thread_poll_editor.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -71,7 +72,10 @@ class ThreadPollExpandableEditor extends StatelessWidget {
           onTap: () => onExpansionChanged(!expanded),
         ),
         AnimatedSize(
-          duration: const Duration(milliseconds: 180),
+          duration: AppMotion.duration(
+            context,
+            const Duration(milliseconds: 180),
+          ),
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
           child: expanded
@@ -188,7 +192,10 @@ class _PollConfigHeader extends StatelessWidget {
                   const SizedBox(width: 6),
                   TweenAnimationBuilder<double>(
                     tween: Tween<double>(begin: 0, end: expanded ? 0.5 : 0),
-                    duration: const Duration(milliseconds: 160),
+                    duration: AppMotion.duration(
+                      context,
+                      const Duration(milliseconds: 160),
+                    ),
                     curve: Curves.easeOutCubic,
                     builder: (context, turns, child) {
                       return RotationTransition(

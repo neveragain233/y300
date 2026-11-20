@@ -107,10 +107,16 @@ class _SwitchState extends State<Switch> with TickerProviderStateMixin {
 
   void _handlePress() {
     _tapLiftTimer?.cancel();
+    if (context.disableAnimations) {
+      return;
+    }
     _pressController.forward();
   }
 
   void _liftAcross() {
+    if (context.disableAnimations) {
+      return;
+    }
     _handlePress();
     _tapLiftTimer = Timer(
       context.motionDuration(_tapLift),

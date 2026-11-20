@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_gesture_coordinator.dart';
 
 enum ReaderZoomBehavior { bounded, continuousVertical }
@@ -621,7 +622,7 @@ class _ReaderZoomSurfaceState extends State<ReaderZoomSurface>
   }
 
   void _animateTo(Matrix4 targetMatrix, {required bool targetZoomed}) {
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (AppMotion.reduceMotion(context)) {
       _stopAnimation();
       _transformationController.value = targetMatrix;
       _setZoomed(targetZoomed);

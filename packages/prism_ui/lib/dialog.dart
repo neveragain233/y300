@@ -51,6 +51,7 @@ Future<T?> showFloatingDialog<T>({
       barrierColor: context.colorScheme.alertScrim,
       barrierDismissible: dismissible,
       barrierLabel: dismissible ? UiLocalizations.of(context).close : null,
+      reduceMotion: context.disableAnimations,
       builder: (context) => SurfaceScope(
         level: SurfaceLevel.floatingOf(context.colorScheme),
         child: child,
@@ -68,6 +69,7 @@ class _AlertRoute<T> extends PopupRoute<T>
     required this.barrierColor,
     required this.barrierDismissible,
     required this.barrierLabel,
+    required this.reduceMotion,
     required this.builder,
   });
 
@@ -79,6 +81,9 @@ class _AlertRoute<T> extends PopupRoute<T>
 
   @override
   final String? barrierLabel;
+
+  @override
+  final bool reduceMotion;
 
   final WidgetBuilder builder;
 
@@ -110,8 +115,11 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
 
   VoidCallback? get onBarrierDismiss => null;
 
+  bool get reduceMotion => false;
+
   @override
-  Duration get transitionDuration => _alertDuration;
+  Duration get transitionDuration =>
+      reduceMotion ? Duration.zero : _alertDuration;
 
   @override
   Widget buildModalBarrier() {
@@ -124,6 +132,9 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
     final barrierColor = this.barrierColor;
     if (offstage || barrierColor == null) {
       return barrier;
+    }
+    if (reduceMotion) {
+      return ColoredBox(color: barrierColor, child: barrier);
     }
     return LiquidGlassVeil(
       color: _spring.drive(
@@ -140,6 +151,9 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    if (reduceMotion) {
+      return child;
+    }
     return _AlertTransition(animation: _spring, child: child);
   }
 

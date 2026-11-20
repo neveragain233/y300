@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/core/motion/app_motion.dart';
 
 class ComposerDropdownItem<T> {
   const ComposerDropdownItem({
@@ -231,7 +232,10 @@ class _ComposerAnchoredDropdownOverlay<T> extends StatelessWidget {
           offset: const Offset(0, 4),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 160),
+            duration: AppMotion.duration(
+              context,
+              const Duration(milliseconds: 160),
+            ),
             curve: Curves.easeOutCubic,
             builder: (context, value, child) {
               return Opacity(
@@ -322,7 +326,7 @@ class _ComposerDropdownArrow extends StatelessWidget {
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: isExpanded ? 0.5 : 0),
-      duration: const Duration(milliseconds: 160),
+      duration: AppMotion.duration(context, const Duration(milliseconds: 160)),
       curve: Curves.easeOutCubic,
       builder: (context, turns, child) {
         return RotationTransition(

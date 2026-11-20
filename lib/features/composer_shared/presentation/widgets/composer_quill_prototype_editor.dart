@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/composer_shared/domain/models/composer_attachment_models.dart';
 import 'package:y300/features/composer_shared/domain/models/composer_attachment_preview_models.dart';
 import 'package:y300/features/composer_shared/domain/models/composer_insertion_models.dart';
@@ -370,7 +371,10 @@ class _ComposerQuillEditorSurfaceState
               ),
             ),
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 180),
+            duration: AppMotion.duration(
+              context,
+              const Duration(milliseconds: 180),
+            ),
             curve: Curves.easeOutCubic,
             left: 0,
             right: 0,
@@ -1538,9 +1542,8 @@ class _FormatSheetState extends State<_FormatSheet> {
                             '${widget.keyPrefix}-format-underline-toggle',
                           ),
                           icon: Icons.format_underline,
-                          tooltip: AppLocalizations.of(
-                            context,
-                          ).composerUnderline,
+                          tooltip: AppLocalizations.of(context)
+                              .composerUnderline,
                           selected: _isAttributeActive(Attribute.underline),
                           onSelected: (_) =>
                               _toggleAttribute(Attribute.underline),
@@ -1549,9 +1552,8 @@ class _FormatSheetState extends State<_FormatSheet> {
                         _FormatIconToggle(
                           key: Key('${widget.keyPrefix}-format-strike-toggle'),
                           icon: Icons.format_strikethrough,
-                          tooltip: AppLocalizations.of(
-                            context,
-                          ).composerStrikethrough,
+                          tooltip: AppLocalizations.of(context)
+                              .composerStrikethrough,
                           selected: _isAttributeActive(Attribute.strikeThrough),
                           onSelected: (_) =>
                               _toggleAttribute(Attribute.strikeThrough),
@@ -2008,9 +2010,8 @@ class _CollapseEmbedBuilder extends EmbedBuilder {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: title.isEmpty
-            ? Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).hintColor,
-              )
+            ? Theme.of(context).textTheme.bodyLarge
+                  ?.copyWith(color: Theme.of(context).hintColor)
             : Theme.of(context).textTheme.bodyLarge,
       ),
       headerTrailing: showEditAction

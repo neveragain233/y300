@@ -62,10 +62,7 @@ class _AppLoadingStateState extends State<AppLoadingState> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     // 减少动态效果时不画持续旋转的指示器，文字仍说明正在读取。
-    final showIndicator =
-        _showIndicator &&
-        !MediaQuery.disableAnimationsOf(context) &&
-        !AppMotion.reduceMotion(context);
+    final showIndicator = _showIndicator && !AppMotion.reduceMotion(context);
     final label = widget.label;
     return Semantics(
       container: true,

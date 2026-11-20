@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chrome_palette.dart';
 
 class ReaderPageIndicatorOverlay extends StatelessWidget {
@@ -29,7 +30,10 @@ class ReaderPageIndicatorOverlay extends StatelessWidget {
       child: AnimatedOpacity(
         key: const Key('comic-reader-page-indicator-overlay'),
         opacity: visible ? (highlighted ? 0.92 : 0.62) : 0,
-        duration: const Duration(milliseconds: 180),
+        duration: AppMotion.duration(
+          context,
+          const Duration(milliseconds: 180),
+        ),
         child: Align(
           alignment: Alignment.bottomCenter,
           child: SafeArea(
@@ -51,9 +55,8 @@ class ReaderPageIndicatorOverlay extends StatelessWidget {
                         ? '$current / $safeTotal'
                         : label,
                     key: const Key('comic-reader-page-indicator-text'),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.white),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: Colors.white),
                   ),
                 ),
               ),

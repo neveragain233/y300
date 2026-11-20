@@ -146,7 +146,7 @@ class _PressRegionState extends State<PressRegion> {
     final shape = widget.shape ?? const RoundedSuperellipseBorder();
     final overlay = TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: _overlayColor(context) ?? const Color(0x00000000)),
-      duration: _overlayFade,
+      duration: context.motionDuration(_overlayFade),
       builder: (context, color, child) =>
           CustomPaint(painter: _OverlayPainter(color, shape), child: child),
       child: widget.child,

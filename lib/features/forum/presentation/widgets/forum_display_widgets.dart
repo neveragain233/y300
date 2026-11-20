@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
@@ -833,7 +834,10 @@ class _TypeFilterMenuOverlay extends StatelessWidget {
           offset: const Offset(0, 4),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 160),
+            duration: AppMotion.duration(
+              context,
+              const Duration(milliseconds: 160),
+            ),
             curve: Curves.easeOutCubic,
             builder: (context, value, child) {
               return Opacity(
@@ -925,7 +929,7 @@ class _RotatingArrowIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: isExpanded ? 0.5 : 0),
-      duration: const Duration(milliseconds: 180),
+      duration: AppMotion.duration(context, const Duration(milliseconds: 180)),
       curve: Curves.easeOutCubic,
       builder: (context, turns, child) {
         return RotationTransition(
@@ -989,7 +993,10 @@ class _FilterChipButton extends StatelessWidget {
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
+                    duration: AppMotion.duration(
+                      context,
+                      const Duration(milliseconds: 160),
+                    ),
                     curve: Curves.easeOutCubic,
                     width: isSelected ? 18 : 0,
                     height: 3,
@@ -1081,11 +1088,17 @@ class _SubForumListState extends State<_SubForumList> {
             if (_isExpanded) _SoftDivider(palette: widget.palette),
             ClipRect(
               child: AnimatedSize(
-                duration: const Duration(milliseconds: 220),
+                duration: AppMotion.duration(
+                  context,
+                  const Duration(milliseconds: 220),
+                ),
                 curve: Curves.easeOutCubic,
                 alignment: Alignment.topCenter,
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
+                  duration: AppMotion.duration(
+                    context,
+                    const Duration(milliseconds: 180),
+                  ),
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: (child, animation) {
@@ -1226,11 +1239,17 @@ class _TopEntrySection extends StatelessWidget {
             if (isExpanded) _SoftDivider(palette: palette),
             ClipRect(
               child: AnimatedSize(
-                duration: const Duration(milliseconds: 220),
+                duration: AppMotion.duration(
+                  context,
+                  const Duration(milliseconds: 220),
+                ),
                 curve: Curves.easeOutCubic,
                 alignment: Alignment.topCenter,
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
+                  duration: AppMotion.duration(
+                    context,
+                    const Duration(milliseconds: 180),
+                  ),
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: (child, animation) {

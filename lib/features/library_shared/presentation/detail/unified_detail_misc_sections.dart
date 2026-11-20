@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
@@ -43,9 +44,8 @@ class UnifiedDetailErrorPanel extends StatelessWidget {
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onErrorContainer,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: scheme.onErrorContainer),
                 ),
               ),
               const SizedBox(width: 8),
@@ -211,7 +211,7 @@ class _AnimatedIntroTextViewport extends StatelessWidget {
         : collapsedHeight;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(end: targetHeight),
-      duration: const Duration(milliseconds: 220),
+      duration: AppMotion.duration(context, const Duration(milliseconds: 220)),
       curve: Curves.easeInOutCubic,
       builder: (context, height, child) {
         final viewport = SizedBox(

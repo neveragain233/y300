@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_document.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_marks.dart';
@@ -1873,12 +1874,11 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final pageCount = widget.plan.pageCount;
+    final reduceMotion = AppMotion.reduceMotion(context);
     final paperEnabled =
-        widget.pageEffect == NovelReaderPageEffect.paper &&
-        !MediaQuery.disableAnimationsOf(context);
+        widget.pageEffect == NovelReaderPageEffect.paper && !reduceMotion;
     final fullSheetEnabled =
-        NovelReaderPageMotion.isFullSheet(widget.pageEffect) &&
-        !MediaQuery.disableAnimationsOf(context);
+        NovelReaderPageMotion.isFullSheet(widget.pageEffect) && !reduceMotion;
     final totalPageLabel = widget.isPageCountFinal
         ? l10n.novelPages(pageCount)
         : l10n.novelPageCountPending;
@@ -1935,12 +1935,12 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
                 clipBehavior:
                     fullSheetEnabled ||
                         widget.pageEffect == NovelReaderPageEffect.staggered &&
-                            !MediaQuery.disableAnimationsOf(context)
+                            !reduceMotion
                     ? Clip.none
                     : Clip.hardEdge,
                 pageSnapping: false,
                 physics: NovelReaderPageScrollPhysics(
-                  durationScale: () => MediaQuery.disableAnimationsOf(context)
+                  durationScale: () => AppMotion.reduceMotion(context)
                       ? 0.01
                       : NovelReaderPageMotion.snapDurationScale(
                           widget.pageEffect,
@@ -1956,7 +1956,7 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
                   return NovelReaderPageTransition(
                     controller: _pageController,
                     index: index,
-                    effect: MediaQuery.disableAnimationsOf(context)
+                    effect: reduceMotion
                         ? NovelReaderPageEffect.fade
                         : widget.pageEffect,
                     reverse: widget.reverse,
@@ -2101,7 +2101,7 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
     _tapTurnAnimationIdentity = identity;
     _forwardAnimationTarget = confirmOnArrival ? target : null;
     try {
-      if (MediaQuery.disableAnimationsOf(context)) {
+      if (AppMotion.reduceMotion(context)) {
         _pageController.jumpToPage(target);
         return;
       }

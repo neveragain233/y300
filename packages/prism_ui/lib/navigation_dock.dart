@@ -574,10 +574,25 @@ class _ElasticPressState extends State<ElasticPress>
   Offset _origin = Offset.zero;
   bool _releasing = false;
 
+  bool get _active => widget.enabled && !context.disableAnimations;
+
   @override
   void initState() {
     super.initState();
     _lift.addListener(_settle);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_active) {
+      _pointer = null;
+      _releasing = false;
+      _lift.jumpTo(0);
+      _hover.jumpTo(0);
+      _pullX.jumpTo(0);
+      _pullY.jumpTo(0);
+    }
   }
 
   @override
@@ -596,9 +611,7 @@ class _ElasticPressState extends State<ElasticPress>
   }
 
   void _handlePointerDown(PointerDownEvent event) {
-    if (!widget.enabled ||
-        _pointer != null ||
-        event.buttons & kPrimaryButton == 0) {
+    if (!_active || _pointer != null || event.buttons & kPrimaryButton == 0) {
       return;
     }
     _pointer = event.pointer;
@@ -659,14 +672,19 @@ class _ElasticPressState extends State<ElasticPress>
 
   @override
   void press(Offset position) {
-    if (!widget.enabled) {
+    if (!_active) {
       return;
     }
     _swell(_localOf(position));
   }
 
   @override
-  void drag(Offset position) => _pullToward(_localOf(position));
+  void drag(Offset position) {
+    if (!_active) {
+      return;
+    }
+    _pullToward(_localOf(position));
+  }
 
   @override
   void release() => _release();
@@ -677,10 +695,11 @@ class _ElasticPressState extends State<ElasticPress>
       return;
     }
     _hovers = math.max(0, _hovers + (entered ? 1 : -1));
-    _hover.springTo(
-      widget.enabled && _hovers > 0 ? _hoverSwell : 0,
-      _settleSpring,
-    );
+    if (!_active) {
+      _hover.jumpTo(0);
+      return;
+    }
+    _hover.springTo(_hovers > 0 ? _hoverSwell : 0, _settleSpring);
   }
 
   @override

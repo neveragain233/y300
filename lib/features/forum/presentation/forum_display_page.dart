@@ -1,3 +1,4 @@
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
@@ -406,6 +407,10 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
         .clamp(position.minScrollExtent, position.maxScrollExtent)
         .toDouble();
     if ((position.pixels - clampedTarget).abs() < 0.5) {
+      return;
+    }
+    if (AppMotion.reduceMotion(context)) {
+      _scrollController.jumpTo(clampedTarget);
       return;
     }
     await _scrollController.animateTo(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -323,6 +324,15 @@ class _LibraryChapterReadStateSwipeState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _returnController.duration = AppMotion.duration(
+      context,
+      const Duration(milliseconds: 180),
+    );
+  }
+
+  @override
   void dispose() {
     _returnController.dispose();
     super.dispose();
@@ -417,9 +427,7 @@ class _LibraryChapterReadStateSwipeState
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final revealWidth = width.isFinite
-                ? width * _visibleFraction
-                : 0.0;
+            final revealWidth = width.isFinite ? width * _visibleFraction : 0.0;
             final throughStage =
                 _supportsThroughStage && _visibleFraction >= _stageTwoFraction;
             final background = throughStage

@@ -158,6 +158,7 @@ final class AppTheme {
               : extension,
         )
         .toList(growable: false);
+    const noAnimationButton = ButtonStyle(animationDuration: Duration.zero);
     return theme.copyWith(
       extensions: extensions,
       splashFactory: NoSplash.splashFactory,
@@ -180,6 +181,28 @@ final class AppTheme {
       popupMenuTheme: theme.popupMenuTheme.copyWith(
         elevation: 0,
         shadowColor: shadow,
+      ),
+      snackBarTheme: theme.snackBarTheme.copyWith(elevation: 0),
+      expansionTileTheme: theme.expansionTileTheme.copyWith(
+        expansionAnimationStyle: AnimationStyle.noAnimation,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: noAnimationButton.merge(theme.filledButtonTheme.style),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: noAnimationButton.merge(theme.textButtonTheme.style),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: noAnimationButton.merge(theme.outlinedButtonTheme.style),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: noAnimationButton.merge(theme.iconButtonTheme.style),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: noAnimationButton.merge(theme.elevatedButtonTheme.style),
+      ),
+      segmentedButtonTheme: theme.segmentedButtonTheme.copyWith(
+        style: noAnimationButton.merge(theme.segmentedButtonTheme.style),
       ),
     );
   }
