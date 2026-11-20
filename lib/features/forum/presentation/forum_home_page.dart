@@ -35,6 +35,7 @@ import 'package:y300/features/thread/domain/services/thread_post_navigation_sess
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
@@ -460,6 +461,7 @@ class _ForumHomeContent extends ConsumerStatefulWidget {
 
 class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
   final Set<String> _collapsedSectionKeys = <String>{};
+  final ScrollController _scrollController = ScrollController();
   final _carouselNavigation = ThreadPostNavigationSession();
   int _carouselNavigationGeneration = 0;
 
@@ -479,6 +481,7 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _carouselNavigation.dispose();
     super.dispose();
   }
@@ -510,38 +513,48 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
           children: [
             ColoredBox(
               color: palette.background,
-              child: ListView(
-                key: const Key('forum-home-list'),
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(
-                  bottom: 10 + mainShellBottomScrollInset(context),
+              // 首页含横向轮播，边缘点击会抢走轮播手势，因此只保留角标。
+              child: EInkScrollPager(
+                controller: _scrollController,
+                edgeTapAllowed: false,
+                cornerPadding: EdgeInsets.only(
+                  right: 12,
+                  bottom: 16 + mainShellBottomScrollInset(context),
                 ),
-                children: [
-                  for (final section in widget.projection.sections.where(
-                    (section) =>
-                        section.source.type == ForumSectionType.favorite,
-                  ))
-                    _buildSection(context, section, l10n),
-                  ForumHomeCarousel(
-                    items: carouselItems,
-                    imageReferer: widget.imageReferer,
-                    onOpen: (item) => _openCarouselTarget(context, ref, item),
-                    isActive: widget.isActive,
+                child: ListView(
+                  controller: _scrollController,
+                  key: const Key('forum-home-list'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    bottom: 10 + mainShellBottomScrollInset(context),
                   ),
-                  if (isEmpty)
-                    SizedBox(
-                      height: constraints.maxHeight,
-                      child: AppEmptyState(
-                        key: const Key('forum-home-empty-state'),
-                        title: l10n.forumHomeEmpty,
-                      ),
+                  children: [
+                    for (final section in widget.projection.sections.where(
+                      (section) =>
+                          section.source.type == ForumSectionType.favorite,
+                    ))
+                      _buildSection(context, section, l10n),
+                    ForumHomeCarousel(
+                      items: carouselItems,
+                      imageReferer: widget.imageReferer,
+                      onOpen: (item) => _openCarouselTarget(context, ref, item),
+                      isActive: widget.isActive,
                     ),
-                  for (final section in widget.projection.sections.where(
-                    (section) =>
-                        section.source.type != ForumSectionType.favorite,
-                  ))
-                    _buildSection(context, section, l10n),
-                ],
+                    if (isEmpty)
+                      SizedBox(
+                        height: constraints.maxHeight,
+                        child: AppEmptyState(
+                          key: const Key('forum-home-empty-state'),
+                          title: l10n.forumHomeEmpty,
+                        ),
+                      ),
+                    for (final section in widget.projection.sections.where(
+                      (section) =>
+                          section.source.type != ForumSectionType.favorite,
+                    ))
+                      _buildSection(context, section, l10n),
+                  ],
+                ),
               ),
             ),
           ],

@@ -8,6 +8,7 @@ import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
@@ -1462,7 +1463,7 @@ class _ShelfCategoryPageState extends ConsumerState<_ShelfCategoryPage>
   }
 }
 
-class _WorkGrid extends StatelessWidget {
+class _WorkGrid extends StatefulWidget {
   const _WorkGrid({
     required this.categoryId,
     required this.moduleKey,
@@ -1490,12 +1491,26 @@ class _WorkGrid extends StatelessWidget {
   final Set<String> selectedWorkIds;
 
   @override
+  State<_WorkGrid> createState() => _WorkGridState();
+}
+
+class _WorkGridState extends State<_WorkGrid> {
+  /// 每个分类页各自持有控制器，滚动位置不跨分类共享。
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = ShelfGridGeometry.columnCount(
           constraints.maxWidth,
-          gridColumns,
+          widget.gridColumns,
         );
         final horizontalSpace =
             ShelfGridGeometry.contentPadding * 2 +
@@ -1503,85 +1518,97 @@ class _WorkGrid extends StatelessWidget {
         final itemWidth = (constraints.maxWidth - horizontalSpace) / columns;
         final rowExtent = itemWidth * 1.5 + ShelfGridGeometry.itemSpacing;
         return KeyedSubtree(
-          key: PageStorageKey<String>('unified-shelf-grid-storage-$categoryId'),
-          child: GridView.builder(
-            key: const Key('unified-shelf-grid-view'),
-            // 保证短列表也能触发 RefreshIndicator 下拉手势。
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: ClampingScrollPhysics(),
+          key: PageStorageKey<String>(
+            'unified-shelf-grid-storage-${widget.categoryId}',
+          ),
+          // 网格含横向手势，不启用边缘点击；角标避让右缘最近阅读按钮。
+          child: EInkScrollPager(
+            controller: _scrollController,
+            edgeTapAllowed: false,
+            cornerPadding: EdgeInsets.only(
+              right: 12,
+              bottom: 88 + mainShellBottomScrollInset(context),
             ),
-            // 大书架场景预渲染适度前后缓存，降低滑动抖动。
-            scrollCacheExtent: ScrollCacheExtent.pixels(rowExtent),
-            // 沉浸式主导航覆盖在正文上方时，末行仍能完整滚出底栏。
-            padding: EdgeInsets.fromLTRB(
-              ShelfGridGeometry.contentPadding,
-              ShelfGridGeometry.contentPadding,
-              ShelfGridGeometry.contentPadding,
-              ShelfGridGeometry.contentPadding +
-                  mainShellBottomScrollInset(context),
-            ),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              crossAxisSpacing: ShelfGridGeometry.itemSpacing,
-              mainAxisSpacing: ShelfGridGeometry.itemSpacing,
-              childAspectRatio: 2 / 3,
-            ),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final l10n = AppLocalizations.of(context);
-              final source = item.source ?? moduleKey;
-              return ShelfCoverCard(
-                key: ValueKey<String>(
-                  'unified-shelf-grid-item-${item.identityKey}',
-                ),
-                coverKey: item.identityKey,
-                identity: LibraryCoverIdentity.resolve(
-                  moduleKey: source,
-                  workId: item.workId,
+            child: GridView.builder(
+              controller: _scrollController,
+              key: const Key('unified-shelf-grid-view'),
+              // 保证短列表也能触发 RefreshIndicator 下拉手势。
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: ClampingScrollPhysics(),
+              ),
+              // 大书架场景预渲染适度前后缓存，降低滑动抖动。
+              scrollCacheExtent: ScrollCacheExtent.pixels(rowExtent),
+              // 沉浸式主导航覆盖在正文上方时，末行仍能完整滚出底栏。
+              padding: EdgeInsets.fromLTRB(
+                ShelfGridGeometry.contentPadding,
+                ShelfGridGeometry.contentPadding,
+                ShelfGridGeometry.contentPadding,
+                ShelfGridGeometry.contentPadding +
+                    mainShellBottomScrollInset(context),
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: ShelfGridGeometry.itemSpacing,
+                mainAxisSpacing: ShelfGridGeometry.itemSpacing,
+                childAspectRatio: 2 / 3,
+              ),
+              itemCount: widget.items.length,
+              itemBuilder: (context, index) {
+                final item = widget.items[index];
+                final l10n = AppLocalizations.of(context);
+                final source = item.source ?? widget.moduleKey;
+                return ShelfCoverCard(
+                  key: ValueKey<String>(
+                    'unified-shelf-grid-item-${item.identityKey}',
+                  ),
+                  coverKey: item.identityKey,
+                  identity: LibraryCoverIdentity.resolve(
+                    moduleKey: source,
+                    workId: item.workId,
+                    coverAsset: item.coverAsset,
+                  ),
+                  title: LibraryShelfTextResolver.workTitle(
+                    l10n,
+                    source,
+                    item.title,
+                    item.workId,
+                  ),
+                  author: item.secondaryName,
+                  coverImageUrl: item.coverImageUrl,
+                  coverLocalPath: item.coverLocalPath,
+                  customCoverLocalPath: item.customCoverLocalPath,
+                  customCoverFocusX: item.customCoverFocusX,
+                  customCoverFocusY: item.customCoverFocusY,
                   coverAsset: item.coverAsset,
-                ),
-                title: LibraryShelfTextResolver.workTitle(
-                  l10n,
-                  source,
-                  item.title,
-                  item.workId,
-                ),
-                author: item.secondaryName,
-                coverImageUrl: item.coverImageUrl,
-                coverLocalPath: item.coverLocalPath,
-                customCoverLocalPath: item.customCoverLocalPath,
-                customCoverFocusX: item.customCoverFocusX,
-                customCoverFocusY: item.customCoverFocusY,
-                coverAsset: item.coverAsset,
-                imageReferer: imageReferer,
-                coverLayerBuilder: useShelfCoverImage
-                    ? null
-                    : _legacyCoverLayerBuilder,
-                onTap: () async => onTapItem(item.identityKey),
-                onLongPress: selectionEnabled
-                    ? () async => onLongPressItem(item.identityKey)
-                    : null,
-                topLeftBadge: showUnreadBadge
-                    ? _UnreadBadge(
-                        count: item.unreadCount,
-                        semanticLabel: l10n.libraryShelfUnreadBadgeSemantics(
-                          item.unreadCount,
+                  imageReferer: widget.imageReferer,
+                  coverLayerBuilder: widget.useShelfCoverImage
+                      ? null
+                      : _legacyCoverLayerBuilder,
+                  onTap: () async => widget.onTapItem(item.identityKey),
+                  onLongPress: widget.selectionEnabled
+                      ? () async => widget.onLongPressItem(item.identityKey)
+                      : null,
+                  topLeftBadge: widget.showUnreadBadge
+                      ? _UnreadBadge(
+                          count: item.unreadCount,
+                          semanticLabel: l10n.libraryShelfUnreadBadgeSemantics(
+                            item.unreadCount,
+                          ),
+                        )
+                      : null,
+                  trailingBadge: item.source == null
+                      ? null
+                      : _WorkTypeBadge(
+                          label: LibraryShelfTextResolver.workTypeBadge(
+                            l10n,
+                            item.source,
+                          ),
                         ),
-                      )
-                    : null,
-                trailingBadge: item.source == null
-                    ? null
-                    : _WorkTypeBadge(
-                        label: LibraryShelfTextResolver.workTypeBadge(
-                          l10n,
-                          item.source,
-                        ),
-                      ),
-                showTwoLineCustomEllipsis: true,
-                selected: selectedWorkIds.contains(item.identityKey),
-              );
-            },
+                  showTwoLineCustomEllipsis: true,
+                  selected: widget.selectedWorkIds.contains(item.identityKey),
+                );
+              },
+            ),
           ),
         );
       },
@@ -1680,7 +1707,7 @@ class _ShelfTaskProgressBanner extends StatelessWidget {
   }
 }
 
-class _WorkList extends StatelessWidget {
+class _WorkList extends StatefulWidget {
   const _WorkList({
     required this.categoryId,
     required this.moduleKey,
@@ -1706,109 +1733,135 @@ class _WorkList extends StatelessWidget {
   final Set<String> selectedWorkIds;
 
   @override
+  State<_WorkList> createState() => _WorkListState();
+}
+
+class _WorkListState extends State<_WorkList> {
+  /// 每个分类页各自持有控制器，滚动位置不跨分类共享。
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return KeyedSubtree(
-      key: PageStorageKey<String>('unified-shelf-list-storage-$categoryId'),
-      child: ListView.separated(
-        key: const Key('unified-shelf-list-view'),
-        // 保证短列表也能触发 RefreshIndicator 下拉手势。
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: ClampingScrollPhysics(),
+      key: PageStorageKey<String>(
+        'unified-shelf-list-storage-${widget.categoryId}',
+      ),
+      // 列表支持右划标记已读，不启用边缘点击；角标避让右缘最近阅读按钮。
+      child: EInkScrollPager(
+        controller: _scrollController,
+        edgeTapAllowed: false,
+        cornerPadding: EdgeInsets.only(
+          right: 12,
+          bottom: 88 + mainShellBottomScrollInset(context),
         ),
-        // 大书架场景预渲染适度前后缓存，降低滑动抖动。
-        scrollCacheExtent: const ScrollCacheExtent.pixels(82),
-        padding: EdgeInsets.fromLTRB(
-          0,
-          8,
-          0,
-          8 + mainShellBottomScrollInset(context),
-        ),
-        itemCount: items.length,
-        separatorBuilder: (context, index) =>
-            const Divider(height: 1, thickness: .5),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          final selected = selectedWorkIds.contains(item.identityKey);
-          final shelfPalette = const ShelfThemePaletteResolver().resolve(
-            Theme.of(context),
-          );
-          final leading = ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              width: 52,
-              height: 52,
-              child: _buildLeadingCover(context, item, moduleKey),
-            ),
-          );
-          return AnimatedContainer(
-            key: ValueKey<String>(
-              'unified-shelf-list-item-${item.identityKey}',
-            ),
-            duration: AppLayoutTokens.motionDuration(context),
-            curve: Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected
-                    ? shelfPalette.selectedBorder
-                    : Colors.transparent,
-                width: 2,
+        child: ListView.separated(
+          controller: _scrollController,
+          key: const Key('unified-shelf-list-view'),
+          // 保证短列表也能触发 RefreshIndicator 下拉手势。
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: ClampingScrollPhysics(),
+          ),
+          // 大书架场景预渲染适度前后缓存，降低滑动抖动。
+          scrollCacheExtent: const ScrollCacheExtent.pixels(82),
+          padding: EdgeInsets.fromLTRB(
+            0,
+            8,
+            0,
+            8 + mainShellBottomScrollInset(context),
+          ),
+          itemCount: widget.items.length,
+          separatorBuilder: (context, index) =>
+              const Divider(height: 1, thickness: .5),
+          itemBuilder: (context, index) {
+            final item = widget.items[index];
+            final selected = widget.selectedWorkIds.contains(item.identityKey);
+            final shelfPalette = const ShelfThemePaletteResolver().resolve(
+              Theme.of(context),
+            );
+            final leading = ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: _buildLeadingCover(context, item, widget.moduleKey),
               ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Material(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: ListTile(
-                  key: ValueKey<String>(
-                    'unified-shelf-list-tile-${item.identityKey}',
-                  ),
-                  minTileHeight: 72,
-                  selected: selected,
-                  onTap: () async => onTapItem(item.identityKey),
-                  onLongPress: selectionEnabled
-                      ? () async => onLongPressItem(item.identityKey)
-                      : null,
-                  leading: leading,
-                  title: Text(
-                    LibraryShelfTextResolver.workTitle(
-                      AppLocalizations.of(context),
-                      item.source ?? moduleKey,
-                      item.title,
-                      item.workId,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: item.source == null && !showUnreadBadge
-                      ? null
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (item.source != null) ...[
-                              _WorkTypeBadge(
-                                label: LibraryShelfTextResolver.workTypeBadge(
-                                  AppLocalizations.of(context),
-                                  item.source,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            if (showUnreadBadge)
-                              _UnreadBadge(
-                                count: item.unreadCount,
-                                semanticLabel: AppLocalizations.of(context)
-                                    .libraryShelfUnreadBadgeSemantics(
-                                      item.unreadCount,
-                                    ),
-                              ),
-                          ],
-                        ),
+            );
+            return AnimatedContainer(
+              key: ValueKey<String>(
+                'unified-shelf-list-item-${item.identityKey}',
+              ),
+              duration: AppLayoutTokens.motionDuration(context),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected
+                      ? shelfPalette.selectedBorder
+                      : Colors.transparent,
+                  width: 2,
                 ),
               ),
-            ),
-          );
-        },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Material(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: ListTile(
+                    key: ValueKey<String>(
+                      'unified-shelf-list-tile-${item.identityKey}',
+                    ),
+                    minTileHeight: 72,
+                    selected: selected,
+                    onTap: () async => widget.onTapItem(item.identityKey),
+                    onLongPress: widget.selectionEnabled
+                        ? () async => widget.onLongPressItem(item.identityKey)
+                        : null,
+                    leading: leading,
+                    title: Text(
+                      LibraryShelfTextResolver.workTitle(
+                        AppLocalizations.of(context),
+                        item.source ?? widget.moduleKey,
+                        item.title,
+                        item.workId,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: item.source == null && !widget.showUnreadBadge
+                        ? null
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (item.source != null) ...[
+                                _WorkTypeBadge(
+                                  label: LibraryShelfTextResolver.workTypeBadge(
+                                    AppLocalizations.of(context),
+                                    item.source,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              if (widget.showUnreadBadge)
+                                _UnreadBadge(
+                                  count: item.unreadCount,
+                                  semanticLabel: AppLocalizations.of(context)
+                                      .libraryShelfUnreadBadgeSemantics(
+                                        item.unreadCount,
+                                      ),
+                                ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1856,14 +1909,14 @@ class _WorkList extends StatelessWidget {
             item.customCoverFocusY,
           )
         : Alignment.center;
-    if (!useShelfCoverImage) {
+    if (!widget.useShelfCoverImage) {
       return LibraryCachedImage(
         localPath: _preferredLocalPath(item),
         imageUrl: _preferredRemoteUrl(item),
         fit: BoxFit.cover,
         alignment: alignment,
         placeholder: placeholder,
-        referer: imageReferer,
+        referer: widget.imageReferer,
       );
     }
     return ShelfCoverImage(
@@ -1871,7 +1924,7 @@ class _WorkList extends StatelessWidget {
       coverAsset: item.coverAsset,
       localPath: _preferredLocalPath(item),
       remoteUrl: _preferredRemoteUrl(item),
-      imageReferer: imageReferer,
+      imageReferer: widget.imageReferer,
       fit: BoxFit.cover,
       alignment: alignment,
       placeholder: placeholder,

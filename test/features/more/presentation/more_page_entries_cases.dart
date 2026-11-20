@@ -1,6 +1,28 @@
 part of 'more_page_test.dart';
 
 void _entriesCases() {
+  testWidgets('MorePage shows corner paging only in eInk mode', (tester) async {
+    Widget build({required bool eInkMode}) => ProviderScope(
+      overrides: [
+        ..._moreAuthOverrides(_FakeAuthRepository(isLoggedIn: false)),
+        appAppearanceControllerProvider.overrideWith(
+          () => _FakeAppAppearanceController(),
+        ),
+      ],
+      child: LocalizedTestApp(
+        home: EInkModeScope(enabled: eInkMode, child: const MorePage()),
+      ),
+    );
+
+    await tester.pumpWidget(build(eInkMode: false));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('eink-corner-page-up')), findsNothing);
+
+    await tester.pumpWidget(build(eInkMode: true));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('eink-corner-page-up')), findsOneWidget);
+  });
+
   testWidgets('MorePage builds dark theme chrome', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

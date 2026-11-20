@@ -18,6 +18,7 @@ import 'package:y300/core/network/api_result.dart';
 import 'package:y300/core/network/cookie_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/core/network/webview_cookie_sync_service.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 
 import '../../../support/forum_auth_test_support.dart';
 

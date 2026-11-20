@@ -552,17 +552,24 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           const AdaptiveDetailExpandAction(),
         ],
       ),
-      body: EInkScrollPager(
-        controller: _scrollController,
-        child: NotificationListener<ScrollMetricsNotification>(
-          onNotification: _handleThreadMetricsNotification,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _handleThreadScrollNotification,
-            child: Column(
-              children: [
-                if (_topicTagsFor(state) case final tags when tags.isNotEmpty)
-                  ThreadTopicTagBar(tags: tags, onOpenTag: _openThreadTag),
-                Expanded(
+      body: Column(
+        children: [
+          if (_topicTagsFor(state) case final tags when tags.isNotEmpty)
+            ThreadTopicTagBar(tags: tags, onOpenTag: _openThreadTag),
+          Expanded(
+            // pager 只包实际滚动区，边缘层不会覆盖顶部分类标签栏。
+            child: EInkScrollPager(
+              controller: _scrollController,
+              cornerPadding: EdgeInsets.only(
+                right: 12,
+                bottom: 16 + _controlsHeight,
+              ),
+              edgeTapAllowed: true,
+              edgeBottomInset: _controlsHeight + 16,
+              child: NotificationListener<ScrollMetricsNotification>(
+                onNotification: _handleThreadMetricsNotification,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleThreadScrollNotification,
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: ConstrainedBox(
@@ -737,10 +744,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: ThreadFloatingControls(
         preferences: controlsPreferences,

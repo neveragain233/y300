@@ -30,6 +30,7 @@ import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/profile/presentation/profile_action_navigation.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 
 class MorePage extends ConsumerStatefulWidget {
@@ -40,6 +41,7 @@ class MorePage extends ConsumerStatefulWidget {
 }
 
 class _MorePageState extends ConsumerState<MorePage> {
+  final ScrollController _scrollController = ScrollController();
   bool _openingMyProfile = false;
   bool _openingMyContent = false;
   bool _openingMyCredits = false;
@@ -52,6 +54,12 @@ class _MorePageState extends ConsumerState<MorePage> {
       _openingMyProfile ||
       _openingMyContent ||
       _openingMyCredits;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,125 +117,133 @@ class _MorePageState extends ConsumerState<MorePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
-            child: ListView(
-              key: const Key('more-page-list'),
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.only(
-                bottom: 24 + mainShellBottomScrollInset(context),
+            child: EInkScrollPager(
+              controller: _scrollController,
+              cornerPadding: EdgeInsets.only(
+                right: 12,
+                bottom: 16 + mainShellBottomScrollInset(context),
               ),
-              children: [
-                MoreAccountHeader(
-                  onOpenProfile: _openingMyProfile
-                      ? null
-                      : () => _openMyProfilePage(context),
-                  onOpenThreads: () =>
-                      _openMyThreadsPage(UserThreadDirectoryType.threads),
-                  onOpenReplies: () =>
-                      _openMyThreadsPage(UserThreadDirectoryType.replies),
-                  onOpenCredits: _openMyCreditsPage,
-                  isAccountActionPending: _accountActionPending,
+              child: ListView(
+                controller: _scrollController,
+                key: const Key('more-page-list'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(
+                  bottom: 24 + mainShellBottomScrollInset(context),
                 ),
-                _MoreSection(
-                  title: l10n.moreSectionContent,
-                  children: [
-                    for (final destination in [
-                      if (!forumVisible) MainShellDestination.history,
-                      MainShellDestination.blogs,
-                    ])
-                      ListTile(
-                        key: ValueKey('more-destination-${destination.name}'),
-                        leading: Icon(destination.icon),
-                        title: Text(destination.localizedLabel(l10n)),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
-                        onTap: () => Navigator.of(context).push(
-                          ref.read(mainDestinationRouteFactoryProvider)(
-                            destination,
+                children: [
+                  MoreAccountHeader(
+                    onOpenProfile: _openingMyProfile
+                        ? null
+                        : () => _openMyProfilePage(context),
+                    onOpenThreads: () =>
+                        _openMyThreadsPage(UserThreadDirectoryType.threads),
+                    onOpenReplies: () =>
+                        _openMyThreadsPage(UserThreadDirectoryType.replies),
+                    onOpenCredits: _openMyCreditsPage,
+                    isAccountActionPending: _accountActionPending,
+                  ),
+                  _MoreSection(
+                    title: l10n.moreSectionContent,
+                    children: [
+                      for (final destination in [
+                        if (!forumVisible) MainShellDestination.history,
+                        MainShellDestination.blogs,
+                      ])
+                        ListTile(
+                          key: ValueKey('more-destination-${destination.name}'),
+                          leading: Icon(destination.icon),
+                          title: Text(destination.localizedLabel(l10n)),
+                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          onTap: () => Navigator.of(context).push(
+                            ref.read(mainDestinationRouteFactoryProvider)(
+                              destination,
+                            ),
                           ),
                         ),
-                      ),
-                    if (!forumVisible)
-                      ListTile(
-                        key: const Key('more-my-messages-entry'),
-                        leading: MessageAttentionIcon(
-                          icon: Icons.mail_outline,
-                          showAttention: hasMessageAttention,
+                      if (!forumVisible)
+                        ListTile(
+                          key: const Key('more-my-messages-entry'),
+                          leading: MessageAttentionIcon(
+                            icon: Icons.mail_outline,
+                            showAttention: hasMessageAttention,
+                          ),
+                          title: Text(l10n.moreMyMessages),
+                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          onTap: canOpenMyContent
+                              ? () => _openMyContentPage(
+                                  ForumUserProfileActionKind.messages,
+                                )
+                              : null,
                         ),
-                        title: Text(l10n.moreMyMessages),
+                      ListTile(
+                        key: const Key('more-my-blogs-entry'),
+                        leading: const Icon(Icons.auto_stories_outlined),
+                        title: Text(l10n.profileMyBlogs),
                         trailing: const Icon(Icons.chevron_right, size: 20),
                         onTap: canOpenMyContent
                             ? () => _openMyContentPage(
-                                ForumUserProfileActionKind.messages,
+                                ForumUserProfileActionKind.blogs,
                               )
                             : null,
                       ),
-                    ListTile(
-                      key: const Key('more-my-blogs-entry'),
-                      leading: const Icon(Icons.auto_stories_outlined),
-                      title: Text(l10n.profileMyBlogs),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: canOpenMyContent
-                          ? () => _openMyContentPage(
-                              ForumUserProfileActionKind.blogs,
-                            )
-                          : null,
-                    ),
-                    ListTile(
-                      key: const Key('more-my-friends-entry'),
-                      leading: const Icon(Icons.people_outline_rounded),
-                      title: Text(l10n.profileMyFriendsTitle),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: canOpenMyContent
-                          ? () => _openMyContentPage(
-                              ForumUserProfileActionKind.friends,
-                            )
-                          : null,
-                    ),
-                  ],
-                ),
-                _MoreSection(
-                  title: l10n.moreSectionManagement,
-                  children: [
-                    ListTile(
-                      key: const Key('more-unused-images-entry'),
-                      leading: const Icon(Icons.photo_library_outlined),
-                      title: Text(l10n.moreUnusedImages),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: _accountActionPending
-                          ? null
-                          : () => _openUnusedImagesPage(context, authSession),
-                    ),
-                    ListTile(
-                      key: const Key('more-download-queue-entry'),
-                      leading: const Icon(Icons.offline_pin_outlined),
-                      title: Text(l10n.moreDownloadQueue),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () {
-                        Navigator.of(context).push(
+                      ListTile(
+                        key: const Key('more-my-friends-entry'),
+                        leading: const Icon(Icons.people_outline_rounded),
+                        title: Text(l10n.profileMyFriendsTitle),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: canOpenMyContent
+                            ? () => _openMyContentPage(
+                                ForumUserProfileActionKind.friends,
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
+                  _MoreSection(
+                    title: l10n.moreSectionManagement,
+                    children: [
+                      ListTile(
+                        key: const Key('more-unused-images-entry'),
+                        leading: const Icon(Icons.photo_library_outlined),
+                        title: Text(l10n.moreUnusedImages),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: _accountActionPending
+                            ? null
+                            : () => _openUnusedImagesPage(context, authSession),
+                      ),
+                      ListTile(
+                        key: const Key('more-download-queue-entry'),
+                        leading: const Icon(Icons.offline_pin_outlined),
+                        title: Text(l10n.moreDownloadQueue),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ComicDownloadQueuePage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  _MoreSection(
+                    title: l10n.moreSectionSettings,
+                    children: [
+                      ListTile(
+                        key: const Key('more-settings-entry'),
+                        leading: const Icon(Icons.settings_outlined),
+                        title: Text(l10n.moreSectionSettings),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => const ComicDownloadQueuePage(),
+                            builder: (_) => const SettingsPage(),
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                _MoreSection(
-                  title: l10n.moreSectionSettings,
-                  children: [
-                    ListTile(
-                      key: const Key('more-settings-entry'),
-                      leading: const Icon(Icons.settings_outlined),
-                      title: Text(l10n.moreSectionSettings),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const SettingsPage(),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

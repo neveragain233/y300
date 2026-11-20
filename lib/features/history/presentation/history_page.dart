@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/history/data/providers/history_providers.dart';
 import 'package:y300/features/history/domain/models/history_models.dart';
@@ -17,6 +18,7 @@ import 'package:y300/features/recent_search/domain/models/recent_search_scope.da
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 
 typedef HistoryEntryOpenCallback = Future<HistoryOpenResult> Function(
@@ -137,7 +139,18 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 onSelected: _applyRecentSearch,
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
               ),
-            Expanded(child: _buildBody(state)),
+            Expanded(
+              // 历史页无横向手势，边缘点击保持可用。
+              child: EInkScrollPager(
+                controller: _scrollController,
+                edgeTapAllowed: true,
+                cornerPadding: EdgeInsets.only(
+                  right: 12,
+                  bottom: 16 + mainShellBottomScrollInset(context),
+                ),
+                child: _buildBody(state),
+              ),
+            ),
           ],
         ),
       ),
