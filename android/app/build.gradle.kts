@@ -60,20 +60,6 @@ android {
         versionName = flutter.versionName
     }
 
-    // 同一版本产出两个可共存的安装包：full 是手机端全量包，eink 是墨水屏
-    // 裁剪包。eink 用独立 applicationId，避免两个包互相顶掉；两者共用同一
-    // versionCode/versionName，差异由 --dart-define=Y300_EINK=true 控制。
-    flavorDimensions += "edition"
-    productFlavors {
-        create("full") {
-            dimension = "edition"
-        }
-        create("eink") {
-            dimension = "edition"
-            applicationIdSuffix = ".eink"
-        }
-    }
-
     signingConfigs {
         // Populated only when android/key.properties exists (real release builds).
         if (hasReleaseKeystore) {

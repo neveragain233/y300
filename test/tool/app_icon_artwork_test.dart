@@ -216,18 +216,22 @@ void main() {
       expect(splash.getPixel(480, 180).a, 0);
       expect(splash.getPixel(0, 0).a, 0);
     }
-    for (final variant in {
-      'values-v31': '#FFF9E2',
-      'values-night-v31': '#20201D',
-    }.entries) {
-      final style = File('android/app/src/main/res/${variant.key}/styles.xml')
-          .readAsStringSync();
-      expect(
-        style,
-        contains(
-          'name="android:windowSplashScreenIconBackgroundColor">${variant.value}',
-        ),
-      );
-    }
+    // 单包只保留一套浅色启动主题；夜间不再覆盖系统启动屏底色。
+    final style = File('android/app/src/main/res/values-v31/styles.xml')
+        .readAsStringSync();
+    expect(
+      style,
+      contains(
+        'name="android:windowSplashScreenIconBackgroundColor">#FFF4F4F4',
+      ),
+    );
+    expect(
+      style,
+      contains('name="android:windowSplashScreenBackground">#FFF4F4F4'),
+    );
+    expect(
+      File('android/app/src/main/res/values-night-v31/styles.xml').existsSync(),
+      isFalse,
+    );
   });
 }
