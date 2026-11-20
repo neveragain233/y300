@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/theme/app_system_ui.dart';
+import 'package:y300/core/motion/app_motion.dart';
 
 /// 整页阅读任务的连续区域。内部会话保持挂载，几何与安全区统一投影到实际页框。
 class ReaderContentRegion extends StatelessWidget {
@@ -46,6 +47,10 @@ class ReaderContentRegion extends StatelessWidget {
                 .removeDisplayFeatures(rect)
                 .copyWith(
                   size: rect.size,
+                  // 墨水屏模式只在阅读器内恢复翻页动画；根层把其余动画关掉。
+                  disableAnimations:
+                      media.disableAnimations &&
+                      !AppMotion.reduceMotion(context),
                   systemGestureInsets: EdgeInsets.only(
                     left: math.max(
                       0,

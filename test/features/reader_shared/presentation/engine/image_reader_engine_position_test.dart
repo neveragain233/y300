@@ -1,9 +1,13 @@
 import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
@@ -304,6 +308,108 @@ void main() {
       greaterThan(tester.view.physicalSize.width),
     );
   });
+
+  testWidgets('runtime eink mode sizes the paged image with contain', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{
+      'reader_pref_mode': 'ltr',
+      'reader_pref_page_fit': 'fitWidth',
+    });
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final capability = _DecodedDimensionCapability();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          forumImagePrecacheServiceProvider.overrideWithValue(
+            _NoopForumImagePrecacheService(),
+          ),
+        ],
+        child: EInkModeScope(
+          enabled: true,
+          child: LocalizedTestApp(
+            home: ImageReaderEngine(capability: capability),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    // fitWidth 在运行时墨水屏模式下收成 contain，画布与预解码尺寸同时跟随
+    // 实际适配，而不是仍按页宽估算。
+    expect(
+      find.byKey(
+        const ValueKey<String>(
+          'reader-paged-fit-decoded-owner-decoded-item-contain-ltr',
+        ),
+      ),
+      findsOneWidget,
+    );
+    // 800x600 视口、初始 0.7 比例：contain 为 420x600；若仍按 fitWidth
+    // 会算出 800x1143，超过视口高度。
+    expect(capability.expectedDisplaySizes.first, const Size(420, 600));
+  });
+
+  testWidgets('full mode leaves EPDC untouched while eink mode triggers it', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{
+      'reader_pref_mode': 'ltr',
+      'reader_pref_page_fit': 'fitWidth',
+    });
+    tester.view.physicalSize = const Size(600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final ripple = _RecordingRippleService();
+
+    Future<void> pumpReader({required bool eink}) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            forumImagePrecacheServiceProvider.overrideWithValue(
+              _NoopForumImagePrecacheService(),
+            ),
+            einkPageRippleServiceProvider.overrideWithValue(ripple),
+          ],
+          child: EInkModeScope(
+            enabled: eink,
+            child: LocalizedTestApp(
+              home: ImageReaderEngine(
+                key: ValueKey<bool>(eink),
+                capability: _RecordingPagedCapability(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+    }
+
+    Future<void> tapNextPage() async {
+      await tester.tapAt(
+        tester.getCenter(find.byKey(const Key('shared-reader-right-tap-zone'))),
+      );
+      await tester.pump(const Duration(milliseconds: 330));
+    }
+
+    await pumpReader(eink: false);
+    await tapNextPage();
+    expect(ripple.forwards, isEmpty);
+
+    await pumpReader(eink: true);
+    await tapNextPage();
+    expect(ripple.forwards, <bool>[true]);
+  });
 }
 
 class _ThrowingSeekCapability extends ReaderCapability {
@@ -590,5 +696,18 @@ class _NoopForumImagePrecacheService implements ForumImagePrecacheService {
     Size? expectedDisplaySize,
   }) async {
     return const ForumImagePrecacheResult(success: true, decoded: true);
+  }
+}
+
+class _RecordingRippleService implements EInkPageRippleService {
+  final List<bool> forwards = <bool>[];
+
+  @override
+  Future<bool> triggerPageRipple({
+    required bool forward,
+    required EInkRippleSpeed speed,
+  }) async {
+    forwards.add(forward);
+    return true;
   }
 }

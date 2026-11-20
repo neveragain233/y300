@@ -4,8 +4,8 @@ import 'package:continuous_image_geometry/continuous_image_geometry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:y300/app/theme/app_system_ui.dart';
-import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
@@ -205,6 +205,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   ProviderSubscription<AsyncValue<bool>>? _hardwarePageKeysSetting;
   bool _hardwarePageKeysEnabled = false;
   bool _hardwarePageKeysArmed = false;
+  bool _hardwareKeysRouteVisible = true;
   ReaderPreferences? _lastKnownReaderPreferences;
   int _lastKnownImageTotal = 0;
 
@@ -249,16 +250,30 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     );
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible =
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        TickerMode.valuesOf(context).enabled;
+    if (visible != _hardwareKeysRouteVisible) {
+      _hardwareKeysRouteVisible = visible;
+      _syncHardwareKeysArmed();
+    }
+  }
+
   void _setHardwarePageKeysEnabled(bool enabled) {
     _hardwarePageKeysEnabled = enabled;
     _hardwarePageKeysRouter.setHardwareKeysEnabled(enabled);
     _syncHardwareKeysArmed();
   }
 
-  /// 只在横向翻页模式拦截实体键；垂直滚动模式不占用音量键。
+  /// 只在横向翻页模式、且路由位于最上层时拦截实体键；垂直滚动模式不占用
+  /// 音量键，弹层或切走的页面也不接收前景按键。
   void _syncHardwareKeysArmed() {
     final preferences = _lastKnownReaderPreferences;
     final armed =
+        _hardwareKeysRouteVisible &&
         _hardwarePageKeysEnabled &&
         preferences != null &&
         _readerMode(preferences) != ContinuousImageReaderMode.vertical;
@@ -274,6 +289,73 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
   @override
   void pageDown() => _onHardwarePageKey(HardwarePageKeyDirection.next);
+
+  /// 供角标与边缘步进判断是否还有上一屏；硬件键仲裁不读这两个 getter，
+  /// 因此状态未知时返回 false 只会隐藏禁用态控件，不会吞掉按键。
+  @override
+  bool get canPageUp {
+    final preferences = _lastKnownReaderPreferences;
+    if (!mounted || preferences == null) {
+      return false;
+    }
+    if (_readerMode(preferences) == ContinuousImageReaderMode.vertical) {
+      return _canScrollVertically(-1);
+    }
+    final page = _currentPagedPage();
+    return page != null && page > 0;
+  }
+
+  @override
+  bool get canPageDown {
+    final preferences = _lastKnownReaderPreferences;
+    if (!mounted || preferences == null) {
+      return false;
+    }
+    if (_readerMode(preferences) == ContinuousImageReaderMode.vertical) {
+      return _canScrollVertically(1);
+    }
+    final page = _currentPagedPage();
+    if (page == null) {
+      return false;
+    }
+    return page < _pagedPageCount(_lastKnownImageTotal) - 1;
+  }
+
+  /// 横向当前页码；内容尚未就绪或页码不可用时返回 null。
+  int? _currentPagedPage() {
+    final total = _lastKnownImageTotal;
+    if (total <= 0) {
+      return null;
+    }
+    final pageCount = _pagedPageCount(total);
+    final controller = _pageController;
+    if (controller != null && controller.hasClients) {
+      final page = controller.page;
+      if (page != null && page.isFinite) {
+        return page.round().clamp(0, pageCount - 1).toInt();
+      }
+    }
+    return _pagedPageForPosition(
+      _pagedPosition,
+      total,
+    ).clamp(0, pageCount - 1).toInt();
+  }
+
+  /// 滚动模式按当前位置判断；视口尚未布局或没有可滚动距离时为 false。
+  bool _canScrollVertically(int direction) {
+    if (!_scrollController.hasClients) {
+      return false;
+    }
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions || !position.hasViewportDimension) {
+      return false;
+    }
+    const epsilon = 0.5;
+    if (direction < 0) {
+      return position.pixels > position.minScrollExtent + epsilon;
+    }
+    return position.pixels < position.maxScrollExtent - epsilon;
+  }
 
   void _onHardwarePageKey(HardwarePageKeyDirection direction) {
     if (!mounted) {
@@ -786,6 +868,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         expectedDisplaySize: _expectedImageDisplaySize(
           preferences,
           paged: paged,
+          fit: effectiveFit,
           aspectRatio: aspectRatio,
         ),
         loadingIndicatorColor: _loadingIndicatorColor(preferences),
@@ -1232,14 +1315,14 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     return false;
   }
 
-  /// eink 构建在横向翻页下把 `fitWidth` 收成 `contain`，4:3 屏不再裁掉
-  /// 两侧内容；滚动模式保持原适配。
+  /// 运行时墨水屏模式下，横向翻页把 `fitWidth` 收成 `contain`，4:3 屏不再
+  /// 裁掉两侧内容；滚动模式保持原适配。
   ReaderPageFitPreference _effectivePageFit(
     ReaderPreferences preferences, {
     required bool paged,
   }) {
     if (paged &&
-        AppEdition.isEInk &&
+        EInkModeScope.of(context) &&
         preferences.pageFit == ReaderPageFitPreference.fitWidth) {
       return ReaderPageFitPreference.contain;
     }
@@ -2088,11 +2171,17 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (target < total) {
       _promoteSessionSeekTarget(target);
     }
-    unawaited(
-      ref
-          .read(einkPageRippleServiceProvider)
-          .triggerPageRipple(forward: forward, speed: EInkRippleSpeed.standard),
-    );
+    // 全量模式不触碰 EPDC 通道；翻页动画本身保持原样。
+    if (EInkModeScope.of(context)) {
+      unawaited(
+        ref
+            .read(einkPageRippleServiceProvider)
+            .triggerPageRipple(
+              forward: forward,
+              speed: EInkRippleSpeed.standard,
+            ),
+      );
+    }
     _animatePagedTurn(pageController, target);
   }
 
@@ -2525,15 +2614,20 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final preferences =
         ref.read(readerPreferencesControllerProvider).value ??
         ReaderPreferences.defaults();
+    final paged = _diagnosticMode != ReaderModePreference.vertical;
     return _expectedImageDisplaySize(
       preferences,
-      paged: _diagnosticMode != ReaderModePreference.vertical,
+      paged: paged,
+      fit: _effectivePageFit(preferences, paged: paged),
     );
   }
 
+  /// 预解码尺寸必须与画布实际使用的适配一致，否则墨水屏把 `fitWidth` 收成
+  /// `contain` 后仍会按 width 多解像素。
   Size _expectedImageDisplaySize(
     ReaderPreferences preferences, {
     required bool paged,
+    required ReaderPageFitPreference fit,
     double? aspectRatio,
   }) {
     final mediaSize = MediaQuery.sizeOf(context);
@@ -2549,7 +2643,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (ratio == null || !ratio.isFinite || ratio <= 0) {
       return viewport;
     }
-    switch (preferences.pageFit) {
+    switch (fit) {
       case ReaderPageFitPreference.fitWidth:
         return Size(viewport.width, viewport.width / ratio);
       case ReaderPageFitPreference.fitHeight:

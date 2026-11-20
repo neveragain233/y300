@@ -15,10 +15,10 @@ import 'package:y300/features/thread/data/providers/thread_repository_providers.
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/eink/eink_paging_router.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -248,6 +248,52 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   @override
   void pageDown() => _onHardwarePageKey(HardwarePageKeyDirection.next);
 
+  /// 当前是否还能向上一页/上一屏翻动。
+  ///
+  /// 硬件键路由只用它决定是否显示/启用翻页入口，实际翻页仍走 [pageUp]；
+  /// 状态未知（分页数未定、滚动未附着）时返回 false。
+  @override
+  bool get canPageUp => _canPage(backward: true);
+
+  @override
+  bool get canPageDown => _canPage(backward: false);
+
+  bool _canPage({required bool backward}) {
+    if (!mounted) {
+      return false;
+    }
+    final current = ref
+        .read(novelReaderControllerProvider(_args))
+        .asData
+        ?.value;
+    if (current == null || current.transition != null) {
+      return false;
+    }
+    if (current.preferences.flowMode == NovelReaderFlowMode.vertical) {
+      if (!_scrollController.hasClients) {
+        return false;
+      }
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions || !position.hasViewportDimension) {
+        return false;
+      }
+      return backward
+          ? position.pixels > position.minScrollExtent + _pageEdgeTolerance
+          : position.pixels < position.maxScrollExtent - _pageEdgeTolerance;
+    }
+    final position = _pagedPosition;
+    if (position == null ||
+        !position.isPageCountFinal ||
+        position.episodeId != current.currentEpisode.episodeId) {
+      return false;
+    }
+    return backward
+        ? position.pageIndex > 0
+        : position.pageIndex < position.pageCount - 1;
+  }
+
+  static const double _pageEdgeTolerance = 0.5;
+
   void _onHardwarePageKey(HardwarePageKeyDirection direction) {
     if (!mounted) {
       return;
@@ -271,7 +317,17 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncReadingVisibility();
+    _syncHardwarePageKeysVisibility();
     _syncSystemUi();
+  }
+
+  /// 路由不在最上层或 tab 被 TickerMode 停用时，实体键让给前景页面。
+  void _syncHardwarePageKeysVisibility() {
+    if (!mounted) return;
+    final visible =
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        TickerMode.valuesOf(context).enabled;
+    _hardwarePageKeysRouter.setVisible(this, visible);
   }
 
   void _syncSystemUi() {
@@ -749,14 +805,16 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
             _readerSurfaceIdentity(current) != expectedSurfaceIdentity)) {
       return;
     }
-    unawaited(
-      ref
-          .read(einkPageRippleServiceProvider)
-          .triggerPageRipple(
-            forward: !backward,
-            speed: EInkRippleSpeed.standard,
-          ),
-    );
+    if (_eInkModeEnabled) {
+      unawaited(
+        ref
+            .read(einkPageRippleServiceProvider)
+            .triggerPageRipple(
+              forward: !backward,
+              speed: EInkRippleSpeed.standard,
+            ),
+      );
+    }
     if (backward) {
       _pagedNavigationController.turnPrevious();
     } else {
@@ -764,11 +822,14 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     }
   }
 
+  /// 运行时墨水屏模式；全量模式下不得触发 EPDC 通道消息。
+  bool get _eInkModeEnabled => EInkModeScope.of(context);
+
   /// eink 构建禁用卷曲与整页纹理过渡，退回淡入，保留页面切换动画。
   NovelReaderPreferences _effectiveRenderPreferences(
     NovelReaderPreferences preferences,
   ) {
-    if (!AppEdition.isEInk) {
+    if (!_eInkModeEnabled) {
       return preferences;
     }
     return preferences.copyWith(pageEffect: NovelReaderPageEffect.fade);
@@ -806,14 +867,16 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     _overlayController.hideMenu();
     final animationsDisabled = MediaQuery.disableAnimationsOf(context);
     final effect = _effectiveRenderPreferences(current.preferences).pageEffect;
-    unawaited(
-      ref
-          .read(einkPageRippleServiceProvider)
-          .triggerPageRipple(
-            forward: !backward,
-            speed: EInkRippleSpeed.standard,
-          ),
-    );
+    if (_eInkModeEnabled) {
+      unawaited(
+        ref
+            .read(einkPageRippleServiceProvider)
+            .triggerPageRipple(
+              forward: !backward,
+              speed: EInkRippleSpeed.standard,
+            ),
+      );
+    }
     _verticalTapTurn.turn(
       direction: backward
           ? NovelReaderVerticalTurnDirection.backward
@@ -929,8 +992,13 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       status: _buildReadingStatus(viewState, verticalMetrics),
       background: palette.background,
       foreground: palette.controlMuted,
+      variant: _readingStatusBarVariant,
     );
   }
+
+  ReaderReadingStatusBarVariant get _readingStatusBarVariant => _eInkModeEnabled
+      ? ReaderReadingStatusBarVariant.eInk
+      : ReaderReadingStatusBarVariant.standard;
 
   ReaderReadingStatus _buildReadingStatus(
     NovelReaderViewState viewState,
@@ -938,6 +1006,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   ) {
     final l10n = AppLocalizations.of(context);
     final episodeIndex = viewState.currentEpisodeIndex;
+    final title = viewState.currentEpisode.episodeTitle;
     final leading = episodeIndex >= 0 && viewState.episodes.isNotEmpty
         ? l10n.novelReadingStatusChapter(
             episodeIndex + 1,
@@ -951,6 +1020,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         return ReaderReadingStatus(
           leading: leading,
           trailing: pending,
+          title: title,
           semanticsLabel: [
             leading,
             pending,
@@ -975,6 +1045,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       return ReaderReadingStatus(
         leading: leading,
         trailing: trailing,
+        title: title,
         semanticsLabel: [
           leading,
           trailing,
@@ -1001,6 +1072,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     return ReaderReadingStatus(
       leading: leading,
       trailing: trailing,
+      title: title,
       semanticsLabel: [
         leading,
         trailing,
@@ -1600,8 +1672,13 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     final isPaged =
         viewState.preferences.flowMode != NovelReaderFlowMode.vertical;
     // The dock location already respects the system safe area; the clearance
-    // covers the footer's remaining height and the gesture region.
-    final bottomClearance = ReaderReadingStatusBarLayout.dockClearance(context);
+    // covers the footer's remaining height and the gesture region. E-ink uses
+    // the fixed 24dp footer so the dock never lands underneath it.
+    final bottomClearance =
+        ReaderReadingStatusBarLayout.dockClearanceForVariant(
+          context,
+          _readingStatusBarVariant,
+        );
     return Padding(
       padding: EdgeInsets.only(bottom: bottomClearance),
       child: AnimatedBuilder(

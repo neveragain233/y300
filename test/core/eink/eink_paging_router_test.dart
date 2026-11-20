@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/core/eink/eink_hardware_page_keys.dart';
 import 'package:y300/core/eink/eink_page_ripple.dart';
@@ -46,13 +47,23 @@ class _RecordingHandler implements EInkPageHandler {
   int downCalls = 0;
 
   @override
+  bool get canPageUp => true;
+
+  @override
+  bool get canPageDown => true;
+
+  @override
   void pageUp() => upCalls += 1;
 
   @override
   void pageDown() => downCalls += 1;
 }
 
+Future<void> _flush() => Future<void>.delayed(Duration.zero);
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _FakeKeysService keys;
   late _FakeRippleService ripple;
   late EInkPagingRouter router;
@@ -74,44 +85,103 @@ void main() {
     router.register('list', first);
     router.register('reader', second);
     router.setHardwareKeysEnabled(true);
-    await Future<void>.delayed(Duration.zero);
+    await _flush();
 
     keys.emit(HardwarePageKeyDirection.next);
-    await Future<void>.delayed(Duration.zero);
+    await _flush();
 
     expect(second.downCalls, 1);
     expect(first.downCalls, 0);
 
     router.setVisible('reader', false);
+    // 越过 180ms 去抖窗口，验证下一次事件交给下一个可见目标。
+    await Future<void>.delayed(const Duration(milliseconds: 220));
     keys.emit(HardwarePageKeyDirection.previous);
-    await Future<void>.delayed(Duration.zero);
+    await _flush();
 
     expect(first.upCalls, 1);
   });
 
-  test('native interception follows user switch and active handlers', () async {
+  test('stays silent until the user switch turns on', () async {
     final handler = _RecordingHandler();
     router.register('reader', handler);
-    await Future<void>.delayed(Duration.zero);
-    expect(keys.enabledCalls.every((enabled) => !enabled), isTrue);
+    await _flush();
+    expect(keys.enabledCalls, isEmpty);
 
     router.setHardwareKeysEnabled(true);
-    await Future<void>.delayed(Duration.zero);
-    expect(keys.enabledCalls.last, isTrue);
+    await _flush();
+    expect(keys.enabledCalls, [true]);
 
     router.unregister('reader');
-    await Future<void>.delayed(Duration.zero);
-    expect(keys.enabledCalls.last, isFalse);
+    await _flush();
+    expect(keys.enabledCalls, [true, false]);
+  });
+
+  test('does not intercept without a visible handler', () async {
+    router.setHardwareKeysEnabled(true);
+    await _flush();
+    expect(keys.enabledCalls, isEmpty);
+
+    final reader = _RecordingHandler();
+    router.register('reader', reader, isVisible: false);
+    await _flush();
+    expect(keys.enabledCalls, isEmpty);
+
+    router.setVisible('reader', true);
+    await _flush();
+    expect(keys.enabledCalls, [true]);
   });
 
   test('ignores key events while the user switch is off', () async {
     final handler = _RecordingHandler();
     router.register('reader', handler);
-    await Future<void>.delayed(Duration.zero);
+    await _flush();
 
     keys.emit(HardwarePageKeyDirection.next);
-    await Future<void>.delayed(Duration.zero);
+    await _flush();
 
     expect(handler.downCalls, 0);
+  });
+
+  test('debounces hardware directions within 180ms', () async {
+    final handler = _RecordingHandler();
+    router.register('reader', handler);
+    router.setHardwareKeysEnabled(true);
+    await _flush();
+
+    keys.emit(HardwarePageKeyDirection.next);
+    keys.emit(HardwarePageKeyDirection.next);
+    await _flush();
+    expect(handler.downCalls, 1);
+
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    keys.emit(HardwarePageKeyDirection.next);
+    await _flush();
+    expect(handler.downCalls, 2);
+  });
+
+  testWidgets('ignores hardware keys while a text field owns focus', (
+    tester,
+  ) async {
+    final handler = _RecordingHandler();
+    router.register('reader', handler);
+    router.setHardwareKeysEnabled(true);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: TextField(autofocus: true))),
+    );
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.context, isNotNull);
+
+    keys.emit(HardwarePageKeyDirection.next);
+    await tester.pump();
+    expect(handler.downCalls, 0);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+
+    keys.emit(HardwarePageKeyDirection.next);
+    await tester.pump();
+    expect(handler.downCalls, 1);
   });
 }
