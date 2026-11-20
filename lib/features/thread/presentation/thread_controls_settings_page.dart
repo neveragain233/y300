@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../domain/models/thread_controls_preferences.dart';
@@ -51,26 +52,21 @@ class ThreadControlsSettingsPage extends ConsumerWidget {
                       AppGroupedRow(
                         leading: const Icon(Icons.swap_horiz),
                         title: l10n.threadControlsSide,
-                        trailing: DropdownButtonHideUnderline(
-                          child: DropdownButton<ThreadControlsSide>(
-                            key: ValueKey(preferences.side),
-                            value: preferences.side,
-                            items: [
-                              DropdownMenuItem(
-                                value: ThreadControlsSide.left,
-                                child: Text(l10n.threadControlsLeft),
-                              ),
-                              DropdownMenuItem(
-                                value: ThreadControlsSide.right,
-                                child: Text(l10n.threadControlsRight),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                save(preferences.copyWith(side: value));
-                              }
-                            },
-                          ),
+                        trailing: AppSelectMenu<ThreadControlsSide>(
+                          key: const Key('thread-controls-side'),
+                          value: preferences.side,
+                          options: [
+                            AppSelectOption(
+                              value: ThreadControlsSide.left,
+                              label: l10n.threadControlsLeft,
+                            ),
+                            AppSelectOption(
+                              value: ThreadControlsSide.right,
+                              label: l10n.threadControlsRight,
+                            ),
+                          ],
+                          onSelected: (value) =>
+                              save(preferences.copyWith(side: value)),
                         ),
                       ),
                       AppSwitchRow(

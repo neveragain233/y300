@@ -30,8 +30,13 @@ class AppPopupMenuButton<T> extends StatelessWidget {
     this.tooltip,
     this.icon,
     this.child,
+    this.targetBuilder,
     this.enabled = true,
-  }) : assert(child == null || icon == null, '自定义触发控件已经提供内容，不再同时接受 icon');
+  }) : assert(child == null || icon == null, '自定义触发控件已经提供内容，不再同时接受 icon'),
+       assert(
+         targetBuilder == null || (child == null && icon == null),
+         'targetBuilder 自己构建触发控件，不再同时接受 icon 或 child',
+       );
 
   final PopupMenuItemBuilder<T> itemBuilder;
   final PopupMenuItemSelected<T>? onSelected;
@@ -41,6 +46,9 @@ class AppPopupMenuButton<T> extends StatelessWidget {
 
   /// 自定义触发控件，用于文字加箭头这类不是图标的入口；给出时不用 [icon]。
   final Widget? child;
+
+  /// 构建带自身玻璃与按压模型的触发控件；[open] 打开本次锚定菜单。
+  final Widget Function(BuildContext context, VoidCallback open)? targetBuilder;
 
   final bool enabled;
 
@@ -53,6 +61,7 @@ class AppPopupMenuButton<T> extends StatelessWidget {
     );
     final label = tooltip ?? MaterialLocalizations.of(context).showMenuTooltip;
     final trigger = child;
+    final customTarget = targetBuilder;
     return prism.PopupAnchor(
       // 菜单内容随外壳做上游液滴模糊；选中动作随关闭立即执行，不等收回动画。
       runsPickedAfterReturn: false,
@@ -61,7 +70,9 @@ class AppPopupMenuButton<T> extends StatelessWidget {
       // 系统减少动态效果时直接开关：不做液滴展开与收回，来源按钮一直可见。
       reduceMotion: MediaQuery.disableAnimationsOf(context),
       theme: theme,
-      targetBuilder: (open) => trigger == null
+      targetBuilder: (open) => customTarget != null
+          ? customTarget(context, open)
+          : trigger == null
           ? prism_button.IconButton(
               onPressed: enabled ? open : null,
               icon: icon ?? Icon(Icons.adaptive.more),

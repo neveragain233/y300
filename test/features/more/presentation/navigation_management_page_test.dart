@@ -16,6 +16,7 @@ import 'package:y300/features/messages/presentation/message_center_page.dart';
 import 'package:y300/features/messages/presentation/message_feed_providers.dart';
 import 'package:y300/features/more/presentation/navigation_management_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
 
 void main() {
   testWidgets('opens visible and hidden destinations without changing settings', (
@@ -381,6 +382,75 @@ void main() {
           .value,
       isTrue,
     );
+  });
+
+  testWidgets('startup page select commits once and cancels without saving', (
+    tester,
+  ) async {
+    final repository = _FakeMainNavigationSettingsRepository();
+    await _pumpPage(tester, repository);
+    final select = find.byKey(const Key('navigation-startup-page'));
+
+    // 旧的展开选项已换成同一套锚定菜单。
+    expect(find.byType(DropdownButton<MainStartupPage>), findsNothing);
+    await tester.tap(select);
+    await tester.pumpAndSettle();
+    final current = tester.getSemantics(
+      find
+          .descendant(
+            of: find.byKey(AppSelectMenu.itemKeyOf(MainStartupPage.forum)),
+            matching: find.byType(Semantics),
+          )
+          .first,
+    );
+    expect(current, isSemantics(hasCheckedState: true, isChecked: true));
+
+    // 点外取消不提交，也不触发保存。
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+    expect(repository.savedSettings, isEmpty);
+
+    await tester.tap(select);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(AppSelectMenu.itemKeyOf(MainStartupPage.bookshelf)),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.savedSettings, hasLength(1));
+    expect(
+      repository.savedSettings.single.startupPage,
+      MainStartupPage.bookshelf,
+    );
+  });
+
+  testWidgets('startup page select stays closed while saving', (tester) async {
+    final saveCompleter = Completer<void>();
+    final repository = _FakeMainNavigationSettingsRepository(
+      saveCompleter: saveCompleter,
+    );
+    await _pumpPage(tester, repository);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey<String>('navigation-management-visible-favorites'),
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.byKey(const Key('navigation-management-saving')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('navigation-startup-page')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.byKey(AppSelectMenu.itemKeyOf(MainStartupPage.bookshelf)),
+      findsNothing,
+    );
+
+    saveCompleter.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('navigation-management-saving')), findsNothing);
   });
 
   testWidgets('reset restores visibility and the default order', (

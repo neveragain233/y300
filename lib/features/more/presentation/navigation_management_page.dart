@@ -10,6 +10,7 @@ import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class NavigationManagementPage extends ConsumerWidget {
@@ -65,32 +66,26 @@ class NavigationManagementPage extends ConsumerWidget {
                       children: [
                         AppGroupedRow(
                           title: l10n.navigationStartupPage,
-                          trailing: DropdownButton<MainStartupPage>(
+                          trailing: AppSelectMenu<MainStartupPage>(
                             key: const Key('navigation-startup-page'),
                             value: state.settings.startupPage,
-                            items: [
-                              DropdownMenuItem(
+                            enabled: !state.isSaving,
+                            options: [
+                              AppSelectOption(
                                 value: MainStartupPage.forum,
-                                child: Text(l10n.appNavigationForum),
+                                label: l10n.appNavigationForum,
                               ),
-                              DropdownMenuItem(
+                              AppSelectOption(
                                 value: MainStartupPage.bookshelf,
-                                child: Text(l10n.appNavigationBookshelf),
+                                label: l10n.appNavigationBookshelf,
                               ),
                             ],
-                            onChanged: state.isSaving
-                                ? null
-                                : (value) {
-                                    if (value != null) {
-                                      unawaited(
-                                        _runMutation(
-                                          context,
-                                          () =>
-                                              controller.setStartupPage(value),
-                                        ),
-                                      );
-                                    }
-                                  },
+                            onSelected: (value) => unawaited(
+                              _runMutation(
+                                context,
+                                () => controller.setStartupPage(value),
+                              ),
+                            ),
                           ),
                         ),
                       ],

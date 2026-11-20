@@ -6,6 +6,7 @@ import 'package:y300/features/library_shared/presentation/selection/selection_ap
 import 'package:y300/l10n/app_localizations_zh.dart';
 import 'package:y300/shared/widgets/app_glass_environment.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 import '../../../../test_support/localized_test_app.dart';
 
@@ -51,7 +52,7 @@ void main() {
       FontWeight.w600,
     );
 
-    // 关闭键是公共玻璃单按钮：键落在按钮本身，圆底由玻璃表面提供。
+    // 关闭键是公共玻璃单按钮：键落在内部按压按钮上，玻璃圆底与按钮同层。
     final close = tester.widget<IconButton>(
       find.byKey(const Key('selection-app-bar-close')),
     );
@@ -62,12 +63,10 @@ void main() {
     expect(
       tester
           .widget<AppGlassSurface>(
-            find
-                .ancestor(
-                  of: find.byKey(const Key('selection-app-bar-close')),
-                  matching: find.byType(AppGlassSurface),
-                )
-                .first,
+            find.descendant(
+              of: find.byType(AppToolbarCloseButton),
+              matching: find.byType(AppGlassSurface),
+            ),
           )
           .baseColor,
       scheme.surfaceContainerHigh,
@@ -83,21 +82,19 @@ void main() {
       );
     }
 
-    // 动作沿用组合胶囊表面；关闭档没有玻璃捕获。
+    // 相关动作共用一块胶囊玻璃，末项保留独立圆键；关闭档没有玻璃捕获。
     expect(find.byType(LiquidGlass), findsNothing);
-    expect(
-      tester
-          .widget<Material>(
-            find
-                .ancestor(
-                  of: find.byKey(const Key('selection-app-bar-select-all')),
-                  matching: find.byType(Material),
-                )
-                .first,
-          )
-          .color,
-      scheme.surfaceContainerHigh,
+    final actionSurfaces = find.descendant(
+      of: find.byType(AppToolbarActions),
+      matching: find.byType(AppGlassSurface),
     );
+    expect(actionSurfaces, findsNWidgets(2));
+    for (var index = 0; index < 2; index++) {
+      expect(
+        tester.widget<AppGlassSurface>(actionSurfaces.at(index)).baseColor,
+        scheme.surfaceContainerHigh,
+      );
+    }
 
     await tester.tap(find.byKey(const Key('selection-app-bar-close')));
     await tester.tap(find.byKey(const Key('selection-app-bar-select-all')));

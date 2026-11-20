@@ -410,6 +410,45 @@ void main() {
     expect(find.text('书架'), findsOneWidget);
   });
 
+  testWidgets('targetBuilder supplies its own trigger and opens the menu', (
+    tester,
+  ) async {
+    final selected = <String>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          appBar: AppBar(
+            actions: [
+              AppPopupMenuButton<String>(
+                key: const Key('menu-button'),
+                itemBuilder: (context) => const [
+                  AppPopupMenuItem<String>(value: 'refresh', label: '刷新页面'),
+                ],
+                onSelected: selected.add,
+                targetBuilder: (context, open) => IconButton(
+                  key: const Key('custom-trigger'),
+                  tooltip: '更多',
+                  onPressed: open,
+                  icon: const Icon(Icons.more_horiz),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('custom-trigger')), findsOneWidget);
+    expect(find.byIcon(Icons.adaptive.more), findsNothing);
+    await tester.tap(find.byKey(const Key('custom-trigger')));
+    await tester.pumpAndSettle();
+    expect(find.text('刷新页面'), findsOneWidget);
+    await tester.tap(find.text('刷新页面'));
+    await tester.pumpAndSettle();
+    expect(selected, ['refresh']);
+  });
+
   testWidgets('a disabled custom trigger never opens the menu', (tester) async {
     await tester.pumpWidget(
       _menuApp(
