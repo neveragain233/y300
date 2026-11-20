@@ -271,8 +271,8 @@ void _dockActionsCases() {
             .dx,
       ),
     );
-    final onPressed = tester.widget<ReaderToolButton>(action).onPressed;
-    onPressed();
+    final onPressed = tester.widget<prism_button.IconButton>(action).onPressed;
+    onPressed!();
     onPressed();
     await tester.pump();
     expect(locator.calls, 1);
@@ -561,7 +561,7 @@ void _dockActionsCases() {
     expect(find.byKey(const Key('shared-reader-next-button')), findsOneWidget);
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-prev-button')),
           )
           .onPressed,
@@ -569,7 +569,7 @@ void _dockActionsCases() {
     );
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-next-button')),
           )
           .onPressed,

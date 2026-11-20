@@ -132,8 +132,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                   onLastImageVisible: () => unawaited(commentSession.load()),
                   onToggleBookmark: () => unawaited(_toggleBookmark()),
                   onOpenSourceThread: () => _openSourceThread(viewState),
-                  onShowMoreActions: () =>
-                      unawaited(_showMoreActionSheet(viewState)),
+                  moreMenu: _buildMoreMenu(viewState),
                   onShowChapterList: () =>
                       unawaited(_showChapterListSheet(viewState)),
                   onOpenAdjacentEpisode: ({required direction}) => unawaited(
@@ -427,42 +426,48 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
     }
   }
 
-  Future<void> _showMoreActionSheet(ComicReaderViewState viewState) async {
+  /// “更多”动作走与三个点菜单相同的锚定菜单，顺序与状态按当前阅读态生成。
+  List<ReaderToolbarMenuEntry> _buildMoreMenu(ComicReaderViewState viewState) {
     final l10n = AppLocalizations.of(context);
-    final action = await showAdaptivePanel<_ComicReaderMoreAction>(
-      context: context,
-      builder: (context) => ReaderActionSheet<_ComicReaderMoreAction>(
-        title: l10n.comicMoreActions,
-        items: [
-          ReaderActionSheetItem<_ComicReaderMoreAction>(
-            id: 'refresh-episode',
-            value: _ComicReaderMoreAction.refreshEpisode,
-            icon: Icons.refresh,
-            label: l10n.comicReaderRefreshEpisode,
+    return [
+      ReaderToolbarMenuEntry(
+        id: 'refresh-episode',
+        icon: Icons.refresh,
+        label: l10n.comicReaderRefreshEpisode,
+        onSelected: () => unawaited(
+          _handleReaderMoreAction(
+            _ComicReaderMoreAction.refreshEpisode,
+            viewState,
           ),
-          ReaderActionSheetItem<_ComicReaderMoreAction>(
-            id: 'mark-read-toggle',
-            value: _ComicReaderMoreAction.markReadToggle,
-            icon: viewState.isCurrentEpisodeRead
-                ? Icons.radio_button_unchecked
-                : Icons.check_circle_outline,
-            label: viewState.isCurrentEpisodeRead
-                ? l10n.comicMarkEpisodeUnread
-                : l10n.comicMarkEpisodeRead,
-          ),
-          ReaderActionSheetItem<_ComicReaderMoreAction>(
-            id: 'set-cover',
-            value: _ComicReaderMoreAction.setCurrentPageAsCover,
-            icon: Icons.image_outlined,
-            label: l10n.comicSetCurrentPageCover,
-          ),
-        ],
+        ),
       ),
-    );
-    if (action == null || !mounted) {
-      return;
-    }
-    await _handleReaderMoreAction(action, viewState);
+      ReaderToolbarMenuEntry(
+        id: 'mark-read-toggle',
+        icon: viewState.isCurrentEpisodeRead
+            ? Icons.radio_button_unchecked
+            : Icons.check_circle_outline,
+        label: viewState.isCurrentEpisodeRead
+            ? l10n.comicMarkEpisodeUnread
+            : l10n.comicMarkEpisodeRead,
+        onSelected: () => unawaited(
+          _handleReaderMoreAction(
+            _ComicReaderMoreAction.markReadToggle,
+            viewState,
+          ),
+        ),
+      ),
+      ReaderToolbarMenuEntry(
+        id: 'set-cover',
+        icon: Icons.image_outlined,
+        label: l10n.comicSetCurrentPageCover,
+        onSelected: () => unawaited(
+          _handleReaderMoreAction(
+            _ComicReaderMoreAction.setCurrentPageAsCover,
+            viewState,
+          ),
+        ),
+      ),
+    ];
   }
 
   Future<void> _showChapterListSheet(ComicReaderViewState viewState) async {

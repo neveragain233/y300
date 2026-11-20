@@ -409,6 +409,8 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
                 colorScheme,
               ).colorOf(colorScheme),
               shadows: menuShadows(colorScheme),
+              // 压黑层只在玻璃档生效：关闭档与高对比的实色卡片已有足够对比。
+              scrim: glass ? menuScrim(colorScheme) : Colors.transparent,
               glass: glass
                   ? (
                       from: LiquidGlassStyle.regular(colorScheme),
@@ -497,6 +499,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
     required this.blursContent,
     required this.surfaceColor,
     required this.shadows,
+    required this.scrim,
     required this.glass,
     super.child,
   });
@@ -511,6 +514,9 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
   final bool blursContent;
   final Color surfaceColor;
   final List<BoxShadow> shadows;
+
+  /// 垫在玻璃采样与菜单内容之间的压黑层；透明时不画。
+  final Color scrim;
 
   /// The platter's glass as it leaves the anchor and as it lands on the card,
   /// or null for a [surfaceColor] fill.
@@ -529,6 +535,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
       blursContent: blursContent,
       surfaceColor: surfaceColor,
       shadows: shadows,
+      scrim: scrim,
       glass: glass,
     );
   }
@@ -549,6 +556,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
       ..blursContent = blursContent
       ..surfaceColor = surfaceColor
       ..shadows = shadows
+      ..scrim = scrim
       ..glass = glass;
   }
 }
@@ -578,6 +586,7 @@ class _RenderPopupMorph extends RenderProxyBox {
     required bool blursContent,
     required Color surfaceColor,
     required List<BoxShadow> shadows,
+    required Color scrim,
     required _PlatterGlass? glass,
   }) : _anchor = anchor,
        _blursContent = blursContent,
@@ -587,6 +596,7 @@ class _RenderPopupMorph extends RenderProxyBox {
        _sourceImage = sourceImage,
        _surfaceColor = surfaceColor,
        _shadows = shadows,
+       _scrim = scrim,
        _glass = glass;
 
   late final _pane = LiquidGlassPane(markNeedsPaint);
@@ -709,6 +719,16 @@ class _RenderPopupMorph extends RenderProxyBox {
       return;
     }
     _shadows = value;
+    markNeedsPaint();
+  }
+
+  Color _scrim;
+
+  set scrim(Color value) {
+    if (value == _scrim) {
+      return;
+    }
+    _scrim = value;
     markNeedsPaint();
   }
 
@@ -988,6 +1008,8 @@ class _RenderPopupMorph extends RenderProxyBox {
         blur: _openContentBlur * under,
       );
     }
+    // 压黑层贴着玻璃、盖在菜单内容之下，随外壳一起成形；透明时不画。
+    _paintScrim(context.canvas, path, settled);
     if (settled > 0) {
       context.pushClipPath(
         needsCompositing,
@@ -1151,6 +1173,7 @@ class _RenderPopupMorph extends RenderProxyBox {
       fill = _sourceColor.withValues(alpha: _sourceColor.a * (1 - remaining));
     }
     context.canvas.drawPath(path, Paint()..color = fill);
+    _paintScrim(context.canvas, path, remaining);
     _paintSource(
       context.canvas,
       image,
@@ -1206,6 +1229,18 @@ class _RenderPopupMorph extends RenderProxyBox {
       );
     }
     canvas.restore();
+  }
+
+  /// Paints the menu's scrim between the glass and its content.
+  void _paintScrim(Canvas canvas, Path path, double strength) {
+    final scrim = _scrim;
+    if (scrim.a <= 0) {
+      return;
+    }
+    canvas.drawPath(
+      path,
+      Paint()..color = scrim.withValues(alpha: scrim.a * strength),
+    );
   }
 
   void _paintSource(
@@ -2770,6 +2805,11 @@ class _PopupMenuState extends State<PopupMenu>
                       dim: colorScheme.surface.withValues(
                         alpha: math.min(0.4, _levelFadeStep * distance),
                       ),
+                      // 压黑层只跟着玻璃菜单走；实色菜单（关闭档、高对比）
+                      // 的底色已经由主题保证对比。
+                      scrim: glass == null
+                          ? const Color(0x00000000)
+                          : menuScrim(colorScheme),
                       glass: step == null
                           ? glass
                           : glass?.scale(_glassSpan.transform(unfold)),
@@ -2984,6 +3024,7 @@ class PopupMenuCard extends SingleChildRenderObjectWidget {
     required this.fill,
     required this.dim,
     required this.glass,
+    this.scrim = const Color(0x00000000),
     this.rim,
     required this.bare,
     super.child,
@@ -3001,6 +3042,9 @@ class PopupMenuCard extends SingleChildRenderObjectWidget {
   /// Laid over the content, as a card recedes under the one above it.
   final Color dim;
 
+  /// 垫在玻璃采样与菜单内容之间的压黑层；只对玻璃卡片生效。
+  final Color scrim;
+
   final LiquidGlassStyle? glass;
   final LiquidGlassRim? rim;
 
@@ -3016,6 +3060,7 @@ class PopupMenuCard extends SingleChildRenderObjectWidget {
       fill: fill,
       dim: dim,
       glass: glass,
+      scrim: scrim,
       rim: rim,
       bare: bare,
     );
@@ -3030,6 +3075,7 @@ class PopupMenuCard extends SingleChildRenderObjectWidget {
       ..fill = fill
       ..dim = dim
       ..glass = glass
+      ..scrim = scrim
       ..rim = rim
       ..bare = bare;
   }
@@ -3043,6 +3089,7 @@ class _RenderPopupMenuCard extends RenderProxyBox {
     required Color fill,
     required Color dim,
     required LiquidGlassStyle? glass,
+    required Color scrim,
     required LiquidGlassRim? rim,
     required bool bare,
   }) : _grow = grow,
@@ -3051,6 +3098,7 @@ class _RenderPopupMenuCard extends RenderProxyBox {
        _fill = fill,
        _dim = dim,
        _glass = glass,
+       _scrim = scrim,
        _rim = rim,
        _bare = bare;
 
@@ -3099,6 +3147,15 @@ class _RenderPopupMenuCard extends RenderProxyBox {
       return;
     }
     _dim = value;
+    markNeedsPaint();
+  }
+
+  Color _scrim;
+  set scrim(Color value) {
+    if (value == _scrim) {
+      return;
+    }
+    _scrim = value;
     markNeedsPaint();
   }
 
@@ -3215,6 +3272,10 @@ class _RenderPopupMenuCard extends RenderProxyBox {
       Offset.zero & size,
       shape,
       (context, offset) {
+        // 压黑层在玻璃采样之上、菜单内容之下；实色卡片不需要。
+        if (_glass != null && _scrim.a > 0) {
+          context.canvas.drawPath(shape.shift(offset), Paint()..color = _scrim);
+        }
         context.paintChild(child, offset);
         if (_dim.a > 0) {
           context.canvas.drawPath(shape.shift(offset), Paint()..color = _dim);

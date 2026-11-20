@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chrome_palette.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_models.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 class ReaderProgressControl extends StatelessWidget {
   const ReaderProgressControl({super.key, required this.config});
@@ -44,10 +45,13 @@ class ReaderProgressControl extends StatelessWidget {
 
     return Row(
       children: [
-        IconButton(
-          key: const Key('shared-reader-prev-button'),
+        AppToolbarIconButton(
+          buttonKey: const Key('shared-reader-prev-button'),
           tooltip: config.previousTooltip ?? l10n.readerPrevious,
           onPressed: config.previousEnabled ? config.onPrevious : null,
+          size: AppToolbarButtonSize.compact,
+          foregroundColor: palette.chromeForeground,
+          baseColor: palette.chromeBackground,
           icon: Icon(config.previousIcon),
         ),
         Expanded(
@@ -127,10 +131,13 @@ class ReaderProgressControl extends StatelessWidget {
             ),
           ),
         ),
-        IconButton(
-          key: const Key('shared-reader-next-button'),
+        AppToolbarIconButton(
+          buttonKey: const Key('shared-reader-next-button'),
           tooltip: config.nextTooltip ?? l10n.readerNext,
           onPressed: config.nextEnabled ? config.onNext : null,
+          size: AppToolbarButtonSize.compact,
+          foregroundColor: palette.chromeForeground,
+          baseColor: palette.chromeBackground,
           icon: Icon(config.nextIcon),
         ),
       ],

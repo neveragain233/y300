@@ -19,7 +19,7 @@ void main() {
           const ComicReaderArgs(comicId: 'comic', episodeId: 'episode'),
         ),
         l10n: l10n,
-        onShowMoreActions: () {},
+        moreMenu: const [],
         onShowChapterList: () {},
         onOpenSourceThread: () {},
         onToggleBookmark: () {},

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 
@@ -229,10 +232,10 @@ void main() {
       ),
     );
 
-    final previous = tester.widget<IconButton>(
+    final previous = tester.widget<prism_button.IconButton>(
       find.byKey(const Key('shared-reader-prev-button')),
     );
-    final next = tester.widget<IconButton>(
+    final next = tester.widget<prism_button.IconButton>(
       find.byKey(const Key('shared-reader-next-button')),
     );
 

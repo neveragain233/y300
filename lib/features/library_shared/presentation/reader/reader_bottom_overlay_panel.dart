@@ -2,20 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_chrome_palette.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_models.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_progress_control.dart';
-import 'package:y300/features/library_shared/presentation/reader/reader_tool_button.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 class ReaderBottomOverlayPanel extends StatelessWidget {
   const ReaderBottomOverlayPanel({super.key, required this.config});
 
   final ReaderBottomBarConfig config;
 
+  /// 动作组在宽屏下的最大宽度；窄屏按可用宽度收缩。
+  static const double _maxActionRowWidth = 480;
+
   @override
   Widget build(BuildContext context) {
-    final palette = const ReaderChromePaletteResolver().resolve(
-      Theme.of(context),
-    );
+    final theme = Theme.of(context);
+    final palette = const ReaderChromePaletteResolver().resolve(theme);
     final progress = config.progress;
     final thumbnailStrip = config.thumbnailStrip;
+    // 公共按钮层按主题取胶囊底面与前景；把阅读控件色板投影回主题，
+    // 关闭档与高对比时按钮退回控件背景色。
+    final actionTheme = theme.copyWith(
+      colorScheme: theme.colorScheme.copyWith(
+        surfaceContainerHigh: palette.chromeBackground,
+        onSurface: palette.chromeForeground,
+      ),
+    );
     return Material(
       key: const Key('shared-reader-bottom-overlay-panel'),
       color: palette.chromeBackground,
@@ -42,18 +52,39 @@ class ReaderBottomOverlayPanel extends StatelessWidget {
                 if (progress != null) ReaderProgressControl(config: progress),
                 if (config.actions.isNotEmpty) ...[
                   if (progress != null) const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      for (final action in config.actions)
-                        ReaderToolButton(
-                          key: Key('shared-reader-bottom-action-${action.id}'),
-                          icon: action.icon,
-                          label: action.label,
-                          enabled: action.enabled,
-                          onPressed: action.onPressed,
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: _maxActionRowWidth,
+                      ),
+                      child: Padding(
+                        // 公共动作组为顶栏右侧留了 12 尾部余量；底栏左侧补上
+                        // 同一宽度，动作组的光学中心才与底栏对齐。
+                        padding: const EdgeInsetsDirectional.only(start: 12),
+                        child: Theme(
+                          data: actionTheme,
+                          child: AppToolbarActions(
+                            size: AppToolbarButtonSize.compact,
+                            children: [
+                              for (final action in config.actions)
+                                AppToolbarIconButton(
+                                  buttonKey: Key(
+                                    'shared-reader-bottom-action-${action.id}',
+                                  ),
+                                  tooltip: action.label,
+                                  onPressed: action.enabled
+                                      ? action.onPressed
+                                      : null,
+                                  size: AppToolbarButtonSize.compact,
+                                  foregroundColor: palette.chromeForeground,
+                                  baseColor: palette.chromeBackground,
+                                  icon: Icon(action.icon),
+                                ),
+                            ],
+                          ),
                         ),
-                    ],
+                      ),
+                    ),
                   ),
                 ],
               ],

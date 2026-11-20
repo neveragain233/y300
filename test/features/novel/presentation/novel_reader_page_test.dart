@@ -8,6 +8,7 @@ import '../../../test_support/localized_test_app.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/switch.dart' as prism;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';

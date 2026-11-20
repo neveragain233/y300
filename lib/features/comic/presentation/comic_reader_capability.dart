@@ -33,7 +33,7 @@ class ComicReaderCapability extends ReaderCapability {
     required this.imageReferer,
     required this.controller,
     required this.l10n,
-    required this.onShowMoreActions,
+    required this.moreMenu,
     required this.onShowChapterList,
     required this.onOpenSourceThread,
     required this.onToggleBookmark,
@@ -74,7 +74,8 @@ class ComicReaderCapability extends ReaderCapability {
   ReaderImagePreparationSink get imagePreparationSink =>
       _ComicReaderImagePreparationSink(controller);
 
-  final VoidCallback onShowMoreActions;
+  /// “更多”锚定菜单的动作，顺序与禁用状态由菜单项自身携带。
+  final List<ReaderToolbarMenuEntry> moreMenu;
   final VoidCallback onShowChapterList;
   final VoidCallback onOpenSourceThread;
   final VoidCallback onToggleBookmark;
@@ -148,11 +149,11 @@ class ComicReaderCapability extends ReaderCapability {
         label: l10n.comicOpenSourceThread,
         onPressed: onOpenSourceThread,
       ),
-      ReaderToolbarAction(
+      ReaderToolbarMenuAction(
         id: 'more',
         icon: Icons.more_vert,
         label: l10n.comicMore,
-        onPressed: onShowMoreActions,
+        entries: moreMenu,
       ),
     ];
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/l10n/app_localizations_zh.dart';
 
@@ -26,10 +27,10 @@ void main() {
         ),
       );
 
-      final previous = tester.widget<IconButton>(
+      final previous = tester.widget<prism_button.IconButton>(
         find.byKey(const Key('shared-reader-prev-button')),
       );
-      final next = tester.widget<IconButton>(
+      final next = tester.widget<prism_button.IconButton>(
         find.byKey(const Key('shared-reader-next-button')),
       );
       final slider = tester.widget<Slider>(
@@ -67,7 +68,7 @@ void main() {
 
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-prev-button')),
           )
           .tooltip,
@@ -75,7 +76,7 @@ void main() {
     );
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-next-button')),
           )
           .tooltip,
@@ -105,7 +106,7 @@ void main() {
 
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-top-back-button')),
           )
           .tooltip,

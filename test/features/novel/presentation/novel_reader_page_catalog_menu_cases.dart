@@ -191,7 +191,7 @@ void _catalogMenuCases() {
     expect(find.text('100%'), findsOneWidget);
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-prev-button')),
           )
           .onPressed,
@@ -199,7 +199,7 @@ void _catalogMenuCases() {
     );
     expect(
       tester
-          .widget<IconButton>(
+          .widget<prism_button.IconButton>(
             find.byKey(const Key('shared-reader-next-button')),
           )
           .onPressed,

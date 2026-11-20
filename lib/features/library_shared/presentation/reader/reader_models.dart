@@ -87,6 +87,50 @@ class ReaderToolbarAction {
   final bool dismissMenu;
 }
 
+/// 阅读器工具栏锚定菜单中的一项。
+///
+/// 与三个点菜单共用同一 `AppPopupMenuButton`：动作顺序按列表，[enabled]、
+/// [checked] 与 [danger] 直接映射到菜单行状态；[onSelected] 只在选中后执行一次。
+@immutable
+class ReaderToolbarMenuEntry {
+  const ReaderToolbarMenuEntry({
+    required this.id,
+    required this.label,
+    required this.onSelected,
+    this.icon,
+    this.enabled = true,
+    this.checked,
+    this.danger = false,
+  });
+
+  final String id;
+  final String label;
+  final VoidCallback onSelected;
+  final IconData? icon;
+  final bool enabled;
+  final bool? checked;
+  final bool danger;
+}
+
+/// 以锚定弹出菜单展开的工具栏动作。
+///
+/// 漫画与小说阅读器的“更多”入口共用这一动作类型与三个点菜单的实现，
+/// 不再维护第二套动作面板；[onPressed] 由菜单选中项自己的回调驱动。
+class ReaderToolbarMenuAction extends ReaderToolbarAction {
+  const ReaderToolbarMenuAction({
+    required super.id,
+    required super.icon,
+    required super.label,
+    required this.entries,
+    super.enabled = true,
+    super.dismissMenu = true,
+  }) : super(onPressed: _noToolbarMenuPress);
+
+  final List<ReaderToolbarMenuEntry> entries;
+}
+
+void _noToolbarMenuPress() {}
+
 class ReaderTopBarConfig {
   const ReaderTopBarConfig({
     required this.title,

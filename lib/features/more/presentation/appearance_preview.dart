@@ -503,7 +503,6 @@ class _BottomBar extends StatelessWidget {
       child: AppGlassSurface(
         level: useGlassShell ? glassLevel : AppGlassLevel.off,
         borderRadius: 14,
-        elevation: 2,
         baseColor: scheme.surfaceContainerHigh,
         child: SizedBox(
           key: const Key('appearance-preview-navigation'),

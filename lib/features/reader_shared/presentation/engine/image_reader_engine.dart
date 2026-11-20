@@ -3129,21 +3129,48 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   List<ReaderToolbarAction> _withMenuDismiss(
     List<ReaderToolbarAction> actions,
   ) {
+    void run(VoidCallback action, {required bool dismissMenu}) {
+      if (dismissMenu) {
+        _overlayController.hideMenu();
+      }
+      action();
+    }
+
     return actions
         .map(
-          (action) => ReaderToolbarAction(
-            id: action.id,
-            icon: action.icon,
-            label: action.label,
-            enabled: action.enabled,
-            dismissMenu: action.dismissMenu,
-            onPressed: () {
-              if (action.dismissMenu) {
-                _overlayController.hideMenu();
-              }
-              action.onPressed();
-            },
-          ),
+          (action) => switch (action) {
+            // 锚定菜单动作只转发菜单元数据；开合期间覆盖层保持可见，选中后
+            // 才按 dismissMenu 收起，来源按钮快照才有稳定的接续位置。
+            ReaderToolbarMenuAction(:final entries) => ReaderToolbarMenuAction(
+              id: action.id,
+              icon: action.icon,
+              label: action.label,
+              enabled: action.enabled,
+              dismissMenu: action.dismissMenu,
+              entries: [
+                for (final entry in entries)
+                  ReaderToolbarMenuEntry(
+                    id: entry.id,
+                    label: entry.label,
+                    icon: entry.icon,
+                    enabled: entry.enabled,
+                    checked: entry.checked,
+                    danger: entry.danger,
+                    onSelected: () =>
+                        run(entry.onSelected, dismissMenu: action.dismissMenu),
+                  ),
+              ],
+            ),
+            _ => ReaderToolbarAction(
+              id: action.id,
+              icon: action.icon,
+              label: action.label,
+              enabled: action.enabled,
+              dismissMenu: action.dismissMenu,
+              onPressed: () =>
+                  run(action.onPressed, dismissMenu: action.dismissMenu),
+            ),
+          },
         )
         .toList(growable: false);
   }

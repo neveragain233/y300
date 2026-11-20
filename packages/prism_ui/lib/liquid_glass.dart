@@ -516,16 +516,30 @@ Color _darkGlassTint(ColorScheme colorScheme) {
 
 /// An iOS 27 menu's or alert's, measured over white below, above and beside
 /// it: one wide shadow, glass or not.
+///
+/// 浅色背景上不再铺 29dp 的大范围灰影：alpha 收在 0.075、模糊 18dp；
+/// 深色沿用 1.5 倍强度，仍受同一深度上限约束，不随子菜单层数重复叠加。
 List<BoxShadow> menuShadows(ColorScheme colorScheme, [double depth = 1]) {
-  final strength = colorScheme.brightness == Brightness.dark ? 1.5 : 1.0;
+  final dark = colorScheme.brightness == Brightness.dark;
+  final alpha = (dark ? 0.075 * 1.5 : 0.075) * depth.clamp(0.0, 1.0);
   return [
     BoxShadow(
-      color: colorScheme.shadow.withValues(alpha: 0.118 * strength * depth),
-      blurRadius: 29,
-      offset: const Offset(0, 8),
+      color: colorScheme.shadow.withValues(alpha: alpha),
+      blurRadius: 18,
+      offset: const Offset(0, 6),
     ),
   ];
 }
+
+/// 菜单玻璃的压黑层：垫在背景采样与菜单内容之间，颜色随主题变化。
+///
+/// 深色菜单的玻璃在纯白封面与高亮漫画页上采样过亮，正文、辅助文字、图标
+/// 和危险态会掉到 4.5:1 以下；一层固定黑色遮罩把最坏底色压到可读范围，
+/// 不逐帧分析背景图片，浅色模式保持极轻。标准与增强档同强度，减少动态
+/// 效果时同样直接使用最终底色。
+Color menuScrim(ColorScheme colorScheme) => Colors.black.withValues(
+  alpha: colorScheme.brightness == Brightness.dark ? 0.45 : 0.02,
+);
 
 Color glassFillOf(ColorScheme colorScheme) =>
     (colorScheme.brightness == Brightness.dark ? Colors.white : Colors.black)

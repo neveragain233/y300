@@ -281,18 +281,22 @@ void main() {
       await tester.pump();
     }
 
+    Finder surfaceOf(Finder button) => find.descendant(
+      of: find.ancestor(of: button, matching: find.byType(Stack)).first,
+      matching: find.byType(AppGlassSurface),
+    );
+
     for (final level in [AppGlassLevel.standard, AppGlassLevel.enhanced]) {
       await pump(level: level);
-      // 返回与每个顶栏动作各一块玻璃，来源是应用根唯一宿主。
-      expect(find.byType(LiquidGlass), findsNWidgets(2));
+      // 返回键、动作胶囊与进度行两端的紧凑按钮各一块玻璃，来源是应用根唯一宿主。
+      expect(find.byType(LiquidGlass), findsNWidgets(4));
       expect(find.byType(LiquidGlassHost), findsOneWidget);
-      for (final finder in [back, action]) {
-        expect(tester.getSize(finder).shortestSide, greaterThanOrEqualTo(48));
-        expect(
-          find.ancestor(of: finder, matching: find.byType(AppGlassSurface)),
-          findsOneWidget,
-        );
-      }
+      expect(tester.getSize(back).shortestSide, greaterThanOrEqualTo(48));
+      // 独立返回键的玻璃与按钮同层绘制（48 命中区内收视觉圆底）；
+      // 胶囊内的动作共用动作胶囊那一层玻璃。
+      expect(surfaceOf(back), findsOneWidget);
+      expect(surfaceOf(action), findsOneWidget);
+      expect(tester.getSize(action).shortestSide, greaterThanOrEqualTo(48));
     }
 
     for (final sample in [
@@ -301,10 +305,10 @@ void main() {
     ]) {
       await pump(level: sample.level, highContrast: sample.highContrast);
       expect(find.byType(LiquidGlass), findsNothing);
-      for (final finder in [back, action]) {
-        final surfaceFinder = find
-            .ancestor(of: finder, matching: find.byType(AppGlassSurface))
-            .first;
+      for (final surfaceFinder in [
+        surfaceOf(back).first,
+        surfaceOf(action).first,
+      ]) {
         expect(
           tester.widget<AppGlassSurface>(surfaceFinder).baseColor,
           palette.chromeBackground,

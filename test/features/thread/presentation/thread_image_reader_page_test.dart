@@ -8,6 +8,7 @@ import '../../../test_support/localized_test_app.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
@@ -477,10 +478,10 @@ void main() {
     );
     // 翻章按钮属于共享进度条 chrome，帖子图片阅读器没有"上一话/下一话"语义，
     // 因此它们存在但被禁用（onPressed == null）。
-    final prevButton = tester.widget<IconButton>(
+    final prevButton = tester.widget<prism_button.IconButton>(
       find.byKey(const Key('shared-reader-prev-button')),
     );
-    final nextButton = tester.widget<IconButton>(
+    final nextButton = tester.widget<prism_button.IconButton>(
       find.byKey(const Key('shared-reader-next-button')),
     );
     expect(prevButton.onPressed, isNull);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/comic/domain/services/comic_source_tag_reader.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/adaptive_panel.dart';
 
 /// Lists a comic's source-thread tags and opens the native tag directory.
 Future<void> showComicSourceTagsSheet(
@@ -10,11 +11,15 @@ Future<void> showComicSourceTagsSheet(
 }) async {
   final navigator = Navigator.of(context);
   final l10n = AppLocalizations.of(context);
-  await showModalBottomSheet<void>(
+  // 面板按窗口属主选择底栏或侧栏宿主，与漫画阅读器其它紧凑面板同源；
+  // 根导航不变，标签页在关闭面板后压入当前阅读器栈。
+  await showAdaptivePanel<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (sheetContext) {
       return SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Column(
