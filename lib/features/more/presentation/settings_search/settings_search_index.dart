@@ -16,6 +16,7 @@ enum SettingsSearchTarget {
   appearanceThemeMode,
   appearanceColorTheme,
   appearanceGlass,
+  appearanceEInk,
   appearanceBoldFont,
   appearanceNavigation,
   appearanceLanguage,
@@ -40,6 +41,7 @@ enum SettingsSearchTarget {
     appearanceThemeMode ||
     appearanceColorTheme ||
     appearanceGlass ||
+    appearanceEInk ||
     appearanceBoldFont ||
     appearanceNavigation ||
     appearanceLanguage ||
@@ -194,6 +196,13 @@ List<SettingsSearchEntry> buildSettingsSearchIndex(
       title: l10n.moreGlassSectionTitle,
       summary: l10n.settingsSearchSummaryGlass,
       keywords: l10n.settingsSearchKeywordsGlass,
+    ),
+    SettingsSearchEntry(
+      id: 'appearance-eink',
+      target: SettingsSearchTarget.appearanceEInk,
+      title: l10n.appearanceEInkSectionTitle,
+      summary: l10n.settingsSearchSummaryEInk,
+      keywords: l10n.settingsSearchKeywordsEInk,
     ),
     SettingsSearchEntry(
       id: 'appearance-navigation',

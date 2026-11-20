@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:y300/core/config/app_edition.dart';
+import 'package:y300/core/motion/app_motion.dart';
 
 abstract final class AppLayoutTokens {
   static const double compactSpacing = 8;
@@ -12,11 +12,9 @@ abstract final class AppLayoutTokens {
   static const Duration feedbackDuration = Duration(milliseconds: 200);
 
   static Duration motionDuration(BuildContext context) {
-    if (AppEdition.isEInk) {
+    if (MediaQuery.disableAnimationsOf(context)) {
       return Duration.zero;
     }
-    return MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : feedbackDuration;
+    return AppMotion.duration(context, feedbackDuration);
   }
 }

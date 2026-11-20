@@ -6429,6 +6429,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsSearchKeywordsBoldFont => '加粗 字体 字重 bold font';
+
+  @override
+  String get appearanceEInkSectionTitle => '墨水屏';
+
+  @override
+  String get appearanceEInkModeTitle => '墨水屏模式';
+
+  @override
+  String get appearanceEInkModeSubtitle => '关闭动画、玻璃与彩色表面，列表改用翻页按钮与硬件键浏览';
+
+  @override
+  String get appearanceEInkModeCaption => '切换立即生效；阅读器内仍保留翻页动画，硬件键翻页继续由阅读偏好控制。';
+
+  @override
+  String get appearanceEInkEdgeTapTitle => '边缘点击翻页';
+
+  @override
+  String get appearanceEInkEdgeTapSubtitle => '在列表左右边缘轻点翻动；含横向手势的页面不启用';
+
+  @override
+  String get settingsSearchSummaryEInk => '墨水屏模式与边缘点击翻页';
+
+  @override
+  String get settingsSearchKeywordsEInk => '墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -12858,4 +12882,28 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsSearchKeywordsBoldFont => '加粗 字體 字重 bold font';
+
+  @override
+  String get appearanceEInkSectionTitle => '墨水屏';
+
+  @override
+  String get appearanceEInkModeTitle => '墨水屏模式';
+
+  @override
+  String get appearanceEInkModeSubtitle => '關閉動畫、玻璃與彩色表面，列表改用翻頁按鈕與硬體鍵瀏覽';
+
+  @override
+  String get appearanceEInkModeCaption => '切換立即生效；閱讀器內仍保留翻頁動畫，硬體鍵翻頁繼續由閱讀偏好控制。';
+
+  @override
+  String get appearanceEInkEdgeTapTitle => '邊緣點擊翻頁';
+
+  @override
+  String get appearanceEInkEdgeTapSubtitle => '在列表左右邊緣輕點翻動；含橫向手勢的頁面不啟用';
+
+  @override
+  String get settingsSearchSummaryEInk => '墨水屏模式與邊緣點擊翻頁';
+
+  @override
+  String get settingsSearchKeywordsEInk => '墨水屏 eink 電子書 電紙書 邊緣 翻頁 動畫 玻璃 灰階';
 }

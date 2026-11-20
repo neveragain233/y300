@@ -30,6 +30,8 @@ class AppAppearanceSettings {
     this.navigationLensMotion = AppNavigationLensMotion.followPress,
     this.glassLevel = AppGlassLevel.standard,
     this.brightnessPreference = AppBrightnessPreference.light,
+    this.eInkMode = false,
+    this.eInkEdgeTapPaging = false,
     required this.languagePreference,
   });
 
@@ -41,6 +43,8 @@ class AppAppearanceSettings {
       navigationLensMotion: AppNavigationLensMotion.followPress,
       glassLevel: AppGlassLevel.standard,
       brightnessPreference: AppBrightnessPreference.light,
+      eInkMode: false,
+      eInkEdgeTapPaging: false,
       languagePreference: AppLanguage.system,
     );
   }
@@ -56,6 +60,12 @@ class AppAppearanceSettings {
   final AppBrightnessPreference brightnessPreference;
   final AppLanguage languagePreference;
 
+  /// 运行时墨水屏模式：关闭动画、玻璃、彩色表面并启用翻页交互。
+  final bool eInkMode;
+
+  /// 边缘点击翻页；默认关闭，只在墨水屏模式下生效。
+  final bool eInkEdgeTapPaging;
+
   ThemeMode get themeMode => brightnessPreference.themeMode;
 
   AppAppearanceSettings copyWith({
@@ -66,6 +76,8 @@ class AppAppearanceSettings {
     AppNavigationLensMotion? navigationLensMotion,
     AppGlassLevel? glassLevel,
     AppBrightnessPreference? brightnessPreference,
+    bool? eInkMode,
+    bool? eInkEdgeTapPaging,
     AppLanguage? languagePreference,
   }) {
     return AppAppearanceSettings(
@@ -77,6 +89,8 @@ class AppAppearanceSettings {
       navigationLensMotion: navigationLensMotion ?? this.navigationLensMotion,
       glassLevel: glassLevel ?? this.glassLevel,
       brightnessPreference: brightnessPreference ?? this.brightnessPreference,
+      eInkMode: eInkMode ?? this.eInkMode,
+      eInkEdgeTapPaging: eInkEdgeTapPaging ?? this.eInkEdgeTapPaging,
       languagePreference: languagePreference ?? this.languagePreference,
     );
   }

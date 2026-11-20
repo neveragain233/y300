@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_component_theme_builder.dart';
-import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_palette.dart';
@@ -29,9 +28,10 @@ final class AppTheme {
     AppThemeColorSource colorSource = AppThemeColorSource.preset,
     ColorScheme? dynamicScheme,
     bool boldFont = false,
+    bool eInkMode = false,
   }) {
-    // 墨水屏变体固定使用灰阶色板，忽略手机主题预设和动态色。
-    if (AppEdition.isEInk) {
+    // 墨水屏模式固定使用灰阶色板，忽略手机主题预设和动态色。
+    if (eInkMode) {
       return _buildTheme(
         brightness == Brightness.dark
             ? AppThemePalette.eInkDark()
@@ -118,11 +118,13 @@ final class AppTheme {
       cardTheme: AppComponentThemeBuilder.cardTheme(colorScheme)
           .copyWith(color: palette.surfaceContainer),
       extensions: <ThemeExtension<dynamic>>[
-        Y300BrandColors.fromPalette(palette),
+        Y300BrandColors.fromPalette(palette, highContrast: eInk),
         ForumThreadBadgeTheme.fromColorScheme(
           colorScheme,
-          standardBackground: palette.appBarBackground,
-          standardForeground: palette.appBarForeground,
+          standardBackground: eInk ? palette.primary : palette.appBarBackground,
+          standardForeground: eInk
+              ? palette.onPrimary
+              : palette.appBarForeground,
         ),
         palette.brightness == Brightness.dark
             ? Y300ThemeExtension.dark(palette)
@@ -131,7 +133,7 @@ final class AppTheme {
     );
     var result = theme;
     if (eInk) {
-      result = _flattenEInkSurfaces(result);
+      result = _flattenEInkSurfaces(result, palette);
     }
     if (boldFont) {
       result = result.copyWith(textTheme: _boldTextTheme(result.textTheme));
@@ -140,9 +142,24 @@ final class AppTheme {
   }
 
   /// 墨水屏上阴影与抬升会产生整块重绘和残影，统一压平为实色描边表面。
-  static ThemeData _flattenEInkSurfaces(ThemeData theme) {
+  static ThemeData _flattenEInkSurfaces(
+    ThemeData theme,
+    AppThemePalette palette,
+  ) {
     const shadow = Colors.transparent;
+    // 选中/命中高亮在灰阶屏上不能靠彩色区分，改为中性遮罩。
+    final highlight = palette.brightness == Brightness.dark
+        ? const Color(0x33FFFFFF)
+        : const Color(0x22000000);
+    final extensions = theme.extensions.values
+        .map<ThemeExtension<dynamic>>(
+          (extension) => extension is Y300ThemeExtension
+              ? extension.copyWith(contentHighlightBackground: highlight)
+              : extension,
+        )
+        .toList(growable: false);
     return theme.copyWith(
+      extensions: extensions,
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
       hoverColor: Colors.transparent,

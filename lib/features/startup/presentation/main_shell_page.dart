@@ -12,7 +12,6 @@ import 'package:y300/app/navigation/main_navigation_grouping.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/navigation/main_navigation_settings.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
-import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
@@ -125,9 +124,9 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     final appearance =
         ref.watch(appAppearanceControllerProvider).value ??
         AppAppearanceSettings.defaults();
-    // eink 构建固定旧式底栏：常驻实色条比沉浸式透镜稳定，少一次整屏重绘。
+    // 墨水屏模式固定旧式底栏：常驻实色条比沉浸式透镜稳定，少一次整屏重绘。
     final isImmersive =
-        !AppEdition.isEInk &&
+        !appearance.eInkMode &&
         appearance.navigationBarStyle == AppNavigationBarStyle.immersive;
 
     final selection = ref.watch(shelfSelectionHostControllerProvider);
@@ -145,6 +144,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
               builder: (context, constraints) {
                 final media = MediaQuery.of(context);
                 final useRail = AppWindowLayout(
+                  eInkMode: appearance.eInkMode,
                   size: Size(
                     constraints.maxWidth - media.padding.horizontal,
                     constraints.maxHeight -

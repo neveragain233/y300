@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:y300/core/config/app_edition.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 /// Adds a non-blocking loading indicator after one uninterrupted load deadline.
@@ -38,11 +38,23 @@ class _DelayedImageLoadingOverlayState
     extends State<DelayedImageLoadingOverlay> {
   Timer? _timer;
   bool _showIndicator = false;
+  bool? _reduceMotion;
 
   @override
   void initState() {
     super.initState();
     _restartTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 墨水屏模式切换要撤掉延迟转圈；依赖变化只重排一次定时器。
+    final reduceMotion = AppMotion.reduceMotion(context);
+    if (reduceMotion != _reduceMotion) {
+      _reduceMotion = reduceMotion;
+      _restartTimer();
+    }
   }
 
   @override
@@ -99,7 +111,7 @@ class _DelayedImageLoadingOverlayState
     _timer?.cancel();
     _timer = null;
     _showIndicator = false;
-    if (!widget.enabled || !widget.isLoading || AppEdition.isEInk) {
+    if (!widget.enabled || !widget.isLoading || (_reduceMotion ?? false)) {
       return;
     }
     if (widget.delay.inMicroseconds <= 0) {

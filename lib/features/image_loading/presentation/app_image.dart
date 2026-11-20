@@ -3,7 +3,7 @@ import 'dart:io' as io;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:y300/core/config/app_edition.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:y300/core/media/image_display_provider.dart';
@@ -118,8 +118,8 @@ class _AppImageState extends ConsumerState<AppImage> {
     0,
   ];
 
-  Widget _applyEInkFilter(Widget child) {
-    if (!AppEdition.isEInk) {
+  Widget _applyEInkFilter(BuildContext context, Widget child) {
+    if (!AppMotion.reduceMotion(context)) {
       return child;
     }
     return ColorFiltered(
@@ -150,7 +150,7 @@ class _AppImageState extends ConsumerState<AppImage> {
           _finiteOr(widget.height, constraints.maxHeight),
         );
         _devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-        return _applyEInkFilter(_buildContent(context));
+        return _applyEInkFilter(context, _buildContent(context));
       },
     );
   }

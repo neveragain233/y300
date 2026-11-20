@@ -15,6 +15,20 @@ void main() {
     expect(AppWindowLayout(size: const Size(1100, 300)).split, isNull);
   });
 
+  test('e-ink mode uses the 600dp rail threshold', () {
+    expect(
+      AppWindowLayout(size: const Size(700, 900)).useNavigationRail,
+      isFalse,
+    );
+    expect(
+      AppWindowLayout(
+        size: const Size(700, 900),
+        eInkMode: true,
+      ).useNavigationRail,
+      isTrue,
+    );
+  });
+
   test('hinge is excluded and translated into the local host', () {
     final window = AppWindowLayout(
       size: const Size(1000, 900),

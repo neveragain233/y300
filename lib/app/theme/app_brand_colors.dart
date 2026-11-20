@@ -9,7 +9,17 @@ import 'package:y300/app/theme/app_theme_palette.dart';
 final class Y300BrandColors extends ThemeExtension<Y300BrandColors> {
   const Y300BrandColors({required this.accent, required this.onAccent});
 
-  factory Y300BrandColors.fromPalette(AppThemePalette palette) {
+  factory Y300BrandColors.fromPalette(
+    AppThemePalette palette, {
+    bool highContrast = false,
+  }) {
+    // 墨水屏模式没有彩色强调：浅色用黑底白字，深色用白底黑字。
+    if (highContrast) {
+      return Y300BrandColors(
+        accent: palette.primary,
+        onAccent: palette.onPrimary,
+      );
+    }
     return Y300BrandColors(
       accent: palette.appBarBackground,
       onAccent: palette.appBarForeground,

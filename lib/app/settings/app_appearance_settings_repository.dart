@@ -45,6 +45,8 @@ class SharedPrefsAppAppearanceSettingsRepository
               json['brightness'],
             ),
             languagePreference: _parseLanguage(json['language']),
+            eInkMode: _parseBool(json['eInkMode']),
+            eInkEdgeTapPaging: _parseBool(json['eInkEdgeTapPaging']),
           );
         }
       } on FormatException {
@@ -120,6 +122,8 @@ class SharedPrefsAppAppearanceSettingsRepository
     'glass': settings.glassLevel.name,
     'brightness': settings.brightnessPreference.name,
     'language': settings.languagePreference.name,
+    'eInkMode': settings.eInkMode,
+    'eInkEdgeTapPaging': settings.eInkEdgeTapPaging,
   });
 
   AppThemeColorSource _parseColorSource(Object? raw) {
@@ -149,6 +153,11 @@ class SharedPrefsAppAppearanceSettingsRepository
   /// 旧快照没有该字段，缺省保留新的默认值。
   bool _parseNavigationSwipe(Object? raw) {
     return raw is bool ? raw : true;
+  }
+
+  /// 墨水屏开关只在用户显式打开时为 true；旧快照与损坏值都回退为关闭。
+  bool _parseBool(Object? raw) {
+    return raw is bool ? raw : false;
   }
 
   /// 旧快照没有透镜方式，未知值或损坏值都回退到“按下即跟随”。

@@ -67,7 +67,9 @@ void main() {
       SettingsSearchTarget.settingsDebug,
       SettingsSearchTarget.appearanceThemeMode,
       SettingsSearchTarget.appearanceColorTheme,
+      SettingsSearchTarget.appearanceBoldFont,
       SettingsSearchTarget.appearanceGlass,
+      SettingsSearchTarget.appearanceEInk,
       SettingsSearchTarget.appearanceNavigation,
       SettingsSearchTarget.appearanceLanguage,
       SettingsSearchTarget.appearanceReset,
@@ -107,6 +109,7 @@ void main() {
       'settings-search-result-appearance',
       'settings-search-result-appearance-theme-mode',
     ]);
+    expect(await search('墨水屏'), ['settings-search-result-appearance-eink']);
 
     final l10n = _l10n(tester, searchPage: true);
     await tester.enterText(
@@ -208,6 +211,32 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('settings-page')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('e-ink search result reveals the new appearance group', (
+    tester,
+  ) async {
+    await _pumpSettings(tester);
+    await _openSearch(tester);
+    await _search(tester, '墨水屏');
+    await tester.tap(
+      find.byKey(const Key('settings-search-result-appearance-eink')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppearancePage), findsOneWidget);
+    expect(
+      find.byKey(const Key('appearance-eink-mode-switch')),
+      findsOneWidget,
+    );
+    expect(
+      _highlightOpacity(
+        tester,
+        find.byKey(const Key('settings-search-highlight-appearanceEInk')),
+      ),
+      1,
+    );
     expect(tester.takeException(), isNull);
   });
 }

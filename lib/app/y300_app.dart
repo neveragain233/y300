@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prism_ui/motion.dart';
 import 'package:y300/app/clipboard/forum_clipboard_runtime.dart';
 import 'package:y300/app/localization/app_locale_resolution.dart';
 import 'package:y300/app/localization/app_prism_ui_localizations.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
-import 'package:y300/core/config/app_edition.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/app/settings/bold_font_provider.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/startup/blacklist_sync_host.dart';
@@ -44,6 +45,7 @@ class Y300App extends ConsumerWidget {
           orElse: AppAppearanceSettings.defaults,
         );
     final boldFont = ref.watch(boldFontEnabledProvider).value ?? false;
+    final eInkMode = settings.eInkMode;
     return AppDynamicColorBuilder(
       builder: (light, dark) => AppDynamicColors(
         light: light,
@@ -51,13 +53,14 @@ class Y300App extends ConsumerWidget {
         child: MaterialApp(
           title: 'Y300',
           debugShowCheckedModeBanner: false,
-          scrollBehavior: AppEdition.isEInk ? const EInkScrollBehavior() : null,
+          scrollBehavior: eInkMode ? const EInkScrollBehavior() : null,
           theme: AppTheme.build(
             family: settings.themeFamily,
             brightness: Brightness.light,
             colorSource: settings.colorSource,
             dynamicScheme: light,
             boldFont: boldFont,
+            eInkMode: eInkMode,
           ),
           darkTheme: AppTheme.build(
             family: settings.themeFamily,
@@ -65,9 +68,10 @@ class Y300App extends ConsumerWidget {
             colorSource: settings.colorSource,
             dynamicScheme: dark,
             boldFont: boldFont,
+            eInkMode: eInkMode,
           ),
           themeMode: settings.themeMode,
-          themeAnimationDuration: AppEdition.isEInk
+          themeAnimationDuration: eInkMode
               ? Duration.zero
               : kThemeAnimationDuration,
           localizationsDelegates: const [
@@ -89,11 +93,21 @@ class Y300App extends ConsumerWidget {
               child: BlacklistSyncHost(
                 // 玻璃来源包住 Navigator，普通路由、根页菜单、模态和分栏
                 // 详情共用同一宿主；WAF、消息与黑名单 host 仍是应用根职责。
-                child: AppGlassEnvironment(
-                  glassLevel: AppEdition.isEInk
-                      ? AppGlassLevel.off
-                      : settings.glassLevel,
-                  child: child ?? const SizedBox.shrink(),
+                child: EInkModeScope(
+                  enabled: eInkMode,
+                  child: PrismMotionScope(
+                    reduceMotion: eInkMode,
+                    child: MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(disableAnimations: eInkMode),
+                      child: AppGlassEnvironment(
+                        glassLevel: eInkMode
+                            ? AppGlassLevel.off
+                            : settings.glassLevel,
+                        child: child ?? const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

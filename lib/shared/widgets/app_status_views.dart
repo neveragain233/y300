@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:y300/core/config/app_edition.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/icons/icons.dart';
 import 'package:prism_ui/loading.dart' as prism_loading;
@@ -65,7 +65,7 @@ class _AppLoadingStateState extends State<AppLoadingState> {
     final showIndicator =
         _showIndicator &&
         !MediaQuery.disableAnimationsOf(context) &&
-        !AppEdition.isEInk;
+        !AppMotion.reduceMotion(context);
     final label = widget.label;
     return Semantics(
       container: true,

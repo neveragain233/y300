@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:prism_ui/motion.dart';
 import 'package:prism_ui/theme_data.dart';
 
 const _transitionDuration = Duration(milliseconds: 300);
@@ -73,6 +74,15 @@ class _AnimatedVisibilityState extends State<AnimatedVisibility>
       curve: Easing.standardDecelerate,
       reverseCurve: const FlippedCurve(Easing.standardAccelerate),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final duration = PrismMotion.duration(context, _transitionDuration);
+    _controller
+      ..duration = duration
+      ..reverseDuration = duration;
   }
 
   @override

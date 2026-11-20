@@ -10,6 +10,7 @@ import 'package:y300/app/theme/app_theme_tokens.dart';
 final class AppThemePalette {
   const AppThemePalette({
     this.isDynamic = false,
+    this.isEInk = false,
     required this.family,
     required this.brightness,
     required this.seedColor,
@@ -72,53 +73,55 @@ final class AppThemePalette {
     };
   }
 
-  /// 墨水屏变体：浅灰纸面、纯白卡片、深灰正文、单档描边。
+  /// 墨水屏高对比色板：纯白底黑字，深色模式纯黑底白字。
   ///
-  /// 与手机端三套预设无关；eink 构建固定使用这套色板，避免彩色表面和
-  /// 大面积米黄/紫色底在低刷新率设备上产生残影。
+  /// 与手机端三套预设无关。正文、标题、图标与选中态使用纯黑/纯白两档，
+  /// 次级表面保留少量中性灰以区分卡片、面板与分隔线，不引入任何彩色。
   factory AppThemePalette.eInk() {
     return const AppThemePalette(
       family: AppThemeFamily.warmPaper,
+      isEInk: true,
       brightness: Brightness.light,
-      seedColor: AppThemeTokens.seedColor,
-      scaffoldBackground: Color(0xFFF4F4F4),
+      seedColor: Color(0xFF000000),
+      scaffoldBackground: Color(0xFFFFFFFF),
       appBarBackground: Color(0xFFFFFFFF),
-      appBarForeground: Color(0xFF1F1F1F),
+      appBarForeground: Color(0xFF000000),
       navigationBarBackground: Color(0xFFFFFFFF),
-      primary: AppThemeTokens.seedColor,
+      primary: Color(0xFF000000),
       onPrimary: Color(0xFFFFFFFF),
       surface: Color(0xFFFFFFFF),
-      onSurface: Color(0xFF1F1F1F),
+      onSurface: Color(0xFF000000),
       surfaceContainerLowest: Color(0xFFFFFFFF),
-      surfaceContainer: Color(0xFFFFFFFF),
-      surfaceContainerHighest: Color(0xFFEDEDED),
-      onSurfaceVariant: Color(0xFF444444),
-      outlineVariant: Color(0xFFCCCCCC),
-      secondaryContainer: Color(0xFFEDEDED),
-      onSecondaryContainer: Color(0xFF1F1F1F),
+      surfaceContainer: Color(0xFFF5F5F5),
+      surfaceContainerHighest: Color(0xFFE8E8E8),
+      onSurfaceVariant: Color(0xFF2E2E2E),
+      outlineVariant: Color(0xFF9A9A9A),
+      secondaryContainer: Color(0xFFE4E4E4),
+      onSecondaryContainer: Color(0xFF000000),
     );
   }
 
   factory AppThemePalette.eInkDark() {
     return const AppThemePalette(
       family: AppThemeFamily.warmPaper,
+      isEInk: true,
       brightness: Brightness.dark,
-      seedColor: AppThemeTokens.seedColor,
-      scaffoldBackground: Color(0xFF101010),
-      appBarBackground: Color(0xFF1A1A1A),
-      appBarForeground: Color(0xFFE8E8E8),
-      navigationBarBackground: Color(0xFF1A1A1A),
-      primary: AppThemeTokens.seedColor,
-      onPrimary: Color(0xFFFFFFFF),
-      surface: Color(0xFF1A1A1A),
-      onSurface: Color(0xFFE8E8E8),
-      surfaceContainerLowest: Color(0xFF0C0C0C),
-      surfaceContainer: Color(0xFF1A1A1A),
+      seedColor: Color(0xFF000000),
+      scaffoldBackground: Color(0xFF000000),
+      appBarBackground: Color(0xFF000000),
+      appBarForeground: Color(0xFFFFFFFF),
+      navigationBarBackground: Color(0xFF000000),
+      primary: Color(0xFFFFFFFF),
+      onPrimary: Color(0xFF000000),
+      surface: Color(0xFF000000),
+      onSurface: Color(0xFFFFFFFF),
+      surfaceContainerLowest: Color(0xFF000000),
+      surfaceContainer: Color(0xFF141414),
       surfaceContainerHighest: Color(0xFF242424),
-      onSurfaceVariant: Color(0xFFB8B8B8),
-      outlineVariant: Color(0xFF3A3A3A),
-      secondaryContainer: Color(0xFF242424),
-      onSecondaryContainer: Color(0xFFE8E8E8),
+      onSurfaceVariant: Color(0xFFD0D0D0),
+      outlineVariant: Color(0xFF6A6A6A),
+      secondaryContainer: Color(0xFF2A2A2A),
+      onSecondaryContainer: Color(0xFFFFFFFF),
     );
   }
 
@@ -262,6 +265,10 @@ final class AppThemePalette {
 
   final AppThemeFamily family;
   final bool isDynamic;
+
+  /// 运行时墨水屏模式的高对比色板；与手机端预设区分，品牌色与原生正文
+  /// 语义据此选择纯黑/纯白映射。
+  final bool isEInk;
   final Brightness brightness;
   final Color seedColor;
   final Color scaffoldBackground;

@@ -12,6 +12,7 @@ import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/theme/app_theme_color_source.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
+import 'package:y300/app/theme/app_theme_palette.dart';
 import 'package:y300/app/y300_app.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/more/presentation/appearance_page.dart';
@@ -304,6 +305,54 @@ void main() {
     await _scrollTo(
       tester,
       find.byKey(const Key('appearance-glass-level-off')),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('runtime e-ink switch applies immediately and confines options', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authSessionControllerProvider.overrideWith(_AnonymousSession.new),
+        ],
+        child: const Y300App(
+          enableAppUpdatePrompt: false,
+          home: AppearancePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final modeSwitch = find.byKey(const Key('appearance-eink-mode-switch'));
+    final edgeSwitch = find.byKey(const Key('appearance-eink-edge-tap-switch'));
+    await _scrollTo(tester, modeSwitch);
+    expect(tester.widget<AppSwitchRow>(modeSwitch).value, isFalse);
+    expect(tester.widget<AppSwitchRow>(edgeSwitch).onChanged, isNull);
+
+    await tester.tap(modeSwitch);
+    await tester.pumpAndSettle();
+
+    final pageContext = tester.element(
+      find.byKey(const Key('appearance-page')),
+    );
+    final settings = ProviderScope.containerOf(pageContext)
+        .read(appAppearanceControllerProvider)
+        .value!;
+    expect(settings.eInkMode, isTrue);
+    expect(
+      Theme.of(pageContext).scaffoldBackgroundColor,
+      AppThemePalette.eInk().scaffoldBackground,
+    );
+    expect(tester.widget<AppSwitchRow>(edgeSwitch).onChanged, isNotNull);
+    expect(
+      find.byKey(const Key('appearance-navigation-style-immersive')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('appearance-navigation-style-legacy')),
+      findsOneWidget,
     );
     expect(tester.takeException(), isNull);
   });

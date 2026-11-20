@@ -22,6 +22,41 @@ class SpringCurve extends Curve {
       _simulation.x(t * seconds) + _residual * t;
 }
 
+/// 让组件库感知外层是否要求减少动态效果。
+///
+/// 应用在墨水屏构建下把 [reduceMotion] 设为 true；未挂 scope 时回退到系统
+/// 的无障碍设置，行为与 Material 的 disableAnimations 一致。
+class PrismMotionScope extends InheritedWidget {
+  const PrismMotionScope({
+    super.key,
+    required this.reduceMotion,
+    required super.child,
+  });
+
+  final bool reduceMotion;
+
+  static bool of(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<PrismMotionScope>();
+    if (scope != null) {
+      return scope.reduceMotion;
+    }
+    return MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+  }
+
+  @override
+  bool updateShouldNotify(PrismMotionScope oldWidget) =>
+      oldWidget.reduceMotion != reduceMotion;
+}
+
+/// 组件库统一的动画时长入口。
+abstract final class PrismMotion {
+  static bool reduce(BuildContext context) => PrismMotionScope.of(context);
+
+  static Duration duration(BuildContext context, Duration value) =>
+      PrismMotionScope.of(context) ? Duration.zero : value;
+}
+
 Duration frameIntervalOf(BuildContext context) {
   final rate = View.maybeOf(context)?.display.refreshRate ?? 0;
   return rate > 0

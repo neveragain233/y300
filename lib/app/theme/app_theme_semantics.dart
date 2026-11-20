@@ -335,6 +335,7 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
 
   static Y300NativeContentColors _nativeContent(AppThemePalette palette) {
     if (!palette.isDynamic &&
+        !palette.isEInk &&
         palette.family == AppThemeFamily.warmPaper &&
         palette.brightness == Brightness.light) {
       return Y300NativeContentColors(
@@ -381,7 +382,9 @@ final class Y300ThemeExtension extends ThemeExtension<Y300ThemeExtension> {
       ),
       accent: palette.primary,
       onAccent: palette.onPrimary,
-      title: palette.isDynamic ? palette.onSurface : palette.appBarBackground,
+      title: palette.isDynamic || palette.isEInk
+          ? palette.onSurface
+          : palette.appBarBackground,
       itemTitle: palette.onSurface,
       author: palette.primary,
       body: palette.onSurface,

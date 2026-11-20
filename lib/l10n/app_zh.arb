@@ -4370,5 +4370,13 @@
   "appearanceBoldFontTitle": "加粗字体",
   "appearanceBoldFontSubtitle": "整体提升一档字重，墨水屏和户外更易辨认",
   "settingsSearchSummaryBoldFont": "全应用加粗字体",
-  "settingsSearchKeywordsBoldFont": "加粗 字体 字重 bold font"
+  "settingsSearchKeywordsBoldFont": "加粗 字体 字重 bold font",
+  "appearanceEInkSectionTitle": "墨水屏",
+  "appearanceEInkModeTitle": "墨水屏模式",
+  "appearanceEInkModeSubtitle": "关闭动画、玻璃与彩色表面，列表改用翻页按钮与硬件键浏览",
+  "appearanceEInkModeCaption": "切换立即生效；阅读器内仍保留翻页动画，硬件键翻页继续由阅读偏好控制。",
+  "appearanceEInkEdgeTapTitle": "边缘点击翻页",
+  "appearanceEInkEdgeTapSubtitle": "在列表左右边缘轻点翻动；含横向手势的页面不启用",
+  "settingsSearchSummaryEInk": "墨水屏模式与边缘点击翻页",
+  "settingsSearchKeywordsEInk": "墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度"
 }

@@ -33,8 +33,42 @@ void main() {
           settings.navigationLensMotion,
           AppNavigationLensMotion.followPress,
         );
+        expect(settings.eInkMode, isFalse);
+        expect(settings.eInkEdgeTapPaging, isFalse);
       },
     );
+
+    test('saves and loads runtime e-ink switches', () async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = SharedPrefsAppAppearanceSettingsRepository();
+
+      for (final eInkMode in [true, false]) {
+        for (final edgeTap in [true, false]) {
+          await repository.save(
+            AppAppearanceSettings(
+              eInkMode: eInkMode,
+              eInkEdgeTapPaging: edgeTap,
+              languagePreference: AppLanguage.system,
+            ),
+          );
+          final settings = await repository.load();
+          expect(settings.eInkMode, eInkMode);
+          expect(settings.eInkEdgeTapPaging, edgeTap);
+        }
+      }
+    });
+
+    test('old snapshot without e-ink fields defaults to full mode', () async {
+      SharedPreferences.setMockInitialValues({
+        PreferenceKeyNames.appAppearanceSnapshotV1:
+            '{"version":1,"source":"preset","family":"moonWhite",'
+            '"brightness":"light","language":"system"}',
+      });
+      final settings = await SharedPrefsAppAppearanceSettingsRepository()
+          .load();
+      expect(settings.eInkMode, isFalse);
+      expect(settings.eInkEdgeTapPaging, isFalse);
+    });
 
     test('saves and loads every glass level', () async {
       SharedPreferences.setMockInitialValues({});
@@ -441,6 +475,8 @@ void main() {
             navigationBarStyle: AppNavigationBarStyle.legacy,
             navigationSwipeEnabled: false,
             navigationLensMotion: AppNavigationLensMotion.fromSelection,
+            eInkMode: true,
+            eInkEdgeTapPaging: true,
             languagePreference: AppLanguage.traditionalChinese,
           ),
         );
@@ -468,6 +504,8 @@ void main() {
           settings.navigationLensMotion,
           AppNavigationLensMotion.followPress,
         );
+        expect(settings.eInkMode, isFalse);
+        expect(settings.eInkEdgeTapPaging, isFalse);
         expect(settings.languagePreference, AppLanguage.traditionalChinese);
         expect(
           repository.savedSettings.single.languagePreference,
@@ -475,6 +513,33 @@ void main() {
         );
       },
     );
+
+    test('persists the runtime e-ink switches independently', () async {
+      final repository = _FakeAppAppearanceSettingsRepository(
+        settings: AppAppearanceSettings.defaults(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appAppearanceSettingsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(appAppearanceControllerProvider.future);
+      await container
+          .read(appAppearanceControllerProvider.notifier)
+          .setEInkMode(true);
+      await container
+          .read(appAppearanceControllerProvider.notifier)
+          .setEInkEdgeTapPaging(true);
+
+      final settings = container.read(appAppearanceControllerProvider).value!;
+      expect(settings.eInkMode, isTrue);
+      expect(settings.eInkEdgeTapPaging, isTrue);
+      expect(repository.savedSettings, hasLength(2));
+      expect(repository.savedSettings.first.eInkMode, isTrue);
+      expect(repository.savedSettings.last.eInkEdgeTapPaging, isTrue);
+    });
 
     test('save failure rolls back state and rethrows', () async {
       final repository = _FakeAppAppearanceSettingsRepository(

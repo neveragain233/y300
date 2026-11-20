@@ -10842,6 +10842,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'加粗 字体 字重 bold font'**
   String get settingsSearchKeywordsBoldFont;
+
+  /// No description provided for @appearanceEInkSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'墨水屏'**
+  String get appearanceEInkSectionTitle;
+
+  /// No description provided for @appearanceEInkModeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'墨水屏模式'**
+  String get appearanceEInkModeTitle;
+
+  /// No description provided for @appearanceEInkModeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭动画、玻璃与彩色表面，列表改用翻页按钮与硬件键浏览'**
+  String get appearanceEInkModeSubtitle;
+
+  /// No description provided for @appearanceEInkModeCaption.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换立即生效；阅读器内仍保留翻页动画，硬件键翻页继续由阅读偏好控制。'**
+  String get appearanceEInkModeCaption;
+
+  /// No description provided for @appearanceEInkEdgeTapTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'边缘点击翻页'**
+  String get appearanceEInkEdgeTapTitle;
+
+  /// No description provided for @appearanceEInkEdgeTapSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'在列表左右边缘轻点翻动；含横向手势的页面不启用'**
+  String get appearanceEInkEdgeTapSubtitle;
+
+  /// No description provided for @settingsSearchSummaryEInk.
+  ///
+  /// In zh, this message translates to:
+  /// **'墨水屏模式与边缘点击翻页'**
+  String get settingsSearchSummaryEInk;
+
+  /// No description provided for @settingsSearchKeywordsEInk.
+  ///
+  /// In zh, this message translates to:
+  /// **'墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度'**
+  String get settingsSearchKeywordsEInk;
 }
 
 class _AppLocalizationsDelegate

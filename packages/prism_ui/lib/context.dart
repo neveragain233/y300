@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:prism_ui/motion.dart';
 import 'package:prism_ui/color.dart';
 import 'package:prism_ui/inherited.dart';
 import 'package:prism_ui/metrics.dart';
@@ -47,7 +48,9 @@ extension BuildContextExtension on BuildContext {
 
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
 
-  bool get disableAnimations => MediaQuery.disableAnimationsOf(this);
+  bool get disableAnimations =>
+      PrismMotionScope.of(this) ||
+      (MediaQuery.maybeDisableAnimationsOf(this) ?? false);
 
   Duration motionDuration(Duration duration) =>
       disableAnimations ? Duration.zero : duration;

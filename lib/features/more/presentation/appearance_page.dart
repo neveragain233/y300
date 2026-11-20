@@ -7,7 +7,6 @@ import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
-import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/app/settings/app_navigation_lens_motion.dart';
 import 'package:y300/app/settings/bold_font_provider.dart';
 import 'package:y300/app/theme/app_dynamic_colors.dart';
@@ -89,6 +88,11 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
         dynamicColors?.available(resolvedBrightness) ?? false;
     final navigationReady =
         ref.watch(mainNavigationSettingsControllerProvider).value != null;
+    final eInkMode = settings.eInkMode;
+    // 墨水屏模式固定旧式底栏，预览与选项都按生效样式展示。
+    final effectiveNavigationStyle = eInkMode
+        ? AppNavigationBarStyle.legacy
+        : settings.navigationBarStyle;
     final scope = _CandidateScope(
       settings: settings,
       resolvedBrightness: resolvedBrightness,
@@ -123,8 +127,10 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                         children: [
                           AppearanceLivePreview(
                             theme: theme,
-                            glassLevel: settings.glassLevel,
-                            navigationStyle: settings.navigationBarStyle,
+                            glassLevel: eInkMode
+                                ? AppGlassLevel.off
+                                : settings.glassLevel,
+                            navigationStyle: effectiveNavigationStyle,
                             previewKey: _previewKey(
                               settings,
                               resolvedBrightness,
@@ -353,6 +359,62 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                     ),
                   ),
                   _anchor(
+                    SettingsSearchTarget.appearanceEInk,
+                    _AppearanceGroup(
+                      title: l10n.appearanceEInkSectionTitle,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppGroupedSection(
+                            margin: EdgeInsets.zero,
+                            children: [
+                              AppSwitchRow(
+                                key: const Key('appearance-eink-mode-switch'),
+                                title: l10n.appearanceEInkModeTitle,
+                                subtitle: l10n.appearanceEInkModeSubtitle,
+                                value: eInkMode,
+                                onChanged: (enabled) => _commit(
+                                  () => ref
+                                      .read(
+                                        appAppearanceControllerProvider
+                                            .notifier,
+                                      )
+                                      .setEInkMode(enabled),
+                                  failure: (error) =>
+                                      l10n.moreThemeSaveFailed('$error'),
+                                ),
+                              ),
+                              AppSwitchRow(
+                                key: const Key(
+                                  'appearance-eink-edge-tap-switch',
+                                ),
+                                title: l10n.appearanceEInkEdgeTapTitle,
+                                subtitle: l10n.appearanceEInkEdgeTapSubtitle,
+                                value: settings.eInkEdgeTapPaging,
+                                onChanged: eInkMode
+                                    ? (enabled) => _commit(
+                                        () => ref
+                                            .read(
+                                              appAppearanceControllerProvider
+                                                  .notifier,
+                                            )
+                                            .setEInkEdgeTapPaging(enabled),
+                                        failure: (error) =>
+                                            l10n.moreThemeSaveFailed('$error'),
+                                      )
+                                    : null,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          _AppearanceCaption(
+                            text: l10n.appearanceEInkModeCaption,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _anchor(
                     SettingsSearchTarget.appearanceNavigation,
                     _AppearanceGroup(
                       title: l10n.moreNavigationSectionTitle,
@@ -364,7 +426,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                             minCardWidth: 130,
                             children: [
                               for (final style
-                                  in AppEdition.isEInk
+                                  in eInkMode
                                       ? const [AppNavigationBarStyle.legacy]
                                       : AppNavigationBarStyle.values)
                                 _AppearanceOptionCard(
@@ -372,8 +434,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                                     'appearance-navigation-style-${style.name}',
                                   ),
                                   title: _navigationStyleLabel(l10n, style),
-                                  selected:
-                                      settings.navigationBarStyle == style,
+                                  selected: effectiveNavigationStyle == style,
                                   thumbnail: NavigationStyleSample(
                                     theme: theme,
                                     style: style,
@@ -394,7 +455,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                           const SizedBox(height: 10),
                           _AppearanceCaption(
                             text:
-                                settings.navigationBarStyle ==
+                                effectiveNavigationStyle ==
                                     AppNavigationBarStyle.immersive
                                 ? l10n.moreNavigationStyleImmersiveDescription
                                 : l10n.moreNavigationStyleLegacyDescription,
@@ -407,13 +468,13 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                                 key: const Key('appearance-navigation-swipe'),
                                 title: l10n.moreNavigationSwipeTitle,
                                 subtitle:
-                                    settings.navigationBarStyle ==
+                                    effectiveNavigationStyle ==
                                         AppNavigationBarStyle.immersive
                                     ? l10n.moreNavigationSwipeDescription
                                     : l10n.moreNavigationSwipeUnavailable,
                                 value: settings.navigationSwipeEnabled,
                                 onChanged:
-                                    settings.navigationBarStyle ==
+                                    effectiveNavigationStyle ==
                                         AppNavigationBarStyle.immersive
                                     ? (enabled) => _commit(
                                         () => ref
@@ -579,6 +640,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       brightness.name,
       settings.glassLevel.name,
       settings.navigationBarStyle.name,
+      settings.eInkMode ? 'eink' : 'full',
       dynamicScheme?.primary.toARGB32() ?? 0,
     ].join('|');
   }
@@ -684,6 +746,7 @@ class _CandidateScope {
       brightness: brightness,
       colorSource: source,
       dynamicScheme: scheme,
+      eInkMode: settings.eInkMode,
     );
   }
 }

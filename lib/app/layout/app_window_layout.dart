@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' show DisplayFeature, DisplayFeatureType, DisplayFeatureState;
 
 import 'package:flutter/widgets.dart';
-import 'package:y300/core/config/app_edition.dart';
 import 'package:y300/core/media/device_display_profile.dart';
 
 /// 所有坐标均属于宿主的可用窗口；[globalOrigin] 把系统分隔投影到该窗口。
@@ -11,7 +10,11 @@ class AppWindowLayout {
     required this.size,
     List<DisplayFeature> displayFeatures = const [],
     Offset globalOrigin = Offset.zero,
+    this.eInkMode = false,
   }) : regions = _regions(size, displayFeatures, globalOrigin);
+
+  /// 运行时墨水屏模式；只影响大屏侧栏阈值，不改变分栏几何。
+  final bool eInkMode;
 
   static const double minimumListWidth = 320;
   static const double minimumDetailWidth = 480;
@@ -34,7 +37,7 @@ class AppWindowLayout {
 
   bool get useNavigationRail =>
       !hasSeparator &&
-      (AppEdition.isEInk ? _eInkLargeScreen : size.width >= 720) &&
+      (eInkMode ? _eInkLargeScreen : size.width >= 720) &&
       size.height >= 360;
 
   Rect get readingRegion => regions.reduce(

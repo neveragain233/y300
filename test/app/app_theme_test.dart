@@ -69,6 +69,88 @@ void main() {
     expect(theme.extension<Y300ThemeExtension>(), isNotNull);
   });
 
+  test(
+    'e-ink mode forces the grayscale palette over family and color source',
+    () {
+      final light = AppTheme.build(
+        family: AppThemeFamily.plumPurple,
+        brightness: Brightness.light,
+        eInkMode: true,
+      );
+      expect(
+        light.scaffoldBackgroundColor,
+        AppThemePalette.eInk().scaffoldBackground,
+      );
+      expect(light.colorScheme.surfaceTint, Colors.transparent);
+      expect(light.colorScheme.primary, AppThemePalette.eInk().primary);
+      // 高对比：浅色纯白底黑字，品牌与选中态同样只用黑白两档。
+      expect(light.scaffoldBackgroundColor, Colors.white);
+      expect(light.colorScheme.onSurface, Colors.black);
+      expect(light.y300BrandColors.accent, Colors.black);
+      expect(light.y300BrandColors.onAccent, Colors.white);
+      expect(
+        light.extension<Y300ThemeExtension>()!.nativeContent.title,
+        Colors.black,
+      );
+      expect(
+        light.extension<Y300ThemeExtension>()!.nativeContent.body,
+        Colors.black,
+      );
+      expect(light.colorScheme.secondaryContainer, isNot(Colors.white));
+
+      final dark = AppTheme.build(
+        family: AppThemeFamily.moonWhite,
+        brightness: Brightness.dark,
+        eInkMode: true,
+      );
+      expect(
+        dark.scaffoldBackgroundColor,
+        AppThemePalette.eInkDark().scaffoldBackground,
+      );
+      expect(dark.colorScheme.surfaceTint, Colors.transparent);
+      // 深色反向映射：纯黑底白字，强调色反转为白底黑字。
+      expect(dark.scaffoldBackgroundColor, Colors.black);
+      expect(dark.colorScheme.onSurface, Colors.white);
+      expect(dark.y300BrandColors.accent, Colors.white);
+      expect(dark.y300BrandColors.onAccent, Colors.black);
+      expect(
+        dark.extension<Y300ThemeExtension>()!.nativeContent.title,
+        Colors.white,
+      );
+      expect(
+        dark.extension<Y300ThemeExtension>()!.nativeContent.body,
+        Colors.white,
+      );
+    },
+  );
+
+  test('e-ink high-contrast palette never falls back to warm paper colors', () {
+    final light = AppThemePalette.eInk();
+    final dark = AppThemePalette.eInkDark();
+    expect(light.isEInk, isTrue);
+    expect(dark.isEInk, isTrue);
+    expect(light.scaffoldBackground, Colors.white);
+    expect(light.onSurface, Colors.black);
+    expect(dark.scaffoldBackground, Colors.black);
+    expect(dark.onSurface, Colors.white);
+    expect(
+      AppTheme.build(
+        family: AppThemeFamily.warmPaper,
+        brightness: Brightness.light,
+        eInkMode: true,
+      ).extension<Y300ThemeExtension>()!.contentHighlightBackground,
+      const Color(0x22000000),
+    );
+    expect(
+      AppTheme.build(
+        family: AppThemeFamily.warmPaper,
+        brightness: Brightness.dark,
+        eInkMode: true,
+      ).extension<Y300ThemeExtension>()!.contentHighlightBackground,
+      const Color(0x33FFFFFF),
+    );
+  });
+
   test('AppThemePalette.light preserves the shell baseline tokens', () {
     final palette = AppThemePalette.light();
 
