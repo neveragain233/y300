@@ -12,7 +12,9 @@ import 'package:y300/features/library_shared/presentation/widgets/library_catego
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
 import 'package:y300/features/library_shared/domain/contracts/library_view_preferences_repository.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
@@ -91,6 +93,10 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   Future<void>? _recentReadingOpenFlight;
   ValueListenable<LibraryShelfRefreshSignal?>? _recentReadingRefreshSignals;
   bool _recentReadingBusy = false;
+  int? _programmaticTargetPage;
+  int _pageTransitionToken = 0;
+  int? _lastSyncedCategoryIndex;
+  String? _lastSyncedCategoryId;
 
   @override
   void initState() {
@@ -193,9 +199,17 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       state.selectedCategoryId,
     );
     final selecting = _selectionController.isSelecting;
-    final shelfPalette = const ShelfThemePaletteResolver().resolve(
-      Theme.of(context),
-    );
+    final eInk = EInkModeScope.of(context);
+    if (!state.isLoading && categories.isNotEmpty) {
+      final syncedId = categories[selectedIndex].categoryId;
+      if (_lastSyncedCategoryIndex != selectedIndex ||
+          _lastSyncedCategoryId != syncedId ||
+          !_pageController.hasClients) {
+        _lastSyncedCategoryIndex = selectedIndex;
+        _lastSyncedCategoryId = syncedId;
+        _schedulePageControllerSync(selectedIndex, categories.length);
+      }
+    }
 
     final content = PopScope<void>(
       canPop: !selecting && !state.isSearchMode,
@@ -262,39 +276,101 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                               onSelected: _applyRecentKeyword,
                             ),
                           if (categories.isNotEmpty)
-                            IgnorePointer(
-                              ignoring: selecting,
-                              child: ShelfCategoryCapsuleBar(
-                                tabs: tabs,
-                                selectedIndex: selectedIndex,
-                                onTap: (index) async {
-                                  await _controller.selectCategory(
-                                    categories[index].categoryId,
-                                  );
-                                  if (!mounted) {
-                                    return;
+                            ShelfCategoryCapsuleBar(
+                              tabs: tabs,
+                              selectedIndex: selectedIndex,
+                              enabled: !selecting,
+                              onTap: (index) async {
+                                if (selecting ||
+                                    index < 0 ||
+                                    index >= categories.length) {
+                                  return;
+                                }
+                                final token = ++_pageTransitionToken;
+                                _programmaticTargetPage = index;
+                                _lastSyncedCategoryIndex = index;
+                                _lastSyncedCategoryId =
+                                    categories[index].categoryId;
+                                final selectFuture = _controller.selectCategory(
+                                  categories[index].categoryId,
+                                );
+                                _pruneSelectionForCurrentCategory();
+                                _syncSelectionHost();
+                                setState(() {});
+                                try {
+                                  if (_pageController.hasClients) {
+                                    final currentPage =
+                                        _pageController.page?.round() ??
+                                        _pageController.initialPage;
+                                    if (eInk ||
+                                        AppMotion.reduceMotion(context) ||
+                                        currentPage == index) {
+                                      _pageController.jumpToPage(index);
+                                    } else {
+                                      await _pageController.animateToPage(
+                                        index,
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        curve: Curves.easeOutCubic,
+                                      );
+                                    }
                                   }
-                                  _pruneSelectionForCurrentCategory();
-                                  _syncSelectionHost();
-                                  setState(() {});
-                                  await _pageController.animateToPage(
-                                    index,
-                                    duration: const Duration(milliseconds: 220),
-                                    curve: Curves.easeOutCubic,
-                                  );
-                                },
-                                indicatorKey: const Key(
-                                  'unified-shelf-category-indicator',
-                                ),
-                                tabKeyBuilder: (id) => ValueKey<String>(
-                                  'unified-shelf-category-tab-$id',
-                                ),
+                                } finally {
+                                  if (_pageTransitionToken == token) {
+                                    _programmaticTargetPage = null;
+                                  }
+                                }
+                                await selectFuture;
+                                if (!mounted) {
+                                  return;
+                                }
+                              },
+                              longPressMenuBuilder: (context, tab) {
+                                final categoryIndex = categories.indexWhere(
+                                  (candidate) => candidate.categoryId == tab.id,
+                                );
+                                if (categoryIndex < 0) {
+                                  return const <PopupMenuEntry<String>>[];
+                                }
+                                final category = categories[categoryIndex];
+                                if (category.isSystemCategory ||
+                                    category.isSynthetic) {
+                                  return const <PopupMenuEntry<String>>[];
+                                }
+                                return <PopupMenuEntry<String>>[
+                                  AppPopupMenuItem<String>(
+                                    value: 'rename-category',
+                                    label: l10n.libraryShelfRenameCategoryTitle,
+                                    icon: const Icon(
+                                      Icons.drive_file_rename_outline,
+                                    ),
+                                  ),
+                                  AppPopupMenuItem<String>(
+                                    value: 'delete-category',
+                                    label: l10n.libraryShelfDeleteCategoryTitle,
+                                    icon: const Icon(Icons.delete_outline),
+                                    danger: true,
+                                  ),
+                                ];
+                              },
+                              onLongPressMenuSelected: (index, value) {
+                                if (index < 0 || index >= categories.length) {
+                                  return;
+                                }
+                                final targetCategory = categories[index];
+                                if (value == 'rename-category') {
+                                  unawaited(_renameCategory(targetCategory));
+                                } else if (value == 'delete-category') {
+                                  unawaited(_deleteCategory(targetCategory));
+                                }
+                              },
+                              indicatorKey: const Key(
+                                'unified-shelf-category-indicator',
                               ),
-                            ),
-                          if (categories.isNotEmpty)
-                            Divider(
-                              height: 1,
-                              color: shelfPalette.categoryDivider,
+                              tabKeyBuilder: (id) => ValueKey<String>(
+                                'unified-shelf-category-tab-$id',
+                              ),
                             ),
                           Expanded(
                             child: categories.isEmpty
@@ -307,11 +383,19 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                                     builder: (context, liveState, _) {
                                       return PageView.builder(
                                         controller: _pageController,
-                                        physics: selecting
+                                        physics: (selecting || eInk)
                                             ? const NeverScrollableScrollPhysics()
                                             : null,
                                         itemCount: categories.length,
                                         onPageChanged: (index) async {
+                                          if (_programmaticTargetPage != null ||
+                                              index < 0 ||
+                                              index >= categories.length) {
+                                            return;
+                                          }
+                                          _lastSyncedCategoryIndex = index;
+                                          _lastSyncedCategoryId =
+                                              categories[index].categoryId;
                                           await _controller.selectCategory(
                                             categories[index].categoryId,
                                           );
@@ -1132,79 +1216,110 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     }
 
     if (value == 'rename-category') {
-      if (selectedCategory.isSystemCategory || selectedCategory.isSynthetic) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)
-                  .libraryShelfSystemCategoryCannotRename,
-            ),
-          ),
-        );
-        return;
-      }
-      final name = await _showCategoryNameDialog(
-        title: AppLocalizations.of(context).libraryShelfRenameCategory,
-        initialValue: selectedCategory.name,
-      );
-      if (name == null || name.trim().isEmpty) {
-        return;
-      }
-      try {
-        await _controller.renameCategory(
-          categoryId: selectedCategory.categoryId,
-          newName: name.trim(),
-        );
-      } catch (_) {
-        if (mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)
-                    .libraryShelfCategoryOperationFailed,
-              ),
-            ),
-          );
-        }
-        return;
-      }
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
+      await _renameCategory(selectedCategory);
       return;
     }
 
     if (value == 'delete-category') {
-      if (selectedCategory.isSystemCategory || selectedCategory.isSynthetic) {
+      await _deleteCategory(selectedCategory);
+    }
+  }
+
+  Future<void> _renameCategory(LibraryCategory category) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (category.isSystemCategory || category.isSynthetic) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).libraryShelfSystemCategoryCannotRename,
+          ),
+        ),
+      );
+      return;
+    }
+    final name = await _showCategoryNameDialog(
+      title: AppLocalizations.of(context).libraryShelfRenameCategory,
+      initialValue: category.name,
+    );
+    if (!mounted || name == null || name.trim().isEmpty) {
+      return;
+    }
+    try {
+      await _controller.renameCategory(
+        categoryId: category.categoryId,
+        newName: name.trim(),
+      );
+    } catch (_) {
+      if (mounted) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context)
-                  .libraryShelfSystemCategoryCannotDelete,
+              AppLocalizations.of(context).libraryShelfCategoryOperationFailed,
             ),
           ),
         );
-        return;
       }
-      final l10n = AppLocalizations.of(context);
-      final confirmed = await showAppConfirmDialog(
-        context: context,
-        title: l10n.libraryShelfDeleteCategoryTitle,
-        message: l10n.libraryShelfDeleteCategoryBody,
-        confirmLabel: l10n.commonDelete,
-        cancelLabel: l10n.commonCancel,
-        destructive: true,
-      );
-      if (!confirmed) {
-        return;
-      }
-      await _controller.deleteCategory(selectedCategory.categoryId);
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
+      return;
     }
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  Future<void> _deleteCategory(LibraryCategory category) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (category.isSystemCategory || category.isSynthetic) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).libraryShelfSystemCategoryCannotDelete,
+          ),
+        ),
+      );
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
+      context: context,
+      title: l10n.libraryShelfDeleteCategoryTitle,
+      message: l10n.libraryShelfDeleteCategoryBody,
+      confirmLabel: l10n.commonDelete,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    await _controller.deleteCategory(category.categoryId);
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  void _schedulePageControllerSync(int targetIndex, int categoryCount) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_pageController.hasClients ||
+          _programmaticTargetPage != null ||
+          categoryCount <= 0) {
+        return;
+      }
+      final boundedIndex = targetIndex.clamp(0, categoryCount - 1);
+      final currentPage =
+          _pageController.page?.round() ?? _pageController.initialPage;
+      if (currentPage == boundedIndex ||
+          _pageController.position.isScrollingNotifier.value) {
+        return;
+      }
+      _programmaticTargetPage = boundedIndex;
+      try {
+        _pageController.jumpToPage(boundedIndex);
+      } finally {
+        _programmaticTargetPage = null;
+      }
+    });
   }
 
   Future<String?> _showCategoryNameDialog({

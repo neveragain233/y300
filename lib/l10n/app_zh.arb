@@ -737,6 +737,7 @@
   "libraryShelfFilterAndSort": "筛选与排序",
   "libraryShelfCreateCategory": "新建分类",
   "libraryShelfRenameCategory": "重命名当前分类",
+  "libraryShelfRenameCategoryTitle": "重命名分类",
   "libraryShelfDeleteCategory": "删除当前分类",
   "libraryShelfDeleteCategoryTitle": "删除分类",
   "libraryShelfDeleteCategoryBody": "删除后，该分类中的作品会回到漫画／小说视图，不再属于该分类。是否继续？",

@@ -1889,6 +1889,12 @@ abstract class AppLocalizations {
   /// **'重命名当前分类'**
   String get libraryShelfRenameCategory;
 
+  /// No description provided for @libraryShelfRenameCategoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'重命名分类'**
+  String get libraryShelfRenameCategoryTitle;
+
   /// No description provided for @libraryShelfDeleteCategory.
   ///
   /// In zh, this message translates to:

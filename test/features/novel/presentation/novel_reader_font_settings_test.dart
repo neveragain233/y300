@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/fonts/domain/repositories/font_library_repository.dart';
 import 'package:y300/features/fonts/domain/services/font_import_picker.dart';
@@ -257,6 +258,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(changed, isEmpty);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('eInk mode restricts theme presets and hides texture control', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fontLibraryServiceProvider.overrideWithValue(service),
+          fontImportPickerProvider.overrideWithValue(_FontPicker()),
+        ],
+        child: EInkModeScope(
+          enabled: true,
+          child: LocalizedTestApp(
+            home: Scaffold(
+              body: NovelReaderDisplaySettingsSheet(
+                initialPreferences: NovelReaderPreferences.defaults().copyWith(
+                  themePreset: NovelReaderThemePreset.sepia,
+                ),
+                initialTab: ReaderDisplayTab.theme,
+                onPreferencesChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('novel-theme-follow-app')), findsOneWidget);
+    expect(find.byKey(const Key('novel-theme-light')), findsOneWidget);
+    expect(find.byKey(const Key('novel-theme-ink')), findsOneWidget);
+    expect(find.byKey(const Key('novel-theme-sepia')), findsNothing);
+    expect(find.byKey(const Key('novel-theme-cream')), findsNothing);
+    expect(find.byKey(const Key('novel-theme-dark')), findsNothing);
+    expect(
+      find.byKey(const Key('novel-reader-background-texture-control')),
+      findsNothing,
+    );
   });
 }
 

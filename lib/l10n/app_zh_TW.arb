@@ -498,6 +498,7 @@
   "libraryShelfFilterAndSort": "篩選與排序",
   "libraryShelfCreateCategory": "新增分類",
   "libraryShelfRenameCategory": "重新命名目前分類",
+  "libraryShelfRenameCategoryTitle": "重新命名分類",
   "libraryShelfDeleteCategory": "刪除目前分類",
   "libraryShelfDeleteCategoryTitle": "刪除分類",
   "libraryShelfDeleteCategoryBody": "刪除後，此分類中的作品會回到漫畫／小說視圖，不再屬於此分類。是否繼續？",

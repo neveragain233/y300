@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_background_resolver.dart';
@@ -213,11 +214,17 @@ class _ReaderDisplaySettingsContentState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final baseTheme = Theme.of(context);
+    final eInk = EInkModeScope.of(context);
+    final effectiveBackground = effectiveReaderBackgroundPreference(
+      _current.background,
+      eInkMode: eInk,
+    );
     final canvasBackground = resolveReaderBackground(
       themeSurface: baseTheme.colorScheme.surface,
-      background: _current.background,
+      background: effectiveBackground,
       readerMode: _current.readerMode,
       pagedCanvasColor: widget.pagedCanvasColor,
+      eInkMode: eInk,
     );
     final panelPalette = ReaderPanelPalette.fromCanvas(
       canvasBackground: canvasBackground,
@@ -231,7 +238,7 @@ class _ReaderDisplaySettingsContentState
     final summary =
         '${ReaderTextResolver.pageFit(l10n, _current.pageFit)} · '
         '${_current.pageSpacing.round()}${l10n.readerUnitPixel} · '
-        '${ReaderTextResolver.background(l10n, _current.background)} · '
+        '${ReaderTextResolver.background(l10n, effectiveBackground)} · '
         '${ReaderTextResolver.mode(l10n, _current.readerMode)}';
 
     return ReaderDisplayPanel(
@@ -272,9 +279,16 @@ class _ReaderDisplaySettingsContentState
       themeChildren: [
         ReaderOptionRow<ReaderBackgroundPreference>(
           label: l10n.readerBackground,
-          value: _current.background,
+          value: effectiveBackground,
           options: [
-            for (final bg in ReaderBackgroundPreference.values)
+            for (final bg
+                in eInk
+                    ? const <ReaderBackgroundPreference>[
+                        ReaderBackgroundPreference.followTheme,
+                        ReaderBackgroundPreference.white,
+                        ReaderBackgroundPreference.black,
+                      ]
+                    : ReaderBackgroundPreference.values)
               (bg, ReaderTextResolver.background(l10n, bg)),
           ],
           onChanged: (value) {

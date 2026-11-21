@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
 import 'package:y300/features/library_shared/data/providers/library_cover_providers.dart';
 import 'package:y300/features/library_shared/data/services/library_cover_decode_scheduler.dart';
@@ -30,6 +31,7 @@ import 'package:y300/l10n/app_localizations_zh.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
+import 'package:y300/shared/widgets/shelf/shelf_category_capsule_bar.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
 import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
@@ -43,6 +45,7 @@ part 'unified_shelf_page_cover_status_cases.dart';
 part 'unified_shelf_page_theme_cases.dart';
 part 'unified_shelf_page_selection_cases.dart';
 part 'unified_shelf_page_mixed_recent_cases.dart';
+part 'unified_shelf_page_category_cases.dart';
 part 'unified_shelf_page_test_fakes.dart';
 
 void main() {
@@ -52,4 +55,5 @@ void main() {
   _themeCases();
   _selectionCases();
   _mixedRecentCases();
+  _categoryCases();
 }

@@ -80,6 +80,7 @@ class ImageReaderEngine extends ConsumerWidget {
       background: preferences.background,
       readerMode: preferences.readerMode,
       pagedCanvasColor: capability.pagedCanvasColor,
+      eInkMode: EInkModeScope.of(context),
     );
     return ReaderContentRegion(
       backgroundColor: background,
@@ -480,12 +481,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final chromePalette = const ReaderChromePaletteResolver().resolve(
       Theme.of(context),
     );
-    // 固定黑底的翻页画布与浅色控件栏亮度相反；工具栏展开时系统栏图标
-    // 跟随顶/底栏的 chrome 色，其余阅读器保持原有背景策略。
-    final fixedPagedCanvas =
-        mode == ContinuousImageReaderMode.horizontal &&
-        _capability.pagedCanvasColor != null;
-    final overlaySurface = _overlayController.isMenuVisible && fixedPagedCanvas
+    // 工具栏展开时系统栏图标跟随顶/底栏的 chrome 色，沉浸阅读时跟随有效画布背景。
+    final overlaySurface = _overlayController.isMenuVisible
         ? chromePalette.chromeBackground
         : background;
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -1349,6 +1346,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       background: preferences.background,
       readerMode: preferences.readerMode,
       pagedCanvasColor: _capability.pagedCanvasColor,
+      eInkMode: EInkModeScope.of(context),
     );
   }
 
@@ -2804,6 +2802,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       background: preferences.background,
       readerMode: preferences.readerMode,
       pagedCanvasColor: _capability.pagedCanvasColor,
+      eInkMode: EInkModeScope.of(context),
     );
     final panelPalette = ReaderPanelPalette.fromCanvas(
       canvasBackground: canvasBackground,
@@ -2846,6 +2845,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       background: preferences.background,
       readerMode: currentMode,
       pagedCanvasColor: _capability.pagedCanvasColor,
+      eInkMode: EInkModeScope.of(context),
     );
     final panelPalette = ReaderPanelPalette.fromCanvas(
       canvasBackground: canvasBackground,

@@ -1135,6 +1135,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryShelfRenameCategory => '重命名当前分类';
 
   @override
+  String get libraryShelfRenameCategoryTitle => '重命名分类';
+
+  @override
   String get libraryShelfDeleteCategory => '删除当前分类';
 
   @override
@@ -7623,6 +7626,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get libraryShelfRenameCategory => '重新命名目前分類';
+
+  @override
+  String get libraryShelfRenameCategoryTitle => '重新命名分類';
 
   @override
   String get libraryShelfDeleteCategory => '刪除目前分類';

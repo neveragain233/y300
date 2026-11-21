@@ -43,11 +43,41 @@ class NovelReaderPalette {
 class NovelReaderThemeResolver {
   const NovelReaderThemeResolver();
 
+  static const List<NovelReaderThemePreset> eInkPresets =
+      <NovelReaderThemePreset>[
+        NovelReaderThemePreset.followApp,
+        NovelReaderThemePreset.light,
+        NovelReaderThemePreset.ink,
+      ];
+
+  static NovelReaderThemePreset effectivePreset(
+    NovelReaderThemePreset preset, {
+    required bool eInkMode,
+  }) {
+    if (!eInkMode) {
+      return preset;
+    }
+    return switch (preset) {
+      NovelReaderThemePreset.followApp => NovelReaderThemePreset.followApp,
+      NovelReaderThemePreset.light => NovelReaderThemePreset.light,
+      NovelReaderThemePreset.ink ||
+      NovelReaderThemePreset.dark => NovelReaderThemePreset.ink,
+      _ => NovelReaderThemePreset.followApp,
+    };
+  }
+
   NovelReaderPalette resolve({
     required NovelReaderPreferences preferences,
     required ThemeData theme,
+    bool eInkMode = false,
   }) {
-    final base = _basePalette(preferences.themePreset, theme);
+    final effective = effectivePreset(
+      preferences.themePreset,
+      eInkMode: eInkMode,
+    );
+    final base = eInkMode
+        ? _basePaletteForEInk(effective, theme)
+        : _basePalette(effective, theme);
     final bodyForeground = WcagColorContrast.blendWhileReadable(
       source: base.foreground,
       target: base.background,
@@ -66,8 +96,49 @@ class NovelReaderThemeResolver {
       quoteBackground: base.quoteBackground,
       controlForeground: base.foreground,
       controlMuted: base.muted,
-      backgroundTexture: preferences.backgroundTexture,
+      backgroundTexture: eInkMode
+          ? NovelReaderBackgroundTexture.solid
+          : preferences.backgroundTexture,
     );
+  }
+
+  NovelReaderPalette _basePaletteForEInk(
+    NovelReaderThemePreset preset,
+    ThemeData theme,
+  ) {
+    switch (preset) {
+      case NovelReaderThemePreset.light:
+        return const NovelReaderPalette(
+          brightness: Brightness.light,
+          background: Color(0xFFFFFFFF),
+          foreground: Color(0xFF000000),
+          muted: Color(0xFF555555),
+          accent: Color(0xFF000000),
+          surface: Color(0xFFFFFFFF),
+          link: Color(0xFF000000),
+          quoteBackground: Color(0xFFF0F0F0),
+          controlForeground: Color(0xFF000000),
+          controlMuted: Color(0xFF555555),
+          backgroundTexture: NovelReaderBackgroundTexture.solid,
+        );
+      case NovelReaderThemePreset.ink:
+        return const NovelReaderPalette(
+          brightness: Brightness.dark,
+          background: Color(0xFF000000),
+          foreground: Color(0xFFFFFFFF),
+          muted: Color(0xFFCCCCCC),
+          accent: Color(0xFFFFFFFF),
+          surface: Color(0xFF000000),
+          link: Color(0xFFFFFFFF),
+          quoteBackground: Color(0xFF1A1A1A),
+          controlForeground: Color(0xFFFFFFFF),
+          controlMuted: Color(0xFFCCCCCC),
+          backgroundTexture: NovelReaderBackgroundTexture.solid,
+        );
+      case NovelReaderThemePreset.followApp:
+      default:
+        return _basePalette(NovelReaderThemePreset.followApp, theme);
+    }
   }
 
   NovelReaderPalette _basePalette(

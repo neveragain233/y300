@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
 import 'package:y300/features/cache/domain/models/image_cache_keys.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
@@ -56,16 +57,6 @@ class ComicReaderCapability extends ReaderCapability {
 
   @override
   ReaderKind get readerKind => ReaderKind.comic;
-
-  /// 左右翻页画布固定纯黑；滚动模式仍使用用户背景偏好。
-  static const Color fixedPagedCanvasColor = Colors.black;
-
-  @override
-  Color? get pagedCanvasColor => fixedPagedCanvasColor;
-
-  @override
-  String? get pagedBackgroundSettingsNote =>
-      l10n.readerPagedBackgroundBlackNote;
 
   @override
   bool get showsThumbnailStrip => true;
@@ -435,9 +426,7 @@ class ComicReaderCapability extends ReaderCapability {
       expectedDisplaySize: spec.expectedDisplaySize,
       width: spec.paged ? null : double.infinity,
       placeholder: _ComicReaderImagePlaceholder(paged: spec.paged),
-      errorPlaceholder: spec.paged
-          ? _pagedCanvasForeground(context, retryPlaceholder)
-          : retryPlaceholder,
+      errorPlaceholder: _canvasForeground(context, retryPlaceholder),
       retryToken: Object.hash(
         viewState.imageSessionRevision,
         image.retryRevision,
@@ -462,18 +451,29 @@ class ComicReaderCapability extends ReaderCapability {
     );
   }
 
-  /// 黑色翻页画布上的失败占位沿用共享组件，只覆盖可读前景。
-  Widget _pagedCanvasForeground(BuildContext context, Widget child) {
+  /// 失败占位沿用共享组件，按实际阅读画布亮度覆盖可读前景。
+  Widget _canvasForeground(BuildContext context, Widget child) {
     final theme = Theme.of(context);
+    final canvasBackground = resolveReaderBackground(
+      themeSurface: theme.colorScheme.surface,
+      background: preferences.background,
+      readerMode: preferences.readerMode,
+      eInkMode: EInkModeScope.of(context),
+    );
+    final isDarkCanvas =
+        ThemeData.estimateBrightnessForColor(canvasBackground) ==
+        Brightness.dark;
+    final primary = isDarkCanvas ? Colors.white : Colors.black87;
+    final secondary = isDarkCanvas ? Colors.white70 : Colors.black54;
     return Theme(
       data: theme.copyWith(
         colorScheme: theme.colorScheme.copyWith(
-          primary: Colors.white,
-          onSurfaceVariant: Colors.white70,
+          primary: primary,
+          onSurfaceVariant: secondary,
         ),
         textTheme: theme.textTheme.apply(
-          bodyColor: Colors.white70,
-          displayColor: Colors.white70,
+          bodyColor: secondary,
+          displayColor: secondary,
         ),
       ),
       child: child,

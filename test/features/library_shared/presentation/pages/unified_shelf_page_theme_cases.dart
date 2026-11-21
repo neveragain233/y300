@@ -47,16 +47,6 @@ void _themeCases() {
     );
     await tester.pumpAndSettle();
 
-    final headerMaterial = tester.widget<Material>(
-      find
-          .ancestor(
-            of: find.byKey(
-              const ValueKey<String>('unified-shelf-category-tab-default'),
-            ),
-            matching: find.byType(Material),
-          )
-          .first,
-    );
     final bannerMaterial = tester.widget<Material>(
       find
           .ancestor(
@@ -76,7 +66,24 @@ void _themeCases() {
           .first,
     );
 
-    expect(headerMaterial.color, palette.categoryBarBackground);
+    expect(
+      find.descendant(
+        of: find.byType(ShelfCategoryCapsuleBar),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Material &&
+              widget.color == palette.categoryBarBackground,
+        ),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(UnifiedShelfPage),
+        matching: find.byType(Divider),
+      ),
+      findsNothing,
+    );
     expect(bannerMaterial.color, palette.taskProgressBackground);
     expect(listItemMaterial.color, AppTheme.dark().scaffoldBackgroundColor);
 

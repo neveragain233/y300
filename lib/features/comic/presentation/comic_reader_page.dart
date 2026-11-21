@@ -10,6 +10,7 @@ import 'package:y300/features/library_shared/domain/services/chapter_search_inde
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/comic/domain/models/comic_reader_exit_result.dart';
 import 'package:y300/features/comic/domain/services/comic_episode_sequence.dart';
@@ -274,7 +275,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
       themeSurface: Theme.of(context).colorScheme.surface,
       background: preferences.background,
       readerMode: preferences.readerMode,
-      pagedCanvasColor: ComicReaderCapability.fixedPagedCanvasColor,
+      eInkMode: EInkModeScope.of(context),
     );
   }
 

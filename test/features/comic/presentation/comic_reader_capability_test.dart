@@ -7,35 +7,29 @@ import 'package:y300/features/reader_shared/domain/reader_preferences/reader_pre
 import 'package:y300/l10n/app_localizations.dart';
 
 void main() {
-  test(
-    'comic capability fixes the paged canvas and enables thumbnails',
-    () async {
-      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
-      final capability = ComicReaderCapability(
-        viewState: _viewState(),
-        preferences: ReaderPreferences.defaults(),
-        imageReferer: null,
-        controller: ComicReaderController(
-          const ComicReaderArgs(comicId: 'comic', episodeId: 'episode'),
-        ),
-        l10n: l10n,
-        moreMenu: const [],
-        onShowChapterList: () {},
-        onOpenSourceThread: () {},
-        onToggleBookmark: () {},
-        onOpenAdjacentEpisode: ({required ComicEpisodeDirection direction}) {},
-        buildNextChapterTransition: (context) => const SizedBox.shrink(),
-        exitResult: null,
-      );
+  test('comic capability unlocks custom paged canvas background and enables thumbnails', () async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    final capability = ComicReaderCapability(
+      viewState: _viewState(),
+      preferences: ReaderPreferences.defaults(),
+      imageReferer: null,
+      controller: ComicReaderController(
+        const ComicReaderArgs(comicId: 'comic', episodeId: 'episode'),
+      ),
+      l10n: l10n,
+      moreMenu: const [],
+      onShowChapterList: () {},
+      onOpenSourceThread: () {},
+      onToggleBookmark: () {},
+      onOpenAdjacentEpisode: ({required ComicEpisodeDirection direction}) {},
+      buildNextChapterTransition: (context) => const SizedBox.shrink(),
+      exitResult: null,
+    );
 
-      expect(capability.pagedCanvasColor, Colors.black);
-      expect(
-        capability.pagedBackgroundSettingsNote,
-        l10n.readerPagedBackgroundBlackNote,
-      );
-      expect(capability.showsThumbnailStrip, isTrue);
-    },
-  );
+    expect(capability.pagedCanvasColor, isNull);
+    expect(capability.pagedBackgroundSettingsNote, isNull);
+    expect(capability.showsThumbnailStrip, isTrue);
+  });
 }
 
 ComicReaderViewState _viewState() {

@@ -219,7 +219,9 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
           constraints.maxWidth - leftInset - rightInset,
         );
         final navigationEnabled =
-            preferences.navigationEnabled && widget.hasContent;
+            !EInkModeScope.of(context) &&
+            preferences.navigationEnabled &&
+            widget.hasContent;
         // 非紧凑主栏居中，只有整条栏本身放得下、且不与右侧导航重叠时才并排。
         final inline =
             !navigationEnabled ||

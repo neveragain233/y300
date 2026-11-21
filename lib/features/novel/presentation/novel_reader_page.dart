@@ -103,7 +103,11 @@ class NovelReaderPage extends ConsumerWidget {
         state.value?.preferences ?? NovelReaderPreferences.defaults();
     return ReaderContentRegion(
       backgroundColor: const NovelReaderThemeResolver()
-          .resolve(preferences: preferences, theme: Theme.of(context))
+          .resolve(
+            preferences: preferences,
+            theme: Theme.of(context),
+            eInkMode: EInkModeScope.of(context),
+          )
           .background,
       child: _NovelReaderContent(
         novelId: novelId,
@@ -579,6 +583,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
             final palette = _themeResolver.resolve(
               preferences: viewState.preferences,
               theme: theme,
+              eInkMode: _eInkModeEnabled,
             );
             final typography = _typographyResolver.resolve(
               preferences: viewState.preferences,
@@ -2744,6 +2749,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     final palette = _themeResolver.resolve(
       preferences: viewState.preferences,
       theme: baseTheme,
+      eInkMode: _eInkModeEnabled,
     );
     return ReaderPanelPalette.fromNovelPalette(
       brightness: palette.brightness,
@@ -2786,6 +2792,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
                 palette: _themeResolver.resolve(
                   preferences: viewState.preferences,
                   theme: Theme.of(this.context),
+                  eInkMode: _eInkModeEnabled,
                 ),
               )
               .body,

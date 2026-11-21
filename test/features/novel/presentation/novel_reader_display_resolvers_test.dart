@@ -211,6 +211,44 @@ void main() {
     expect(typography.body.fontSize, preferences.fontSize);
     expect(typography.body.height, preferences.lineHeight);
   });
+
+  test('eInkMode narrows presets to monochrome followApp/light/ink and forces solid texture', () {
+    final theme = ThemeData.light();
+    final sepiaInEInk = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.sepia,
+        backgroundTexture: NovelReaderBackgroundTexture.paper,
+      ),
+      theme: theme,
+      eInkMode: true,
+    );
+    expect(sepiaInEInk.background, theme.scaffoldBackgroundColor);
+    expect(sepiaInEInk.backgroundTexture, NovelReaderBackgroundTexture.solid);
+
+    final lightInEInk = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.light,
+        backgroundTexture: NovelReaderBackgroundTexture.grain,
+      ),
+      theme: theme,
+      eInkMode: true,
+    );
+    expect(lightInEInk.background, const Color(0xFFFFFFFF));
+    expect(lightInEInk.foreground, const Color(0xFF000000));
+    expect(lightInEInk.backgroundTexture, NovelReaderBackgroundTexture.solid);
+
+    final darkInEInk = themeResolver.resolve(
+      preferences: NovelReaderPreferences.defaults().copyWith(
+        themePreset: NovelReaderThemePreset.dark,
+        backgroundTexture: NovelReaderBackgroundTexture.paper,
+      ),
+      theme: theme,
+      eInkMode: true,
+    );
+    expect(darkInEInk.background, const Color(0xFF000000));
+    expect(darkInEInk.foreground, const Color(0xFFFFFFFF));
+    expect(darkInEInk.backgroundTexture, NovelReaderBackgroundTexture.solid);
+  });
 }
 
 const _fontId =

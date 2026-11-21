@@ -436,10 +436,27 @@ void main() {
       final surfaces = tester.widgetList<AppGlassSurface>(
         find.byType(AppGlassSurface),
       );
-      expect(surfaces, hasLength(2));
+      expect(surfaces, hasLength(1));
       for (final surface in surfaces) {
         expect(surface.level, AppGlassLevel.off);
       }
+
+      expect(find.byKey(const Key('test-favorite-button')), findsOneWidget);
+      expect(
+        find.byKey(const Key('thread-detail-appbar-reply-button')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('test-jump-button')), findsOneWidget);
+      expect(find.byKey(const Key('test-more-button')), findsOneWidget);
+      expect(find.byKey(const Key('thread-next-post-button')), findsNothing);
+      expect(
+        find.byKey(const Key('thread-previous-post-button')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('thread-single-navigation-button')),
+        findsNothing,
+      );
 
       final scheme = Theme.of(
         tester.element(find.byType(ThreadFloatingControls)),
@@ -454,7 +471,7 @@ void main() {
             decoration.borderRadius == BorderRadius.circular(28) &&
             decoration.border == Border.all(color: scheme.outlineVariant);
       });
-      expect(borderedBoxes, findsNWidgets(2));
+      expect(borderedBoxes, findsOneWidget);
 
       final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
       final opacity = tester.widget<AnimatedOpacity>(

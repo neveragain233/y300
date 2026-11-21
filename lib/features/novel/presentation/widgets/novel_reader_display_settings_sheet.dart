@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
@@ -69,9 +70,15 @@ class _NovelReaderDisplaySettingsSheetState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final baseTheme = Theme.of(context);
+    final eInk = EInkModeScope.of(context);
+    final effectivePreset = NovelReaderThemeResolver.effectivePreset(
+      _draft.themePreset,
+      eInkMode: eInk,
+    );
     final novelPalette = _themeResolver.resolve(
       preferences: _draft,
       theme: baseTheme,
+      eInkMode: eInk,
     );
     final panelPalette = ReaderPanelPalette.fromNovelPalette(
       brightness: novelPalette.brightness,
@@ -86,7 +93,7 @@ class _NovelReaderDisplaySettingsSheetState
         '${_draft.fontSize.toStringAsFixed(1)}${l10n.readerUnitPoint} · '
         '${_draft.lineHeight.toStringAsFixed(2)}${l10n.readerUnitMultiple} · '
         '${_paragraphIndentLabel(l10n, _draft.paragraphIndent)} · '
-        '${_themeLabel(l10n, _draft.themePreset)}';
+        '${_themeLabel(l10n, effectivePreset)}';
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -98,7 +105,11 @@ class _NovelReaderDisplaySettingsSheetState
         initialTab: widget.initialTab,
         summary: summary,
         typographyChildren: _buildTypographyTab(l10n),
-        themeChildren: _buildThemeTab(l10n),
+        themeChildren: _buildThemeTab(
+          l10n,
+          eInk: eInk,
+          effectivePreset: effectivePreset,
+        ),
         readingChildren: _buildReadingTab(l10n),
       ),
     );
@@ -179,7 +190,14 @@ class _NovelReaderDisplaySettingsSheetState
     ];
   }
 
-  List<Widget> _buildThemeTab(AppLocalizations l10n) {
+  List<Widget> _buildThemeTab(
+    AppLocalizations l10n, {
+    required bool eInk,
+    required NovelReaderThemePreset effectivePreset,
+  }) {
+    final presets = eInk
+        ? NovelReaderThemeResolver.eInkPresets
+        : NovelReaderThemePreset.values;
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -187,11 +205,11 @@ class _NovelReaderDisplaySettingsSheetState
           spacing: 6,
           runSpacing: 6,
           children: [
-            for (final preset in NovelReaderThemePreset.values)
+            for (final preset in presets)
               _ThemeChip(
                 key: Key('novel-theme-${_themeKey(preset)}'),
                 label: _themeLabel(l10n, preset),
-                selected: _draft.themePreset == preset,
+                selected: effectivePreset == preset,
                 onSelected: () =>
                     _applyPreferences(_draft.copyWith(themePreset: preset)),
               ),
@@ -216,17 +234,18 @@ class _NovelReaderDisplaySettingsSheetState
           _draft.copyWith(bodyBrightness: _snap(value, 0.05)),
         ),
       ),
-      ReaderOptionRow<NovelReaderBackgroundTexture>(
-        key: const Key('novel-reader-background-texture-control'),
-        label: l10n.novelBackgroundTexture,
-        value: _draft.backgroundTexture,
-        options: [
-          for (final texture in NovelReaderBackgroundTexture.values)
-            (texture, _textureLabel(l10n, texture)),
-        ],
-        onChanged: (value) =>
-            _applyPreferences(_draft.copyWith(backgroundTexture: value)),
-      ),
+      if (!eInk)
+        ReaderOptionRow<NovelReaderBackgroundTexture>(
+          key: const Key('novel-reader-background-texture-control'),
+          label: l10n.novelBackgroundTexture,
+          value: _draft.backgroundTexture,
+          options: [
+            for (final texture in NovelReaderBackgroundTexture.values)
+              (texture, _textureLabel(l10n, texture)),
+          ],
+          onChanged: (value) =>
+              _applyPreferences(_draft.copyWith(backgroundTexture: value)),
+        ),
       ReaderOptionRow<NovelReaderBodyColorMode>(
         key: const Key('novel-reader-body-color-mode-control'),
         label: l10n.novelBodyColor,

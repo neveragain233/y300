@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/segmented_control.dart' as prism;
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_display_settings_sheet.dart';
@@ -206,6 +207,44 @@ void main() {
       expect(find.byIcon(Icons.check), findsOneWidget);
     },
   );
+
+  testWidgets('eInkMode hides gray option and handles persisted gray safely', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      EInkModeScope(
+        enabled: true,
+        child: LocalizedTestApp(
+          home: Scaffold(
+            body: ReaderDisplaySettingsSheet(
+              preferences: ReaderPreferences.defaults().copyWith(
+                background: ReaderBackgroundPreference.gray,
+              ),
+              onModeChanged: _noopMode,
+              onPageFitChanged: _noopFit,
+              onBackgroundChanged: _noopBg,
+              onPageSpacingChanged: _noopSpacing,
+              onShowPageIndicatorChanged: _noopBool,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text('主题'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('主题'), findsWidgets);
+    expect(find.text('白'), findsOneWidget);
+    expect(find.text('黑'), findsOneWidget);
+    expect(find.text('灰'), findsNothing);
+  });
 }
 
 void _noopMode(ReaderModePreference _) {}

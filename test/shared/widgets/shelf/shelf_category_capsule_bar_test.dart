@@ -8,12 +8,15 @@ import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/shelf/shelf_category_capsule_bar.dart';
 import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
 
+import '../../../test_support/localized_test_app.dart';
+
 void main() {
   testWidgets(
-    'selected capsule uses prism glass lens and ElasticPress without InkWell',
+    'selected capsule uses single glass lens without outer opaque bar or unselected pills',
     (tester) async {
       final semanticsHandle = tester.ensureSemantics();
       try {
@@ -50,7 +53,18 @@ void main() {
         expect(indicator, findsOneWidget);
         expect(find.byType(InkWell), findsNothing);
         expect(find.byType(ElasticPress), findsNWidgets(2));
-        expect(find.byType(AppGlassSurface), findsNWidgets(2));
+        expect(find.byType(AppGlassSurface), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ShelfCategoryCapsuleBar),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Material &&
+                  widget.color == palette.categoryBarBackground,
+            ),
+          ),
+          findsNothing,
+        );
 
         final decorated = tester.widget<DecoratedBox>(
           find.descendant(of: indicator, matching: find.byType(DecoratedBox)),
@@ -58,7 +72,7 @@ void main() {
         final shape = decorated.decoration as ShapeDecoration;
         expect(
           shape.color,
-          palette.categorySelectedBackground.withValues(alpha: 0.86),
+          palette.categorySelectedBackground.withValues(alpha: 0.88),
         );
 
         final tabA = find.byKey(const ValueKey<String>('tab-a'));
@@ -189,5 +203,78 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('indicator')), findsOneWidget);
+  });
+
+  testWidgets('disabled state dims the bar and blocks taps', (tester) async {
+    var tapped = -1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ShelfCategoryCapsuleBar(
+            tabs: const <ShelfCategoryCapsuleTab>[
+              ShelfCategoryCapsuleTab(id: 'a', label: '全部'),
+              ShelfCategoryCapsuleTab(id: 'b', label: '漫画'),
+            ],
+            selectedIndex: 0,
+            enabled: false,
+            onTap: (index) => tapped = index,
+            indicatorKey: const Key('indicator'),
+            tabKeyBuilder: (id) => ValueKey<String>('tab-$id'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final opacity = tester.widget<AnimatedOpacity>(
+      find.descendant(
+        of: find.byType(ShelfCategoryCapsuleBar),
+        matching: find.byType(AnimatedOpacity),
+      ),
+    );
+    expect(opacity.opacity, lessThan(0.5));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('tab-b')),
+      warnIfMissed: false,
+    );
+    expect(tapped, -1);
+  });
+
+  testWidgets('long-press menu builder invokes callback for selected action', (
+    tester,
+  ) async {
+    (int, String)? selectedMenuAction;
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: ShelfCategoryCapsuleBar(
+            tabs: const <ShelfCategoryCapsuleTab>[
+              ShelfCategoryCapsuleTab(id: 'a', label: '全部'),
+              ShelfCategoryCapsuleTab(id: 'b', label: '自定义'),
+            ],
+            selectedIndex: 0,
+            onTap: (_) {},
+            longPressMenuBuilder: (_, tab) => tab.id == 'b'
+                ? const <PopupMenuEntry<String>>[
+                    AppPopupMenuItem<String>(value: 'rename', label: '重命名'),
+                    AppPopupMenuItem<String>(value: 'delete', label: '删除'),
+                  ]
+                : const <PopupMenuEntry<String>>[],
+            onLongPressMenuSelected: (index, value) =>
+                selectedMenuAction = (index, value),
+            indicatorKey: const Key('indicator'),
+            tabKeyBuilder: (id) => ValueKey<String>('tab-$id'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const ValueKey<String>('tab-b')));
+    await tester.pumpAndSettle();
+    expect(find.text('重命名'), findsOneWidget);
+    await tester.tap(find.text('重命名'));
+    await tester.pumpAndSettle();
+    expect(selectedMenuAction, (1, 'rename'));
   });
 }

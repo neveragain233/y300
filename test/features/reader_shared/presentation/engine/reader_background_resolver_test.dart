@@ -71,4 +71,39 @@ void main() {
       );
     }
   });
+
+  test(
+    'eInkMode maps gray preference back to themeSurface without mutating',
+    () {
+      for (final mode in ReaderModePreference.values) {
+        expect(
+          resolveReaderBackground(
+            themeSurface: themeSurface,
+            background: ReaderBackgroundPreference.gray,
+            readerMode: mode,
+            eInkMode: true,
+          ),
+          themeSurface,
+        );
+        expect(
+          resolveReaderBackground(
+            themeSurface: themeSurface,
+            background: ReaderBackgroundPreference.white,
+            readerMode: mode,
+            eInkMode: true,
+          ),
+          Colors.white,
+        );
+        expect(
+          resolveReaderBackground(
+            themeSurface: themeSurface,
+            background: ReaderBackgroundPreference.black,
+            readerMode: mode,
+            eInkMode: true,
+          ),
+          Colors.black,
+        );
+      }
+    },
+  );
 }
