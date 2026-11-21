@@ -197,9 +197,11 @@ void _searchFilterCases() {
 
     expect(find.text('已添加标签'), findsNothing);
 
-    // 切到第 3 个分段（显示），避免依赖具体文案。
     await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
+      find.descendant(
+        of: find.byKey(const Key('unified-shelf-panel-tabs')),
+        matching: find.text(AppLocalizationsZh().libraryShelfDisplayMode),
+      ),
     );
     await tester.pumpAndSettle();
 

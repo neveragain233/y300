@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/liquid_glass.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 import '../../test_support/localized_test_app.dart';
 
@@ -101,13 +104,68 @@ void main() {
     expect(glass.shadows, isEmpty);
   });
 
-  testWidgets('eink glass carries no shadow', (tester) async {
+  testWidgets('eink forces opaque bordered zero-elevation surface over glass', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       surface(AppGlassLevel.standard, theme: AppTheme.dark(), eInk: true),
     );
 
-    final glass = tester.widget<LiquidGlass>(find.byType(LiquidGlass));
-    expect(glass.shadows, isEmpty);
+    expect(find.byType(LiquidGlass), findsNothing);
+    final material = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(const Key('glass-surface')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(material.elevation, 0);
+    expect(
+      material.shape,
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: AppTheme.eInkBorderColor(Brightness.dark)),
+      ),
+    );
+  });
+
+  testWidgets('AppPrismTheme applies high-contrast bordered buttons in eink', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        theme: AppTheme.build(
+          family: AppThemeFamily.warmPaper,
+          brightness: Brightness.light,
+          eInkMode: true,
+        ),
+        builder: (context, child) =>
+            EInkModeScope(enabled: true, child: child!),
+        home: Scaffold(
+          body: AppPrismTheme(
+            child: Builder(
+              builder: (context) {
+                final buttonTheme = prism_button.ButtonTheme.of(context);
+                expect(
+                  buttonTheme.filled?.side?.resolve(const <WidgetState>{}),
+                  BorderSide(color: AppTheme.eInkBorderColor(Brightness.light)),
+                );
+                expect(
+                  buttonTheme.text?.side?.resolve(const <WidgetState>{}),
+                  BorderSide(color: AppTheme.eInkBorderColor(Brightness.light)),
+                );
+                return prism_button.TextButton(
+                  onPressed: () {},
+                  child: const Text('确认'),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('确认'), findsOneWidget);
   });
 
   testWidgets('high contrast falls back to the opaque surface', (tester) async {

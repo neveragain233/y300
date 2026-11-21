@@ -18,7 +18,7 @@ class ReaderBottomOverlayPanel extends StatelessWidget {
     final palette = const ReaderChromePaletteResolver().resolve(theme);
     final progress = config.progress;
     final thumbnailStrip = config.thumbnailStrip;
-    // 公共按钮层按主题取胶囊底面与前景；把阅读控件色板投影回主题，
+    // 公共按钮层按主题取圆底面与前景；把阅读控件色板投影回主题，
     // 关闭档与高对比时按钮退回控件背景色。
     final actionTheme = theme.copyWith(
       colorScheme: theme.colorScheme.copyWith(
@@ -57,31 +57,26 @@ class ReaderBottomOverlayPanel extends StatelessWidget {
                       constraints: const BoxConstraints(
                         maxWidth: _maxActionRowWidth,
                       ),
-                      child: Padding(
-                        // 公共动作组为顶栏右侧留了 12 尾部余量；底栏左侧补上
-                        // 同一宽度，动作组的光学中心才与底栏对齐。
-                        padding: const EdgeInsetsDirectional.only(start: 12),
-                        child: Theme(
-                          data: actionTheme,
-                          child: AppToolbarActions(
-                            size: AppToolbarButtonSize.compact,
-                            children: [
-                              for (final action in config.actions)
-                                AppToolbarIconButton(
-                                  buttonKey: Key(
-                                    'shared-reader-bottom-action-${action.id}',
-                                  ),
-                                  tooltip: action.label,
-                                  onPressed: action.enabled
-                                      ? action.onPressed
-                                      : null,
-                                  size: AppToolbarButtonSize.compact,
-                                  foregroundColor: palette.chromeForeground,
-                                  baseColor: palette.chromeBackground,
-                                  icon: Icon(action.icon),
+                      child: Theme(
+                        data: actionTheme,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            for (final action in config.actions)
+                              AppToolbarIconButton(
+                                buttonKey: Key(
+                                  'shared-reader-bottom-action-${action.id}',
                                 ),
-                            ],
-                          ),
+                                tooltip: action.label,
+                                onPressed: action.enabled
+                                    ? action.onPressed
+                                    : null,
+                                size: AppToolbarButtonSize.compact,
+                                foregroundColor: palette.chromeForeground,
+                                baseColor: palette.chromeBackground,
+                                icon: Icon(action.icon),
+                              ),
+                          ],
                         ),
                       ),
                     ),

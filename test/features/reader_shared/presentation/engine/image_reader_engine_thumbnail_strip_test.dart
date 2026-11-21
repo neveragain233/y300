@@ -59,9 +59,24 @@ void main() {
       await pumpEngine(tester, capability);
 
       expect(find.byKey(ReaderThumbnailStrip.listKey), findsNothing);
+      expect(
+        find.byKey(const Key('shared-reader-thumbnail-strip-slot')),
+        findsOneWidget,
+      );
+      final closedHeight = tester
+          .getSize(find.byKey(const Key('shared-reader-bottom-overlay-panel')))
+          .height;
 
       await openMenu(tester);
       expect(find.byKey(ReaderThumbnailStrip.listKey), findsOneWidget);
+      expect(
+        tester
+            .getSize(
+              find.byKey(const Key('shared-reader-bottom-overlay-panel')),
+            )
+            .height,
+        closedHeight,
+      );
       expect(
         tester
             .widget<Text>(find.byKey(const Key('shared-reader-current-label')))
@@ -100,11 +115,39 @@ void main() {
 
       expect(capability.seeks, <int>[4]);
 
-      await openMenu(tester);
+      // 点按收起期间缩略图槽与面板高度保持同步滑出，直到完全退场才卸载列表。
+      await tester.tapAt(
+        tester.getCenter(
+          find.byKey(const Key('shared-reader-center-tap-zone')),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 360));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(ReaderThumbnailStrip.listKey), findsOneWidget);
+      expect(
+        tester
+            .getSize(
+              find.byKey(const Key('shared-reader-bottom-overlay-panel')),
+            )
+            .height,
+        closedHeight,
+      );
+
+      await tester.pump(const Duration(milliseconds: 220));
+      await tester.pump();
       expect(find.byKey(ReaderThumbnailStrip.listKey), findsNothing);
       expect(
         find.byKey(const Key('shared-reader-thumbnail-strip-slot')),
-        findsNothing,
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getSize(
+              find.byKey(const Key('shared-reader-bottom-overlay-panel')),
+            )
+            .height,
+        closedHeight,
       );
     },
   );

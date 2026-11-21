@@ -51,6 +51,7 @@ class ReaderThumbnailStripSpec {
     required this.previewIndex,
     required this.reversed,
     required this.enabled,
+    this.active = true,
     required this.sessionBindingFor,
     required this.onPreview,
     required this.onSubmit,
@@ -70,6 +71,10 @@ class ReaderThumbnailStripSpec {
   final bool reversed;
 
   final bool enabled;
+
+  /// 底栏处于可见或退出动画期间为 true；完全归位后置 false 卸载缩略图解码列表
+  /// 并保持槽位高度恒定，避免底栏滑入/滑出时高度跳变。
+  final bool active;
   final ReaderImageSessionBinding Function(ContinuousImageItem item)
   sessionBindingFor;
   final ValueChanged<int> onPreview;
@@ -132,6 +137,18 @@ class _ReaderThumbnailStripState extends State<ReaderThumbnailStrip> {
         previous.ownerId != next.ownerId ||
         previous.items.length != next.items.length;
     final directionChanged = previous.reversed != next.reversed;
+    if (previous.active && !next.active) {
+      // 完全归位后清理离屏列表并取消残留拖动，同时清空旧视口宽度以便下次展开居中。
+      _isDragging = false;
+      _candidateIndex = null;
+      _viewportWidth = null;
+      return;
+    }
+    if (!previous.active && next.active) {
+      _viewportWidth = null;
+      _scheduleCenter(next.currentIndex, animate: false);
+      return;
+    }
     if (contentChanged || directionChanged) {
       // 换章/换方向后旧候选与旧滚动偏移都不再属于同一序列。
       _isDragging = false;
@@ -225,52 +242,54 @@ class _ReaderThumbnailStripState extends State<ReaderThumbnailStrip> {
             ),
             SizedBox(
               height: _slotHeight,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final viewportWidth = constraints.maxWidth;
-                  _syncViewport(viewportWidth);
-                  return Listener(
-                    // 系统取消指针时拖动手势只会收到 end；先在这里作废候选，
-                    // 避免把被打断的浏览提交成跳页。
-                    onPointerCancel: (_) => _cancelScrubByPointer(),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      // Scrubbing starts at touch-down instead of discarding
-                      // the first slop distance, like a photo browser.
-                      dragStartBehavior: DragStartBehavior.down,
-                      onHorizontalDragStart: _handleDragStart,
-                      onHorizontalDragUpdate: _handleDragUpdate,
-                      onHorizontalDragEnd: (_) => _finishScrub(),
-                      onHorizontalDragCancel: _cancelScrubByPointer,
-                      child: ListView.builder(
-                        key: ReaderThumbnailStrip.listKey,
-                        controller: _controller,
-                        scrollDirection: Axis.horizontal,
-                        itemExtent: _slotExtent,
-                        // 手势由外层拖动识别器统一驱动，列表本身不参与滚动竞争。
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: math.max(
-                            0.0,
-                            viewportWidth / 2 - _slotExtent / 2,
+              child: !widget.spec.active
+                  ? const SizedBox.expand()
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final viewportWidth = constraints.maxWidth;
+                        _syncViewport(viewportWidth);
+                        return Listener(
+                          // 系统取消指针时拖动手势只会收到 end；先在这里作废候选，
+                          // 避免把被打断的浏览提交成跳页。
+                          onPointerCancel: (_) => _cancelScrubByPointer(),
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            // Scrubbing starts at touch-down instead of discarding
+                            // the first slop distance, like a photo browser.
+                            dragStartBehavior: DragStartBehavior.down,
+                            onHorizontalDragStart: _handleDragStart,
+                            onHorizontalDragUpdate: _handleDragUpdate,
+                            onHorizontalDragEnd: (_) => _finishScrub(),
+                            onHorizontalDragCancel: _cancelScrubByPointer,
+                            child: ListView.builder(
+                              key: ReaderThumbnailStrip.listKey,
+                              controller: _controller,
+                              scrollDirection: Axis.horizontal,
+                              itemExtent: _slotExtent,
+                              // 手势由外层拖动识别器统一驱动，列表本身不参与滚动竞争。
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: math.max(
+                                  0.0,
+                                  viewportWidth / 2 - _slotExtent / 2,
+                                ),
+                              ),
+                              itemCount: _itemCount,
+                              itemBuilder: (context, physicalIndex) {
+                                final logicalIndex = widget.spec.reversed
+                                    ? _itemCount - 1 - physicalIndex
+                                    : physicalIndex;
+                                return _buildThumbnail(
+                                  context,
+                                  logicalIndex,
+                                  selected: logicalIndex == selectedIndex,
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                        itemCount: _itemCount,
-                        itemBuilder: (context, physicalIndex) {
-                          final logicalIndex = widget.spec.reversed
-                              ? _itemCount - 1 - physicalIndex
-                              : physicalIndex;
-                          return _buildThumbnail(
-                            context,
-                            logicalIndex,
-                            selected: logicalIndex == selectedIndex,
-                          );
-                        },
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

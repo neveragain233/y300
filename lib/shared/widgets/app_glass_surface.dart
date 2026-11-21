@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:prism_ui/liquid_glass.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 /// 应用共享的液态玻璃外壳，材质由 prism_ui 的 LiquidGlass 提供。
 ///
 /// 玻璃层只负责背景采样、着色、折射和边缘光学；[child] 在其上独立绘制，
-/// 文字与图标不参与模糊或形变。关闭档与高对比模式退回主题实色。
+/// 文字与图标不参与模糊或形变。关闭档、高对比与墨水屏模式退回实色表面。
 ///
 /// 使用前提：上层存在启用中的 `LiquidGlassScope` 与 `LiquidGlassHost`。宿主
 /// 由应用根 `AppGlassEnvironment` 在 Navigator 之上统一提供一次，普通路由、
@@ -60,13 +61,30 @@ class AppGlassSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final eInk = EInkModeScope.of(context);
     final media = MediaQuery.of(context);
     final level = this.level ?? levelOf(context);
-    final resolved = media.highContrast && level.enabled
+    final resolved = eInk || (media.highContrast && level.enabled)
         ? AppGlassLevel.off
         : level;
     final shape = BorderRadius.circular(borderRadius);
     if (!resolved.enabled) {
+      if (eInk) {
+        final surfaceColor = baseColor ?? scheme.surface;
+        final surfaceBrightness = ThemeData.estimateBrightnessForColor(
+          surfaceColor,
+        );
+        final borderColor = AppTheme.eInkBorderColor(surfaceBrightness);
+        return Material(
+          color: surfaceColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: shape,
+            side: BorderSide(color: borderColor, width: 1),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        );
+      }
       return Material(
         color:
             baseColor ??
@@ -86,7 +104,7 @@ class AppGlassSurface extends StatelessWidget {
         scheme.surfaceContainerHigh,
       ),
       borderRadius: shape,
-      shadows: shadowsOf(scheme, eInk: EInkModeScope.of(context)),
+      shadows: shadowsOf(scheme, eInk: eInk),
       // InkWell 仍需要 Material 祖先提供水波纹层；透明 Material 不遮挡玻璃。
       child: Material(type: MaterialType.transparency, child: child),
     );

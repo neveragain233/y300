@@ -597,6 +597,11 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
             final contentTopInset = viewState.preferences.safeAreaEnabled
                 ? MediaQuery.viewPaddingOf(context).top
                 : 0.0;
+            final contentBottomInset =
+                ReaderReadingStatusBarLayout.heightForVariant(
+                  context,
+                  _readingStatusBarVariant,
+                );
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: _readerSystemUiOverlayStyle(palette),
               child: NovelReaderBackground(
@@ -631,18 +636,17 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
                               surfaceIdentity: readerSurfaceIdentity,
                               isLeftTap: false,
                             ),
-                      child: Padding(
-                        padding: EdgeInsets.only(top: contentTopInset),
-                        child: _buildReaderList(
-                          viewState,
-                          typography,
-                          const NovelForumHtmlRenderThemeFactory().fromPalette(
-                            palette,
-                          ),
-                          imageReferer,
-                          externalLauncher,
-                          surfaceIdentity: readerSurfaceIdentity,
+                      child: _buildReaderList(
+                        viewState,
+                        typography,
+                        const NovelForumHtmlRenderThemeFactory().fromPalette(
+                          palette,
                         ),
+                        imageReferer,
+                        externalLauncher,
+                        surfaceIdentity: readerSurfaceIdentity,
+                        contentTopInset: contentTopInset,
+                        contentBottomInset: contentBottomInset,
                       ),
                     );
                     final loadingIdentity =
@@ -987,6 +991,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       status: _buildReadingStatus(viewState, verticalMetrics),
       background: palette.background,
       foreground: palette.controlMuted,
+      progressForeground: palette.controlForeground,
       variant: _readingStatusBarVariant,
     );
   }
@@ -1340,6 +1345,8 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     String imageReferer,
     ForumWebViewExternalLauncher externalLauncher, {
     required String surfaceIdentity,
+    required double contentTopInset,
+    required double contentBottomInset,
   }) {
     final lineHeight =
         (typography.body.fontSize ?? 14) * (typography.body.height ?? 1.5);
@@ -1369,7 +1376,10 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         startsAtBeginning: ref
             .read(novelReaderControllerProvider(_args).notifier)
             .startsPagedAtBeginning,
-        chromeInsets: const ReaderChromeInsets.zero(),
+        chromeInsets: ReaderChromeInsets(
+          top: contentTopInset,
+          bottom: contentBottomInset,
+        ),
         semanticDocument: viewState.document,
         conversionPosition: _conversionPosition,
         onConversionPositionChanged: (position) {
@@ -1472,186 +1482,196 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
           ? _scrollController.offset
           : null,
     );
-    return LayoutBuilder(
-      builder: (context, readerConstraints) {
-        final children = <Widget>[
-          NovelReadingBodySliver(
-            effectiveViewportHeight: math.max(0, readerConstraints.maxHeight),
-            layoutIdentity: (surfaceIdentity, _bodyContentRevision),
-            onGeometry: (geometry) {
-              if (_isCurrentReaderSurface(surfaceIdentity)) {
-                _bodyGeometry = geometry;
-                _bodyGeometryOwner = surfaceIdentity;
-                _publishVerticalPageMetrics();
-                _scheduleVerticalRestoreAttempt(
-                  session: session,
-                  trigger: 'body_geometry',
-                );
-                _observeReadingSurface();
-              }
-            },
-            sliver: NovelReaderHtmlDocumentView(
-              preparationService: ref.watch(
-                novelReaderHtmlPreparationServiceProvider,
-              ),
-              asSliver: true,
-              preparedChapterCache: _preparedChapterCache,
-              rawHtml: viewState.currentContent.rawHtml,
-              episode: viewState.currentEpisode,
-              preferences: viewState.renderPreferences,
-              typography: typography,
-              theme: htmlTheme,
-              imageReferer: _imageRefererFor(viewState),
-              onLinkTap: (link) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: contentTopInset,
+        bottom: contentBottomInset,
+      ),
+      child: LayoutBuilder(
+        builder: (context, readerConstraints) {
+          final children = <Widget>[
+            NovelReadingBodySliver(
+              effectiveViewportHeight: math.max(0, readerConstraints.maxHeight),
+              layoutIdentity: (surfaceIdentity, _bodyContentRevision),
+              onGeometry: (geometry) {
                 if (_isCurrentReaderSurface(surfaceIdentity)) {
-                  _openReaderLink(link, externalLauncher);
-                }
-              },
-              onOpenImage: (request) {
-                if (_isCurrentReaderSurface(surfaceIdentity)) {
-                  _openHtmlReaderImage(request);
-                }
-              },
-              onImageFallback: (request) {
-                if (_isCurrentReaderSurface(surfaceIdentity)) {
-                  _copyNovelImageUrl(request.url);
-                }
-              },
-              onContentInteraction: _cancelPendingReaderTap,
-              onImagesReadyChanged: (ready) {
-                if (_isCurrentReaderSurface(surfaceIdentity)) {
-                  _imagesReady = ready;
+                  _bodyGeometry = geometry;
+                  _bodyGeometryOwner = surfaceIdentity;
+                  _publishVerticalPageMetrics();
+                  _scheduleVerticalRestoreAttempt(
+                    session: session,
+                    trigger: 'body_geometry',
+                  );
                   _observeReadingSurface();
                 }
               },
-              onContentReady: () {
-                if (_isSuspendedVerticalContent(session)) {
-                  _verticalSession.markSuspendedContent(session);
-                  return;
-                }
-                _restoreVerticalOffsetAfterThemeUpdate(request: themeRequest);
-                _restoreVerticalOffsetAfterContentReady(session: session);
-              },
-              onContentTerminal: () {
-                if (_isSuspendedVerticalContent(session)) {
-                  _verticalSession.markSuspendedContent(
-                    session,
-                    terminal: true,
-                  );
-                  return;
-                }
-                if (!_isCurrentVerticalSession(session) ||
-                    !_verticalSession.ownsTheme(themeRequest)) {
-                  return;
-                }
-                _verticalSession.clearThemeRestore(themeRequest);
-                _verticalSession.markContentTerminal(session);
-                _markReaderSurfaceReady(surfaceIdentity);
-              },
-              onRetry: () {
-                if (_isCurrentReaderSurface(surfaceIdentity)) {
-                  ref.invalidate(novelReaderControllerProvider(_args));
-                }
-              },
-            ),
-          ),
-          if (viewState.nextEpisode != null)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: viewState.preferences.paragraphSpacing * 2,
+              sliver: NovelReaderHtmlDocumentView(
+                preparationService: ref.watch(
+                  novelReaderHtmlPreparationServiceProvider,
                 ),
-                child: NovelReaderNextChapterTransition(
-                  nextEpisode: viewState.nextEpisode!,
-                  onPressed: () {
-                    if (_isCurrentReaderSurface(surfaceIdentity)) {
-                      _openDifferentEpisode(
-                        () => ref
-                            .read(novelReaderControllerProvider(_args).notifier)
-                            .goToNextEpisode(),
-                      );
-                    }
-                  },
-                ),
+                asSliver: true,
+                preparedChapterCache: _preparedChapterCache,
+                rawHtml: viewState.currentContent.rawHtml,
+                episode: viewState.currentEpisode,
+                preferences: viewState.renderPreferences,
+                typography: typography,
+                theme: htmlTheme,
+                imageReferer: _imageRefererFor(viewState),
+                onLinkTap: (link) {
+                  if (_isCurrentReaderSurface(surfaceIdentity)) {
+                    _openReaderLink(link, externalLauncher);
+                  }
+                },
+                onOpenImage: (request) {
+                  if (_isCurrentReaderSurface(surfaceIdentity)) {
+                    _openHtmlReaderImage(request);
+                  }
+                },
+                onImageFallback: (request) {
+                  if (_isCurrentReaderSurface(surfaceIdentity)) {
+                    _copyNovelImageUrl(request.url);
+                  }
+                },
+                onContentInteraction: _cancelPendingReaderTap,
+                onImagesReadyChanged: (ready) {
+                  if (_isCurrentReaderSurface(surfaceIdentity)) {
+                    _imagesReady = ready;
+                    _observeReadingSurface();
+                  }
+                },
+                onContentReady: () {
+                  if (_isSuspendedVerticalContent(session)) {
+                    _verticalSession.markSuspendedContent(session);
+                    return;
+                  }
+                  _restoreVerticalOffsetAfterThemeUpdate(request: themeRequest);
+                  _restoreVerticalOffsetAfterContentReady(session: session);
+                },
+                onContentTerminal: () {
+                  if (_isSuspendedVerticalContent(session)) {
+                    _verticalSession.markSuspendedContent(
+                      session,
+                      terminal: true,
+                    );
+                    return;
+                  }
+                  if (!_isCurrentVerticalSession(session) ||
+                      !_verticalSession.ownsTheme(themeRequest)) {
+                    return;
+                  }
+                  _verticalSession.clearThemeRestore(themeRequest);
+                  _verticalSession.markContentTerminal(session);
+                  _markReaderSurfaceReady(surfaceIdentity);
+                },
+                onRetry: () {
+                  if (_isCurrentReaderSurface(surfaceIdentity)) {
+                    ref.invalidate(novelReaderControllerProvider(_args));
+                  }
+                },
               ),
             ),
-        ];
-        return NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification.depth == 0 && _isCurrentVerticalSession(session)) {
-              if (notification is ScrollStartNotification) {
-                _readingScrolling = true;
-                _userScrollActive = notification.dragDetails != null;
-                if (notification.dragDetails != null) {
-                  // A real drag takes over from a tap animation and retires any
-                  // queued tap intent.
-                  _verticalTapTurn.retire();
-                }
-                _observeReadingSurface();
-              }
-              if (notification is ScrollEndNotification) {
-                _readingScrolling = false;
-                _userScrollActive = false;
-                _observeReadingSurface();
-              }
-            }
-            if (notification.depth == 0 &&
-                notification is ScrollStartNotification &&
-                notification.dragDetails != null &&
-                _isCurrentVerticalSession(session) &&
-                !_hasRestoredOffset) {
-              _verticalSession.claimPosition(session);
-              _scrollController.cancelRestore();
-              _progressDiagnostics.log(
-                'restore_cancel',
-                fields: <String, Object?>{
-                  'novelId': widget.novelId,
-                  'episodeId': viewState.currentEpisode.episodeId,
-                  'reason': 'user_scroll_started',
-                },
-              );
-            }
-            return false;
-          },
-          child: NotificationListener<ScrollMetricsNotification>(
+            if (viewState.nextEpisode != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: viewState.preferences.paragraphSpacing * 2,
+                  ),
+                  child: NovelReaderNextChapterTransition(
+                    nextEpisode: viewState.nextEpisode!,
+                    onPressed: () {
+                      if (_isCurrentReaderSurface(surfaceIdentity)) {
+                        _openDifferentEpisode(
+                          () => ref
+                              .read(
+                                novelReaderControllerProvider(_args).notifier,
+                              )
+                              .goToNextEpisode(),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+          ];
+          return NotificationListener<ScrollNotification>(
             onNotification: (notification) {
-              if (notification.depth == 0) {
-                _scheduleVerticalRestoreAttempt(
-                  session: session,
-                  trigger: 'metrics_changed',
+              if (notification.depth == 0 &&
+                  _isCurrentVerticalSession(session)) {
+                if (notification is ScrollStartNotification) {
+                  _readingScrolling = true;
+                  _userScrollActive = notification.dragDetails != null;
+                  if (notification.dragDetails != null) {
+                    // A real drag takes over from a tap animation and retires any
+                    // queued tap intent.
+                    _verticalTapTurn.retire();
+                  }
+                  _observeReadingSurface();
+                }
+                if (notification is ScrollEndNotification) {
+                  _readingScrolling = false;
+                  _userScrollActive = false;
+                  _observeReadingSurface();
+                }
+              }
+              if (notification.depth == 0 &&
+                  notification is ScrollStartNotification &&
+                  notification.dragDetails != null &&
+                  _isCurrentVerticalSession(session) &&
+                  !_hasRestoredOffset) {
+                _verticalSession.claimPosition(session);
+                _scrollController.cancelRestore();
+                _progressDiagnostics.log(
+                  'restore_cancel',
+                  fields: <String, Object?>{
+                    'novelId': widget.novelId,
+                    'episodeId': viewState.currentEpisode.episodeId,
+                    'reason': 'user_scroll_started',
+                  },
                 );
-                _scheduleVerticalDockUpdate(surfaceIdentity);
-                _publishVerticalPageMetrics();
               }
               return false;
             },
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final sidePadding = math.max(
-                  viewState.preferences.pagePadding,
-                  (constraints.maxWidth - _safeContentMaxWidth(typography)) / 2,
-                );
-                return CustomScrollView(
-                  key: const Key('novel-reader-paragraph-list'),
-                  controller: _scrollController,
-                  slivers: [
-                    SliverPadding(
-                      key: const Key('novel-reader-content-column'),
-                      padding: EdgeInsets.fromLTRB(
-                        sidePadding,
-                        viewState.preferences.pagePadding,
-                        sidePadding,
-                        viewState.preferences.pagePadding,
-                      ),
-                      sliver: SliverMainAxisGroup(slivers: children),
-                    ),
-                  ],
-                );
+            child: NotificationListener<ScrollMetricsNotification>(
+              onNotification: (notification) {
+                if (notification.depth == 0) {
+                  _scheduleVerticalRestoreAttempt(
+                    session: session,
+                    trigger: 'metrics_changed',
+                  );
+                  _scheduleVerticalDockUpdate(surfaceIdentity);
+                  _publishVerticalPageMetrics();
+                }
+                return false;
               },
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final sidePadding = math.max(
+                    viewState.preferences.pagePadding,
+                    (constraints.maxWidth - _safeContentMaxWidth(typography)) /
+                        2,
+                  );
+                  return CustomScrollView(
+                    key: const Key('novel-reader-paragraph-list'),
+                    controller: _scrollController,
+                    slivers: [
+                      SliverPadding(
+                        key: const Key('novel-reader-content-column'),
+                        padding: EdgeInsets.fromLTRB(
+                          sidePadding,
+                          viewState.preferences.pagePadding,
+                          sidePadding,
+                          viewState.preferences.pagePadding,
+                        ),
+                        sliver: SliverMainAxisGroup(slivers: children),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

@@ -150,14 +150,70 @@ void main() {
       AnimationStyle.noAnimation,
     );
     expect(eInkLight.snackBarTheme.elevation, 0);
+    expect(eInkLight.floatingActionButtonTheme.elevation, 0);
+    expect(eInkLight.floatingActionButtonTheme.highlightElevation, 0);
+    expect(eInkLight.floatingActionButtonTheme.backgroundColor, Colors.white);
+    expect(eInkLight.floatingActionButtonTheme.foregroundColor, Colors.black);
     expect(
-      AppTheme.build(
-        family: AppThemeFamily.warmPaper,
-        brightness: Brightness.dark,
-        eInkMode: true,
-      ).extension<Y300ThemeExtension>()!.contentHighlightBackground,
+      eInkLight.floatingActionButtonTheme.shape,
+      isA<StadiumBorder>().having(
+        (s) => s.side,
+        'side',
+        BorderSide(color: AppTheme.eInkBorderColor(Brightness.light), width: 1),
+      ),
+    );
+    final eInkDark = AppTheme.build(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.dark,
+      eInkMode: true,
+    );
+    expect(
+      eInkDark.extension<Y300ThemeExtension>()!.contentHighlightBackground,
       const Color(0x33FFFFFF),
     );
+    expect(eInkDark.floatingActionButtonTheme.elevation, 0);
+    expect(eInkDark.floatingActionButtonTheme.backgroundColor, Colors.black);
+    expect(eInkDark.floatingActionButtonTheme.foregroundColor, Colors.white);
+
+    // 确认墨水屏 ColorScheme 全部角色均为中性灰阶（不含种子粉色残留）。
+    for (final scheme in [eInkLight.colorScheme, eInkDark.colorScheme]) {
+      for (final color in [
+        scheme.primary,
+        scheme.onPrimary,
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+        scheme.secondary,
+        scheme.onSecondary,
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+        scheme.tertiary,
+        scheme.onTertiary,
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+        scheme.error,
+        scheme.onError,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+        scheme.surface,
+        scheme.onSurface,
+        scheme.surfaceDim,
+        scheme.surfaceBright,
+        scheme.surfaceContainerLowest,
+        scheme.surfaceContainerLow,
+        scheme.surfaceContainer,
+        scheme.surfaceContainerHigh,
+        scheme.surfaceContainerHighest,
+        scheme.onSurfaceVariant,
+        scheme.outline,
+        scheme.outlineVariant,
+        scheme.inverseSurface,
+        scheme.onInverseSurface,
+        scheme.inversePrimary,
+      ]) {
+        expect(color.r, color.g);
+        expect(color.g, color.b);
+      }
+    }
   });
 
   test('AppThemePalette.light preserves the shell baseline tokens', () {

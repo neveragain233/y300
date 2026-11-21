@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/card_surface.dart' show PressLook;
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/theme_data.dart' as prism;
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 
 /// 把应用主题桥接给 prism_ui 组件。
 ///
@@ -19,14 +23,65 @@ class AppPrismTheme extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final eInk = EInkModeScope.of(context);
+    Widget content = child;
+    if (eInk) {
+      content = prism_button.ButtonTheme.merge(
+        data: _eInkButtonThemeData(scheme),
+        child: content,
+      );
+    }
     return prism.Theme(
       data: prism.ThemeData(
         colorScheme: prismColorSchemeOf(
-          Theme.of(context).colorScheme,
+          scheme,
           navigationSurface: navigationSurface,
         ),
       ),
-      child: child,
+      child: content,
+    );
+  }
+
+  static prism_button.ButtonThemeData _eInkButtonThemeData(ColorScheme scheme) {
+    final border = AppTheme.eInkBorderColor(scheme.brightness);
+    final disabledFg = scheme.onSurface.withValues(alpha: 0.38);
+    final side = WidgetStateProperty.resolveWith<BorderSide?>(
+      (states) => BorderSide(
+        color: states.contains(WidgetState.disabled)
+            ? scheme.outlineVariant
+            : border,
+        width: 1,
+      ),
+    );
+    final filledStyle = prism_button.ButtonStyle(
+      backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+        (states) => states.contains(WidgetState.disabled)
+            ? scheme.surfaceContainerHighest
+            : scheme.primary,
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+        (states) => states.contains(WidgetState.disabled)
+            ? disabledFg
+            : scheme.onPrimary,
+      ),
+      side: side,
+      pressLook: PressLook.none,
+    );
+    final outlinedStyle = prism_button.ButtonStyle(
+      backgroundColor: WidgetStatePropertyAll<Color?>(scheme.surface),
+      foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+        (states) => states.contains(WidgetState.disabled)
+            ? disabledFg
+            : scheme.onSurface,
+      ),
+      side: side,
+      pressLook: PressLook.none,
+    );
+    return prism_button.ButtonThemeData(
+      filled: filledStyle,
+      outlined: outlinedStyle,
+      text: outlinedStyle,
     );
   }
 }

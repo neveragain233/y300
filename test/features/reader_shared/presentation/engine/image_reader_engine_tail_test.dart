@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,7 +14,7 @@ import 'package:y300/features/reader_shared/presentation/engine/engine.dart';
 
 void main() {
   testWidgets(
-    'page highlight updates locally, dims after 900ms and resets when hidden',
+    'vertical scroll avoids engine rebuilds and status bar yields to tail',
     (tester) async {
       SharedPreferences.setMockInitialValues({'reader_pref_mode': 'vertical'});
       await tester.pumpWidget(_host(_ActionTail()));
@@ -27,35 +29,39 @@ void main() {
         if (element.widget is ImageReaderEngine) builds++;
       };
       addTearDown(() => debugOnRebuildDirtyWidget = beforeHook);
-      ReaderPageIndicatorOverlay indicator() =>
-          tester.widget<ReaderPageIndicatorOverlay>(
-            find.byType(ReaderPageIndicatorOverlay),
-          );
+
+      expect(
+        find.byKey(const Key('shared-reader-persistent-status-bar')),
+        findsOneWidget,
+      );
       scroll.jumpTo(10);
       await tester.pump();
-      expect(indicator().highlighted, isTrue);
       for (var i = 1; i <= 20; i++) {
         scroll.jumpTo(10.0 + i);
         await tester.pump(const Duration(milliseconds: 16));
       }
-      await tester.pump(const Duration(milliseconds: 880));
-      expect(indicator().highlighted, isTrue);
-      await tester.pump(const Duration(milliseconds: 20));
-      expect(indicator().highlighted, isFalse);
       expect(builds, 0);
+      expect(
+        find.byKey(const Key('shared-reader-persistent-status-bar')),
+        findsOneWidget,
+      );
 
       scroll.jumpTo(1500);
       await tester.pumpAndSettle();
-      expect(indicator().visible, isFalse);
-      expect(indicator().highlighted, isFalse);
+      expect(
+        find.byKey(const Key('shared-reader-persistent-status-bar')),
+        findsNothing,
+      );
       builds = 0;
       scroll.jumpTo(1550);
       await tester.pumpAndSettle();
       expect(builds, 0);
       scroll.jumpTo(0);
       await tester.pumpAndSettle();
-      expect(indicator().visible, isTrue);
-      expect(indicator().highlighted, isFalse);
+      expect(
+        find.byKey(const Key('shared-reader-persistent-status-bar')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -148,7 +154,12 @@ void main() {
     expect(
       tester
           .widget<Text>(
-            find.byKey(const Key('comic-reader-page-indicator-text')),
+            find.descendant(
+              of: find.byKey(
+                const Key('shared-reader-persistent-status-trailing'),
+              ),
+              matching: find.byType(Text),
+            ),
           )
           .data,
       '评论',
@@ -272,7 +283,12 @@ void main() {
       expect(
         tester
             .widget<Text>(
-              find.byKey(const Key('comic-reader-page-indicator-text')),
+              find.descendant(
+                of: find.byKey(
+                  const Key('shared-reader-persistent-status-trailing'),
+                ),
+                matching: find.byType(Text),
+              ),
             )
             .data,
         '1 / 2',

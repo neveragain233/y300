@@ -365,21 +365,11 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
     final eInk = EInkModeScope.of(context);
     final reduceMotion = AppMotion.reduceMotion(context);
     final inner = Padding(padding: const EdgeInsets.all(4), child: child);
-    final bordered = eInk
-        ? DecoratedBox(
-            position: DecorationPosition.foreground,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: scheme.outlineVariant, width: 1),
-            ),
-            child: inner,
-          )
-        : inner;
     final pill = AppGlassSurface(
       borderRadius: 28,
       level: eInk ? AppGlassLevel.off : null,
       baseColor: eInk ? scheme.surface : color,
-      child: bordered,
+      child: inner,
     );
     return reduceMotion ? pill : ElasticPress(child: pill);
   }

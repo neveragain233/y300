@@ -337,7 +337,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
 
       final indicator = tester.widget<Text>(
-        find.byKey(const Key('comic-reader-page-indicator-text')),
+        find.descendant(
+          of: find.byKey(const Key('shared-reader-persistent-status-trailing')),
+          matching: find.byType(Text),
+        ),
       );
       final logicalIndex =
           int.parse(indicator.data!.split('/').first.trim()) - 1;
@@ -361,7 +364,12 @@ void main() {
       expect(
         tester
             .widget<Text>(
-              find.byKey(const Key('comic-reader-page-indicator-text')),
+              find.descendant(
+                of: find.byKey(
+                  const Key('shared-reader-persistent-status-trailing'),
+                ),
+                matching: find.byType(Text),
+              ),
             )
             .data,
         indicator.data,

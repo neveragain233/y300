@@ -92,7 +92,10 @@ void _themeCases() {
 
     expect(find.text('筛选'), findsWidgets);
     await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
+      find.descendant(
+        of: find.byKey(const Key('unified-shelf-panel-tabs')),
+        matching: find.text(AppLocalizationsZh().libraryShelfDisplayMode),
+      ),
     );
     await tester.pumpAndSettle();
 

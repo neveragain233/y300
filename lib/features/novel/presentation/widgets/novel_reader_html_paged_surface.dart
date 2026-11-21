@@ -622,128 +622,118 @@ class _NovelReaderHtmlPagedSurfaceState
                     );
                   }
                   final requestGeneration = _requestGeneration;
-                  final pagedContent = Padding(
+                  final horizontalMargin =
+                      (constraints.maxWidth - pageWidth) / 2;
+                  final contentPadding = EdgeInsets.fromLTRB(
+                    horizontalMargin,
+                    pagePadding + topChromeInset,
+                    horizontalMargin,
+                    pagePadding + bottomChromeInset,
+                  );
+                  final pagedContent = KeyedSubtree(
                     key: const Key('novel-reader-paged-surface'),
-                    padding: EdgeInsets.fromLTRB(
-                      pagePadding,
-                      pagePadding + topChromeInset,
-                      pagePadding,
-                      pagePadding + bottomChromeInset,
-                    ),
-                    child: Center(
-                      child: SizedBox(
-                        width: pageWidth,
-                        height: availableHeight,
-                        child: _NovelReaderPagedPageView(
-                          key: ValueKey<String>(plan.key.cacheIdentity),
-                          requestGeneration: requestGeneration,
-                          plan: plan,
-                          isPageCountFinal: isPlanComplete,
-                          initialPage: initialPage,
-                          isReadOnlyCompatibilityRestore:
-                              _displayRestoreReadOnly,
-                          navigationRequest: widget.navigationRequest,
-                          pageSeekRequest: widget.pageSeekRequest,
-                          navigationController: widget.navigationController,
-                          readingAuthorityIdentity:
-                              widget.readingAuthorityIdentity,
-                          targetPage: requestedPage,
-                          pendingForwardRequest: _wait.pendingForwardRequest,
-                          onRequestPendingForwardPage: (target) =>
-                              mounted &&
-                              _requestGeneration == requestGeneration &&
-                              _requestPendingForwardPage(target),
-                          onConsumePendingForwardPage: (target) =>
-                              mounted &&
-                              _requestGeneration == requestGeneration &&
-                              _consumePendingForwardPage(target),
-                          onCancelPendingForwardPage: () {
-                            if (mounted &&
-                                _requestGeneration == requestGeneration) {
-                              _cancelPendingForwardPage();
-                            }
-                          },
-                          reverse:
-                              widget.preferences.flowMode ==
-                              NovelReaderFlowMode.pagedRtl,
-                          pageEffect: widget.preferences.pageEffect,
-                          pageSpeed: widget.preferences.pageSpeed,
-                          paperInsets: EdgeInsets.fromLTRB(
-                            (constraints.maxWidth - pageWidth) / 2,
-                            pagePadding + topChromeInset,
-                            (constraints.maxWidth - pageWidth) / 2,
-                            pagePadding + bottomChromeInset,
-                          ),
-                          previousChapterTitle: widget.previousChapterTitle,
-                          nextChapterTitle: widget.nextChapterTitle,
-                          chapterTurnPolicy: widget.chapterTurnPolicy,
-                          chapterTurnIsInFlight:
-                              widget.chapterEntryRequest != null,
-                          onTurnToAdjacentChapter:
-                              widget.onTurnToAdjacentChapter,
-                          contentBottomInset: 0,
-                          theme: widget.theme,
-                          htmlPreferences: htmlPreferences,
-                          typography: widget.typography,
-                          renderEnvironment: renderEnvironment,
-                          renderDocument: prepared.renderDocument,
-                          episode: widget.episode,
-                          imageReferer: widget.imageReferer,
-                          onLinkTap: widget.onLinkTap,
-                          onOpenImage: widget.onOpenImage,
-                          onImageFallback: widget.onImageFallback,
-                          onContentInteraction: widget.onContentInteraction,
-                          imageReaderBridge: widget.imageReaderBridge,
-                          imageHost: widget.imageHost,
-                          onImagesReadyChanged: (ready) {
-                            if (mounted &&
-                                _planKey == plan.key &&
-                                _requestGeneration == requestGeneration) {
-                              widget.onImagesReadyChanged?.call(ready);
-                            }
-                          },
-                          onScrollActivityChanged: (scrolling) {
-                            if (mounted &&
-                                _planKey == plan.key &&
-                                _requestGeneration == requestGeneration) {
-                              widget.onScrollActivityChanged?.call(scrolling);
-                            }
-                          },
-                          onPositionChanged: (position) {
-                            if (mounted &&
-                                _planKey == plan.key &&
-                                _requestGeneration == requestGeneration) {
-                              _visiblePosition = position;
-                              if (position.hasUserNavigated) {
-                                _conversionRestoreGeneration++;
-                                _conversionRestoreAnchor = null;
-                              }
-                              _wait.setVisiblePage(position.pageIndex);
-                              _syncWorkDemand();
-                              widget.onConversionPositionChanged?.call(
-                                NovelReaderConversionPosition(
-                                  rawHtml: widget.rawHtml,
-                                  conversionIdentity:
-                                      widget.preferences.conversionMode.name,
-                                  chapter: prepared,
-                                  // Consecutive previews retain the mapped
-                                  // point, rather than each new page's start.
-                                  anchor:
-                                      _conversionRestoreAnchor != null &&
-                                          plan.pageIndexForAnchor(
-                                                _conversionRestoreAnchor!,
-                                                isPlanComplete: isPlanComplete,
-                                              ) ==
-                                              position.pageIndex
-                                      ? _conversionRestoreAnchor!
-                                      : position.anchor,
-                                ),
-                              );
-                              widget.onPositionChanged?.call(position);
-                            }
-                          },
-                        ),
-                      ),
+                    child: _NovelReaderPagedPageView(
+                      key: ValueKey<String>(plan.key.cacheIdentity),
+                      requestGeneration: requestGeneration,
+                      plan: plan,
+                      isPageCountFinal: isPlanComplete,
+                      initialPage: initialPage,
+                      isReadOnlyCompatibilityRestore: _displayRestoreReadOnly,
+                      navigationRequest: widget.navigationRequest,
+                      pageSeekRequest: widget.pageSeekRequest,
+                      navigationController: widget.navigationController,
+                      readingAuthorityIdentity: widget.readingAuthorityIdentity,
+                      targetPage: requestedPage,
+                      pendingForwardRequest: _wait.pendingForwardRequest,
+                      onRequestPendingForwardPage: (target) =>
+                          mounted &&
+                          _requestGeneration == requestGeneration &&
+                          _requestPendingForwardPage(target),
+                      onConsumePendingForwardPage: (target) =>
+                          mounted &&
+                          _requestGeneration == requestGeneration &&
+                          _consumePendingForwardPage(target),
+                      onCancelPendingForwardPage: () {
+                        if (mounted &&
+                            _requestGeneration == requestGeneration) {
+                          _cancelPendingForwardPage();
+                        }
+                      },
+                      reverse:
+                          widget.preferences.flowMode ==
+                          NovelReaderFlowMode.pagedRtl,
+                      pageEffect: widget.preferences.pageEffect,
+                      pageSpeed: widget.preferences.pageSpeed,
+                      backgroundTexture: widget.preferences.backgroundTexture,
+                      contentPadding: contentPadding,
+                      pageWidth: pageWidth,
+                      pageHeight: availableHeight,
+                      previousChapterTitle: widget.previousChapterTitle,
+                      nextChapterTitle: widget.nextChapterTitle,
+                      chapterTurnPolicy: widget.chapterTurnPolicy,
+                      chapterTurnIsInFlight: widget.chapterEntryRequest != null,
+                      onTurnToAdjacentChapter: widget.onTurnToAdjacentChapter,
+                      contentBottomInset: 0,
+                      theme: widget.theme,
+                      htmlPreferences: htmlPreferences,
+                      typography: widget.typography,
+                      renderEnvironment: renderEnvironment,
+                      renderDocument: prepared.renderDocument,
+                      episode: widget.episode,
+                      imageReferer: widget.imageReferer,
+                      onLinkTap: widget.onLinkTap,
+                      onOpenImage: widget.onOpenImage,
+                      onImageFallback: widget.onImageFallback,
+                      onContentInteraction: widget.onContentInteraction,
+                      imageReaderBridge: widget.imageReaderBridge,
+                      imageHost: widget.imageHost,
+                      onImagesReadyChanged: (ready) {
+                        if (mounted &&
+                            _planKey == plan.key &&
+                            _requestGeneration == requestGeneration) {
+                          widget.onImagesReadyChanged?.call(ready);
+                        }
+                      },
+                      onScrollActivityChanged: (scrolling) {
+                        if (mounted &&
+                            _planKey == plan.key &&
+                            _requestGeneration == requestGeneration) {
+                          widget.onScrollActivityChanged?.call(scrolling);
+                        }
+                      },
+                      onPositionChanged: (position) {
+                        if (mounted &&
+                            _planKey == plan.key &&
+                            _requestGeneration == requestGeneration) {
+                          _visiblePosition = position;
+                          if (position.hasUserNavigated) {
+                            _conversionRestoreGeneration++;
+                            _conversionRestoreAnchor = null;
+                          }
+                          _wait.setVisiblePage(position.pageIndex);
+                          _syncWorkDemand();
+                          widget.onConversionPositionChanged?.call(
+                            NovelReaderConversionPosition(
+                              rawHtml: widget.rawHtml,
+                              conversionIdentity:
+                                  widget.preferences.conversionMode.name,
+                              chapter: prepared,
+                              // Consecutive previews retain the mapped
+                              // point, rather than each new page's start.
+                              anchor:
+                                  _conversionRestoreAnchor != null &&
+                                      plan.pageIndexForAnchor(
+                                            _conversionRestoreAnchor!,
+                                            isPlanComplete: isPlanComplete,
+                                          ) ==
+                                          position.pageIndex
+                                  ? _conversionRestoreAnchor!
+                                  : position.anchor,
+                            ),
+                          );
+                          widget.onPositionChanged?.call(position);
+                        }
+                      },
                     ),
                   );
                   return Stack(
@@ -1601,7 +1591,10 @@ class _NovelReaderPagedPageView extends StatefulWidget {
     required this.reverse,
     required this.pageEffect,
     required this.pageSpeed,
-    this.paperInsets = EdgeInsets.zero,
+    this.backgroundTexture = NovelReaderBackgroundTexture.solid,
+    this.contentPadding = EdgeInsets.zero,
+    required this.pageWidth,
+    required this.pageHeight,
     this.previousChapterTitle,
     this.nextChapterTitle,
     this.chapterTurnPolicy = const NovelReaderChapterTurnPolicy(),
@@ -1645,7 +1638,10 @@ class _NovelReaderPagedPageView extends StatefulWidget {
   final bool reverse;
   final NovelReaderPageEffect pageEffect;
   final NovelReaderPageSpeed pageSpeed;
-  final EdgeInsets paperInsets;
+  final NovelReaderBackgroundTexture backgroundTexture;
+  final EdgeInsets contentPadding;
+  final double pageWidth;
+  final double pageHeight;
   final String? previousChapterTitle;
   final String? nextChapterTitle;
   final NovelReaderChapterTurnPolicy chapterTurnPolicy;
@@ -1877,8 +1873,6 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
     final reduceMotion = AppMotion.reduceMotion(context);
     final paperEnabled =
         widget.pageEffect == NovelReaderPageEffect.paper && !reduceMotion;
-    final fullSheetEnabled =
-        NovelReaderPageMotion.isFullSheet(widget.pageEffect) && !reduceMotion;
     final totalPageLabel = widget.isPageCountFinal
         ? l10n.novelPages(pageCount)
         : l10n.novelPageCountPending;
@@ -1932,12 +1926,7 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
                 controller: _pageController,
                 reverse: widget.reverse,
                 allowImplicitScrolling: false,
-                clipBehavior:
-                    fullSheetEnabled ||
-                        widget.pageEffect == NovelReaderPageEffect.staggered &&
-                            !reduceMotion
-                    ? Clip.none
-                    : Clip.hardEdge,
+                clipBehavior: Clip.hardEdge,
                 pageSnapping: false,
                 physics: NovelReaderPageScrollPhysics(
                   durationScale: () => AppMotion.reduceMotion(context)
@@ -1961,49 +1950,63 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
                         : widget.pageEffect,
                     reverse: widget.reverse,
                     paperColor: widget.theme.surface,
+                    backgroundTexture: widget.backgroundTexture,
                     paperClock: _paperClock,
                     paragraphClock: _paragraphClock,
-                    paperInsets: widget.paperInsets,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Padding(
-                          key: ValueKey<String>(
-                            'novel-reader-paged-content-inset-${page.index}',
-                          ),
-                          padding: EdgeInsets.only(
-                            bottom: widget.contentBottomInset,
-                          ),
-                          child: _NovelReaderPagedPage(
-                            key: ValueKey<String>(
-                              'novel-reader-paged-page-${page.index}',
-                            ),
-                            page: page,
-                            plan: widget.plan,
-                            theme: widget.theme,
-                            htmlPreferences: widget.htmlPreferences,
-                            typography: widget.typography,
-                            renderEnvironment: widget.renderEnvironment,
-                            renderDocument: widget.renderDocument,
-                            episode: widget.episode,
-                            imageReferer: widget.imageReferer,
-                            onLinkTap: widget.onLinkTap,
-                            onOpenImage: widget.onOpenImage,
-                            onImageFallback: widget.onImageFallback,
-                            onContentInteraction: widget.onContentInteraction,
-                            imageReaderBridge: widget.imageReaderBridge,
-                            imageHost: widget.imageHost,
-                            isVisible: index == _currentPage,
-                            readingAuthorityIdentity:
-                                widget.readingAuthorityIdentity,
-                            onImagesReadyChanged: widget.onImagesReadyChanged,
-                            onScrollActivityChanged:
-                                widget.onScrollActivityChanged,
-                            onBodyVisibilityChanged: (visibility) =>
-                                _onBodyVisibilityChanged(index, visibility),
+                    child: Padding(
+                      padding: widget.contentPadding,
+                      child: Center(
+                        child: SizedBox(
+                          width: widget.pageWidth,
+                          height: widget.pageHeight,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Padding(
+                                key: ValueKey<String>(
+                                  'novel-reader-paged-content-inset-${page.index}',
+                                ),
+                                padding: EdgeInsets.only(
+                                  bottom: widget.contentBottomInset,
+                                ),
+                                child: _NovelReaderPagedPage(
+                                  key: ValueKey<String>(
+                                    'novel-reader-paged-page-${page.index}',
+                                  ),
+                                  page: page,
+                                  plan: widget.plan,
+                                  theme: widget.theme,
+                                  htmlPreferences: widget.htmlPreferences,
+                                  typography: widget.typography,
+                                  renderEnvironment: widget.renderEnvironment,
+                                  renderDocument: widget.renderDocument,
+                                  episode: widget.episode,
+                                  imageReferer: widget.imageReferer,
+                                  onLinkTap: widget.onLinkTap,
+                                  onOpenImage: widget.onOpenImage,
+                                  onImageFallback: widget.onImageFallback,
+                                  onContentInteraction:
+                                      widget.onContentInteraction,
+                                  imageReaderBridge: widget.imageReaderBridge,
+                                  imageHost: widget.imageHost,
+                                  isVisible: index == _currentPage,
+                                  readingAuthorityIdentity:
+                                      widget.readingAuthorityIdentity,
+                                  onImagesReadyChanged:
+                                      widget.onImagesReadyChanged,
+                                  onScrollActivityChanged:
+                                      widget.onScrollActivityChanged,
+                                  onBodyVisibilityChanged: (visibility) =>
+                                      _onBodyVisibilityChanged(
+                                        index,
+                                        visibility,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   );
                 },
@@ -2023,8 +2026,8 @@ class _NovelReaderPagedPageViewState extends State<_NovelReaderPagedPageView> {
     if (!_pageController.hasClients) return;
     final size = context.size;
     if (size == null) return;
-    final height = size.height + widget.paperInsets.vertical;
-    if (height > 0) _paperClock.touchY = (dy + widget.paperInsets.top) / height;
+    final height = size.height;
+    if (height > 0) _paperClock.touchY = dy / height;
   }
 
   bool _turnPageByTap(int delta) {

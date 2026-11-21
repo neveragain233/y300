@@ -271,19 +271,25 @@ void _verticalReadingCases() {
     await _pumpPagedCacheReady(tester);
 
     final pageView = find.byKey(const Key('novel-reader-paged-page-view'));
-    final pageViewBox = tester.renderObject<RenderBox>(pageView);
+    final pageBox = tester.renderObject<RenderBox>(
+      find.byKey(const ValueKey<String>('novel-reader-paged-page-0')),
+    );
     final content = find.descendant(
       of: pageView,
       matching: find.byType(ForumHtmlWidgetPostRenderer),
     );
     final contentBox = tester.renderObject<RenderBox>(content.first);
-    expect(contentBox.size.height, closeTo(pageViewBox.size.height, 2));
+    expect(contentBox.size.height, closeTo(pageBox.size.height, 2));
     expect(
       find.byKey(const Key('shared-reader-persistent-status-bar')),
       findsOneWidget,
     );
     expect(
-      tester.getBottomLeft(pageView).dy,
+      tester
+          .getBottomLeft(
+            find.byKey(const ValueKey<String>('novel-reader-paged-page-0')),
+          )
+          .dy,
       lessThanOrEqualTo(
         tester
             .getTopLeft(

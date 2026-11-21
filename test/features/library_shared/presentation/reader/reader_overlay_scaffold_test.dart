@@ -330,6 +330,54 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets(
+    'persistentFooter overlays bottom without shrinking body and tracks dismissal',
+    (tester) async {
+      final controller = ReaderOverlayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _buildScaffold(
+          controller: controller,
+          animationDuration: const Duration(milliseconds: 200),
+          persistentFooter: const SizedBox(
+            key: Key('test-persistent-footer'),
+            height: 28,
+          ),
+        ),
+      );
+
+      final scaffoldSize = tester.getSize(
+        find.byKey(const Key('shared-reader-overlay-scaffold')),
+      );
+      expect(
+        tester.getSize(find.byKey(const Key('reader-test-body'))),
+        scaffoldSize,
+      );
+      expect(
+        tester
+            .getBottomLeft(find.byKey(const Key('test-persistent-footer')))
+            .dy,
+        scaffoldSize.height,
+      );
+      expect(controller.isOverlayDismissed, isTrue);
+
+      controller.showMenu();
+      await tester.pump();
+      expect(controller.isOverlayDismissed, isFalse);
+      await tester.pump(const Duration(milliseconds: 220));
+      expect(controller.isOverlayDismissed, isFalse);
+
+      controller.hideMenu();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(controller.isOverlayDismissed, isFalse);
+
+      await tester.pump(const Duration(milliseconds: 120));
+      await tester.pump();
+      expect(controller.isOverlayDismissed, isTrue);
+    },
+  );
 }
 
 Future<void> _pumpTapAndOverlayAnimation(WidgetTester tester) async {
@@ -342,6 +390,7 @@ Widget _buildScaffold({
   bool menuInitiallyVisible = false,
   List<ReaderToolbarAction> topActions = const <ReaderToolbarAction>[],
   List<ReaderToolbarAction> bottomActions = const <ReaderToolbarAction>[],
+  Widget? persistentFooter,
   VoidCallback? onCenterTap,
   ReaderOverlayController? controller,
   ThemeData? theme,
@@ -372,6 +421,7 @@ Widget _buildScaffold({
         menuInitiallyVisible: menuInitiallyVisible,
         animationDuration: animationDuration,
         onCenterTap: onCenterTap,
+        persistentFooter: persistentFooter,
         topBar: ReaderTopBarConfig(
           title: '作品名',
           subtitle: '章节名',

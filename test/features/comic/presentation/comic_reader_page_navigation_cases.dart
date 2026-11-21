@@ -49,7 +49,7 @@ void _readerPageBaselineCases() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('comic-reader-page-indicator-overlay')),
+      find.byKey(const Key('shared-reader-persistent-status-bar')),
       findsOneWidget,
     );
     expect(

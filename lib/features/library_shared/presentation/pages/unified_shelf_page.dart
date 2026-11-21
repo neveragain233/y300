@@ -12,6 +12,7 @@ import 'package:y300/features/library_shared/presentation/widgets/library_catego
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prism_ui/segmented_control.dart' as prism;
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
 import 'package:y300/core/motion/app_motion.dart';
@@ -41,6 +42,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:y300/shared/widgets/shelf/shelf_category_capsule_bar.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_card.dart';
 import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
@@ -963,94 +965,42 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
   Future<void> _showFilterSheet() async {
     final state = _controller.state;
     final capabilities = resolveShelfModuleCapabilities(widget.adapter);
-    var selectedFilter = capabilities.normalizeFilters(state.filters);
+    var initialFilter = capabilities.normalizeFilters(state.filters);
     final supportsDownloadedFilter =
         widget.adapter is ShelfDownloadStatusAdapter;
     if (!supportsDownloadedFilter &&
-        selectedFilter.downloaded != TriStateFilterValue.ignore) {
-      selectedFilter = selectedFilter.copyWith(
+        initialFilter.downloaded != TriStateFilterValue.ignore) {
+      initialFilter = initialFilter.copyWith(
         downloaded: TriStateFilterValue.ignore,
       );
     }
-    var selectedSort = capabilities.normalizeSortOption(state.sortOption);
-    var selectedMode = state.displayMode;
-    var selectedColumns = state.gridColumnCount.toDouble();
-    var tabIndex = 0;
+    final initialSort = capabilities.normalizeSortOption(state.sortOption);
 
     await showAdaptivePanel<void>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final l10n = AppLocalizations.of(context);
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ShelfPanelSegmentedTabs(
-                      labels: [
-                        l10n.libraryShelfFilter,
-                        l10n.libraryShelfSort,
-                        l10n.libraryShelfDisplayMode,
-                      ],
-                      selectedIndex: tabIndex,
-                      onSelected: (index) =>
-                          setSheetState(() => tabIndex = index),
-                    ),
-                    const SizedBox(height: 8),
-                    Flexible(
-                      fit: FlexFit.loose,
-                      // 矮窗口与大字号下只有内容滚动，确认／取消固定在尾部。
-                      child: SingleChildScrollView(
-                        key: const Key('unified-shelf-panel-scroll'),
-                        child: switch (tabIndex) {
-                          0 => _FilterTab(
-                            filters: selectedFilter,
-                            showDownloaded: supportsDownloadedFilter,
-                            showReadState: capabilities.supportsReadState,
-                            showBookmarked: capabilities.supportsBookmarkFilter,
-                            onChanged: (next) =>
-                                setSheetState(() => selectedFilter = next),
-                          ),
-                          1 => _SortTab(
-                            sortOption: selectedSort,
-                            availableFields: capabilities.availableSortFields,
-                            onChanged: (next) =>
-                                setSheetState(() => selectedSort = next),
-                          ),
-                          _ => _DisplayTab(
-                            displayMode: selectedMode,
-                            gridColumns: selectedColumns,
-                            onDisplayModeChanged: (mode) =>
-                                setSheetState(() => selectedMode = mode),
-                            onGridColumnsChanged: (columns) =>
-                                setSheetState(() => selectedColumns = columns),
-                          ),
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _ShelfPanelActions(
-                      onCancel: () => Navigator.of(sheetContext).pop(),
-                      onApply: () => unawaited(
-                        _commitShelfPanel(
-                          sheetContext: sheetContext,
-                          filters: selectedFilter,
-                          sortOption: selectedSort,
-                          displayMode: selectedMode,
-                          gridColumnCount: selectedColumns.round(),
-                        ),
-                      ),
-                    ),
-                  ],
+        return _UnifiedShelfFilterPanel(
+          initialFilters: initialFilter,
+          initialSortOption: initialSort,
+          initialDisplayMode: state.displayMode,
+          initialGridColumns: state.gridColumnCount.toDouble(),
+          showDownloaded: supportsDownloadedFilter,
+          showReadState: capabilities.supportsReadState,
+          showBookmarked: capabilities.supportsBookmarkFilter,
+          availableSortFields: capabilities.availableSortFields,
+          onCancel: () => Navigator.of(sheetContext).pop(),
+          onApply: (filters, sortOption, displayMode, gridColumnCount) =>
+              unawaited(
+                _commitShelfPanel(
+                  sheetContext: sheetContext,
+                  filters: filters,
+                  sortOption: sortOption,
+                  displayMode: displayMode,
+                  gridColumnCount: gridColumnCount,
                 ),
               ),
-            );
-          },
         );
       },
     );
@@ -2351,81 +2301,198 @@ class _TriStateLine extends StatelessWidget {
   }
 }
 
-/// 面板内的紧凑胶囊分段控件：三个分段共用同一底色，选中项落在实色胶囊上。
-///
-/// 分段保持 48 逻辑像素触区，选中状态同时进入语义树，供读屏区分当前分组。
-class _ShelfPanelSegmentedTabs extends StatelessWidget {
-  const _ShelfPanelSegmentedTabs({
-    required this.labels,
-    required this.selectedIndex,
-    required this.onSelected,
+enum _ShelfPanelTab { filter, sort, display }
+
+/// 与阅读器显示面板同构的书架筛选／排序／显示面板：
+/// 顶部使用 `prism.SegmentedControl`、单行配置摘要与定高 `IndexedStack`。
+class _UnifiedShelfFilterPanel extends StatefulWidget {
+  const _UnifiedShelfFilterPanel({
+    required this.initialFilters,
+    required this.initialSortOption,
+    required this.initialDisplayMode,
+    required this.initialGridColumns,
+    required this.showDownloaded,
+    required this.showReadState,
+    required this.showBookmarked,
+    required this.availableSortFields,
+    required this.onCancel,
+    required this.onApply,
   });
 
-  final List<String> labels;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
+  final LibraryFilterSet initialFilters;
+  final LibraryShelfSortOption initialSortOption;
+  final LibraryDisplayMode initialDisplayMode;
+  final double initialGridColumns;
+  final bool showDownloaded;
+  final bool showReadState;
+  final bool showBookmarked;
+  final List<LibraryShelfSortField> availableSortFields;
+  final VoidCallback onCancel;
+  final void Function(
+    LibraryFilterSet filters,
+    LibraryShelfSortOption sortOption,
+    LibraryDisplayMode displayMode,
+    int gridColumnCount,
+  )
+  onApply;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      key: const Key('unified-shelf-panel-tabs'),
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(27),
-      ),
-      child: Row(
-        children: [
-          for (var index = 0; index < labels.length; index++)
-            Expanded(
-              child: _ShelfPanelSegment(
-                index: index,
-                label: labels[index],
-                selected: index == selectedIndex,
-                onTap: () => onSelected(index),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  State<_UnifiedShelfFilterPanel> createState() =>
+      _UnifiedShelfFilterPanelState();
 }
 
-class _ShelfPanelSegment extends StatelessWidget {
-  const _ShelfPanelSegment({
-    required this.index,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _UnifiedShelfFilterPanelState extends State<_UnifiedShelfFilterPanel> {
+  _ShelfPanelTab _tab = _ShelfPanelTab.filter;
+  late LibraryFilterSet _filters;
+  late LibraryShelfSortOption _sortOption;
+  late LibraryDisplayMode _displayMode;
+  late double _gridColumns;
+  late final Map<_ShelfPanelTab, ScrollController> _scrollControllers;
 
-  final int index;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  @override
+  void initState() {
+    super.initState();
+    _filters = widget.initialFilters;
+    _sortOption = widget.initialSortOption;
+    _displayMode = widget.initialDisplayMode;
+    _gridColumns = widget.initialGridColumns;
+    _scrollControllers = {
+      for (final tab in _ShelfPanelTab.values) tab: ScrollController(),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _scrollControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  String _summaryText(AppLocalizations l10n) {
+    final activeFilters = [
+      if (widget.showDownloaded) _filters.downloaded,
+      if (widget.showReadState) _filters.unread,
+      if (widget.showReadState) _filters.read,
+      if (widget.showBookmarked) _filters.bookmarked,
+    ].where((value) => value != TriStateFilterValue.ignore).length;
+    final filterPart = activeFilters == 0
+        ? l10n.libraryShelfAllWorks
+        : '${l10n.libraryShelfFilter} $activeFilters';
+    final sortArrow = _sortOption.direction == LibrarySortDirection.asc
+        ? '↑'
+        : '↓';
+    final sortPart =
+        '${LibraryShelfTextResolver.sortField(l10n, _sortOption.field)} $sortArrow';
+    final displayPart = _displayMode == LibraryDisplayMode.grid
+        ? '${l10n.libraryShelfGrid} ${_gridColumns.round()}'
+        : l10n.libraryShelfList;
+    return '$filterPart · $sortPart · $displayPart';
+  }
+
+  Widget _buildTabContent(_ShelfPanelTab tab) {
+    switch (tab) {
+      case _ShelfPanelTab.filter:
+        return _FilterTab(
+          filters: _filters,
+          showDownloaded: widget.showDownloaded,
+          showReadState: widget.showReadState,
+          showBookmarked: widget.showBookmarked,
+          onChanged: (next) => setState(() => _filters = next),
+        );
+      case _ShelfPanelTab.sort:
+        return _SortTab(
+          sortOption: _sortOption,
+          availableFields: widget.availableSortFields,
+          onChanged: (next) => setState(() => _sortOption = next),
+        );
+      case _ShelfPanelTab.display:
+        return _DisplayTab(
+          displayMode: _displayMode,
+          gridColumns: _gridColumns,
+          onDisplayModeChanged: (mode) => setState(() => _displayMode = mode),
+          onGridColumnsChanged: (columns) =>
+              setState(() => _gridColumns = columns),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return TextButton(
-      key: ValueKey<String>('unified-shelf-panel-tab-$index'),
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(0, 48),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        backgroundColor: selected ? scheme.surface : Colors.transparent,
-        foregroundColor: selected ? scheme.onSurface : scheme.onSurfaceVariant,
-        textStyle: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppPrismTheme(
+              child: prism.SegmentedControl<_ShelfPanelTab>(
+                key: const Key('unified-shelf-panel-tabs'),
+                segments: [
+                  (_ShelfPanelTab.filter, l10n.libraryShelfFilter),
+                  (_ShelfPanelTab.sort, l10n.libraryShelfSort),
+                  (_ShelfPanelTab.display, l10n.libraryShelfDisplayMode),
+                ],
+                value: _tab,
+                onChanged: (next) {
+                  if (next == _tab) {
+                    return;
+                  }
+                  final controller = _scrollControllers[next];
+                  if (controller != null && controller.hasClients) {
+                    controller.jumpTo(0);
+                  }
+                  setState(() => _tab = next);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+              child: Text(
+                _summaryText(l10n),
+                key: const Key('unified-shelf-panel-summary'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Flexible(
+              // 用 IndexedStack 固定三栏最大高度，切换分段时外框不跳变。
+              child: IndexedStack(
+                index: _tab.index,
+                alignment: AlignmentDirectional.topStart,
+                children: [
+                  for (final tab in _ShelfPanelTab.values)
+                    ExcludeFocus(
+                      key: ValueKey<_ShelfPanelTab>(tab),
+                      excluding: tab != _tab,
+                      child: SingleChildScrollView(
+                        key: const Key('unified-shelf-panel-scroll'),
+                        controller: _scrollControllers[tab],
+                        child: _buildTabContent(tab),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _ShelfPanelActions(
+              onCancel: widget.onCancel,
+              onApply: () => widget.onApply(
+                _filters,
+                _sortOption,
+                _displayMode,
+                _gridColumns.round(),
+              ),
+            ),
+          ],
         ),
-        shape: const StadiumBorder(),
-      ),
-      // 选中状态并入按钮自身的语义节点，读屏可读出当前分段。
-      child: Semantics(
-        selected: selected,
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

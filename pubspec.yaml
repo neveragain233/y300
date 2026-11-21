@@ -126,6 +126,7 @@ flutter:
     - assets/messages/grouppm.png
     - assets/messages/systempm.png
     - assets/prototypes/forum_html/
+    - assets/textures/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

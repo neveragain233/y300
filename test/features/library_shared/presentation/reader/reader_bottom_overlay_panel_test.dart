@@ -84,7 +84,7 @@ void main() {
   });
 
   testWidgets(
-    'action row groups related compact buttons and keeps download independent',
+    'action row renders separate circular compact buttons instead of merged pill',
     (tester) async {
       await tester.pumpWidget(
         _buildPanel(
@@ -97,31 +97,26 @@ void main() {
         ),
       );
 
-      final mode = find.byKey(const Key('shared-reader-bottom-action-mode'));
-      final catalog = find.byKey(
+      final keys = [
+        const Key('shared-reader-bottom-action-mode'),
         const Key('shared-reader-bottom-action-catalog'),
-      );
-      final display = find.byKey(
         const Key('shared-reader-bottom-action-display'),
-      );
-      final download = find.byKey(
         const Key('shared-reader-bottom-action-download'),
-      );
+      ];
+      final rects = [
+        for (final key in keys) tester.getRect(_surfaceOf(find.byKey(key))),
+      ];
 
-      final capsule = tester.getRect(_surfaceOf(mode));
-      expect(tester.getRect(_surfaceOf(catalog)), capsule);
-      expect(tester.getRect(_surfaceOf(display)), capsule);
-      final downloadSurface = tester.getRect(_surfaceOf(download));
-
-      // 视觉 32、组间 8；相关动作共用胶囊，下载是独立键。
-      expect(capsule.height, 32);
-      expect(capsule.width, 3 * 48);
-      expect(downloadSurface.height, 32);
-      expect(downloadSurface.left - capsule.right, 8);
-
-      // 48 命中区不随紧凑视觉缩小。
-      for (final finder in [mode, catalog, display, download]) {
-        expect(tester.getSize(finder).shortestSide, greaterThanOrEqualTo(48));
+      for (var i = 0; i < rects.length; i++) {
+        expect(rects[i].width, moreOrLessEquals(32, epsilon: 0.01));
+        expect(rects[i].height, moreOrLessEquals(32, epsilon: 0.01));
+        expect(
+          tester.getSize(find.byKey(keys[i])).shortestSide,
+          greaterThanOrEqualTo(48),
+        );
+        if (i > 0) {
+          expect(rects[i].left, greaterThan(rects[i - 1].right));
+        }
       }
 
       // 动作组在底栏居中。
@@ -129,7 +124,7 @@ void main() {
           .getSize(find.byKey(const Key('shared-reader-bottom-overlay-panel')))
           .width;
       expect(
-        (capsule.left + downloadSurface.right) / 2,
+        (rects.first.left + rects.last.right) / 2,
         moreOrLessEquals(panelWidth / 2, epsilon: 0.5),
       );
     },
@@ -153,15 +148,15 @@ void main() {
       ),
     );
 
-    final capsule = tester.getRect(
+    final first = tester.getRect(
       _surfaceOf(find.byKey(const Key('shared-reader-bottom-action-mode'))),
     );
-    final download = tester.getRect(
+    final last = tester.getRect(
       _surfaceOf(find.byKey(const Key('shared-reader-bottom-action-download'))),
     );
-    expect(download.right - capsule.left, lessThanOrEqualTo(480));
+    expect(last.right - first.left, lessThanOrEqualTo(480));
     expect(
-      (capsule.left + download.right) / 2,
+      (first.left + last.right) / 2,
       moreOrLessEquals(1400 / 2, epsilon: 0.5),
     );
   });
@@ -221,9 +216,7 @@ void main() {
     }
   });
 
-  testWidgets('compact action group uses one glass layer per surface', (
-    tester,
-  ) async {
+  testWidgets('each circular button owns one glass layer', (tester) async {
     await tester.pumpWidget(
       _buildPanel(
         glassLevel: AppGlassLevel.standard,
@@ -236,8 +229,8 @@ void main() {
       ),
     );
 
-    // 胶囊、下载独立键与进度行两端各一层玻璃。
-    expect(find.byType(LiquidGlass), findsNWidgets(4));
+    // 四个独立底栏圆钮与进度行两端各一层玻璃。
+    expect(find.byType(LiquidGlass), findsNWidgets(6));
   });
 }
 

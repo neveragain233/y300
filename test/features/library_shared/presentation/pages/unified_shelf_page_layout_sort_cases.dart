@@ -62,7 +62,10 @@ void _layoutSortCases() {
     await tester.tap(find.byIcon(Icons.filter_list).first);
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-1')),
+      find.descendant(
+        of: find.byKey(const Key('unified-shelf-panel-tabs')),
+        matching: find.text(AppLocalizationsZh().libraryShelfSort),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -144,7 +147,10 @@ void _layoutSortCases() {
     expect(find.text('有书签'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-1')),
+      find.descendant(
+        of: find.byKey(const Key('unified-shelf-panel-tabs')),
+        matching: find.text(AppLocalizationsZh().libraryShelfSort),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.text('章节数'), findsOneWidget);
@@ -224,7 +230,10 @@ void _layoutSortCases() {
     await tester.tap(find.byIcon(Icons.filter_list).first);
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
+      find.descendant(
+        of: find.byKey(const Key('unified-shelf-panel-tabs')),
+        matching: find.text(AppLocalizationsZh().libraryShelfDisplayMode),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(

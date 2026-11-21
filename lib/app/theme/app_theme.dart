@@ -11,6 +11,12 @@ import 'package:y300/app/theme/forum_thread_badge_theme.dart';
 final class AppTheme {
   const AppTheme._();
 
+  /// 墨水屏高对比描边色，用于按钮、胶囊、FAB 与玻璃回退表面。
+  static Color eInkBorderColor(Brightness brightness) =>
+      brightness == Brightness.dark
+      ? const Color(0xFFB0B0B0)
+      : const Color(0xFF2E2E2E);
+
   static ThemeData light() {
     return build(
       family: AppThemeFamily.warmPaper,
@@ -61,30 +67,22 @@ final class AppTheme {
     bool boldFont = false,
     bool eInk = false,
   }) {
-    final colorScheme =
-        scheme ??
-        _buildColorScheme(palette).copyWith(
-          primary: palette.primary,
-          onPrimary: palette.onPrimary,
-          surface: palette.surface,
-          onSurface: palette.onSurface,
-          surfaceContainerLowest: palette.surfaceContainerLowest,
-          surfaceContainer: palette.surfaceContainer,
-          surfaceContainerHighest: palette.surfaceContainerHighest,
-          onSurfaceVariant: palette.onSurfaceVariant,
-          outlineVariant: palette.outlineVariant,
-          secondaryContainer: palette.secondaryContainer,
-          onSecondaryContainer: palette.onSecondaryContainer,
-        );
-    // 墨水屏构建去掉 Material 3 的表面着色与阴影色，避免灰阶上叠出偏色。
     final resolvedScheme = eInk
-        ? colorScheme.copyWith(
-            outline: palette.outlineVariant,
-            surfaceTint: Colors.transparent,
-            shadow: Colors.transparent,
-            scrim: Colors.transparent,
-          )
-        : colorScheme;
+        ? _buildEInkColorScheme(palette)
+        : (scheme ??
+              _buildColorScheme(palette).copyWith(
+                primary: palette.primary,
+                onPrimary: palette.onPrimary,
+                surface: palette.surface,
+                onSurface: palette.onSurface,
+                surfaceContainerLowest: palette.surfaceContainerLowest,
+                surfaceContainer: palette.surfaceContainer,
+                surfaceContainerHighest: palette.surfaceContainerHighest,
+                onSurfaceVariant: palette.onSurfaceVariant,
+                outlineVariant: palette.outlineVariant,
+                secondaryContainer: palette.secondaryContainer,
+                onSecondaryContainer: palette.onSecondaryContainer,
+              ));
     final theme = ThemeData(
       useMaterial3: true,
       brightness: palette.brightness,
@@ -93,34 +91,36 @@ final class AppTheme {
       scaffoldBackgroundColor: palette.scaffoldBackground,
       appBarTheme: AppComponentThemeBuilder.appBarTheme(palette),
       navigationBarTheme: AppComponentThemeBuilder.navigationBarTheme(palette),
-      popupMenuTheme: AppComponentThemeBuilder.popupMenuTheme(colorScheme),
-      menuTheme: AppComponentThemeBuilder.menuTheme(colorScheme),
+      popupMenuTheme: AppComponentThemeBuilder.popupMenuTheme(resolvedScheme),
+      menuTheme: AppComponentThemeBuilder.menuTheme(resolvedScheme),
       dropdownMenuTheme: AppComponentThemeBuilder.dropdownMenuTheme(
-        colorScheme,
+        resolvedScheme,
       ),
-      bottomSheetTheme: AppComponentThemeBuilder.bottomSheetTheme(colorScheme),
-      dialogTheme: AppComponentThemeBuilder.dialogTheme(colorScheme),
-      snackBarTheme: AppComponentThemeBuilder.snackBarTheme(colorScheme),
+      bottomSheetTheme: AppComponentThemeBuilder.bottomSheetTheme(
+        resolvedScheme,
+      ),
+      dialogTheme: AppComponentThemeBuilder.dialogTheme(resolvedScheme),
+      snackBarTheme: AppComponentThemeBuilder.snackBarTheme(resolvedScheme),
       segmentedButtonTheme: AppComponentThemeBuilder.segmentedButtonTheme(
-        colorScheme,
+        resolvedScheme,
       ),
-      sliderTheme: AppComponentThemeBuilder.sliderTheme(colorScheme),
+      sliderTheme: AppComponentThemeBuilder.sliderTheme(resolvedScheme),
       filledButtonTheme: AppComponentThemeBuilder.filledButtonTheme(),
       textButtonTheme: AppComponentThemeBuilder.textButtonTheme(),
       outlinedButtonTheme: AppComponentThemeBuilder.outlinedButtonTheme(),
-      listTileTheme: AppComponentThemeBuilder.listTileTheme(colorScheme),
-      dividerTheme: AppComponentThemeBuilder.dividerTheme(colorScheme),
-      iconButtonTheme: AppComponentThemeBuilder.iconButtonTheme(colorScheme),
+      listTileTheme: AppComponentThemeBuilder.listTileTheme(resolvedScheme),
+      dividerTheme: AppComponentThemeBuilder.dividerTheme(resolvedScheme),
+      iconButtonTheme: AppComponentThemeBuilder.iconButtonTheme(resolvedScheme),
       inputDecorationTheme: AppComponentThemeBuilder.inputDecorationTheme(
-        colorScheme,
+        resolvedScheme,
       ),
-      chipTheme: AppComponentThemeBuilder.chipTheme(colorScheme),
-      cardTheme: AppComponentThemeBuilder.cardTheme(colorScheme)
+      chipTheme: AppComponentThemeBuilder.chipTheme(resolvedScheme),
+      cardTheme: AppComponentThemeBuilder.cardTheme(resolvedScheme)
           .copyWith(color: palette.surfaceContainer),
       extensions: <ThemeExtension<dynamic>>[
         Y300BrandColors.fromPalette(palette, highContrast: eInk),
         ForumThreadBadgeTheme.fromColorScheme(
-          colorScheme,
+          resolvedScheme,
           standardBackground: eInk ? palette.primary : palette.appBarBackground,
           standardForeground: eInk
               ? palette.onPrimary
@@ -141,12 +141,55 @@ final class AppTheme {
     return result;
   }
 
-  /// 墨水屏上阴影与抬升会产生整块重绘和残影，统一压平为实色描边表面。
+  /// 纯中性灰阶 ColorScheme，不经由 ColorScheme.fromSeed，彻底杜绝粉色/彩色容器残留。
+  static ColorScheme _buildEInkColorScheme(AppThemePalette palette) {
+    final border = eInkBorderColor(palette.brightness);
+    return ColorScheme(
+      brightness: palette.brightness,
+      primary: palette.primary,
+      onPrimary: palette.onPrimary,
+      primaryContainer: palette.surface,
+      onPrimaryContainer: palette.onSurface,
+      secondary: palette.primary,
+      onSecondary: palette.onPrimary,
+      secondaryContainer: palette.secondaryContainer,
+      onSecondaryContainer: palette.onSecondaryContainer,
+      tertiary: palette.onSurfaceVariant,
+      onTertiary: palette.surface,
+      tertiaryContainer: palette.surfaceContainerHighest,
+      onTertiaryContainer: palette.onSurface,
+      error: palette.onSurface,
+      onError: palette.surface,
+      errorContainer: palette.surfaceContainerHighest,
+      onErrorContainer: palette.onSurface,
+      surface: palette.surface,
+      onSurface: palette.onSurface,
+      surfaceDim: palette.surfaceContainerHighest,
+      surfaceBright: palette.surface,
+      surfaceContainerLowest: palette.surfaceContainerLowest,
+      surfaceContainerLow: palette.surface,
+      surfaceContainer: palette.surfaceContainer,
+      surfaceContainerHigh: palette.surfaceContainerHighest,
+      surfaceContainerHighest: palette.surfaceContainerHighest,
+      onSurfaceVariant: palette.onSurfaceVariant,
+      outline: border,
+      outlineVariant: palette.outlineVariant,
+      shadow: Colors.transparent,
+      scrim: Colors.transparent,
+      inverseSurface: palette.onSurface,
+      onInverseSurface: palette.surface,
+      inversePrimary: palette.surface,
+      surfaceTint: Colors.transparent,
+    );
+  }
+
+  /// 墨水屏上阴影与抬升会产生整块重绘和残影，统一压平为黑白高对比、无阴影描边表面。
   static ThemeData _flattenEInkSurfaces(
     ThemeData theme,
     AppThemePalette palette,
   ) {
     const shadow = Colors.transparent;
+    final border = eInkBorderColor(palette.brightness);
     // 选中/命中高亮在灰阶屏上不能靠彩色区分，改为中性遮罩。
     final highlight = palette.brightness == Brightness.dark
         ? const Color(0x33FFFFFF)
@@ -158,7 +201,46 @@ final class AppTheme {
               : extension,
         )
         .toList(growable: false);
-    const noAnimationButton = ButtonStyle(animationDuration: Duration.zero);
+    final disabledFg = palette.onSurface.withValues(alpha: 0.38);
+    WidgetStateProperty<BorderSide?> sideProp() =>
+        WidgetStateProperty.resolveWith<BorderSide?>(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.disabled)
+                ? palette.outlineVariant
+                : border,
+            width: 1,
+          ),
+        );
+    const zeroElevation = WidgetStatePropertyAll<double>(0);
+    const transparentProp = WidgetStatePropertyAll<Color>(Colors.transparent);
+    const noAnimationButton = ButtonStyle(
+      animationDuration: Duration.zero,
+      elevation: zeroElevation,
+      shadowColor: transparentProp,
+      surfaceTintColor: transparentProp,
+    );
+    final filledStyle = noAnimationButton.copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith<Color>(
+        (states) => states.contains(WidgetState.disabled)
+            ? palette.surfaceContainerHighest
+            : palette.primary,
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+        (states) => states.contains(WidgetState.disabled)
+            ? disabledFg
+            : palette.onPrimary,
+      ),
+      side: sideProp(),
+    );
+    final outlinedStyle = noAnimationButton.copyWith(
+      backgroundColor: WidgetStatePropertyAll<Color>(palette.surface),
+      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+        (states) => states.contains(WidgetState.disabled)
+            ? disabledFg
+            : palette.onSurface,
+      ),
+      side: sideProp(),
+    );
     return theme.copyWith(
       extensions: extensions,
       splashFactory: NoSplash.splashFactory,
@@ -183,23 +265,33 @@ final class AppTheme {
         shadowColor: shadow,
       ),
       snackBarTheme: theme.snackBarTheme.copyWith(elevation: 0),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        disabledElevation: 0,
+        backgroundColor: palette.surface,
+        foregroundColor: palette.onSurface,
+        shape: StadiumBorder(side: BorderSide(color: border, width: 1)),
+      ),
       expansionTileTheme: theme.expansionTileTheme.copyWith(
         expansionAnimationStyle: AnimationStyle.noAnimation,
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: noAnimationButton.merge(theme.filledButtonTheme.style),
+        style: filledStyle.merge(theme.filledButtonTheme.style),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: noAnimationButton.merge(theme.textButtonTheme.style),
+        style: outlinedStyle.merge(theme.textButtonTheme.style),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: noAnimationButton.merge(theme.outlinedButtonTheme.style),
+        style: outlinedStyle.merge(theme.outlinedButtonTheme.style),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: noAnimationButton.merge(theme.iconButtonTheme.style),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: noAnimationButton.merge(theme.elevatedButtonTheme.style),
+        style: outlinedStyle.merge(theme.elevatedButtonTheme.style),
       ),
       segmentedButtonTheme: theme.segmentedButtonTheme.copyWith(
         style: noAnimationButton.merge(theme.segmentedButtonTheme.style),

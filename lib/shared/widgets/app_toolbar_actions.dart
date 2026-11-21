@@ -5,6 +5,7 @@ import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
 import 'package:prism_ui/theme_data.dart' as prism_theme;
 import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
@@ -101,8 +102,9 @@ class AppToolbarActions extends StatelessWidget {
     );
     Widget surface(List<Widget> actions) {
       // 行布局保持 48 命中高度，玻璃按尺寸档收在中央。
+      final eInk = EInkModeScope.of(context);
       final glass = AppGlassSurface(
-        baseColor: scheme.surfaceContainerHigh,
+        baseColor: eInk ? scheme.surface : scheme.surfaceContainerHigh,
         borderRadius: size.radius,
         child: const SizedBox.expand(),
       );
@@ -216,6 +218,7 @@ class AppToolbarIconButton extends StatelessWidget {
       return button;
     }
     // 玻璃圆底随尺寸档收在命中区中央，按钮本身仍占满 48 命中区。
+    final eInk = EInkModeScope.of(context);
     final surface = Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
@@ -224,7 +227,9 @@ class AppToolbarIconButton extends StatelessWidget {
           dimension: size.visual,
           child: AppGlassSurface(
             level: glassLevel,
-            baseColor: baseColor ?? scheme.surfaceContainerHigh,
+            baseColor:
+                baseColor ??
+                (eInk ? scheme.surface : scheme.surfaceContainerHigh),
             borderRadius: size.radius,
             child: const SizedBox.expand(),
           ),
@@ -304,10 +309,12 @@ class AppToolbarBackButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final foreground = foregroundColor ?? scheme.onSurface;
     final reduceMotion = AppMotion.reduceMotion(context);
+    final eInk = EInkModeScope.of(context);
     final glassButton = _ToolbarGlassButton(
       size: size,
       level: glassLevel,
-      baseColor: baseColor ?? scheme.surfaceContainerHigh,
+      baseColor:
+          baseColor ?? (eInk ? scheme.surface : scheme.surfaceContainerHigh),
       child: BackButton(
         style: _materialToolbarButtonStyle(
           foreground,
@@ -351,10 +358,12 @@ class AppToolbarCloseButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final foreground = foregroundColor ?? scheme.onSurface;
     final reduceMotion = AppMotion.reduceMotion(context);
+    final eInk = EInkModeScope.of(context);
     final glassButton = _ToolbarGlassButton(
       size: size,
       level: glassLevel,
-      baseColor: baseColor ?? scheme.surfaceContainerHigh,
+      baseColor:
+          baseColor ?? (eInk ? scheme.surface : scheme.surfaceContainerHigh),
       child: IconButton(
         key: buttonKey,
         tooltip: tooltip,
@@ -438,6 +447,7 @@ class _ToolbarGlassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final eInk = EInkModeScope.of(context);
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
@@ -446,7 +456,9 @@ class _ToolbarGlassButton extends StatelessWidget {
           dimension: size.visual,
           child: AppGlassSurface(
             level: level,
-            baseColor: baseColor ?? scheme.surfaceContainerHigh,
+            baseColor:
+                baseColor ??
+                (eInk ? scheme.surface : scheme.surfaceContainerHigh),
             borderRadius: size.radius,
             child: const SizedBox.expand(),
           ),

@@ -3,11 +3,71 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
+import 'package:y300/features/novel/data/models/novel_models.dart';
+import 'package:y300/features/novel/presentation/widgets/novel_reader_background.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_page_motion.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_paragraph_motion.dart';
 
 void main() {
+  test('isFullSheet covers slide and sheet effects, excluding staggered', () {
+    expect(
+      NovelReaderPageMotion.isFullSheet(NovelReaderPageEffect.slide),
+      isTrue,
+    );
+    expect(
+      NovelReaderPageMotion.isFullSheet(NovelReaderPageEffect.cover),
+      isTrue,
+    );
+    expect(
+      NovelReaderPageMotion.isFullSheet(NovelReaderPageEffect.paper),
+      isTrue,
+    );
+    expect(
+      NovelReaderPageMotion.isFullSheet(NovelReaderPageEffect.fade),
+      isTrue,
+    );
+    expect(
+      NovelReaderPageMotion.isFullSheet(NovelReaderPageEffect.staggered),
+      isFalse,
+    );
+  });
+
+  testWidgets(
+    'NovelReaderPageTransition paints texture on page sheet except staggered',
+    (tester) async {
+      final controller = PageController();
+      addTearDown(controller.dispose);
+      for (final effect in NovelReaderPageEffect.values) {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: 300,
+              height: 400,
+              child: NovelReaderPageTransition(
+                controller: controller,
+                index: 0,
+                effect: effect,
+                reverse: false,
+                paperColor: const Color(0xFFFDF8F0),
+                backgroundTexture: NovelReaderBackgroundTexture.paper,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        );
+        if (effect == NovelReaderPageEffect.staggered) {
+          expect(find.byType(NovelReaderPaperSurface), findsNothing);
+        } else {
+          final surface = tester.widget<NovelReaderPaperSurface>(
+            find.byType(NovelReaderPaperSurface),
+          );
+          expect(surface.texture, NovelReaderBackgroundTexture.paper);
+        }
+      }
+    },
+  );
+
   test('live snap speed changes time without changing page destination', () {
     var scale = 1.0;
     final physics = NovelReaderPageScrollPhysics(durationScale: () => scale);

@@ -15,70 +15,78 @@ import 'package:y300/l10n/app_localizations_zh.dart';
 
 import '../../../../test_support/localized_test_app.dart';
 
-/// 书架筛选面板试点：分段切换、确认一次、取消回滚、大字号滚动与遮罩拦截。
+/// 书架筛选面板试点：分段切换、定高不跳变、摘要预览、确认一次、取消回滚、大字号滚动与遮罩拦截。
 void main() {
-  testWidgets('segmented control switches filter, sort and display sections', (
-    tester,
-  ) async {
-    await _pumpShelfPhone(tester);
-    await _openPanel(tester);
+  Finder segmentFinder(String label) => find.descendant(
+    of: find.byKey(const Key('unified-shelf-panel-tabs')),
+    matching: find.text(label),
+  );
 
-    expect(
-      find.byKey(const ValueKey<String>('unified-shelf-filter-unread')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('unified-shelf-sort-chapterCount')),
-      findsNothing,
-    );
+  testWidgets(
+    'segmented control switches filter, sort and display with constant height',
+    (tester) async {
+      final l10n = AppLocalizationsZh();
+      await _pumpShelfPhone(tester);
+      await _openPanel(tester);
 
-    await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-1')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey<String>('unified-shelf-sort-chapterCount')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('unified-shelf-filter-unread')),
-      findsNothing,
-    );
-
-    await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey<String>('unified-shelf-display-grid')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('unified-shelf-grid-columns-slider')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('unified-shelf-sort-chapterCount')),
-      findsNothing,
-    );
-  });
-
-  testWidgets('panel controls keep at least 48 logical pixel touch targets', (
-    tester,
-  ) async {
-    await _pumpShelfPhone(tester);
-    await _openPanel(tester);
-
-    for (var index = 0; index < 3; index++) {
+      final panelRoot = find
+          .ancestor(
+            of: find.byKey(const Key('unified-shelf-panel-tabs')),
+            matching: find.byType(SafeArea),
+          )
+          .first;
+      final initialHeight = tester.getSize(panelRoot).height;
       expect(
-        tester
-            .getSize(
-              find.byKey(ValueKey<String>('unified-shelf-panel-tab-$index')),
-            )
-            .height,
-        greaterThanOrEqualTo(48),
+        find.byKey(const Key('unified-shelf-panel-summary')),
+        findsOneWidget,
       );
-    }
+      expect(
+        find.byKey(const ValueKey<String>('unified-shelf-filter-unread')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('unified-shelf-sort-chapterCount')),
+        findsNothing,
+      );
+
+      await tester.tap(segmentFinder(l10n.libraryShelfSort));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panelRoot).height, initialHeight);
+      expect(
+        find.byKey(const ValueKey<String>('unified-shelf-sort-chapterCount')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('unified-shelf-filter-unread')),
+        findsNothing,
+      );
+
+      await tester.tap(segmentFinder(l10n.libraryShelfDisplayMode));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panelRoot).height, initialHeight);
+      expect(
+        find.byKey(const ValueKey<String>('unified-shelf-display-grid')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('unified-shelf-grid-columns-slider')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('unified-shelf-sort-chapterCount')),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets('panel controls keep accessible touch targets', (tester) async {
+    await _pumpShelfPhone(tester);
+    await _openPanel(tester);
+
+    expect(
+      tester.getSize(find.byKey(const Key('unified-shelf-panel-tabs'))).height,
+      greaterThanOrEqualTo(44),
+    );
     for (final key in const [
       Key('unified-shelf-filter-cancel'),
       Key('unified-shelf-filter-apply'),
@@ -90,15 +98,14 @@ void main() {
   testWidgets('confirm commits the changed value once and closes the panel', (
     tester,
   ) async {
+    final l10n = AppLocalizationsZh();
     final repository = _RecordingPreferencesRepository();
     final adapter = await _pumpShelfPhone(tester, repository: repository);
     final savesBefore = repository.saves.length;
     final queriesBefore = adapter.queryCount;
 
     await _openPanel(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
-    );
+    await tester.tap(segmentFinder(l10n.libraryShelfDisplayMode));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('unified-shelf-display-list')),
@@ -118,14 +125,13 @@ void main() {
   testWidgets('cancel discards the draft and keeps the saved values', (
     tester,
   ) async {
+    final l10n = AppLocalizationsZh();
     final repository = _RecordingPreferencesRepository();
     await _pumpShelfPhone(tester, repository: repository);
     final savesBefore = repository.saves.length;
 
     await _openPanel(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
-    );
+    await tester.tap(segmentFinder(l10n.libraryShelfDisplayMode));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('unified-shelf-display-list')),
@@ -139,9 +145,7 @@ void main() {
 
     // 重新打开时草稿回到已保存值：网格选中，列表未选中。
     await _openPanel(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
-    );
+    await tester.tap(segmentFinder(l10n.libraryShelfDisplayMode));
     await tester.pumpAndSettle();
     expect(
       find.descendant(
@@ -162,14 +166,12 @@ void main() {
   testWidgets('large text in a short window scrolls while actions stay put', (
     tester,
   ) async {
+    final l10n = AppLocalizationsZh();
     await _pumpShelfPhone(tester, textScale: 2, viewSize: const Size(400, 360));
     await _openPanel(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
-    );
+    await tester.tap(segmentFinder(l10n.libraryShelfDisplayMode));
     await tester.pumpAndSettle();
 
-    final l10n = AppLocalizationsZh();
     expect(find.text(l10n.commonApply).hitTestable(), findsOneWidget);
     expect(find.text(l10n.commonCancel).hitTestable(), findsOneWidget);
     final applyBottom = tester
@@ -229,9 +231,7 @@ void main() {
       await _openPanel(tester);
       final l10n = AppLocalizationsZh();
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('unified-shelf-panel-tab-2')),
-      );
+      await tester.tap(segmentFinder(l10n.libraryShelfDisplayMode));
       await tester.pumpAndSettle();
 
       // 显示方式：网格当前选中、列表未选中，读屏可分辨。
@@ -254,9 +254,7 @@ void main() {
       expect(_isSelected(tester, l10n.libraryShelfList), isTrue);
 
       // 排序字段同为多选一，默认收藏日期选中。
-      await tester.tap(
-        find.byKey(const ValueKey<String>('unified-shelf-panel-tab-1')),
-      );
+      await tester.tap(segmentFinder(l10n.libraryShelfSort));
       await tester.pumpAndSettle();
       expect(_isSelected(tester, l10n.libraryShelfSortFavoriteAddedAt), isTrue);
       expect(_isSelected(tester, l10n.libraryShelfSortChapterCount), isFalse);

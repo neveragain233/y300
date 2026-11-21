@@ -4,6 +4,7 @@ import 'package:y300/features/library_shared/presentation/reader/reader_paged_tu
 
 import '../models/novel_reader_paragraph_clock.dart';
 
+import 'novel_reader_background.dart';
 import 'novel_reader_paragraph_motion.dart';
 import 'novel_reader_paper_turn.dart';
 import 'novel_reader_sheet_motion.dart';
@@ -38,9 +39,7 @@ abstract final class NovelReaderPageMotion {
   };
 
   static bool isFullSheet(NovelReaderPageEffect effect) =>
-      effect == NovelReaderPageEffect.paper ||
-      effect == NovelReaderPageEffect.fade ||
-      effect == NovelReaderPageEffect.cover;
+      effect != NovelReaderPageEffect.staggered;
   static Duration duration(
     NovelReaderPageEffect effect,
     NovelReaderPageSpeed speed,
@@ -98,6 +97,7 @@ class NovelReaderPageTransition extends StatelessWidget {
     required this.reverse,
     required this.paperColor,
     required this.child,
+    this.backgroundTexture = NovelReaderBackgroundTexture.solid,
     this.paperClock,
     this.paragraphClock,
     this.paperInsets = EdgeInsets.zero,
@@ -107,6 +107,7 @@ class NovelReaderPageTransition extends StatelessWidget {
   final NovelReaderPageEffect effect;
   final bool reverse;
   final Color paperColor;
+  final NovelReaderBackgroundTexture backgroundTexture;
   final Widget child;
   final NovelReaderPaperClock? paperClock;
   final NovelReaderParagraphClock? paragraphClock;
@@ -118,53 +119,69 @@ class NovelReaderPageTransition extends StatelessWidget {
       final insets = NovelReaderPageMotion.isFullSheet(effect)
           ? paperInsets
           : EdgeInsets.zero;
-      return AnimatedBuilder(
-        animation: controller,
-        child: Transform.translate(
-          offset: Offset(-insets.left, -insets.top),
-          child: OverflowBox(
-            alignment: Alignment.topLeft,
-            minWidth: constraints.maxWidth + insets.horizontal,
-            maxWidth: constraints.maxWidth + insets.horizontal,
-            minHeight: constraints.maxHeight + insets.vertical,
-            maxHeight: constraints.maxHeight + insets.vertical,
-            child: NovelReaderPaperTurn(
-              clock: paperClock,
-              controller: controller,
-              index: index,
-              reverse:
-                  reverse != (Directionality.of(context) == TextDirection.rtl),
-              enabled: effect == NovelReaderPageEffect.paper,
-              paperColor: paperColor,
-              child: NovelReaderSheetMotion(
-                controller: controller,
-                index: index,
-                effect: effect,
-                reverse:
-                    reverse !=
-                    (Directionality.of(context) == TextDirection.rtl),
-                child: ColoredBox(
-                  color: effect == NovelReaderPageEffect.staggered
-                      ? const Color(0x00000000)
-                      : paperColor,
+      final sheetWidth = constraints.maxWidth + insets.horizontal;
+      final sheetBody = NovelReaderPaperTurn(
+        clock: paperClock,
+        controller: controller,
+        index: index,
+        reverse: reverse != (Directionality.of(context) == TextDirection.rtl),
+        enabled: effect == NovelReaderPageEffect.paper,
+        paperColor: paperColor,
+        child: NovelReaderSheetMotion(
+          controller: controller,
+          index: index,
+          effect: effect,
+          reverse: reverse != (Directionality.of(context) == TextDirection.rtl),
+          child: effect == NovelReaderPageEffect.staggered
+              ? ColoredBox(
+                  color: const Color(0x00000000),
                   child: Padding(
                     padding: insets,
                     child: NovelReaderParagraphTurnPage(
                       controller: controller,
                       clock: paragraphClock,
-                      travelWidth:
-                          constraints.maxWidth + paperInsets.horizontal,
+                      travelWidth: sheetWidth,
                       index: index,
                       reverse: reverse,
-                      enabled: effect == NovelReaderPageEffect.staggered,
+                      enabled: true,
+                      child: RepaintBoundary(child: child),
+                    ),
+                  ),
+                )
+              : NovelReaderPaperSurface(
+                  color: paperColor,
+                  texture: backgroundTexture,
+                  child: Padding(
+                    padding: insets,
+                    child: NovelReaderParagraphTurnPage(
+                      controller: controller,
+                      clock: paragraphClock,
+                      travelWidth: sheetWidth,
+                      index: index,
+                      reverse: reverse,
+                      enabled: false,
                       child: RepaintBoundary(child: child),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
         ),
+      );
+      final animatedChild = insets == EdgeInsets.zero
+          ? sheetBody
+          : Transform.translate(
+              offset: Offset(-insets.left, -insets.top),
+              child: OverflowBox(
+                alignment: Alignment.topLeft,
+                minWidth: sheetWidth,
+                maxWidth: sheetWidth,
+                minHeight: constraints.maxHeight + insets.vertical,
+                maxHeight: constraints.maxHeight + insets.vertical,
+                child: sheetBody,
+              ),
+            );
+      return AnimatedBuilder(
+        animation: controller,
+        child: animatedChild,
         builder: (context, body) {
           final physicalReverse =
               reverse != (Directionality.of(context) == TextDirection.rtl);

@@ -66,6 +66,9 @@ void main() {
           ),
         ),
       );
+      await tester.runAsync(
+        () => NovelReaderTextureCache.instance.ensureLoaded(texture),
+      );
       await tester.pump();
 
       final customPaintFinder = find.byKey(

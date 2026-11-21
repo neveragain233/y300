@@ -9,9 +9,14 @@ import 'package:y300/features/library_shared/presentation/reader/reader_top_over
 
 class ReaderOverlayController extends ChangeNotifier {
   bool _isMenuVisible = false;
+  bool _isOverlayDismissed = true;
   _ReaderOverlayScaffoldState? _state;
 
   bool get isMenuVisible => _state?._isMenuVisible ?? _isMenuVisible;
+
+  /// True only once the overlay exit animation has fully reached `dismissed`.
+  bool get isOverlayDismissed =>
+      _state?._isOverlayDismissed ?? _isOverlayDismissed;
 
   void showMenu() {
     final state = _state;
@@ -43,6 +48,7 @@ class ReaderOverlayController extends ChangeNotifier {
   void _attach(_ReaderOverlayScaffoldState state) {
     _state = state;
     _isMenuVisible = state._isMenuVisible;
+    _isOverlayDismissed = state._isOverlayDismissed;
   }
 
   void _detach(_ReaderOverlayScaffoldState state) {
@@ -50,6 +56,7 @@ class ReaderOverlayController extends ChangeNotifier {
       return;
     }
     _isMenuVisible = state._isMenuVisible;
+    _isOverlayDismissed = state._isOverlayDismissed;
     _state = null;
   }
 
@@ -61,11 +68,21 @@ class ReaderOverlayController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _syncOverlayDismissed(bool value) {
+    if (_isOverlayDismissed == value) {
+      return;
+    }
+    _isOverlayDismissed = value;
+    notifyListeners();
+  }
+
   void _setDetachedValue(bool value) {
-    if (_isMenuVisible == value) {
+    final nextDismissed = !value;
+    if (_isMenuVisible == value && _isOverlayDismissed == nextDismissed) {
       return;
     }
     _isMenuVisible = value;
+    _isOverlayDismissed = nextDismissed;
     notifyListeners();
   }
 }
@@ -93,9 +110,8 @@ class ReaderOverlayScaffold extends StatefulWidget {
   final ReaderBottomBarConfig bottomBar;
   final Widget child;
 
-  /// Display-only status shown below the tap-zone viewport for the whole
-  /// reading session. It is intentionally outside [child] so scroll and tap
-  /// geometry never include it.
+  /// Display-only status overlaid at the bottom edge of the viewport so page
+  /// turns and paper textures extend full-bleed underneath it.
   final Widget? persistentFooter;
   final ReaderOverlayController? controller;
   final VoidCallback? onLeftTap;
@@ -118,6 +134,7 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   late final Animation<Offset> _topSlideAnimation;
   late final Animation<Offset> _bottomSlideAnimation;
   late bool _isMenuVisible;
+  late bool _isOverlayDismissed;
   final _topFocus = FocusScopeNode();
   final _bottomFocus = FocusScopeNode();
 
@@ -127,11 +144,12 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
     _isMenuVisible =
         widget.menuInitiallyVisible ||
         (widget.controller?.isMenuVisible ?? false);
+    _isOverlayDismissed = !_isMenuVisible;
     _animationController = AnimationController(
       vsync: this,
       duration: widget.animationDuration,
       value: _isMenuVisible ? 1 : 0,
-    );
+    )..addStatusListener(_handleAnimationStatus);
     final curve = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
@@ -147,6 +165,17 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
     widget.controller?._attach(this);
   }
 
+  void _handleAnimationStatus(AnimationStatus status) {
+    final dismissed = status == AnimationStatus.dismissed && !_isMenuVisible;
+    if (_isOverlayDismissed == dismissed) {
+      return;
+    }
+    setState(() {
+      _isOverlayDismissed = dismissed;
+    });
+    widget.controller?._syncOverlayDismissed(dismissed);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -160,6 +189,11 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
         : widget.animationDuration;
     if (reduce) {
       _animationController.value = _isMenuVisible ? 1 : 0;
+      final dismissed = !_isMenuVisible;
+      if (_isOverlayDismissed != dismissed) {
+        _isOverlayDismissed = dismissed;
+        widget.controller?._syncOverlayDismissed(dismissed);
+      }
     }
   }
 
@@ -181,7 +215,9 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
   @override
   void dispose() {
     widget.controller?._detach(this);
-    _animationController.dispose();
+    _animationController
+      ..removeStatusListener(_handleAnimationStatus)
+      ..dispose();
     _topFocus.dispose();
     _bottomFocus.dispose();
     super.dispose();
@@ -192,32 +228,28 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
     return Stack(
       key: const Key('shared-reader-overlay-scaffold'),
       children: [
-        Column(
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ReaderTapZones(
-                    enabled: widget.tapZonesEnabled,
-                    blockedListenable: widget.tapZonesBlockedListenable,
-                    gestureCoordinator: widget.gestureCoordinator,
-                    bottomSafeFraction: widget.bottomSafeFraction,
-                    onCenterTap: _handleCenterTap,
-                    onLeftTap: widget.onLeftTap,
-                    onRightTap: widget.onRightTap,
-                    child: widget.child,
-                  ),
-                ],
-              ),
-            ),
-            if (widget.persistentFooter != null)
-              KeyedSubtree(
+        ReaderTapZones(
+          enabled: widget.tapZonesEnabled,
+          blockedListenable: widget.tapZonesBlockedListenable,
+          gestureCoordinator: widget.gestureCoordinator,
+          bottomSafeFraction: widget.bottomSafeFraction,
+          onCenterTap: _handleCenterTap,
+          onLeftTap: widget.onLeftTap,
+          onRightTap: widget.onRightTap,
+          child: widget.child,
+        ),
+        if (widget.persistentFooter != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: KeyedSubtree(
                 key: const Key('shared-reader-persistent-footer-slot'),
                 child: widget.persistentFooter!,
               ),
-          ],
-        ),
+            ),
+          ),
         Positioned(
           key: const Key('shared-reader-top-overlay'),
           top: 0,
@@ -282,7 +314,13 @@ class _ReaderOverlayScaffoldState extends State<ReaderOverlayScaffold>
     }
     setState(() {
       _isMenuVisible = visible;
+      if (visible) {
+        _isOverlayDismissed = false;
+      }
     });
+    if (visible) {
+      widget.controller?._syncOverlayDismissed(false);
+    }
     widget.controller?._syncFromState(visible);
     if (_isMenuVisible) {
       _animationController.forward();

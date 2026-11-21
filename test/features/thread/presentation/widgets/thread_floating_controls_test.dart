@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/liquid_glass.dart';
 import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
 import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/thread/domain/models/thread_controls_preferences.dart';
 import 'package:y300/features/thread/presentation/services/thread_floor_navigation_coordinator.dart';
@@ -461,17 +462,24 @@ void main() {
       final scheme = Theme.of(
         tester.element(find.byType(ThreadFloatingControls)),
       ).colorScheme;
-      final borderedBoxes = find.byWidgetPredicate((widget) {
-        if (widget is! DecoratedBox ||
-            widget.position != DecorationPosition.foreground) {
-          return false;
-        }
-        final decoration = widget.decoration;
-        return decoration is BoxDecoration &&
-            decoration.borderRadius == BorderRadius.circular(28) &&
-            decoration.border == Border.all(color: scheme.outlineVariant);
-      });
-      expect(borderedBoxes, findsOneWidget);
+      final borderedMaterials = find.descendant(
+        of: find.byType(AppGlassSurface),
+        matching: find.byWidgetPredicate((widget) {
+          if (widget is! Material) {
+            return false;
+          }
+          final shape = widget.shape;
+          return widget.elevation == 0 &&
+              shape is RoundedRectangleBorder &&
+              shape.borderRadius == BorderRadius.circular(28) &&
+              shape.side ==
+                  BorderSide(
+                    color: AppTheme.eInkBorderColor(scheme.brightness),
+                    width: 1,
+                  );
+        }),
+      );
+      expect(borderedMaterials, findsOneWidget);
 
       final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
       final opacity = tester.widget<AnimatedOpacity>(

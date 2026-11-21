@@ -7,13 +7,12 @@ import 'continuous_image_extent_observer.dart';
 
 enum ContinuousImageReaderMode { vertical, horizontal }
 
-typedef ContinuousImageReaderItemBuilder =
-    Widget Function(
-      BuildContext context,
-      ContinuousImageItem item,
-      int index, {
-      required bool paged,
-    });
+typedef ContinuousImageReaderItemBuilder = Widget Function(
+  BuildContext context,
+  ContinuousImageItem item,
+  int index, {
+  required bool paged,
+});
 
 class ContinuousImageReaderView extends StatelessWidget {
   const ContinuousImageReaderView({
@@ -35,6 +34,7 @@ class ContinuousImageReaderView extends StatelessWidget {
     this.horizontalTrailingBuilder,
     this.horizontalAdvanceBuilder,
     this.horizontalPagePadding = EdgeInsets.zero,
+    this.verticalPadding = EdgeInsets.zero,
     this.verticalListKey = const Key('continuous-image-reader-list'),
     this.horizontalPageKey = const Key('continuous-image-reader-page-view'),
     this.slotKeyPrefix = 'continuous-image-reader-slot',
@@ -58,6 +58,7 @@ class ContinuousImageReaderView extends StatelessWidget {
   final WidgetBuilder? horizontalTrailingBuilder;
   final WidgetBuilder? horizontalAdvanceBuilder;
   final EdgeInsetsGeometry horizontalPagePadding;
+  final EdgeInsetsGeometry verticalPadding;
   final Key verticalListKey;
   final Key horizontalPageKey;
   final String slotKeyPrefix;
@@ -84,7 +85,7 @@ class ContinuousImageReaderView extends StatelessWidget {
       key: verticalListKey,
       controller: scrollController,
       scrollCacheExtent: scrollCacheExtent,
-      padding: EdgeInsets.zero,
+      padding: verticalPadding,
       itemCount: items.length + trailingCount,
       itemBuilder: (context, index) {
         if (index >= items.length) {

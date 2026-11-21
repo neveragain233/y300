@@ -28,7 +28,6 @@ import 'package:y300/features/reader_shared/presentation/engine/reader_capabilit
 import 'package:y300/features/reader_shared/presentation/engine/reader_background_resolver.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_display_settings_sheet.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_image_session_coordinator.dart';
-import 'package:y300/features/reader_shared/presentation/engine/reader_page_indicator_overlay.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_paged_image_fit_surface.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_position_state.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_restore_coordinator.dart';
@@ -152,10 +151,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   int? get _effectivePreviewIndex =>
       _thumbnailPreviewIndex ?? _sliderPreviewIndex;
   Size? _lastReaderLayoutSize;
-
-  final ValueNotifier<bool> _pageIndicatorHighlighted = ValueNotifier(false);
-  bool _pageIndicatorVisible = false;
-  Timer? _pageIndicatorDimTimer;
 
   final Set<int> _reportedVisibleImageIndexes = <int>{};
 
@@ -392,8 +387,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _gestureCoordinator.dispose();
     _zoomGate.dispose();
     _activePagedIndex.dispose();
-    _pageIndicatorDimTimer?.cancel();
-    _pageIndicatorHighlighted.dispose();
     _verticalPositionDriver.dispose();
     _sessionPreloadCoordinator.dispose();
     _imageSessionStore.dispose();
@@ -466,15 +459,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       vertical: mode == ContinuousImageReaderMode.vertical,
       pagedVisible: _pagedPosition.isTail,
     );
-    _pageIndicatorVisible =
-        !_overlayController.isMenuVisible &&
-        !_tailActionController.visible &&
-        preferences.showPageIndicator;
-    if (!_pageIndicatorVisible) {
-      _pageIndicatorDimTimer?.cancel();
-      _pageIndicatorDimTimer = null;
-      _pageIndicatorHighlighted.value = false;
-    }
 
     // Chrome and viewport must retire together: a chapter can change while a
     // modal is dismissing and the old tail's semantics are still offstage.
@@ -501,6 +485,11 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
               gestureCoordinator: _gestureCoordinator,
               topBar: _buildTopBar(engineContext),
               bottomBar: _buildBottomBar(engineContext, preferences),
+              persistentFooter: _buildPersistentFooter(
+                engineContext,
+                preferences,
+                background,
+              ),
               onLeftTap: mode == ContinuousImageReaderMode.vertical
                   ? null
                   : () => _turnPageByTap(
@@ -525,16 +514,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
                 mode: mode,
                 preferences: preferences,
                 engineContext: engineContext,
-              ),
-            ),
-            ValueListenableBuilder<bool>(
-              valueListenable: _pageIndicatorHighlighted,
-              builder: (context, highlighted, _) => ReaderPageIndicatorOverlay(
-                visible: _pageIndicatorVisible,
-                highlighted: highlighted,
-                currentPage: (_effectivePreviewIndex ?? _lastKnownIndex) + 1,
-                totalPages: total,
-                positionLabel: _sequencePositionLabel(),
               ),
             ),
             if (actionSurface != null)
@@ -609,6 +588,11 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         ),
         layoutResolver: _layoutResolver,
         onExtentResolved: (extent) => _recordExtent(extent, session: session),
+        verticalPadding: EdgeInsets.only(
+          bottom: _tailSurface is ReaderTailActionSurface
+              ? 0
+              : _statusBarBottomClearance(preferences),
+        ),
         verticalListKey: widget.listKey,
         slotKeyPrefix: widget.slotKeyPrefix,
         verticalItemAnchorKeyBuilder: (item, _) =>
@@ -670,9 +654,15 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
                 }
               },
         horizontalPageKey: widget.pageKey,
-        horizontalPagePadding: EdgeInsets.all(
-          preferences.pageSpacing.clamp(0.0, 48.0).toDouble(),
-        ),
+        horizontalPagePadding: () {
+          final spacing = preferences.pageSpacing.clamp(0.0, 48.0).toDouble();
+          return EdgeInsets.fromLTRB(
+            spacing,
+            spacing,
+            spacing,
+            spacing + _statusBarBottomClearance(preferences),
+          );
+        }(),
         horizontalTrailingBuilder: tail == null
             ? null
             : (context) => _buildPagedTail(context, tail),
@@ -1899,7 +1889,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _verticalCompensation.syncPosition();
     _verticalCompensation.flushIfIdle();
     _hideReaderMenuForContentMotion();
-    _pulsePageIndicator();
     final position = _scrollController.position;
     if (!position.hasContentDimensions || position.maxScrollExtent <= 0) {
       return;
@@ -2105,7 +2094,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     }
     final previousIndex = _lastKnownIndex;
     _hideReaderMenuForContentMotion();
-    _pulsePageIndicator();
     _commitLogicalIndex(pageIndex);
     _recordReaderDiagnostic(
       type: ContinuousImageDiagnosticEventType.pageChanged,
@@ -2332,7 +2320,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (positionState.needsInitialRestore) {
       positionState.consumeInitialRestore();
     }
-    _pulsePageIndicator();
 
     _recordReaderDiagnostic(
       type: ContinuousImageDiagnosticEventType.seekStarted,
@@ -3025,6 +3012,60 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     );
   }
 
+  double _statusBarBottomClearance(ReaderPreferences preferences) {
+    if (!preferences.showPageIndicator) {
+      return 0;
+    }
+    final variant = EInkModeScope.of(context)
+        ? ReaderReadingStatusBarVariant.eInk
+        : ReaderReadingStatusBarVariant.standard;
+    return ReaderReadingStatusBarLayout.heightForVariant(context, variant);
+  }
+
+  Widget? _buildPersistentFooter(
+    ReaderEngineContext engineContext,
+    ReaderPreferences preferences,
+    Color background,
+  ) {
+    if (!preferences.showPageIndicator || _tailActionController.visible) {
+      return null;
+    }
+    final variant = EInkModeScope.of(context)
+        ? ReaderReadingStatusBarVariant.eInk
+        : ReaderReadingStatusBarVariant.standard;
+    final isDark =
+        ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+    final foreground = isDark
+        ? Colors.white.withValues(alpha: 0.68)
+        : Colors.black.withValues(alpha: 0.58);
+    final progressForeground = isDark
+        ? Colors.white.withValues(alpha: 0.88)
+        : Colors.black.withValues(alpha: 0.80);
+    final titleSpec = _capability.titleFor(engineContext);
+    final leading = titleSpec.title.trim();
+    final title = titleSpec.subtitle.trim();
+    final trailing =
+        _sequencePositionLabel() ??
+        '${(_effectivePreviewIndex ?? _lastKnownIndex) + 1} / ${engineContext.totalCount}';
+    final semanticsLabel = [
+      if (leading.isNotEmpty) leading,
+      if (title.isNotEmpty) title,
+      trailing,
+    ].join('，');
+    return ReaderReadingStatusBar(
+      status: ReaderReadingStatus(
+        leading: leading,
+        title: title,
+        trailing: trailing,
+        semanticsLabel: semanticsLabel,
+      ),
+      background: background,
+      foreground: foreground,
+      progressForeground: progressForeground,
+      variant: variant,
+    );
+  }
+
   ReaderBottomBarConfig _buildBottomBar(
     ReaderEngineContext context,
     ReaderPreferences preferences,
@@ -3033,9 +3074,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final currentIndex = _effectivePreviewIndex ?? _lastKnownIndex;
     final nav = _capability.chapterNav(context);
     return ReaderBottomBarConfig(
-      thumbnailStrip: _overlayController.isMenuVisible
-          ? _buildThumbnailStrip(preferences: preferences)
-          : null,
+      thumbnailStrip: _buildThumbnailStrip(preferences: preferences),
       progress: ReaderProgressConfig.discrete(
         current: currentIndex + 1,
         total: total,
@@ -3064,6 +3103,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (!_capability.showsThumbnailStrip || content.length <= 1) {
       return null;
     }
+    final active =
+        _overlayController.isMenuVisible ||
+        !_overlayController.isOverlayDismissed;
     return _capability.buildThumbnailStrip(
       context,
       ReaderThumbnailStripSpec(
@@ -3073,6 +3115,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         previewIndex: _thumbnailPreviewIndex,
         reversed: preferences.readerMode == ReaderModePreference.rtl,
         enabled: !_isSliderCommitInFlight,
+        active: active,
         sessionBindingFor: _thumbnailSessionBindingFor,
         onPreview: _onThumbnailPreview,
         onSubmit: _onThumbnailSubmit,
@@ -3338,24 +3381,6 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       return;
     }
     _overlayController.hideMenu();
-  }
-
-  void _pulsePageIndicator() {
-    _pageIndicatorDimTimer?.cancel();
-    if (!mounted || !_pageIndicatorVisible) {
-      _pageIndicatorDimTimer = null;
-      return;
-    }
-    // Scroll notifications must never rebuild the reader's lazy rows just
-    // to highlight chrome; repeated true values do not notify listeners.
-    _pageIndicatorHighlighted.value = true;
-    _pageIndicatorDimTimer = Timer(const Duration(milliseconds: 900), () {
-      if (!mounted) {
-        return;
-      }
-      _pageIndicatorDimTimer = null;
-      _pageIndicatorHighlighted.value = false;
-    });
   }
 
   void _recordReaderDiagnostic({

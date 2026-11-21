@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'reader_models.dart';
 
-/// One compact reading-status line shared by the novel reading modes.
+/// One compact reading-status line shared by the novel and image reading modes.
 ///
 /// The bar is display-only: page progress must keep flowing through the
 /// existing reading-progress pipeline, never through this presentation value.
@@ -21,8 +21,7 @@ final class ReaderReadingStatus {
   final String trailing;
   final String semanticsLabel;
 
-  /// Chapter title used by the e-ink variant; the standard bar ignores it and
-  /// keeps its established single-line geometry.
+  /// Optional chapter or sequence title rendered after [leading] when width permits.
   final String title;
 
   @override
@@ -40,8 +39,9 @@ final class ReaderReadingStatus {
 
 /// Visual contract of the persistent reading status bar.
 ///
-/// [standard] keeps the existing palette-driven line. [eInk] is the fixed
-/// 24dp footer used while the runtime e-ink mode is on.
+/// [standard] uses a transparent overlay surface with palette-driven text.
+/// [eInk] is the fixed 24dp opaque footer with a 1px top divider used while
+/// runtime e-ink mode is active.
 enum ReaderReadingStatusBarVariant { standard, eInk }
 
 abstract final class ReaderReadingStatusBarLayout {
@@ -120,18 +120,18 @@ abstract final class ReaderReadingStatusBarLayout {
   }
 }
 
-/// Persistent reading status shown below the reading viewport.
+/// Persistent three-segment reading status shown at the bottom edge of the
+/// reading viewport.
 ///
-/// The chapter sits on the left and the mode-specific position on the right;
-/// it deliberately avoids controls and any decorative progress line. Opening
-/// the reader menu stays a center-tap action, and progress seeking stays in the
-/// overlay bottom panel.
+/// Renders left title/chapter metadata on the left and bold reading progress plus
+/// real-time clock on the right, degrading gracefully on narrow widths.
 class ReaderReadingStatusBar extends StatelessWidget {
   const ReaderReadingStatusBar({
     super.key,
     required this.status,
     required this.background,
     required this.foreground,
+    this.progressForeground,
     this.variant = ReaderReadingStatusBarVariant.standard,
     this.now,
   });
@@ -139,6 +139,10 @@ class ReaderReadingStatusBar extends StatelessWidget {
   final ReaderReadingStatus status;
   final Color background;
   final Color foreground;
+
+  /// Optional emphasis color for the bold progress segment in [standard] mode;
+  /// defaults to [foreground] when omitted.
+  final Color? progressForeground;
   final ReaderReadingStatusBarVariant variant;
 
   /// Test-only clock injection. Production rebuilds the line with the current
@@ -162,61 +166,20 @@ class ReaderReadingStatusBar extends StatelessWidget {
       letterSpacing: 0,
       color: foreground,
     );
-
-    return Semantics(
-      container: true,
-      label: status.semanticsLabel,
-      child: ExcludeSemantics(
-        child: Material(
-          key: const Key('shared-reader-persistent-status-bar'),
-          color: background,
-          child: SafeArea(
-            top: false,
-            bottom: false,
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: ReaderReadingStatusBarLayout.bottomInset(context),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ReaderReadingStatusBarLayout.horizontalPadding,
-                  vertical: ReaderReadingStatusBarLayout.verticalPadding,
-                ),
-                child: Row(
-                  children: [
-                    // 左侧占满剩余宽度，右侧按内容宽度贴住右边缘；两者都
-                    // 用 flex 会把空白对半分，右下角就只剩半个屏宽。
-                    Expanded(
-                      child: status.leading.isEmpty
-                          ? const SizedBox.shrink()
-                          : _StatusText(
-                              key: const Key(
-                                'shared-reader-persistent-status-leading',
-                              ),
-                              text: status.leading,
-                              style: textStyle,
-                              alignment: TextAlign.start,
-                            ),
-                    ),
-                    if (status.trailing.isNotEmpty) ...[
-                      const SizedBox(width: 12),
-                      _StatusText(
-                        key: const Key(
-                          'shared-reader-persistent-status-trailing',
-                        ),
-                        text: status.trailing,
-                        style: textStyle,
-                        alignment: TextAlign.end,
-                        maxWidth: MediaQuery.sizeOf(context).width * 0.6,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    final progressStyle = textStyle.copyWith(
+      fontWeight: FontWeight.w600,
+      color: progressForeground ?? foreground,
+    );
+    return _buildThreeSegmentBar(
+      context,
+      materialColor: Colors.transparent,
+      textStyle: textStyle,
+      progressStyle: progressStyle,
+      horizontalPadding: ReaderReadingStatusBarLayout.eInkHorizontalPadding,
+      verticalPadding: ReaderReadingStatusBarLayout.verticalPadding,
+      leftKey: const Key('shared-reader-persistent-status-leading'),
+      progressKey: const Key('shared-reader-persistent-status-trailing'),
+      timeKey: const Key('shared-reader-persistent-status-time'),
     );
   }
 
@@ -241,6 +204,37 @@ class ReaderReadingStatusBar extends StatelessWidget {
       color: resolvedForeground,
     );
     final progressStyle = textStyle.copyWith(fontWeight: FontWeight.w600);
+    return _buildThreeSegmentBar(
+      context,
+      materialColor: resolvedBackground,
+      surfaceKey: const Key('shared-reader-persistent-status-eink'),
+      fixedHeight: ReaderReadingStatusBarLayout.eInkContentHeight,
+      topBorderColor: dividerColor,
+      textStyle: textStyle,
+      progressStyle: progressStyle,
+      horizontalPadding: ReaderReadingStatusBarLayout.eInkHorizontalPadding,
+      leftKey: const Key('shared-reader-persistent-status-eink-left'),
+      progressKey: const Key('shared-reader-persistent-status-eink-progress'),
+      timeKey: const Key('shared-reader-persistent-status-eink-time'),
+      directTextKeys: true,
+    );
+  }
+
+  Widget _buildThreeSegmentBar(
+    BuildContext context, {
+    required Color materialColor,
+    required TextStyle textStyle,
+    required TextStyle progressStyle,
+    required double horizontalPadding,
+    required Key leftKey,
+    required Key progressKey,
+    required Key timeKey,
+    bool directTextKeys = false,
+    Key? surfaceKey,
+    double? fixedHeight,
+    double verticalPadding = 0,
+    Color? topBorderColor,
+  }) {
     final formattedTime = MaterialLocalizations.of(context).formatTimeOfDay(
       TimeOfDay.fromDateTime(now ?? DateTime.now()),
       alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
@@ -254,11 +248,8 @@ class ReaderReadingStatusBar extends StatelessWidget {
         final maxWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth
             : screenWidth;
-        final availableWidth = math.max(
-          0.0,
-          maxWidth - ReaderReadingStatusBarLayout.eInkHorizontalPadding * 2,
-        );
-        final parts = _resolveEInkParts(
+        final availableWidth = math.max(0.0, maxWidth - horizontalPadding * 2);
+        final parts = _resolveStatusParts(
           availableWidth: availableWidth,
           textScaler: textScaler,
           textDirection: textDirection,
@@ -267,13 +258,100 @@ class ReaderReadingStatusBar extends StatelessWidget {
           timeText: formattedTime,
         );
 
+        final leftWidget = parts.leftText.isEmpty
+            ? const SizedBox.shrink()
+            : directTextKeys
+            ? Text(
+                parts.leftText,
+                key: leftKey,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle,
+              )
+            : KeyedSubtree(
+                key: leftKey,
+                child: Text(
+                  parts.leftText,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+              );
+        final progressTextWidget = Text(
+          parts.progressText,
+          key: directTextKeys ? progressKey : null,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+          style: progressStyle,
+        );
+        final progressBox = ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: parts.progressMaxWidth),
+          child: progressTextWidget,
+        );
+
+        final row = Row(
+          children: [
+            Expanded(child: leftWidget),
+            if (parts.progressText.isNotEmpty) ...[
+              const SizedBox(width: _segmentGap),
+              directTextKeys
+                  ? progressBox
+                  : KeyedSubtree(key: progressKey, child: progressBox),
+            ],
+            if (parts.showTime) ...[
+              const SizedBox(width: _segmentGap),
+              Text(
+                parts.timeText,
+                key: timeKey,
+                maxLines: 1,
+                softWrap: false,
+                style: textStyle,
+              ),
+            ],
+          ],
+        );
+
+        final barContent = topBorderColor != null || fixedHeight != null
+            ? Container(
+                key: surfaceKey,
+                height: fixedHeight,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                decoration: BoxDecoration(
+                  color: materialColor,
+                  border: topBorderColor == null
+                      ? null
+                      : Border(
+                          top: BorderSide(
+                            color: topBorderColor,
+                            width:
+                                ReaderReadingStatusBarLayout.eInkTopBorderWidth,
+                          ),
+                        ),
+                ),
+                child: row,
+              )
+            : Padding(
+                key: surfaceKey,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                child: row,
+              );
+
         return Semantics(
           container: true,
           label: parts.semanticsLabel,
           child: ExcludeSemantics(
             child: Material(
               key: const Key('shared-reader-persistent-status-bar'),
-              color: resolvedBackground,
+              color: materialColor,
               child: SafeArea(
                 top: false,
                 bottom: false,
@@ -281,72 +359,7 @@ class ReaderReadingStatusBar extends StatelessWidget {
                   padding: EdgeInsets.only(
                     bottom: ReaderReadingStatusBarLayout.bottomInset(context),
                   ),
-                  child: Container(
-                    key: const Key('shared-reader-persistent-status-eink'),
-                    height: ReaderReadingStatusBarLayout.eInkContentHeight,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal:
-                          ReaderReadingStatusBarLayout.eInkHorizontalPadding,
-                    ),
-                    decoration: BoxDecoration(
-                      color: resolvedBackground,
-                      border: Border(
-                        top: BorderSide(
-                          color: dividerColor,
-                          width:
-                              ReaderReadingStatusBarLayout.eInkTopBorderWidth,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: parts.leftText.isEmpty
-                              ? const SizedBox.shrink()
-                              : Text(
-                                  parts.leftText,
-                                  key: const Key(
-                                    'shared-reader-persistent-status-eink-left',
-                                  ),
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textStyle,
-                                ),
-                        ),
-                        if (parts.progressText.isNotEmpty) ...[
-                          const SizedBox(width: _eInkSegmentGap),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: parts.progressMaxWidth,
-                            ),
-                            child: Text(
-                              parts.progressText,
-                              key: const Key(
-                                'shared-reader-persistent-status-eink-progress',
-                              ),
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.ellipsis,
-                              style: progressStyle,
-                            ),
-                          ),
-                        ],
-                        if (parts.showTime) ...[
-                          const SizedBox(width: _eInkSegmentGap),
-                          Text(
-                            parts.timeText,
-                            key: const Key(
-                              'shared-reader-persistent-status-eink-time',
-                            ),
-                            maxLines: 1,
-                            softWrap: false,
-                            style: textStyle,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                  child: barContent,
                 ),
               ),
             ),
@@ -356,11 +369,11 @@ class ReaderReadingStatusBar extends StatelessWidget {
     );
   }
 
-  /// Resolves the three e-ink segments under the available width.
+  /// Resolves the three segments under the available width.
   ///
   /// The fixed degradation order is title, time, progress. Progress is never
   /// removed: it is ellipsized into the space the title/time drops free up.
-  _EInkStatusParts _resolveEInkParts({
+  _StatusParts _resolveStatusParts({
     required double availableWidth,
     required TextScaler textScaler,
     required TextDirection textDirection,
@@ -382,7 +395,7 @@ class ReaderReadingStatusBar extends StatelessWidget {
 
     var includeTitle = title.isNotEmpty;
     var leftText = leftTextFor(includeTitle: includeTitle);
-    var leftWidth = _measureEInkText(
+    var leftWidth = _measureText(
       leftText,
       textStyle,
       textScaler,
@@ -390,13 +403,8 @@ class ReaderReadingStatusBar extends StatelessWidget {
     );
     final progressWidth = progressText.isEmpty
         ? 0.0
-        : _measureEInkText(
-            progressText,
-            progressStyle,
-            textScaler,
-            textDirection,
-          );
-    final timeWidth = _measureEInkText(
+        : _measureText(progressText, progressStyle, textScaler, textDirection);
+    final timeWidth = _measureText(
       timeText,
       textStyle,
       textScaler,
@@ -406,10 +414,10 @@ class ReaderReadingStatusBar extends StatelessWidget {
     double totalWidth({required bool withTime}) {
       var width = leftWidth;
       if (progressText.isNotEmpty) {
-        width += _eInkSegmentGap + progressWidth;
+        width += _segmentGap + progressWidth;
       }
       if (withTime) {
-        width += _eInkSegmentGap + timeWidth;
+        width += _segmentGap + timeWidth;
       }
       return width;
     }
@@ -417,14 +425,9 @@ class ReaderReadingStatusBar extends StatelessWidget {
     if (includeTitle && totalWidth(withTime: true) > availableWidth) {
       includeTitle = false;
       leftText = leftTextFor(includeTitle: false);
-      leftWidth = _measureEInkText(
-        leftText,
-        textStyle,
-        textScaler,
-        textDirection,
-      );
+      leftWidth = _measureText(leftText, textStyle, textScaler, textDirection);
     }
-    var showTime = totalWidth(withTime: true) <= availableWidth;
+    final showTime = totalWidth(withTime: true) <= availableWidth;
     // Progress is never dropped. When it cannot keep its intrinsic width it
     // gets at least 60% of the line and ellipsizes, so a long chapter ordinal
     // can still shrink instead of squeezing the progress away entirely.
@@ -433,8 +436,8 @@ class ReaderReadingStatusBar extends StatelessWidget {
       math.min(
         progressWidth,
         math.max(
-          availableWidth - leftWidth - _eInkSegmentGap,
-          availableWidth * _eInkProgressWidthFraction,
+          availableWidth - leftWidth - _segmentGap,
+          availableWidth * _progressWidthFraction,
         ),
       ),
     );
@@ -444,7 +447,7 @@ class ReaderReadingStatusBar extends StatelessWidget {
       if (showTime) timeText,
     ].join('，');
 
-    return _EInkStatusParts(
+    return _StatusParts(
       leftText: leftText,
       progressText: progressText,
       timeText: timeText,
@@ -457,10 +460,10 @@ class ReaderReadingStatusBar extends StatelessWidget {
   }
 }
 
-const double _eInkSegmentGap = 10;
-const double _eInkProgressWidthFraction = 0.6;
+const double _segmentGap = 10;
+const double _progressWidthFraction = 0.6;
 
-double _measureEInkText(
+double _measureText(
   String text,
   TextStyle style,
   TextScaler textScaler,
@@ -481,8 +484,8 @@ double _measureEInkText(
 }
 
 @immutable
-class _EInkStatusParts {
-  const _EInkStatusParts({
+class _StatusParts {
+  const _StatusParts({
     required this.leftText,
     required this.progressText,
     required this.timeText,
@@ -497,38 +500,4 @@ class _EInkStatusParts {
   final bool showTime;
   final double progressMaxWidth;
   final String semanticsLabel;
-}
-
-class _StatusText extends StatelessWidget {
-  const _StatusText({
-    super.key,
-    required this.text,
-    required this.style,
-    required this.alignment,
-    this.maxWidth,
-  });
-
-  final String text;
-  final TextStyle style;
-  final TextAlign alignment;
-  final double? maxWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Text(
-      text,
-      maxLines: 1,
-      softWrap: false,
-      overflow: TextOverflow.ellipsis,
-      textAlign: alignment,
-      style: style,
-    );
-    final width = maxWidth;
-    return width == null
-        ? child
-        : ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: width),
-            child: child,
-          );
-  }
 }
