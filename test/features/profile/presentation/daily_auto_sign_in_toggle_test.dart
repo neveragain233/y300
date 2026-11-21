@@ -17,6 +17,7 @@ import 'package:y300/features/profile/data/providers/daily_sign_in_providers.dar
 import 'package:y300/features/profile/data/providers/daily_sign_in_storage_providers.dart';
 import 'package:y300/features/profile/presentation/daily_auto_sign_in_toggle.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../support/forum_auth_test_support.dart';
 import '../../../test_support/localized_test_app.dart';
@@ -52,8 +53,8 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(tester.widget<Switch>(toggle).value, enabled);
-      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+      expect(tester.widget<AppSwitch>(toggle).value, enabled);
+      expect(tester.widget<AppSwitch>(toggle).onChanged, isNotNull);
       expect(tester.getRect(control), pendingRect);
       // No animation from a fabricated off/disabled state on the first frame.
       expect(tester.binding.transientCallbackCount, 0);
@@ -76,7 +77,7 @@ void main() {
     );
 
     final toggle = find.byKey(const Key('daily-auto-sign-in-toggle'));
-    expect(tester.widget<Switch>(toggle).onChanged, isNull);
+    expect(tester.widget<AppSwitch>(toggle).onChanged, isNull);
     final l10n = AppLocalizations.of(
       tester.element(find.byType(DailyAutoSignInToggle)),
     );
@@ -104,11 +105,11 @@ void main() {
     );
 
     final toggle = find.byKey(const Key('daily-auto-sign-in-toggle'));
-    expect(tester.widget<Switch>(toggle).value, isTrue);
+    expect(tester.widget<AppSwitch>(toggle).value, isTrue);
     await tester.tap(toggle);
     await tester.pumpAndSettle();
-    expect(tester.widget<Switch>(toggle).value, isFalse);
-    final previousAccountToggle = tester.widget<Switch>(toggle).onChanged!;
+    expect(tester.widget<AppSwitch>(toggle).value, isFalse);
+    final previousAccountToggle = tester.widget<AppSwitch>(toggle).onChanged!;
     expect(
       await SharedPreferencesDailyAutoSignInSettings(preferences)
           .isEnabled('654321'),
@@ -132,15 +133,15 @@ void main() {
           ),
         );
     await tester.pumpAndSettle();
-    expect(tester.widget<Switch>(toggle).value, isTrue);
+    expect(tester.widget<AppSwitch>(toggle).value, isTrue);
     previousAccountToggle(false);
     await tester.pumpAndSettle();
-    expect(tester.widget<Switch>(toggle).value, isTrue);
+    expect(tester.widget<AppSwitch>(toggle).value, isTrue);
     await tester.tap(toggle);
     await tester.pumpAndSettle();
     await tester.tap(toggle);
     await tester.pumpAndSettle();
-    expect(tester.widget<Switch>(toggle).value, isTrue);
+    expect(tester.widget<AppSwitch>(toggle).value, isTrue);
     expect(repository.queries, isEmpty);
     expect(command.requests, isEmpty);
   });
@@ -164,8 +165,8 @@ void main() {
     final l10n = AppLocalizations.of(
       tester.element(find.byType(DailyAutoSignInToggle)),
     );
-    expect(tester.widget<Switch>(toggle).value, isTrue);
-    expect(tester.widget<Switch>(toggle).onChanged, isNull);
+    expect(tester.widget<AppSwitch>(toggle).value, isTrue);
+    expect(tester.widget<AppSwitch>(toggle).onChanged, isNull);
     expect(find.text(l10n.dailyAutoSignInStorageUnavailable), findsOneWidget);
     expect(repository.queries, isEmpty);
     expect(command.requests, isEmpty);

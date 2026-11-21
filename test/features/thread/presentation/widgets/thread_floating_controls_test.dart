@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/liquid_glass.dart';
+import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
+import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/thread/domain/models/thread_controls_preferences.dart';
 import 'package:y300/features/thread/presentation/services/thread_floor_navigation_coordinator.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_floating_controls.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 
 import '../../../../test_support/localized_test_app.dart';
 
@@ -365,6 +370,98 @@ void main() {
       await tester.tap(button);
       expect(firstPosts, 1);
       expect(nav.forward, isTrue);
+    },
+  );
+
+  testWidgets(
+    'floating pills use prism glass surface and ElasticPress with active scope',
+    (tester) async {
+      final visibility = ValueNotifier(true);
+      addTearDown(visibility.dispose);
+      final viewport = _Viewport()
+        ..visiblePostId = 'p3'
+        ..atBottom = true;
+      final nav = _navigation(viewport);
+      addTearDown(nav.dispose);
+      var firstPosts = 0;
+
+      await tester.pumpWidget(
+        LiquidGlassScope(
+          enabled: true,
+          quality: LiquidGlassQuality.standard,
+          child: _app(
+            nav,
+            visibility,
+            const ThreadControlsPreferences(singleNavigationButton: true),
+            onFirst: () => firstPosts++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppGlassSurface), findsNWidgets(2));
+      expect(find.byType(LiquidGlass), findsNWidgets(2));
+      expect(find.byType(ElasticPress), findsNWidgets(2));
+
+      final button = find.byKey(const Key('thread-single-navigation-button'));
+      await tester.tap(button);
+      expect(firstPosts, 1);
+    },
+  );
+
+  testWidgets(
+    'eInk mode disables glass and ElasticPress with 1px outline border and zero motion',
+    (tester) async {
+      final visibility = ValueNotifier(true);
+      addTearDown(visibility.dispose);
+      final viewport = _Viewport();
+      final nav = _navigation(viewport);
+      addTearDown(nav.dispose);
+
+      await tester.pumpWidget(
+        EInkModeScope(
+          enabled: true,
+          child: LiquidGlassScope(
+            enabled: true,
+            quality: LiquidGlassQuality.standard,
+            child: _app(nav, visibility, const ThreadControlsPreferences()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LiquidGlass), findsNothing);
+      expect(find.byType(ElasticPress), findsNothing);
+
+      final surfaces = tester.widgetList<AppGlassSurface>(
+        find.byType(AppGlassSurface),
+      );
+      expect(surfaces, hasLength(2));
+      for (final surface in surfaces) {
+        expect(surface.level, AppGlassLevel.off);
+      }
+
+      final scheme = Theme.of(
+        tester.element(find.byType(ThreadFloatingControls)),
+      ).colorScheme;
+      final borderedBoxes = find.byWidgetPredicate((widget) {
+        if (widget is! DecoratedBox ||
+            widget.position != DecorationPosition.foreground) {
+          return false;
+        }
+        final decoration = widget.decoration;
+        return decoration is BoxDecoration &&
+            decoration.borderRadius == BorderRadius.circular(28) &&
+            decoration.border == Border.all(color: scheme.outlineVariant);
+      });
+      expect(borderedBoxes, findsNWidgets(2));
+
+      final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
+      final opacity = tester.widget<AnimatedOpacity>(
+        find.byType(AnimatedOpacity),
+      );
+      expect(slide.duration, Duration.zero);
+      expect(opacity.duration, Duration.zero);
     },
   );
 }

@@ -1,5 +1,6 @@
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,7 +179,7 @@ void main() {
       const Key('post-edit-composer-message-input'),
     );
     expect(
-      tester.widget<TextField>(sourceInput).controller!.text,
+      tester.widget<AppTextInput>(sourceInput).controller!.text,
       contains('12'),
     );
 
@@ -392,7 +393,7 @@ void main() {
 
     final subject = find.byKey(const Key('post-edit-subject-input'));
     expect(subject, findsOneWidget);
-    expect(tester.widget<TextField>(subject).controller!.text, '论坛近期考虑升级吗');
+    expect(tester.widget<AppTextInput>(subject).controller!.text, '论坛近期考虑升级吗');
 
     await tester.enterText(subject, '新的标题');
     await tester.pump();

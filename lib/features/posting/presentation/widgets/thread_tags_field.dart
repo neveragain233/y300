@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:prism_ui/surface.dart' as prism_surface;
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 /// 主题标签 chip 输入框。
 ///
@@ -131,40 +134,52 @@ class _ThreadTagsFieldState extends State<ThreadTagsField> {
           style: theme.textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
-        InputDecorator(
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            isDense: true,
-            // hintText 由内部 TextField 接管，外层只画边框。
-          ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              for (var i = 0; i < widget.tags.length; i += 1)
-                InputChip(
-                  key: widget.chipKeyBuilder?.call(widget.tags[i], i),
-                  label: Text(widget.tags[i]),
-                  onDeleted: widget.enabled ? () => _removeAt(i) : null,
-                  deleteButtonTooltipMessage: widget.enabled
-                      ? l10n.postingTagDelete
-                      : null,
-                  // deleteIcon 依赖默认实现；若需要测试单独 key，
-                  // 改成 [GestureDetector] 包裹一个自定义 Icon 即可。
+        AppPrismTheme(
+          child: Builder(
+            builder: (prismContext) {
+              final fillColor = prism_surface.SurfaceContext(prismContext)
+                  .raisedSurfaceLevel
+                  .colorOf(prismColorSchemeOf(theme.colorScheme));
+              return DecoratedBox(
+                decoration: BoxDecoration(
+                  color: fillColor,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              if (canAddMore)
-                _ChipInputField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: widget.enabled,
-                  hintText: widget.hintText ?? l10n.postingTagsHint,
-                  inputFieldKey: widget.inputFieldKey,
-                  onChanged: _onTextChanged,
-                  onSubmitted: _onSubmitted,
-                  maxTagLength: widget.maxTagLength,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      for (var i = 0; i < widget.tags.length; i += 1)
+                        InputChip(
+                          key: widget.chipKeyBuilder?.call(widget.tags[i], i),
+                          label: Text(widget.tags[i]),
+                          onDeleted: widget.enabled ? () => _removeAt(i) : null,
+                          deleteButtonTooltipMessage: widget.enabled
+                              ? l10n.postingTagDelete
+                              : null,
+                        ),
+                      if (canAddMore)
+                        _ChipInputField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          enabled: widget.enabled,
+                          hintText: widget.hintText ?? l10n.postingTagsHint,
+                          inputFieldKey: widget.inputFieldKey,
+                          onChanged: _onTextChanged,
+                          onSubmitted: _onSubmitted,
+                          maxTagLength: widget.maxTagLength,
+                        ),
+                    ],
+                  ),
                 ),
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 4),
@@ -208,7 +223,7 @@ class _ChipInputField extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
-      child: TextField(
+      child: AppTextInput(
         key: inputFieldKey,
         controller: controller,
         focusNode: focusNode,
@@ -219,11 +234,8 @@ class _ChipInputField extends StatelessWidget {
         maxLines: 1,
         // 截到 maxTagLength + 2，留给逗号/换行触发器，最终 commit 还会再过滤一次。
         inputFormatters: [LengthLimitingTextInputFormatter(maxTagLength + 2)],
-        decoration: InputDecoration(
-          isDense: true,
-          border: InputBorder.none,
-          hintText: hintText,
-        ),
+        hintText: hintText,
+        variant: AppTextInputVariant.plain,
       ),
     );
   }

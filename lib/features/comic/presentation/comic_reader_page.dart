@@ -3,8 +3,9 @@ import 'dart:io' as io;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:y300/features/library_shared/presentation/reader/reader_chapter_panel.dart';
+import 'package:y300/features/library_shared/presentation/detail/unified_detail_chapter_tile.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -472,10 +473,18 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
 
   Future<void> _showChapterListSheet(ComicReaderViewState viewState) async {
     final l10n = AppLocalizations.of(context);
+    final preferences =
+        ref.read(readerPreferencesControllerProvider).value ??
+        ReaderPreferences.defaults();
+    final panelPalette = ReaderPanelPalette.fromCanvas(
+      canvasBackground: _readerBackgroundColor(preferences),
+      baseTheme: Theme.of(context),
+    );
     final selected = await showAdaptivePanel<ComicReaderChapterEntry>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      backgroundColor: panelPalette.panelSurface,
       builder: (context) => SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
@@ -491,59 +500,89 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
                     MediaQuery.paddingOf(context).vertical,
               ),
             ),
-            child: ReaderChapterPanel<ComicReaderChapterEntry>(
-              entries: viewState.chapters,
-              isBookmarked: (chapter) => chapter.isBookmarked,
-              builder: (context, chapters) =>
-                  LibraryChapterBrowser<ComicReaderChapterEntry>(
-                    workId: viewState.comicId,
-                    keyPrefix: 'comic-reader-chapter',
-                    currentId: viewState.episodeId,
-                    itemExtent: math.max(
-                      64,
-                      MediaQuery.textScalerOf(context).scale(16) * 1.5 + 24,
-                    ),
-                    entries: [
-                      for (final chapter in chapters)
-                        ChapterSearchEntry(
-                          id: chapter.episodeId,
-                          title: chapter.title,
-                          aliases: [
-                            if (chapter.sourceTitle != null)
-                              chapter.sourceTitle!,
-                          ],
-                          metadata: [chapter.sourceTid],
-                          value: chapter,
+            child: Consumer(
+              builder: (context, ref, _) {
+                final latest =
+                    ref
+                        .watch(comicReaderControllerProvider(_readerArgs))
+                        .value ??
+                    viewState;
+                final bookmarked = latest.chapters
+                    .where((chapter) => chapter.isBookmarked)
+                    .toList(growable: false);
+                return ReaderContentPanel(
+                  palette: panelPalette,
+                  bookmarks: [
+                    for (final chapter in bookmarked)
+                      ReaderBookmarkEntry(
+                        id: chapter.episodeId,
+                        rowKey: ValueKey<String>(
+                          'comic-reader-bookmark-${chapter.episodeId}',
                         ),
-                    ],
-                    rowBuilder: (context, chapter, confirmSearch) => ListTile(
-                      key: ValueKey<String>(
-                        'comic-reader-chapter-${chapter.episodeId}',
-                      ),
-                      selected: chapter.isCurrent,
-                      leading: Icon(
-                        chapter.isRead
-                            ? Icons.check_circle_outline
-                            : Icons.radio_button_unchecked,
-                      ),
-                      title: Text(
-                        ComicTextResolver.chapterTitle(
+                        deleteKey: ValueKey<String>(
+                          'comic-reader-bookmark-delete-${chapter.episodeId}',
+                        ),
+                        title: ComicTextResolver.chapterTitle(
                           l10n,
                           chapter.title,
                           chapter.sourceTid,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        subtitle: chapter.isCurrent
+                            ? l10n.comicCurrentChapter
+                            : null,
+                        isCurrent: chapter.isCurrent,
+                        onTap: () => Navigator.of(context).pop(chapter),
+                        onDelete: () => unawaited(
+                          _controller().setEpisodeBookmarked(
+                            chapter.episodeId,
+                            false,
+                          ),
+                        ),
                       ),
-                      trailing: chapter.isCurrent
-                          ? Text(l10n.comicCurrentChapter)
-                          : null,
-                      onTap: () {
-                        confirmSearch();
-                        Navigator.of(context).pop(chapter);
-                      },
-                    ),
-                  ),
+                  ],
+                  catalogBuilder: (context) =>
+                      LibraryChapterBrowser<ComicReaderChapterEntry>(
+                        workId: latest.comicId,
+                        keyPrefix: 'comic-reader-chapter',
+                        currentId: latest.episodeId,
+                        itemExtent: math.max(
+                          64,
+                          MediaQuery.textScalerOf(context).scale(16) * 1.5 + 24,
+                        ),
+                        entries: [
+                          for (final chapter in latest.chapters)
+                            ChapterSearchEntry(
+                              id: chapter.episodeId,
+                              title: chapter.title,
+                              aliases: [
+                                if (chapter.sourceTitle != null)
+                                  chapter.sourceTitle!,
+                              ],
+                              metadata: [chapter.sourceTid],
+                              value: chapter,
+                            ),
+                        ],
+                        rowBuilder: (context, chapter, confirmSearch) =>
+                            _ComicReaderCatalogRow(
+                              chapter: chapter,
+                              panelPalette: panelPalette,
+                              onTap: () {
+                                confirmSearch();
+                                Navigator.of(context).pop(chapter);
+                              },
+                              onToggleRead: () => _controller().setEpisodeRead(
+                                chapter.episodeId,
+                                !chapter.isRead,
+                              ),
+                              onLongPress: () => _showChapterRowActions(
+                                context,
+                                chapter,
+                                panelPalette,
+                              ),
+                            ),
+                      ),
+                );
+              },
             ),
           ),
         ),
@@ -555,6 +594,167 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
     await _controller().openEpisode(
       episodeId: selected.episodeId,
       policy: ComicEpisodeOpenPolicy.startAtBeginning,
+    );
+  }
+
+  Future<void> _showChapterRowActions(
+    BuildContext sheetContext,
+    ComicReaderChapterEntry chapter,
+    ReaderPanelPalette panelPalette,
+  ) async {
+    final l10n = AppLocalizations.of(sheetContext);
+    await showAdaptivePanel<void>(
+      context: sheetContext,
+      backgroundColor: panelPalette.panelSurface,
+      builder: (context) => ReaderPanelTheme(
+        palette: panelPalette,
+        child: Material(
+          color: panelPalette.panelSurface,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: AppGroupedSection(
+                margin: EdgeInsets.zero,
+                children: [
+                  AppGroupedRow(
+                    leading: Icon(
+                      chapter.isRead ? Icons.remove_done : Icons.done,
+                    ),
+                    title: chapter.isRead
+                        ? l10n.libraryChapterClearReadState
+                        : l10n.libraryChapterMarkRead,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      unawaited(
+                        _controller().setEpisodeRead(
+                          chapter.episodeId,
+                          !chapter.isRead,
+                        ),
+                      );
+                    },
+                  ),
+                  AppGroupedRow(
+                    leading: Icon(
+                      chapter.isBookmarked
+                          ? Icons.bookmark_remove_outlined
+                          : Icons.bookmark_add_outlined,
+                    ),
+                    title: chapter.isBookmarked
+                        ? l10n.comicBookmarkRemove
+                        : l10n.comicBookmarkAdd,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      unawaited(
+                        _controller().setEpisodeBookmarked(
+                          chapter.episodeId,
+                          !chapter.isBookmarked,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComicReaderCatalogRow extends StatelessWidget {
+  const _ComicReaderCatalogRow({
+    required this.chapter,
+    required this.panelPalette,
+    required this.onTap,
+    required this.onToggleRead,
+    required this.onLongPress,
+  });
+
+  final ComicReaderChapterEntry chapter;
+  final ReaderPanelPalette panelPalette;
+  final VoidCallback onTap;
+  final Future<void> Function() onToggleRead;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final foreground = chapter.isRead
+        ? scheme.onSecondaryContainer
+        : scheme.onPrimaryContainer;
+    return LibraryChapterReadStateSwipe(
+      key: Key('comic-reader-chapter-read-swipe-${chapter.episodeId}'),
+      foregroundKey: Key(
+        'comic-reader-chapter-read-swipe-foreground-${chapter.episodeId}',
+      ),
+      locked: false,
+      onTriggered: onToggleRead,
+      background: ColoredBox(
+        color: chapter.isRead
+            ? scheme.secondaryContainer
+            : scheme.primaryContainer,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(
+                  chapter.isRead ? Icons.remove_done : Icons.done,
+                  size: 20,
+                  color: foreground,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      chapter.isRead
+                          ? l10n.libraryChapterClearReadState
+                          : l10n.libraryChapterMarkRead,
+                      maxLines: 1,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      child: Material(
+        color: panelPalette.cardSurface,
+        child: ListTile(
+          key: ValueKey<String>('comic-reader-chapter-${chapter.episodeId}'),
+          selected: chapter.isCurrent,
+          leading: Icon(
+            chapter.isBookmarked
+                ? Icons.bookmark
+                : chapter.isRead
+                ? Icons.check_circle_outline
+                : Icons.radio_button_unchecked,
+            color: chapter.isBookmarked ? scheme.primary : null,
+          ),
+          title: Text(
+            ComicTextResolver.chapterTitle(
+              l10n,
+              chapter.title,
+              chapter.sourceTid,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: chapter.isCurrent ? Text(l10n.comicCurrentChapter) : null,
+          onTap: onTap,
+          onLongPress: onLongPress,
+        ),
+      ),
     );
   }
 }

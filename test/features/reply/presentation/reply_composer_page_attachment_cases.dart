@@ -69,7 +69,7 @@ void _attachmentCases() {
       );
 
       await _openReplySourceEditor(tester);
-      final sourceField = tester.widget<TextField>(
+      final sourceField = tester.widget<AppTextInput>(
         find.byKey(const Key('reply-composer-message-input')),
       );
       expect(
@@ -130,7 +130,7 @@ void _attachmentCases() {
       expect(find.textContaining('上传失败'), findsWidgets);
       expect(find.byKey(const Key('reply-composer-image-error')), findsNothing);
       await _openReplySourceEditor(tester);
-      final sourceField = tester.widget<TextField>(
+      final sourceField = tester.widget<AppTextInput>(
         find.byKey(const Key('reply-composer-message-input')),
       );
       expect(sourceField.controller?.text, '正文');

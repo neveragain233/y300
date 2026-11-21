@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/profile/presentation/daily_sign_in_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 /// Loads only the account preference; displaying this control never checks
 /// remote sign-in status or starts an automatic attempt.
 class DailyAutoSignInToggle extends ConsumerWidget {
-  const DailyAutoSignInToggle({super.key});
+  const DailyAutoSignInToggle({super.key, this.expand = false});
+
+  /// Whether the toggle expands across the full row width with the switch
+  /// anchored at the trailing edge.
+  final bool expand;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,10 +21,22 @@ class DailyAutoSignInToggle extends ConsumerWidget {
     if (owner == null || state.owner != owner) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final canChange =
         state.autoEnabled != null &&
         !state.isSavingAutoPreference &&
         !state.settingsUnavailable;
+    final label = Text(
+      l10n.dailyAutoSignInToggle,
+      style: expand
+          ? theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
+            )
+          : theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+    );
     return MergeSemantics(
       child: Tooltip(
         message: state.settingsUnavailable
@@ -28,17 +45,10 @@ class DailyAutoSignInToggle extends ConsumerWidget {
             ? l10n.dailyAutoSignInSaving
             : l10n.dailyAutoSignInDescription,
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
           children: [
-            Flexible(
-              child: Text(
-                l10n.dailyAutoSignInToggle,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
+            if (expand) Expanded(child: label) else Flexible(child: label),
+            SizedBox(width: expand ? 8 : 4),
             if (state.autoEnabled == null && !state.settingsUnavailable)
               // Reserve the adaptive control's space without showing an
               // invented off state. Mount the real switch only when known,
@@ -48,10 +58,10 @@ class DailyAutoSignInToggle extends ConsumerWidget {
                 maintainSize: true,
                 maintainAnimation: true,
                 maintainState: true,
-                child: Switch.adaptive(value: false, onChanged: null),
+                child: AppSwitch(value: false, onChanged: null),
               )
             else
-              Switch.adaptive(
+              AppSwitch(
                 key: const Key('daily-auto-sign-in-toggle'),
                 value: state.autoEnabled ?? false,
                 onChanged: canChange

@@ -367,6 +367,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                         children: [
                           AppGroupedSection(
                             margin: EdgeInsets.zero,
+                            dividerIndent: 16,
                             children: [
                               AppSwitchRow(
                                 key: const Key('appearance-eink-mode-switch'),
@@ -463,6 +464,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                           const SizedBox(height: 10),
                           AppGroupedSection(
                             margin: EdgeInsets.zero,
+                            dividerIndent: 16,
                             children: [
                               AppSwitchRow(
                                 key: const Key('appearance-navigation-swipe'),
@@ -545,6 +547,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                       title: l10n.appLanguageSectionTitle,
                       child: AppGroupedSection(
                         margin: EdgeInsets.zero,
+                        dividerIndent: 16,
                         children: [
                           for (final language in AppLanguage.values)
                             AppGroupedRow(

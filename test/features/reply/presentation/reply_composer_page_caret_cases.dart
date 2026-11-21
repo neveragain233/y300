@@ -31,7 +31,7 @@ void _caretCases() {
         '第一行\n第二行',
       );
       await tester.pump();
-      final field = tester.widget<TextField>(
+      final field = tester.widget<AppTextInput>(
         find.byKey(const Key('reply-composer-message-input')),
       );
       field.controller!.selection = const TextSelection.collapsed(offset: 3);
@@ -91,7 +91,7 @@ void _caretCases() {
       expect(quill.selection, const TextSelection.collapsed(offset: 6));
 
       await _openReplySourceEditor(tester);
-      final field = tester.widget<TextField>(
+      final field = tester.widget<AppTextInput>(
         find.byKey(const Key('reply-composer-message-input')),
       );
       expect(field.controller!.text, '第一行\n[attach]123456[/attach]\n第二行');
@@ -130,7 +130,7 @@ void _caretCases() {
       final inputFinder = find.byKey(const Key('reply-composer-message-input'));
       await tester.enterText(inputFinder, '第一行\n第二行');
       await tester.pump();
-      final field = tester.widget<TextField>(inputFinder);
+      final field = tester.widget<AppTextInput>(inputFinder);
       field.controller!.selection = const TextSelection.collapsed(offset: 3);
       await tester.pump();
 

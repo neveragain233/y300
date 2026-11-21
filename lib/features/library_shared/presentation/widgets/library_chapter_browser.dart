@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/controllers/chapter_search_controller.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader_panel_theme.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
@@ -199,11 +200,12 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
     final container = _providerContainer();
     if (scope == null || container == null) return;
     _focus.unfocus();
+    final panelPalette = ReaderPanelTheme.maybeOf(context);
     final keyword = await showAdaptivePanel<String>(
       context: context,
-      builder: (context) => UncontrolledProviderScope(
-        container: container,
-        child: SafeArea(
+      backgroundColor: panelPalette?.panelSurface,
+      builder: (context) {
+        Widget panelBody = SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 16),
             child: RecentSearchView(
@@ -211,8 +213,18 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
               onSelected: (value) => Navigator.of(context).pop(value),
             ),
           ),
-        ),
-      ),
+        );
+        if (panelPalette != null) {
+          panelBody = ReaderPanelTheme(
+            palette: panelPalette,
+            child: Material(color: panelPalette.panelSurface, child: panelBody),
+          );
+        }
+        return UncontrolledProviderScope(
+          container: container,
+          child: panelBody,
+        );
+      },
     );
     if (!mounted || keyword == null) return;
     _text.value = TextEditingValue(
@@ -286,7 +298,9 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
                         l10n.libraryChapterSearchCount(results.length),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                     IconButton(

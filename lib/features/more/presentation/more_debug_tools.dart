@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_quill_prototype_page.dart';
 import 'package:y300/features/thread/presentation/html_rendering/forum_html_renderer_prototype_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 
 class MoreDebugTools {
   const MoreDebugTools();
@@ -12,10 +13,11 @@ class MoreDebugTools {
       return const <Widget>[];
     }
     return <Widget>[
-      ListTile(
+      AppGroupedRow(
         key: const Key('more-composer-quill-prototype-entry'),
         leading: const Icon(Icons.edit_note_outlined),
-        title: Text(l10n.moreDebugQuillComposer),
+        title: l10n.moreDebugQuillComposer,
+        showChevron: true,
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -24,10 +26,11 @@ class MoreDebugTools {
           );
         },
       ),
-      ListTile(
+      AppGroupedRow(
         key: const Key('more-html-renderer-prototype-entry'),
         leading: const Icon(Icons.article_outlined),
-        title: Text(l10n.moreDebugHtmlRenderer),
+        title: l10n.moreDebugHtmlRenderer,
+        showChevron: true,
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(

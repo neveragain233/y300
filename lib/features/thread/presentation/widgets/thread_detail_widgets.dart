@@ -40,8 +40,8 @@ import 'package:y300/features/thread/presentation/widgets/thread_replies_header.
 import 'package:y300/features/thread/presentation/widgets/thread_poll_option_image.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_post_render_context.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
-import 'package:y300/shared/widgets/app_prism_theme.dart';
-import 'package:prism_ui/switch.dart' as prism;
+import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/forum_metric_pill.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
@@ -243,6 +243,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   @override
   bool _repliesHeaderPinned = false;
   bool _stickyHeaderSyncScheduled = false;
+  List<ThreadDetailRenderEntry> _lastEntries = const [];
+  bool _lastAnchoredListMode = false;
 
   @override
   void initState() {
@@ -502,17 +504,10 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       (entry) => entry.kind == ThreadDetailRenderEntryKind.repliesHeader,
     );
     _imageAspectRatioTracker.resetFor(_imageAspectRatioSignature());
-    if (_endpointTarget != null && entries.isNotEmpty) {
-      return _buildTargetAnchoredList(
-        entries: entries,
-        targetEntryIndex: _endpointTarget == ThreadDetailQuickScrollTarget.top
-            ? 0
-            : entries.length - 1,
-        palette: palette,
-      );
-    }
+    final endpointAnchored = _endpointTarget != null && entries.isNotEmpty;
     final targetPid = _activeTargetPid?.trim();
-    final targetEntryIndex = targetPid == null || targetPid.isEmpty
+    final targetEntryIndex =
+        endpointAnchored || targetPid == null || targetPid.isEmpty
         ? -1
         : entries.indexWhere(
             (entry) =>
@@ -527,6 +522,22 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                               ThreadDetailRenderEntryKind.blacklistedPost) &&
                 entry.sourcePost?.pid == targetPid,
           );
+    final anchored = endpointAnchored || targetEntryIndex >= 0;
+    if (anchored != _lastAnchoredListMode) {
+      // 切换居中定位列表与标准列表时坐标系不同，丢弃旧偏移避免误判吸顶。
+      _repliesHeaderContentOffset = null;
+    }
+    _lastEntries = entries;
+    _lastAnchoredListMode = anchored;
+    if (endpointAnchored) {
+      return _buildTargetAnchoredList(
+        entries: entries,
+        targetEntryIndex: _endpointTarget == ThreadDetailQuickScrollTarget.top
+            ? 0
+            : entries.length - 1,
+        palette: palette,
+      );
+    }
     if (targetEntryIndex >= 0) {
       return _buildTargetAnchoredList(
         entries: entries,
@@ -1176,16 +1187,15 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final viewportContext = _viewportKey.currentContext;
     final height = _stickyRepliesHeaderKey.currentContext?.size?.height;
     final controller = widget.scrollController;
-    if (headerContext != null && viewportContext != null) {
+    final viewportRaw = viewportContext?.findRenderObject();
+    final viewportBox =
+        viewportRaw is RenderBox && viewportRaw.attached && viewportRaw.hasSize
+        ? viewportRaw
+        : null;
+    if (headerContext != null && viewportBox != null) {
       final header = headerContext.findRenderObject();
-      final viewport = viewportContext.findRenderObject();
-      if (header is RenderBox &&
-          viewport is RenderBox &&
-          header.attached &&
-          header.hasSize &&
-          viewport.attached &&
-          viewport.hasSize) {
-        final top = header.localToGlobal(Offset.zero, ancestor: viewport).dy;
+      if (header is RenderBox && header.attached && header.hasSize) {
+        final top = header.localToGlobal(Offset.zero, ancestor: viewportBox).dy;
         if (controller != null && controller.hasClients) {
           _repliesHeaderContentOffset = controller.position.pixels + top;
         }
@@ -1193,13 +1203,94 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         return;
       }
     }
+    final pinned = _inferStickyPinnedWhenUnmounted(
+      viewport: viewportBox,
+      controller: controller,
+    );
+    _updateStickyHeader(pinned: pinned, height: height);
+  }
+
+  RenderBox? _mountedEntryBox(ThreadDetailRenderEntry entry) {
+    final post = entry.sourcePost;
+    final key = switch (entry.kind) {
+      ThreadDetailRenderEntryKind.postCard ||
+      ThreadDetailRenderEntryKind.blacklistedPost =>
+        post == null ? null : _projectionAnchorCoordinator.keyForPid(post.pid),
+      ThreadDetailRenderEntryKind.postHeader =>
+        post == null
+            ? null
+            : (_preparedBodies[post.pid] != null
+                  ? _projectionAnchorCoordinator.keyForPid(post.pid)
+                  : _floorHeaderKeys[post.pid]),
+      ThreadDetailRenderEntryKind.postBodyChunk =>
+        post == null || entry.bodyManifest == null || entry.chunkOrdinal == null
+            ? null
+            : _projectionAnchorCoordinator.keyForChunk(
+                post.pid,
+                entry.bodyManifest!.chunks[entry.chunkOrdinal!].startUnit,
+                endUnit:
+                    entry.bodyManifest!.chunks[entry.chunkOrdinal!].endUnit,
+              ),
+      ThreadDetailRenderEntryKind.postFooter =>
+        post != null && _preparedBodies[post.pid] == null
+            ? _projectionAnchorCoordinator.keyForPid(post.pid)
+            : null,
+      _ => null,
+    };
+    final renderObject = key?.currentContext?.findRenderObject();
+    if (renderObject is RenderBox &&
+        renderObject.attached &&
+        renderObject.hasSize) {
+      return renderObject;
+    }
+    return null;
+  }
+
+  /// 内联回复栏被列表回收（例如倒序切换后仍停在回复区，或墨水屏 85% 单次跳页直接越过）
+  /// 时，依据前后仍在视口中的条目与滚动偏移推断是否应继续吸顶。
+  bool _inferStickyPinnedWhenUnmounted({
+    required RenderBox? viewport,
+    required ScrollController? controller,
+  }) {
+    final headerIndex = _lastEntries.indexWhere(
+      (entry) => entry.kind == ThreadDetailRenderEntryKind.repliesHeader,
+    );
+    if (headerIndex < 0) return false;
+    if (headerIndex == 0) {
+      if (_lastAnchoredListMode) {
+        return _endpointTarget != ThreadDetailQuickScrollTarget.top;
+      }
+      return controller != null &&
+          controller.hasClients &&
+          controller.position.pixels >= ForumContentSpacing.listTop;
+    }
+    if (viewport != null) {
+      for (var index = 0; index < headerIndex; index++) {
+        final box = _mountedEntryBox(_lastEntries[index]);
+        if (box == null) continue;
+        final bottom = box
+            .localToGlobal(Offset(0, box.size.height), ancestor: viewport)
+            .dy;
+        if (bottom > 0) return false;
+      }
+      for (var index = headerIndex + 1; index < _lastEntries.length; index++) {
+        final box = _mountedEntryBox(_lastEntries[index]);
+        if (box == null) continue;
+        final top = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+        if (top < viewport.size.height) return true;
+      }
+    }
     final offset = _repliesHeaderContentOffset;
-    final pinned =
-        offset != null &&
+    if (offset != null && controller != null && controller.hasClients) {
+      return controller.position.pixels >= offset;
+    }
+    if (!_lastAnchoredListMode &&
         controller != null &&
         controller.hasClients &&
-        controller.position.pixels >= offset;
-    _updateStickyHeader(pinned: pinned, height: height);
+        controller.position.pixels > 0) {
+      return true;
+    }
+    return false;
   }
 
   void _updateStickyHeader({required bool pinned, double? height}) {

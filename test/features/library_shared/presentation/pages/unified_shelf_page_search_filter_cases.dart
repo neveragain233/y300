@@ -68,7 +68,7 @@ void _searchFilterCases() {
     await tester.pump();
     expect(
       tester
-          .widget<TextField>(
+          .widget<AppTextInput>(
             find.byKey(const Key('unified-shelf-search-input')),
           )
           .controller

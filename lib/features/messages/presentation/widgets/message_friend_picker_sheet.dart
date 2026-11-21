@@ -10,6 +10,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/message_friend_directory_controller.dart';
 import 'package:y300/features/messages/presentation/widgets/message_avatar.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_checkbox_row.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 
 /// The caller disposes [controller] when this sheet closes. Selection belongs
@@ -239,34 +240,25 @@ class _MessageFriendPickerSheetState
                                 widget.selection.length <
                                     PrivateMessageRecipientSelection
                                         .maxRecipients;
-                            return CheckboxListTile(
+                            return AppCheckboxRow(
                               key: Key('message-friend-${friend.userId}'),
                               value: selected,
                               selected: selected,
-                              activeColor: palette.accent,
-                              checkColor: palette.onAccent,
-                              checkboxShape: const CircleBorder(),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              isCircle: true,
+                              selectedBackgroundColor: palette.accent
+                                  .withValues(alpha: 0.08),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                                 vertical: 2,
                               ),
-                              selectedTileColor: palette.accent.withValues(
-                                alpha: 0.08,
-                              ),
-                              onChanged: enabled
-                                  ? (_) => _toggle(friend)
-                                  : null,
-                              title: Text(
-                                friend.username,
-                                style: TextStyle(color: palette.body),
-                              ),
-                              secondary: MessageAvatar(
+                              leading: MessageAvatar(
                                 userId: friend.userId,
                                 imageUrl: friend.avatarUrl,
                               ),
+                              title: friend.username,
+                              onChanged: enabled
+                                  ? (_) => _toggle(friend)
+                                  : null,
                             );
                           },
                         ),

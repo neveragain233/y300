@@ -96,7 +96,7 @@ void _destinationCases() {
     expect(find.byKey(const Key('more-my-messages-entry')), findsNothing);
     await navigation.setVisibility(MainShellDestination.forum, false);
     await tester.pumpAndSettle();
-    final fallback = tester.widget<ListTile>(
+    final fallback = tester.widget<AppGroupedRow>(
       find.byKey(const Key('more-my-messages-entry')),
     );
     expect((fallback.leading! as MessageAttentionIcon).showAttention, true);

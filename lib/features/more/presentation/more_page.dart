@@ -149,11 +149,11 @@ class _MorePageState extends ConsumerState<MorePage> {
                         if (!forumVisible) MainShellDestination.history,
                         MainShellDestination.blogs,
                       ])
-                        ListTile(
+                        AppGroupedRow(
                           key: ValueKey('more-destination-${destination.name}'),
                           leading: Icon(destination.icon),
-                          title: Text(destination.localizedLabel(l10n)),
-                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          title: destination.localizedLabel(l10n),
+                          showChevron: true,
                           onTap: () => Navigator.of(context).push(
                             ref.read(mainDestinationRouteFactoryProvider)(
                               destination,
@@ -161,36 +161,39 @@ class _MorePageState extends ConsumerState<MorePage> {
                           ),
                         ),
                       if (!forumVisible)
-                        ListTile(
+                        AppGroupedRow(
                           key: const Key('more-my-messages-entry'),
                           leading: MessageAttentionIcon(
                             icon: Icons.mail_outline,
                             showAttention: hasMessageAttention,
                           ),
-                          title: Text(l10n.moreMyMessages),
-                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          title: l10n.moreMyMessages,
+                          showChevron: true,
+                          enabled: canOpenMyContent,
                           onTap: canOpenMyContent
                               ? () => _openMyContentPage(
                                   ForumUserProfileActionKind.messages,
                                 )
                               : null,
                         ),
-                      ListTile(
+                      AppGroupedRow(
                         key: const Key('more-my-blogs-entry'),
                         leading: const Icon(Icons.auto_stories_outlined),
-                        title: Text(l10n.profileMyBlogs),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        title: l10n.profileMyBlogs,
+                        showChevron: true,
+                        enabled: canOpenMyContent,
                         onTap: canOpenMyContent
                             ? () => _openMyContentPage(
                                 ForumUserProfileActionKind.blogs,
                               )
                             : null,
                       ),
-                      ListTile(
+                      AppGroupedRow(
                         key: const Key('more-my-friends-entry'),
                         leading: const Icon(Icons.people_outline_rounded),
-                        title: Text(l10n.profileMyFriendsTitle),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        title: l10n.profileMyFriendsTitle,
+                        showChevron: true,
+                        enabled: canOpenMyContent,
                         onTap: canOpenMyContent
                             ? () => _openMyContentPage(
                                 ForumUserProfileActionKind.friends,
@@ -202,20 +205,21 @@ class _MorePageState extends ConsumerState<MorePage> {
                   _MoreSection(
                     title: l10n.moreSectionManagement,
                     children: [
-                      ListTile(
+                      AppGroupedRow(
                         key: const Key('more-unused-images-entry'),
                         leading: const Icon(Icons.photo_library_outlined),
-                        title: Text(l10n.moreUnusedImages),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        title: l10n.moreUnusedImages,
+                        showChevron: true,
+                        enabled: !_accountActionPending,
                         onTap: _accountActionPending
                             ? null
                             : () => _openUnusedImagesPage(context, authSession),
                       ),
-                      ListTile(
+                      AppGroupedRow(
                         key: const Key('more-download-queue-entry'),
                         leading: const Icon(Icons.offline_pin_outlined),
-                        title: Text(l10n.moreDownloadQueue),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        title: l10n.moreDownloadQueue,
+                        showChevron: true,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
@@ -229,11 +233,11 @@ class _MorePageState extends ConsumerState<MorePage> {
                   _MoreSection(
                     title: l10n.moreSectionSettings,
                     children: [
-                      ListTile(
+                      AppGroupedRow(
                         key: const Key('more-settings-entry'),
                         leading: const Icon(Icons.settings_outlined),
-                        title: Text(l10n.moreSectionSettings),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        title: l10n.moreSectionSettings,
+                        showChevron: true,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => const SettingsPage(),
@@ -493,18 +497,15 @@ class _MoreSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTileTheme(
-      minVerticalPadding: 12,
-      child: AppGroupedSection(
-        title: title,
-        margin: const EdgeInsets.fromLTRB(
-          AppLayoutTokens.contentSpacing,
-          AppLayoutTokens.sectionSpacing,
-          AppLayoutTokens.contentSpacing,
-          0,
-        ),
-        children: children,
+    return AppGroupedSection(
+      title: title,
+      margin: const EdgeInsets.fromLTRB(
+        AppLayoutTokens.contentSpacing,
+        AppLayoutTokens.sectionSpacing,
+        AppLayoutTokens.contentSpacing,
+        0,
       ),
+      children: children,
     );
   }
 }

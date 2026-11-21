@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_action_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_app_bar.dart';
 import 'package:y300/l10n/app_localizations_zh.dart';
+
 import '../../../../test_support/localized_test_app.dart';
 
 void main() {
@@ -28,7 +30,7 @@ void main() {
       ),
     );
 
-    final button = tester.widget<IconButton>(
+    final button = tester.widget<prism_button.IconButton>(
       find.byKey(const ValueKey<String>('selection-action-unfavorite')),
     );
     expect(

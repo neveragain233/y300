@@ -362,32 +362,45 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
     if (current == null) {
       return null;
     }
-    final next = !current.isBookmarked;
+    return setEpisodeBookmarked(current.episodeId, !current.isBookmarked);
+  }
+
+  Future<ComicReaderNoticeCode?> setEpisodeBookmarked(
+    String episodeId,
+    bool isBookmarked,
+  ) async {
+    final current = state.value;
+    if (current == null) {
+      return null;
+    }
     final generation = _episodeOperationGeneration;
     await _readingStateWriter.setEpisodeBookmarked(
       comicId: _args.comicId,
-      episodeId: current.episodeId,
-      isBookmarked: next,
+      episodeId: episodeId,
+      isBookmarked: isBookmarked,
     );
-    if (!ref.mounted ||
-        generation != _episodeOperationGeneration ||
-        state.value?.episodeId != current.episodeId) {
+    if (!ref.mounted || generation != _episodeOperationGeneration) {
       return null;
     }
-    final latest = state.value!;
+    final latest = state.value;
+    if (latest == null) {
+      return null;
+    }
     state = AsyncData(
       latest.copyWith(
-        isBookmarked: next,
+        isBookmarked: episodeId == latest.episodeId
+            ? isBookmarked
+            : latest.isBookmarked,
         clearNotice: true,
         chapters: [
           for (final chapter in latest.chapters)
-            chapter.episodeId == current.episodeId
-                ? chapter.copyWith(isBookmarked: next)
+            chapter.episodeId == episodeId
+                ? chapter.copyWith(isBookmarked: isBookmarked)
                 : chapter,
         ],
       ),
     );
-    return next
+    return isBookmarked
         ? ComicReaderNoticeCode.bookmarkAdded
         : ComicReaderNoticeCode.bookmarkRemoved;
   }
@@ -397,25 +410,43 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
     if (current == null) {
       return null;
     }
+    return setEpisodeRead(current.episodeId, isRead);
+  }
+
+  Future<ComicReaderNoticeCode?> setEpisodeRead(
+    String episodeId,
+    bool isRead,
+  ) async {
+    final current = state.value;
+    if (current == null) {
+      return null;
+    }
+    final generation = _episodeOperationGeneration;
     await _readingStateWriter.setEpisodeRead(
       comicId: _args.comicId,
-      episodeId: current.episodeId,
+      episodeId: episodeId,
       isRead: isRead,
     );
     if (isRead) {
-      _completedEpisodeIds.add(current.episodeId);
+      _completedEpisodeIds.add(episodeId);
     } else {
-      _completedEpisodeIds.remove(current.episodeId);
+      _completedEpisodeIds.remove(episodeId);
     }
-    if (!ref.mounted) {
+    if (!ref.mounted || generation != _episodeOperationGeneration) {
+      return null;
+    }
+    final latest = state.value;
+    if (latest == null) {
       return null;
     }
     state = AsyncData(
-      current.copyWith(
-        isCurrentEpisodeRead: isRead,
+      latest.copyWith(
+        isCurrentEpisodeRead: episodeId == latest.episodeId
+            ? isRead
+            : latest.isCurrentEpisodeRead,
         chapters: _markChapterRead(
-          current.chapters,
-          episodeId: current.episodeId,
+          latest.chapters,
+          episodeId: episodeId,
           isRead: isRead,
         ),
         clearNotice: true,

@@ -4378,5 +4378,56 @@
   "appearanceEInkEdgeTapTitle": "边缘点击翻页",
   "appearanceEInkEdgeTapSubtitle": "在列表左右边缘轻点翻动；含横向手势的页面不启用",
   "settingsSearchSummaryEInk": "墨水屏模式与边缘点击翻页",
-  "settingsSearchKeywordsEInk": "墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度"
+  "settingsSearchKeywordsEInk": "墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度",
+  "readerStepperDecrease": "减小{label}",
+  "@readerStepperDecrease": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "readerStepperIncrease": "增大{label}",
+  "@readerStepperIncrease": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "readerStepperValueSemantics": "{label}，当前{value}",
+  "@readerStepperValueSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readerStepperRangeHint": "范围：{min} – {max}",
+  "@readerStepperRangeHint": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "readerUnitPoint": "磅",
+  "readerUnitMultiple": "倍",
+  "readerUnitPixel": "像素",
+  "readerUnitPercent": "%",
+  "readerBookmarkDelete": "删除书签：{title}",
+  "@readerBookmarkDelete": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "readerContentTitle": "内容"
 }

@@ -3272,8 +3272,9 @@ class _RenderPopupMenuCard extends RenderProxyBox {
       Offset.zero & size,
       shape,
       (context, offset) {
-        // 压黑层在玻璃采样之上、菜单内容之下；实色卡片不需要。
-        if (_glass != null && _scrim.a > 0) {
+        // 压黑层在玻璃采样之上、菜单内容之下；开合阶段由 Morph 统一绘制，
+        // 避免 bare 状态下 Morph 与 Card 双重叠加；实色卡片也不需要。
+        if (_glass != null && !_bare && _scrim.a > 0) {
           context.canvas.drawPath(shape.shift(offset), Paint()..color = _scrim);
         }
         context.paintChild(child, offset);

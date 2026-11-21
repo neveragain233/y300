@@ -1,6 +1,7 @@
 import 'package:animated_flip_counter/animated_flip_counter.dart';
+import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/more/presentation/more_account_avatar.dart';
-import 'package:y300/features/more/presentation/more_account_identity_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -8,6 +9,7 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/profile/presentation/current_account_summary_controller.dart';
 import 'package:y300/features/profile/presentation/daily_auto_sign_in_toggle.dart';
+import 'package:y300/features/profile/presentation/daily_sign_in_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
@@ -83,6 +85,16 @@ class MoreAccountHeader extends ConsumerWidget {
         : null;
     final busy = verifying || loggingOut || isAccountActionPending;
     final openProfile = owner != null && !busy ? onOpenProfile : null;
+    final motion200 = AppMotion.duration(
+      context,
+      const Duration(milliseconds: 200),
+    );
+    final showAutoSignIn =
+        hasAccount &&
+        owner != null &&
+        ref.watch(
+          dailySignInControllerProvider.select((s) => s.owner == owner),
+        );
     final avatar = Semantics(
       label: l10n.moreAccountAvatar(name),
       image: true,
@@ -94,7 +106,7 @@ class MoreAccountHeader extends ConsumerWidget {
             ? MoreAccountAvatar(
                 key: ValueKey('account-avatar-$displayUid'),
                 uid: displayUid,
-                size: 72,
+                size: 64,
               )
             : ForumCachedAvatar(
                 imageUrl: null,
@@ -122,9 +134,7 @@ class MoreAccountHeader extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: AnimatedSwitcher(
               key: ValueKey((displayUid, data != null)),
-              duration: MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : const Duration(milliseconds: 200),
+              duration: motion200,
               child: Text(
                 name,
                 key: ValueKey(name),
@@ -139,15 +149,14 @@ class MoreAccountHeader extends ConsumerWidget {
           ),
         ),
       ),
-      if (hasAccount && groupName != null)
+      if (hasAccount && groupName != null) ...[
+        const SizedBox(height: 6),
         Semantics(
           label: l10n.moreAccountGroup(groupName),
           excludeSemantics: true,
           child: AnimatedSwitcher(
             key: ValueKey(displayUid),
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 200),
+            duration: motion200,
             child: KeyedSubtree(
               key: ValueKey(groupName),
               child: Container(
@@ -169,132 +178,137 @@ class MoreAccountHeader extends ConsumerWidget {
             ),
           ),
         ),
+      ],
     ];
-    final identity = hasAccount
-        ? Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: identityChildren,
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: identityChildren,
-          );
+    final identity = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: identityChildren,
+    );
 
-    return Card(
-      key: const Key('more-account-header'),
-      margin: const EdgeInsets.only(top: 12),
-      color: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: hasAccount
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.center,
-              children: [
-                avatar,
-                if (hasAccount) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: _AccountStatistic(
-                            key: const Key('more-account-threads'),
-                            label: l10n.moreAccountThreads,
-                            value: threads,
-                            accountUid: displayUid,
-                            onTap: owner != null && !busy
-                                ? onOpenThreads
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 32,
-                          width: 16,
-                          child: VerticalDivider(indent: 5, endIndent: 5),
-                        ),
-                        Expanded(
-                          child: _AccountStatistic(
-                            key: const Key('more-account-replies'),
-                            label: l10n.moreAccountReplies,
-                            value: replies,
-                            accountUid: displayUid,
-                            onTap: owner != null && !busy
-                                ? onOpenReplies
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 32,
-                          width: 16,
-                          child: VerticalDivider(indent: 5, endIndent: 5),
-                        ),
-                        Expanded(
-                          child: _AccountStatistic(
-                            key: const Key('more-account-credits'),
-                            label: l10n.moreAccountCreditLabel,
-                            value: credits,
-                            accountUid: displayUid,
-                            onTap: owner != null && !busy
-                                ? onOpenCredits
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ] else ...[
-                  const SizedBox(width: 12),
-                  Expanded(child: identity),
-                ],
-              ],
-            ),
-            if (hasAccount) ...[
-              const SizedBox(height: 8),
-              if (owner == null)
-                identity
-              else
-                MoreAccountIdentityLayout(
-                  identity: identity,
-                  action: const DailyAutoSignInToggle(),
+    final scheme = theme.colorScheme;
+    final cardColor = scheme.brightness == Brightness.dark
+        ? scheme.surfaceContainer
+        : scheme.surfaceContainerLowest;
+    final dividerColor = scheme.outlineVariant.withValues(alpha: 0.6);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayoutTokens.contentSpacing,
+        12,
+        AppLayoutTokens.contentSpacing,
+        0,
+      ),
+      child: ClipRRect(
+        key: const Key('more-account-header'),
+        borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: cardColor,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: identity),
+                    const SizedBox(width: 16),
+                    avatar,
+                  ],
                 ),
-            ],
-            if (current && summary.failure != null)
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                children: [
-                  Text(
-                    l10n.moreAccountLoadFailed,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  TextButton(
-                    key: const Key('more-account-retry'),
-                    onPressed: summary.isLoading
-                        ? null
-                        : () => ref
-                              .read(
-                                currentAccountSummaryControllerProvider
-                                    .notifier,
-                              )
-                              .refresh(),
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
               ),
-          ],
+              if (hasAccount) ...[
+                Divider(height: 1, thickness: 0.6, color: dividerColor),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: _AccountStatistic(
+                          key: const Key('more-account-threads'),
+                          label: l10n.moreAccountThreads,
+                          value: threads,
+                          accountUid: displayUid,
+                          onTap: owner != null && !busy ? onOpenThreads : null,
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 32,
+                        width: 16,
+                        child: VerticalDivider(indent: 5, endIndent: 5),
+                      ),
+                      Expanded(
+                        child: _AccountStatistic(
+                          key: const Key('more-account-replies'),
+                          label: l10n.moreAccountReplies,
+                          value: replies,
+                          accountUid: displayUid,
+                          onTap: owner != null && !busy ? onOpenReplies : null,
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 32,
+                        width: 16,
+                        child: VerticalDivider(indent: 5, endIndent: 5),
+                      ),
+                      Expanded(
+                        child: _AccountStatistic(
+                          key: const Key('more-account-credits'),
+                          label: l10n.moreAccountCreditLabel,
+                          value: credits,
+                          accountUid: displayUid,
+                          onTap: owner != null && !busy ? onOpenCredits : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (showAutoSignIn) ...[
+                Divider(height: 1, thickness: 0.6, color: dividerColor),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: DailyAutoSignInToggle(expand: true),
+                ),
+              ],
+              if (current && summary.failure != null) ...[
+                Divider(height: 1, thickness: 0.6, color: dividerColor),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Text(
+                        l10n.moreAccountLoadFailed,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      TextButton(
+                        key: const Key('more-account-retry'),
+                        onPressed: summary.isLoading
+                            ? null
+                            : () => ref
+                                  .read(
+                                    currentAccountSummaryControllerProvider
+                                        .notifier,
+                                  )
+                                  .refresh(),
+                        child: Text(l10n.commonRetry),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -337,7 +351,7 @@ class _AccountStatistic extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -365,13 +379,14 @@ class _AccountStatistic extends StatelessWidget {
                   return AnimatedFlipCounter(
                     key: ValueKey(accountUid),
                     value: value!,
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : const Duration(milliseconds: 260),
-                    negativeSignDuration:
-                        MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : const Duration(milliseconds: 150),
+                    duration: AppMotion.duration(
+                      context,
+                      const Duration(milliseconds: 260),
+                    ),
+                    negativeSignDuration: AppMotion.duration(
+                      context,
+                      const Duration(milliseconds: 150),
+                    ),
                     textStyle: style,
                   );
                 },

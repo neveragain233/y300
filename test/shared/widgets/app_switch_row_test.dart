@@ -66,7 +66,88 @@ void main() {
     final node = tester.getSemantics(find.byType(AppSwitchRow));
     expect(node, isSemantics(hasEnabledState: true, isEnabled: false));
   });
+
+  testWidgets('AppSwitch guarantees 48dp hit target and respects disabled', (
+    tester,
+  ) async {
+    final changes = <bool>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              AppSwitch(
+                key: const Key('standalone-switch'),
+                switchKey: const Key('inner-prism-switch'),
+                value: false,
+                onChanged: changes.add,
+              ),
+              const AppSwitch(
+                key: Key('disabled-switch'),
+                value: true,
+                disabled: true,
+                onChanged: _noopBool,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final size = tester.getSize(find.byKey(const Key('standalone-switch')));
+    expect(size.width, greaterThanOrEqualTo(48));
+    expect(size.height, greaterThanOrEqualTo(48));
+    expect(find.byType(Switch), findsNothing);
+    expect(find.byKey(const Key('inner-prism-switch')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('standalone-switch')));
+    await tester.tap(find.byKey(const Key('disabled-switch')));
+    await tester.pump();
+    expect(changes, [true]);
+  });
+
+  testWidgets('AppSwitchRow.compact toggles on row and switchKey tap', (
+    tester,
+  ) async {
+    final changes = <bool>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: AppSwitchRow.compact(
+            key: const Key('compact-row'),
+            switchKey: const Key('compact-switch'),
+            title: '安全区避让',
+            value: false,
+            onChanged: changes.add,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSize(find.byKey(const Key('compact-row'))).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(find.byKey(const Key('compact-switch')), findsOneWidget);
+    final node = tester.getSemantics(find.byKey(const Key('compact-row')));
+    expect(
+      node,
+      isSemantics(
+        hasToggledState: true,
+        isToggled: false,
+        hasEnabledState: true,
+        isEnabled: true,
+      ),
+    );
+
+    await tester.tap(find.text('安全区避让'));
+    await tester.tap(find.byKey(const Key('compact-switch')));
+    await tester.pump();
+    expect(changes, [true, true]);
+  });
 }
+
+void _noopBool(bool _) {}
 
 Widget _switchApp({
   required bool value,

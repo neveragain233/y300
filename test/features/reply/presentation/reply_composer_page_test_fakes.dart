@@ -86,7 +86,7 @@ Future<void> _pumpUntilMessageContains(
         .isEmpty) {
       await _openReplySourceEditor(tester);
     }
-    final sourceField = tester.widget<TextField>(
+    final sourceField = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     if ((sourceField.controller?.text ?? '').contains(expected)) {

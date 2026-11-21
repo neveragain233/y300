@@ -3,6 +3,9 @@ import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_access_fields.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_checkbox_row.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
@@ -111,8 +114,8 @@ class BlogEditorSettingsFields extends StatelessWidget {
         ),
         if (options.canPublishFeed || draft.publishFeed) ...[
           const SizedBox(height: 4),
-          BlogEditorSwitchRow(
-            controlKey: const Key('blog-editor-publish-feed'),
+          AppSwitchRow.compact(
+            switchKey: const Key('blog-editor-publish-feed'),
             title: l10n.profileBlogPublishFeed,
             titleStyle: theme.textTheme.bodyMedium?.copyWith(
               color: native.body,
@@ -225,43 +228,22 @@ class _CategoryField extends StatelessWidget {
             : category.name,
       if (includeNew) 'new': l10n.profileBlogNewCategory,
     };
-    return KeyedSubtree(
+    return AppSelectField<String>(
       key: fieldKey,
-      child: DropdownButtonFormField<String>(
-        key: ValueKey((
-          fieldKey,
-          selected,
-          Object.hashAll(
-            labels.entries.map((entry) => (entry.key, entry.value)),
+      label: label,
+      value: labels.containsKey(selected) ? selected : null,
+      hintText: l10n.profileBlogChooseCategory,
+      textStyle: theme.textTheme.bodyMedium?.copyWith(color: native.body),
+      enabled: onChanged != null,
+      options: [
+        for (final entry in labels.entries)
+          AppSelectOption(
+            value: entry.key,
+            label: entry.value,
+            enabled: entry.key != 'new' || allowNew,
           ),
-        )),
-        initialValue: labels.containsKey(selected) ? selected : null,
-        decoration: _settingDecoration(context, label: label),
-        style: theme.textTheme.bodyMedium?.copyWith(color: native.body),
-        iconEnabledColor: native.supportingText,
-        iconDisabledColor: native.disabled,
-        dropdownColor: native.card,
-        isExpanded: true,
-        itemHeight: null,
-        hint: Text(l10n.profileBlogChooseCategory),
-        items: [
-          for (final entry in labels.entries)
-            DropdownMenuItem(
-              value: entry.key,
-              enabled: entry.key != 'new' || allowNew,
-              child: Text(
-                entry.value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-        onChanged: onChanged == null
-            ? null
-            : (value) {
-                if (value != null) onChanged!(value);
-              },
-      ),
+      ],
+      onSelected: onChanged,
     );
   }
 }
@@ -309,9 +291,9 @@ class BlogEditorServerMetadata extends StatelessWidget {
           ),
           if (draft.visibility == UserBlogVisibility.selectedFriends)
             Text('${l10n.profileBlogTargetNames}：${draft.targetNames}'),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l10n.profileBlogPublishFeed),
+          AppCheckboxRow(
+            compact: true,
+            title: l10n.profileBlogPublishFeed,
             value: draft.publishFeed,
             onChanged: null,
           ),
@@ -319,21 +301,6 @@ class BlogEditorServerMetadata extends StatelessWidget {
       ),
     );
   }
-}
-
-InputDecoration _settingDecoration(
-  BuildContext context, {
-  required String label,
-}) {
-  final native = Theme.of(context).y300NativeContent;
-  return InputDecoration(
-    labelText: label,
-    labelStyle: TextStyle(color: native.supportingText),
-    floatingLabelStyle: TextStyle(color: native.author),
-    isDense: true,
-    filled: false,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-  );
 }
 
 String _category(

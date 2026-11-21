@@ -16,6 +16,7 @@ import 'package:y300/features/thread/presentation/thread_detail_state.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 class ForumHtmlRendererPrototypePage extends ConsumerStatefulWidget {
   const ForumHtmlRendererPrototypePage({
@@ -858,33 +859,14 @@ class _JitterDiagnosticsControls extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.threadPrototypeJitterTitle,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        recording
-                            ? l10n.threadPrototypeJitterRecording
-                            : l10n.threadPrototypeJitterCount(logCount),
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: colors.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch.adaptive(
-                  key: const Key('forum-html-prototype-jitter-log-switch'),
-                  value: recording,
-                  onChanged: onRecordingChanged,
-                ),
-              ],
+            AppSwitchRow.compact(
+              switchKey: const Key('forum-html-prototype-jitter-log-switch'),
+              title: l10n.threadPrototypeJitterTitle,
+              subtitle: recording
+                  ? l10n.threadPrototypeJitterRecording
+                  : l10n.threadPrototypeJitterCount(logCount),
+              value: recording,
+              onChanged: onRecordingChanged,
             ),
             Row(
               children: [

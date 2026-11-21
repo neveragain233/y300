@@ -5,6 +5,7 @@ import 'package:y300/features/messages/data/message_repository_provider.dart';
 import 'package:y300/features/messages/presentation/message_feed_providers.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 
 /// The dialog owns one explicit write, even if the originating row scrolls away.
@@ -87,6 +88,7 @@ class _NotificationIgnoreDialogState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final ownsAccount = ref.watch(messageAccountIdProvider) == widget.accountId;
     final result = _result;
     return AppFormDialog(
@@ -94,58 +96,58 @@ class _NotificationIgnoreDialogState
       hasFields: true,
       content: !ownsAccount
           ? Text(l10n.messageLoginRequired)
-          : Material(
-              // prism 对话框只画表面；单选行仍需 Material 祖先提供墨水层。
-              type: MaterialType.transparency,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.messageIgnoreExplanation),
-                  const SizedBox(height: 12),
-                  RadioGroup<ForumNotificationIgnoreScope>(
-                    groupValue: _scope,
-                    onChanged: (scope) {
-                      if (!_busy && scope != null) {
-                        setState(() => _scope = scope);
-                      }
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_hasAuthor)
-                          RadioListTile<ForumNotificationIgnoreScope>(
-                            value: ForumNotificationIgnoreScope.author,
-                            enabled: !_busy,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(l10n.messageIgnoreAuthor),
-                            subtitle: widget.item.authorName.isEmpty
-                                ? null
-                                : Text(widget.item.authorName),
-                          ),
-                        RadioListTile<ForumNotificationIgnoreScope>(
-                          value: ForumNotificationIgnoreScope.allAuthors,
-                          enabled: !_busy,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(l10n.messageIgnoreEveryone),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (result?.failureOrNull != null)
-                    Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        result is DataCommandOutcomeUnknown
-                            ? l10n.messageIgnoreUnknown
-                            : LocalizedErrorSummary.resolve(l10n, result),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(l10n.messageIgnoreExplanation),
+                const SizedBox(height: 12),
+                AppGroupedSection(
+                  margin: EdgeInsets.zero,
+                  children: [
+                    if (_hasAuthor)
+                      AppGroupedRow(
+                        title: l10n.messageIgnoreAuthor,
+                        subtitle: widget.item.authorName.isEmpty
+                            ? null
+                            : widget.item.authorName,
+                        selected: _scope == ForumNotificationIgnoreScope.author,
+                        enabled: !_busy,
+                        trailing: _scope == ForumNotificationIgnoreScope.author
+                            ? Icon(Icons.check, size: 20, color: scheme.primary)
+                            : null,
+                        onTap: () => setState(
+                          () => _scope = ForumNotificationIgnoreScope.author,
                         ),
                       ),
+                    AppGroupedRow(
+                      title: l10n.messageIgnoreEveryone,
+                      selected:
+                          _scope == ForumNotificationIgnoreScope.allAuthors,
+                      enabled: !_busy,
+                      trailing:
+                          _scope == ForumNotificationIgnoreScope.allAuthors
+                          ? Icon(Icons.check, size: 20, color: scheme.primary)
+                          : null,
+                      onTap: () => setState(
+                        () => _scope = ForumNotificationIgnoreScope.allAuthors,
+                      ),
                     ),
+                  ],
+                ),
+                if (result?.failureOrNull != null) ...[
+                  const SizedBox(height: 8),
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      result is DataCommandOutcomeUnknown
+                          ? l10n.messageIgnoreUnknown
+                          : LocalizedErrorSummary.resolve(l10n, result),
+                      style: TextStyle(color: scheme.error),
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
       actions: [
         AppDialogAction(

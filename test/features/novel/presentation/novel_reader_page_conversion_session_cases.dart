@@ -206,6 +206,13 @@ void _conversionSessionCases() {
         final l10n = AppLocalizations.of(
           tester.element(find.byType(NovelReaderPage)),
         );
+        await tester.tap(
+          find.descendant(
+            of: find.byKey(const Key('reader-display-panel-tabs')),
+            matching: find.text(l10n.novelReading),
+          ),
+        );
+        await tester.pumpAndSettle();
         final option = find.descendant(
           of: find.byKey(const Key('novel-reader-conversion-mode-control')),
           matching: find.text(l10n.novelConversionSimplified),
@@ -418,27 +425,35 @@ void _conversionSessionCases() {
         find.byKey(const Key('shared-reader-bottom-action-display')),
       );
       await tester.pumpAndSettle();
-      final margin = find.byKey(const Key('novel-reader-page-padding-slider'));
-      await tester.ensureVisible(margin);
-      final slider = tester.widget<Slider>(
-        find.descendant(of: margin, matching: find.byType(Slider)),
+      await tester.tap(
+        find.byKey(const Key('novel-reader-page-padding-value')),
       );
-      slider.onChanged!(24);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('novel-reader-page-padding-input')),
+        '24',
+      );
+      await tester.tap(
+        find.byKey(const Key('novel-reader-page-padding-confirm')),
+      );
       await tester.pumpAndSettle();
       final l10n = AppLocalizations.of(
         tester.element(find.byType(NovelReaderPage)),
       );
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(l10n.novelReading),
+        ),
+      );
+      await tester.pumpAndSettle();
       for (final (key, label) in [
         ('novel-reader-page-effect-control', l10n.novelPageEffectStaggered),
         ('novel-reader-page-speed-control', l10n.novelPageSpeedRelaxed),
       ]) {
-        final choice = find.descendant(
-          of: find.byKey(Key(key)),
-          matching: find.text(label),
-        );
-        await tester.ensureVisible(choice);
+        await tester.tap(find.byKey(Key(key)));
         await tester.pumpAndSettle();
-        await tester.tap(choice);
+        await tester.tap(find.text(label));
         await tester.pumpAndSettle();
       }
       await tester.pump(const Duration(milliseconds: 600));

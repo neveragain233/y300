@@ -3108,5 +3108,15 @@
   "appearanceEInkEdgeTapTitle": "邊緣點擊翻頁",
   "appearanceEInkEdgeTapSubtitle": "在列表左右邊緣輕點翻動；含橫向手勢的頁面不啟用",
   "settingsSearchSummaryEInk": "墨水屏模式與邊緣點擊翻頁",
-  "settingsSearchKeywordsEInk": "墨水屏 eink 電子書 電紙書 邊緣 翻頁 動畫 玻璃 灰階"
+  "settingsSearchKeywordsEInk": "墨水屏 eink 電子書 電紙書 邊緣 翻頁 動畫 玻璃 灰階",
+  "readerStepperDecrease": "減小{label}",
+  "readerStepperIncrease": "增大{label}",
+  "readerStepperValueSemantics": "{label}，目前{value}",
+  "readerStepperRangeHint": "範圍：{min} – {max}",
+  "readerUnitPoint": "點",
+  "readerUnitMultiple": "倍",
+  "readerUnitPixel": "像素",
+  "readerUnitPercent": "%",
+  "readerBookmarkDelete": "刪除書籤：{title}",
+  "readerContentTitle": "內容"
 }

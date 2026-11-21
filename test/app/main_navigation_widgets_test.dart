@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:prism_ui/liquid_glass.dart';
 import 'package:prism_ui/navigation_dock.dart';
+import 'package:prism_ui/press_region.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 
 import '../test_support/localized_test_app.dart';
 
@@ -130,6 +132,180 @@ void main() {
       expect(tester.getSize(bar).height, greaterThanOrEqualTo(48));
       expect(tester.widget<FloatingNavigationBar>(bar).selectedIndex, 4);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'legacy bottom bar uses PressRegion with 48dp targets, semantics, and 2x text safety',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(280, 700);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        var selected = 0;
+        final items = [
+          for (var i = 0; i < 5; i++)
+            MainNavigationItem(
+              id: 'tab$i',
+              label: ['论坛', '收藏', '书架', '消息', '我的'][i],
+              icon: const Icon(Icons.circle_outlined),
+              selectedIcon: const Icon(Icons.circle),
+            ),
+        ];
+
+        await tester.pumpWidget(
+          LocalizedTestApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: StatefulBuilder(
+              builder: (context, setState) => Scaffold(
+                body: const SizedBox.expand(),
+                bottomNavigationBar: MainLegacyNavigationBar(
+                  items: items,
+                  selectedIndex: selected,
+                  onSelected: (index) => setState(() => selected = index),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NavigationBar), findsNothing);
+        expect(find.byType(PressRegion), findsNWidgets(5));
+
+        for (var i = 0; i < 5; i++) {
+          final target = find.byKey(
+            ValueKey<String>('main-shell-destination-tab$i'),
+          );
+          final size = tester.getSize(target);
+          expect(size.width, greaterThanOrEqualTo(48));
+          expect(size.height, greaterThanOrEqualTo(48));
+          await tester.tap(target);
+          await tester.pumpAndSettle();
+          expect(selected, i);
+          expect(
+            tester.getSemantics(target),
+            isSemantics(
+              isButton: true,
+              hasSelectedState: true,
+              isSelected: true,
+              hasTapAction: true,
+            ),
+          );
+        }
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
+  testWidgets(
+    'navigation rail preserves 80dp compact geometry using PressRegion',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 700);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      var selected = 0;
+      final items = _swipeItems();
+
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          home: StatefulBuilder(
+            builder: (context, setState) => Scaffold(
+              body: Row(
+                children: [
+                  MainNavigationRail(
+                    items: items,
+                    selectedIndex: selected,
+                    onSelected: (index) => setState(() => selected = index),
+                  ),
+                  const Expanded(child: SizedBox.expand()),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(PressRegion), findsNWidgets(items.length));
+      expect(
+        tester
+            .getSize(find.byKey(const Key('main-shell-navigation-rail')))
+            .width,
+        80,
+      );
+
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>('main-shell-rail-destination-target2'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(selected, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'legacy bar and rail use high-contrast primary pill and zero duration in eInk mode',
+    (tester) async {
+      final items = _swipeItems();
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          home: EInkModeScope(
+            enabled: true,
+            child: Row(
+              children: [
+                MainNavigationRail(items: items, selectedIndex: 1),
+                Expanded(
+                  child: Scaffold(
+                    body: const SizedBox.expand(),
+                    bottomNavigationBar: MainLegacyNavigationBar(
+                      items: items,
+                      selectedIndex: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scheme = Theme.of(
+        tester.element(find.byType(MainLegacyNavigationBar)),
+      ).colorScheme;
+      final pressRegions = tester.widgetList<PressRegion>(
+        find.byType(PressRegion),
+      );
+      for (final region in pressRegions) {
+        expect(region.overlay, isNull);
+      }
+      final tweens = tester.widgetList<TweenAnimationBuilder<double>>(
+        find.byType(TweenAnimationBuilder<double>),
+      );
+      for (final tween in tweens) {
+        expect(tween.duration, Duration.zero);
+      }
+      final selectedPills = find.byWidgetPredicate((widget) {
+        if (widget is! DecoratedBox) return false;
+        final decoration = widget.decoration;
+        return decoration is ShapeDecoration &&
+            decoration.shape == const StadiumBorder() &&
+            decoration.color == scheme.primary;
+      });
+      expect(selectedPills, findsNWidgets(2));
     },
   );
 }

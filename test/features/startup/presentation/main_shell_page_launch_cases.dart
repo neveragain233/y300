@@ -36,7 +36,7 @@ void _launchCases() {
         await tester.pumpAndSettle();
         final chrome = style == AppNavigationBarStyle.immersive
             ? find.byType(MainNavigationCapsule)
-            : find.byType(NavigationBar);
+            : find.byType(MainLegacyNavigationBar);
         expect(
           tester.getRect(find.text(l10n.contentFilterUndo)).bottom,
           lessThan(tester.getRect(chrome).top),
@@ -136,8 +136,8 @@ void _launchCases() {
       final home = tester.element(find.byKey(const Key('forum-home-list')));
       tester.view.physicalSize = const Size(1100, 900);
       await tester.pumpAndSettle();
-      expect(find.byType(NavigationRail), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(MainNavigationRail), findsOneWidget);
+      expect(find.byType(MainLegacyNavigationBar), findsNothing);
       expect(
         tester.element(find.byKey(const Key('forum-home-list'))),
         same(home),
@@ -147,7 +147,7 @@ void _launchCases() {
       );
       await tester.tap(
         find.descendant(
-          of: find.byType(NavigationRail),
+          of: find.byType(MainNavigationRail),
           matching: find.text(l10n.appNavigationBookshelf),
         ),
       );
@@ -157,16 +157,16 @@ void _launchCases() {
       );
       await tester.tap(
         find.descendant(
-          of: find.byType(NavigationRail),
+          of: find.byType(MainNavigationRail),
           matching: find.text(l10n.appNavigationForum),
         ),
       );
       await _pumpShellTab(tester);
       tester.view.physicalSize = const Size(400, 800);
       await tester.pumpAndSettle();
-      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(MainNavigationRail), findsNothing);
       expect(find.byType(MainNavigationCapsule), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(MainLegacyNavigationBar), findsNothing);
       expect(
         tester.element(find.byKey(const Key('forum-home-list'))),
         same(home),

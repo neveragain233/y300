@@ -22,7 +22,7 @@ void _navigationCases() {
         await _scrollUntilVisibleIfNeeded(tester, settingsEntry);
         final l10n = AppLocalizations.of(tester.element(settingsEntry));
         expect(
-          (tester.widget<ListTile>(settingsEntry).title! as Text).data,
+          tester.widget<AppGroupedRow>(settingsEntry).title,
           l10n.moreSectionSettings,
         );
         for (final key in [
@@ -147,7 +147,7 @@ void _navigationCases() {
       for (final name in ['messages', 'blogs', 'friends']) {
         final entry = find.byKey(Key('more-my-$name-entry'));
         await _scrollUntilVisibleIfNeeded(tester, entry);
-        menuTaps.add(tester.widget<ListTile>(entry).onTap!);
+        menuTaps.add(tester.widget<AppGroupedRow>(entry).onTap!);
       }
       threadTap();
       for (final tap in menuTaps) {
@@ -257,7 +257,7 @@ void _navigationCases() {
         await tester.pumpAndSettle();
         expect(find.byType(MorePage), findsOneWidget);
         expect(summary.reads, 2);
-        expect(tester.widget<ListTile>(entry).onTap, isNotNull);
+        expect(tester.widget<AppGroupedRow>(entry).onTap, isNotNull);
         expect(tester.takeException(), isNull);
       },
     );
@@ -282,7 +282,7 @@ void _navigationCases() {
         );
         final entry = find.byKey(const Key('more-my-friends-entry'));
         await _scrollUntilVisibleIfNeeded(tester, entry);
-        final tap = tester.widget<ListTile>(entry).onTap!;
+        final tap = tester.widget<AppGroupedRow>(entry).onTap!;
         tap();
         tap();
         expect(observer.pushedNames.last, LoginWebViewPage.routeName);
@@ -324,7 +324,7 @@ void _navigationCases() {
           expect(find.byType(MyFriendsPage), findsNothing);
           expect(friends.requests, isEmpty);
           expect(observer.pushedNames, hasLength(2));
-          expect(tester.widget<ListTile>(entry).onTap, isNotNull);
+          expect(tester.widget<AppGroupedRow>(entry).onTap, isNotNull);
         }
         expect(tester.takeException(), isNull);
       },

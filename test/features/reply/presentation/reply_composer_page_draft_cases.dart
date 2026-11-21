@@ -20,7 +20,7 @@ void _draftCases() {
     await tester.pump();
 
     await _openReplySourceEditor(tester);
-    final restoredField = tester.widget<TextField>(
+    final restoredField = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     expect(restoredField.controller?.text, '恢复的草稿');
@@ -127,7 +127,7 @@ void _draftCases() {
       find.byKey(const Key('reply-composer-reset-cancel-button')),
     );
     await tester.pumpAndSettle();
-    var messageField = tester.widget<TextField>(
+    var messageField = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     expect(messageField.controller?.text, contains('正文'));
@@ -143,7 +143,7 @@ void _draftCases() {
     );
     await tester.pumpAndSettle();
 
-    messageField = tester.widget<TextField>(
+    messageField = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     expect(messageField.controller?.text, isEmpty);
@@ -238,7 +238,7 @@ void _draftCases() {
       findsOneWidget,
     );
     await _openReplySourceEditor(tester);
-    final sanitizedField = tester.widget<TextField>(
+    final sanitizedField = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     expect(sanitizedField.controller?.text, '正文\n[attach]123456[/attach]');
@@ -340,7 +340,7 @@ void _draftCases() {
     );
 
     await _openReplySourceEditor(tester);
-    final source = tester.widget<TextField>(
+    final source = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     expect(source.controller?.text, '正文\n[attach]123456[/attach]');

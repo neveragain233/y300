@@ -3,9 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/liquid_glass.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 import '../../test_support/localized_test_app.dart';
 
@@ -324,4 +326,54 @@ void main() {
     expect(confirmed, 1);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'cross-brightness side panel disables glass and uses contrasting close button',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          theme: ThemeData.light(useMaterial3: true),
+          home: LiquidGlassScope(
+            enabled: true,
+            quality: LiquidGlassQuality.standard,
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: TextButton(
+                    onPressed: () => showAdaptivePanel<void>(
+                      context: context,
+                      backgroundColor: const Color(0xFF171717),
+                      builder: (_) => const Text('dark panel'),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final panel = find.byKey(const Key('adaptive-side-panel'));
+      expect(panel, findsOneWidget);
+      expect(tester.widget<AppGlassSurface>(panel).level, AppGlassLevel.off);
+      expect(
+        find.descendant(of: panel, matching: find.byType(LiquidGlass)),
+        findsNothing,
+      );
+
+      final closeButton = tester.widget<AppToolbarCloseButton>(
+        find.byType(AppToolbarCloseButton),
+      );
+      expect(closeButton.baseColor, const Color(0xFF171717));
+      expect(closeButton.foregroundColor!.computeLuminance(), greaterThan(0.5));
+    },
+  );
 }

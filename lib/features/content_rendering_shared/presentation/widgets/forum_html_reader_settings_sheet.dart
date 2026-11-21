@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_controller.dart';
 import 'package:y300/features/content_rendering_shared/application/forum_html_typography_preview.dart';
 import 'package:y300/features/content_rendering_shared/domain/models/forum_html_reader_preferences.dart';
@@ -10,7 +9,7 @@ import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/typography/rich_text_typography.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/app_prism_theme.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 class ForumHtmlReaderSettingsSheet extends ConsumerStatefulWidget {
   const ForumHtmlReaderSettingsSheet({
@@ -176,12 +175,13 @@ class _ForumHtmlReaderSettingsSheetState
             ),
             if (widget.showAuthorStyleControls) ...[
               const SizedBox(height: 16),
-              _ReaderSwitchRow(
-                controlKey: const Key(
+              AppSwitchRow.compact(
+                switchKey: const Key(
                   'forum-html-reader-preserve-font-size-switch',
                 ),
                 title: l10n.threadHtmlPreserveAuthorFontSize,
                 value: preferences.preserveAuthorFontSize,
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 onChanged: ready
                     ? (value) => _replacePreview(
                         () => controller.setPreserveAuthorFontSize(value),
@@ -357,73 +357,6 @@ class _TypographySlider extends StatelessWidget {
             onChangeEnd: onChangeEnd,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 阅读设置面板中的开关行。
-///
-/// 面板已有统一内边距与行距，不套用分组列表的 `AppSwitchRow`；这里只取
-/// 同一 prism 开关外观，整行与尾部开关都可切换，禁用态由空回调表达。
-class _ReaderSwitchRow extends StatelessWidget {
-  const _ReaderSwitchRow({
-    required this.controlKey,
-    required this.title,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final Key controlKey;
-  final String title;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final enabled = onChanged != null;
-    void toggle() {
-      if (enabled) {
-        onChanged!(!value);
-      }
-    }
-
-    return Semantics(
-      container: true,
-      label: title,
-      toggled: value,
-      enabled: enabled,
-      onTap: enabled ? toggle : null,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? toggle : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: enabled
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.38),
-                    ),
-                  ),
-                ),
-                AppPrismTheme(
-                  child: prism.Switch(
-                    key: controlKey,
-                    value: value,
-                    onChanged: onChanged,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

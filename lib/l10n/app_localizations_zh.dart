@@ -6453,6 +6453,46 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsSearchKeywordsEInk => '墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度';
+
+  @override
+  String readerStepperDecrease(String label) {
+    return '减小$label';
+  }
+
+  @override
+  String readerStepperIncrease(String label) {
+    return '增大$label';
+  }
+
+  @override
+  String readerStepperValueSemantics(String label, String value) {
+    return '$label，当前$value';
+  }
+
+  @override
+  String readerStepperRangeHint(String min, String max) {
+    return '范围：$min – $max';
+  }
+
+  @override
+  String get readerUnitPoint => '磅';
+
+  @override
+  String get readerUnitMultiple => '倍';
+
+  @override
+  String get readerUnitPixel => '像素';
+
+  @override
+  String get readerUnitPercent => '%';
+
+  @override
+  String readerBookmarkDelete(String title) {
+    return '删除书签：$title';
+  }
+
+  @override
+  String get readerContentTitle => '内容';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -12906,4 +12946,44 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsSearchKeywordsEInk => '墨水屏 eink 電子書 電紙書 邊緣 翻頁 動畫 玻璃 灰階';
+
+  @override
+  String readerStepperDecrease(String label) {
+    return '減小$label';
+  }
+
+  @override
+  String readerStepperIncrease(String label) {
+    return '增大$label';
+  }
+
+  @override
+  String readerStepperValueSemantics(String label, String value) {
+    return '$label，目前$value';
+  }
+
+  @override
+  String readerStepperRangeHint(String min, String max) {
+    return '範圍：$min – $max';
+  }
+
+  @override
+  String get readerUnitPoint => '點';
+
+  @override
+  String get readerUnitMultiple => '倍';
+
+  @override
+  String get readerUnitPixel => '像素';
+
+  @override
+  String get readerUnitPercent => '%';
+
+  @override
+  String readerBookmarkDelete(String title) {
+    return '刪除書籤：$title';
+  }
+
+  @override
+  String get readerContentTitle => '內容';
 }

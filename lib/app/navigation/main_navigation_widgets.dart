@@ -2,10 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:prism_ui/liquid_glass.dart';
+import 'package:prism_ui/motion.dart';
 import 'package:prism_ui/navigation_dock.dart';
-import 'package:y300/shared/widgets/app_prism_theme.dart';
+import 'package:prism_ui/press_region.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/core/motion/app_motion.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 @immutable
 class MainNavigationItem {
@@ -21,6 +25,78 @@ class MainNavigationItem {
   final Widget selectedIcon;
 }
 
+/// 旧式底部导航栏：沿用与沉浸式胶囊一致的配色、墨水屏静默退化及 prism 状态交互。
+class MainLegacyNavigationBar extends StatelessWidget {
+  const MainLegacyNavigationBar({
+    super.key,
+    required this.items,
+    required this.selectedIndex,
+    this.onSelected,
+  });
+
+  final List<MainNavigationItem> items;
+  final int selectedIndex;
+  final ValueChanged<int>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final reduceMotion = AppMotion.reduceMotion(context);
+    final surface =
+        theme.navigationBarTheme.backgroundColor ?? scheme.surfaceContainer;
+    final dividerColor = eInk
+        ? scheme.outlineVariant
+        : scheme.outlineVariant.withValues(alpha: 0.5);
+
+    return _DockTheme(
+      child: PrismMotionScope(
+        reduceMotion: reduceMotion,
+        child: Material(
+          color: surface,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: dividerColor, width: 0.6)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 72),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      for (var index = 0; index < items.length; index++)
+                        Expanded(
+                          child: _UnifiedNavigationDestination(
+                            itemKey: ValueKey<String>(
+                              'main-shell-destination-${items[index].id}',
+                            ),
+                            item: items[index],
+                            selected: index == selectedIndex,
+                            onTap: onSelected == null
+                                ? null
+                                : () => onSelected!(index),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 宽屏与大屏墨水屏设备侧栏：维持 80dp 常显标签几何，接入统一状态与动效语言。
 class MainNavigationRail extends StatelessWidget {
   const MainNavigationRail({
     super.key,
@@ -33,53 +109,184 @@ class MainNavigationRail extends StatelessWidget {
   final ValueChanged<int>? onSelected;
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    // 宽屏侧栏沿用导航表面，不铺预设强调色。
-    color:
-        Theme.of(context).navigationBarTheme.backgroundColor ??
-        Theme.of(context).colorScheme.surface,
-    child: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final targetHeight =
-              items.length *
-                  (64 + MediaQuery.textScalerOf(context).scale(14) * 2) +
-              32;
-          return SingleChildScrollView(
-            child: SizedBox(
-              height: math.max(constraints.maxHeight, targetHeight),
-              child: NavigationRail(
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final reduceMotion = AppMotion.reduceMotion(context);
+    final surface =
+        theme.navigationBarTheme.backgroundColor ?? scheme.surfaceContainer;
+    final dividerColor = eInk
+        ? scheme.outlineVariant
+        : scheme.outlineVariant.withValues(alpha: 0.5);
+    final side = BorderSide(color: dividerColor, width: 0.6);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+    return _DockTheme(
+      child: PrismMotionScope(
+        reduceMotion: reduceMotion,
+        child: Material(
+          // 宽屏侧栏沿用导航表面，以极细分割线与内容区分。
+          color: surface,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              border: isRtl ? Border(left: side) : Border(right: side),
+            ),
+            child: SafeArea(
+              right: false,
+              child: SizedBox(
                 key: const Key('main-shell-navigation-rail'),
-                minWidth: 80,
-                backgroundColor: Theme.of(context)
-                    .navigationBarTheme
-                    .backgroundColor,
-                labelType: NavigationRailLabelType.all,
-                indicatorColor: Theme.of(context).colorScheme.primary,
-                selectedIconTheme: IconThemeData(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-                selectedLabelTextStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-                selectedIndex: selectedIndex,
-                onDestinationSelected: onSelected,
-                destinations: [
-                  for (final item in items)
-                    NavigationRailDestination(
-                      icon: item.icon,
-                      selectedIcon: item.selectedIcon,
-                      label: Text(item.label),
+                width: 80,
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 16,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          spacing: 8,
+                          children: [
+                            for (var index = 0; index < items.length; index++)
+                              _UnifiedNavigationDestination(
+                                itemKey: ValueKey<String>(
+                                  'main-shell-rail-destination-${items[index].id}',
+                                ),
+                                item: items[index],
+                                selected: index == selectedIndex,
+                                onTap: onSelected == null
+                                    ? null
+                                    : () => onSelected!(index),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+class _UnifiedNavigationDestination extends StatelessWidget {
+  const _UnifiedNavigationDestination({
+    this.itemKey,
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Key? itemKey;
+  final MainNavigationItem item;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  static const _indicatorDuration = Duration(milliseconds: 220);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final duration = AppMotion.duration(context, _indicatorDuration);
+    final indicatorFill = eInk
+        ? scheme.primary
+        : scheme.primary.withValues(alpha: 0.14);
+    final iconColor = selected
+        ? (eInk ? scheme.onPrimary : scheme.primary)
+        : scheme.onSurfaceVariant;
+    final labelColor = selected ? scheme.primary : scheme.onSurfaceVariant;
+
+    return Semantics(
+      key: itemKey,
+      container: true,
+      button: true,
+      selected: selected,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        child: PressRegion(
+          onTap: onTap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          overlay: eInk ? null : PressRegion.pressOverlay,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final pillWidth = math.min(56.0, constraints.maxWidth);
+                    return SizedBox(
+                      width: pillWidth,
+                      height: 32,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          TweenAnimationBuilder<double>(
+                            tween: Tween<double>(end: selected ? 1 : 0),
+                            duration: duration,
+                            curve: Curves.easeOutCubic,
+                            builder: (context, t, _) {
+                              final clamped = t.clamp(0.0, 1.0);
+                              if (clamped == 0) {
+                                return const SizedBox.shrink();
+                              }
+                              return Opacity(
+                                opacity: clamped,
+                                child: Transform.scale(
+                                  scaleX: clamped,
+                                  child: DecoratedBox(
+                                    decoration: ShapeDecoration(
+                                      color: indicatorFill,
+                                      shape: const StadiumBorder(),
+                                    ),
+                                    child: const SizedBox.expand(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconTheme.merge(
+                            data: IconThemeData(size: 24, color: iconColor),
+                            child: selected ? item.selectedIcon : item.icon,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: labelColor,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 沉浸式主壳的悬浮导航胶囊。

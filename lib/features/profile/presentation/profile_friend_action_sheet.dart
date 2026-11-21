@@ -10,6 +10,7 @@ import 'package:y300/features/profile/data/providers/profile_read_providers.dart
 import 'package:y300/features/profile/presentation/profile_friend_action_controller.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
@@ -221,28 +222,17 @@ class _ProfileFriendActionSheetState
                     ],
                     if (preparation?.groups.isNotEmpty == true) ...[
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
+                      AppSelectField<String>(
                         key: ValueKey(preparation),
-                        initialValue: _groupId,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          labelText: l10n.profileFriendGroup,
-                          border: const OutlineInputBorder(),
-                        ),
-                        items: [
+                        value: _groupId,
+                        label: l10n.profileFriendGroup,
+                        enabled: ready,
+                        options: [
                           for (final group in preparation!.groups)
-                            DropdownMenuItem(
-                              value: group.id,
-                              child: Text(
-                                group.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+                            AppSelectOption(value: group.id, label: group.name),
                         ],
-                        onChanged: ready
-                            ? (groupId) => setState(() => _groupId = groupId)
-                            : null,
+                        onSelected: (groupId) =>
+                            setState(() => _groupId = groupId),
                       ),
                     ],
                     if (state.failure != null) ...[

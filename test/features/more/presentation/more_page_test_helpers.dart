@@ -22,16 +22,16 @@ Future<void> _expectMyContentEntryOrderAndLabels(
     ('friends', l10n.profileMyFriendsTitle),
   ]) {
     final finder = find.byKey(Key('more-my-$name-entry'));
-    final tile = tester.widget<ListTile>(finder);
-    expect((tile.title! as Text).data, label);
-    expect(tile.onTap, isNotNull);
+    final row = tester.widget<AppGroupedRow>(finder);
+    expect(row.title, label);
+    expect(row.onTap, isNotNull);
     final rect = tester.getRect(finder);
     if (previousBottom != null) {
       expect(rect.top, greaterThanOrEqualTo(previousBottom));
     }
     previousBottom = rect.bottom;
     if (name == 'messages') {
-      final icon = tile.leading! as MessageAttentionIcon;
+      final icon = row.leading! as MessageAttentionIcon;
       expect(icon.icon, Icons.mail_outline);
       expect(icon.showAttention, isFalse);
     }

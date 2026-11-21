@@ -17,6 +17,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/more/presentation/navigation_management_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_select_menu.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 void main() {
   testWidgets('opens visible and hidden destinations without changing settings', (
@@ -105,7 +106,7 @@ void main() {
     expect(find.byType(NavigationManagementPage), findsOneWidget);
     expect(
       tester
-          .widget<Switch>(
+          .widget<AppSwitch>(
             find.byKey(const Key('navigation-management-visible-messages')),
           )
           .value,
@@ -240,11 +241,11 @@ void main() {
       findsNothing,
     );
     expect(find.text(l10n.navigationStartupPage), findsOneWidget);
-    expect(find.byType(Switch), findsNWidgets(4));
+    expect(find.byType(AppSwitch), findsNWidgets(4));
     final messageToggle = find.byKey(
       const ValueKey<String>('navigation-management-visible-messages'),
     );
-    expect(tester.widget<Switch>(messageToggle).value, isFalse);
+    expect(tester.widget<AppSwitch>(messageToggle).value, isFalse);
     await tester.tap(messageToggle);
     await tester.pumpAndSettle();
     expect(
@@ -346,7 +347,7 @@ void main() {
       find.byKey(const Key('navigation-management-saving')),
       findsOneWidget,
     );
-    final novelSwitch = tester.widget<Switch>(
+    final novelSwitch = tester.widget<AppSwitch>(
       find.byKey(
         const ValueKey<String>('navigation-management-visible-bookshelf'),
       ),
@@ -374,7 +375,7 @@ void main() {
     expect(find.text('导航栏设置保存失败'), findsOneWidget);
     expect(
       tester
-          .widget<Switch>(
+          .widget<AppSwitch>(
             find.byKey(
               const ValueKey<String>('navigation-management-visible-favorites'),
             ),

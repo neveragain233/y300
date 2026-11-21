@@ -566,6 +566,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                 bottom: 16 + _controlsHeight,
               ),
               edgeTapAllowed: true,
+              edgeTopInset: _repliesHeaderHeight > 0
+                  ? _repliesHeaderHeight
+                  : 56,
               edgeBottomInset: _controlsHeight + 16,
               child: NotificationListener<ScrollMetricsNotification>(
                 onNotification: _handleThreadMetricsNotification,

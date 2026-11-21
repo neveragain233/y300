@@ -2,10 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 /// 辅助操作覆盖所属连续区域，不挤压底下的阅读或详情视口。
 Future<T?> showAdaptivePanel<T>({
@@ -15,6 +17,7 @@ Future<T?> showAdaptivePanel<T>({
   bool useSafeArea = true,
   bool useRootNavigator = false,
   BoxConstraints? constraints,
+  Color? backgroundColor,
 }) {
   // 根页面操作覆盖主壳导航；阅读器与分栏详情默认仍归所属区域。
   final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
@@ -39,6 +42,7 @@ Future<T?> showAdaptivePanel<T>({
       useSafeArea: useSafeArea,
       useRootNavigator: useRootNavigator,
       constraints: constraints,
+      backgroundColor: backgroundColor,
       anchorPoint: anchor,
       sheetAnimationStyle: AppMotion.reduceMotion(context)
           ? AnimationStyle.noAnimation
@@ -90,6 +94,17 @@ Future<T?> showAdaptivePanel<T>({
             .copyWith(size: available.biggest)
             .removeDisplayFeatures(panel)
             .copyWith(size: panel.size, viewInsets: EdgeInsets.zero);
+        final panelBrightness = backgroundColor == null
+            ? null
+            : ThemeData.estimateBrightnessForColor(backgroundColor);
+        final crossesBrightness =
+            panelBrightness != null &&
+            panelBrightness != Theme.of(context).brightness;
+        final closeForeground = crossesBrightness
+            ? (panelBrightness == Brightness.dark
+                  ? const Color(0xFFF2F2F5)
+                  : const Color(0xFF1F1F1F))
+            : null;
         return Stack(
           children: [
             Positioned.fromRect(
@@ -97,22 +112,35 @@ Future<T?> showAdaptivePanel<T>({
               child: MediaQuery(
                 data: localMedia,
                 // 表面并入应用根玻璃宿主：关闭档与高对比回退主题实色，
-                // 标准／增强档共用同一份背景捕获，不在这里新建宿主。
+                // 跨明暗背景（例如浅色应用内打开暗色阅读面板）关闭玻璃避免泛白染色。
                 child: AppGlassSurface(
                   key: const Key('adaptive-side-panel'),
                   borderRadius: AppLayoutTokens.panelRadius,
-                  baseColor: Theme.of(context).colorScheme.surfaceContainerLow,
+                  level: crossesBrightness ? AppGlassLevel.off : null,
+                  baseColor:
+                      backgroundColor ??
+                      Theme.of(context).colorScheme.surfaceContainerLow,
                   child: SafeArea(
                     bottom: bottomInset == 0,
                     child: Column(
                       children: [
                         Align(
                           alignment: Alignment.centerRight,
-                          child: IconButton(
-                            key: const Key('adaptive-panel-close'),
-                            tooltip: AppLocalizations.of(context).commonClose,
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.close),
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(
+                              top: 4,
+                              end: 8,
+                            ),
+                            child: AppToolbarCloseButton(
+                              buttonKey: const Key('adaptive-panel-close'),
+                              size: AppToolbarButtonSize.compact,
+                              foregroundColor: closeForeground,
+                              baseColor: crossesBrightness
+                                  ? backgroundColor
+                                  : null,
+                              tooltip: AppLocalizations.of(context).commonClose,
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
                           ),
                         ),
                         Expanded(child: Builder(builder: builder)),

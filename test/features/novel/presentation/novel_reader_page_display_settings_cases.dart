@@ -45,14 +45,18 @@ void _displaySettingsCases() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('novel-theme-sepia')), findsOneWidget);
-    expect(find.byKey(const Key('novel-theme-follow-app')), findsOneWidget);
-    expect(
-      find.byKey(const Key('novel-reader-display-settings-sheet')),
-      findsOneWidget,
+    final wideL10n = AppLocalizations.of(
+      tester.element(find.byType(NovelReaderPage)),
     );
     expect(
-      find.byKey(const Key('novel-reader-flow-mode-control')),
+      find.descendant(
+        of: find.byKey(const Key('novel-reader-display-settings-sheet')),
+        matching: find.byType(Slider),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-display-settings-sheet')),
       findsOneWidget,
     );
     expect(
@@ -64,7 +68,7 @@ void _displaySettingsCases() {
       findsNothing,
     );
     expect(
-      find.byKey(const Key('novel-reader-page-padding-slider')),
+      find.byKey(const Key('novel-reader-page-padding-stepper')),
       findsOneWidget,
     );
     expect(
@@ -99,8 +103,16 @@ void _displaySettingsCases() {
       480,
     );
 
-    await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(wideL10n.novelTheme),
+      ),
+    );
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('novel-theme-sepia')), findsOneWidget);
+    expect(find.byKey(const Key('novel-theme-follow-app')), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('novel-theme-sepia')));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 600));
@@ -112,6 +124,18 @@ void _displaySettingsCases() {
       NovelReaderThemePreset.sepia,
     );
     expect(repository.upsertPreferencesCallCount, 1);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(wideL10n.novelReading),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('novel-reader-flow-mode-control')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('NovelReaderPage display sheet exposes paged modes', (
@@ -127,18 +151,17 @@ void _displaySettingsCases() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('novel-reader-flow-mode-control')),
-      findsOneWidget,
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(NovelReaderPage)),
     );
-    expect(
-      find.byKey(const Key('novel-reader-conversion-mode-control')),
-      findsOneWidget,
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(l10n.novelTheme),
+      ),
     );
-    expect(
-      find.byKey(const Key('novel-reader-safe-area-switch')),
-      findsOneWidget,
-    );
+    await tester.pumpAndSettle();
+
     const themeKeys = <Key>[
       Key('novel-theme-follow-app'),
       Key('novel-theme-light'),
@@ -158,6 +181,26 @@ void _displaySettingsCases() {
       expect(chip.showCheckmark, isFalse);
       expect(chip.selected, key == const Key('novel-theme-follow-app'));
     }
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(l10n.novelReading),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('novel-reader-flow-mode-control')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-conversion-mode-control')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('novel-reader-safe-area-switch')),
+      findsOneWidget,
+    );
     expect(find.text('分页 LTR'), findsOneWidget);
     expect(find.text('分页 RTL'), findsOneWidget);
     expect(find.byKey(const Key('novel-reader-paged-page-view')), findsNothing);
@@ -169,7 +212,7 @@ void _displaySettingsCases() {
   });
 
   testWidgets(
-    'NovelReaderPage display sheet slider applies without save button',
+    'NovelReaderPage display sheet stepper applies without save button',
     (tester) async {
       final repository = _FakeNovelRepository();
       await tester.pumpWidget(_buildReaderApp(repository: repository));
@@ -186,19 +229,13 @@ void _displaySettingsCases() {
         findsNothing,
       );
 
-      await tester.drag(
-        find.descendant(
-          of: find.byKey(const Key('novel-reader-font-size-slider')),
-          matching: find.byType(Slider),
-        ),
-        const Offset(120, 0),
+      await tester.tap(
+        find.byKey(const Key('novel-reader-font-size-increase')),
       );
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
       expect(repository.latestPreferences, isNotNull);
-      expect(repository.latestPreferences?.fontSize, isNot(18.5));
+      expect(repository.latestPreferences?.fontSize, 19.0);
       expect(repository.upsertPreferencesCallCount, 1);
     },
   );
@@ -275,6 +312,17 @@ void _displaySettingsCases() {
     );
     await tester.pumpAndSettle();
 
+    final switchL10n = AppLocalizations.of(
+      tester.element(find.byType(NovelReaderPage)),
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(switchL10n.novelReading),
+      ),
+    );
+    await tester.pumpAndSettle();
+
     final safeAreaSwitch = tester.widget<prism.Switch>(
       find.byKey(const Key('novel-reader-safe-area-switch')),
     );
@@ -310,7 +358,14 @@ void _displaySettingsCases() {
       );
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+      final themeTab = find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(
+          AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+              .novelTheme,
+        ),
+      );
+      await tester.tap(themeTab);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('novel-theme-sepia')));
       await tester.pumpAndSettle();
@@ -368,7 +423,15 @@ void _displaySettingsCases() {
       find.byKey(const Key('shared-reader-bottom-action-display')),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(
+          AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+              .novelTheme,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('novel-theme-sepia')));
     await tester.pump();
@@ -428,7 +491,15 @@ void _displaySettingsCases() {
         find.byKey(const Key('shared-reader-bottom-action-display')),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(
+            AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+                .novelTheme,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('novel-theme-sepia')));
       await tester.pump(const Duration(milliseconds: 600));
@@ -482,7 +553,15 @@ void _displaySettingsCases() {
       find.byKey(const Key('shared-reader-bottom-action-display')),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(
+          AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+              .novelTheme,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('novel-theme-sepia')));
     await tester.tap(find.byKey(const Key('novel-theme-dark')));
@@ -542,7 +621,15 @@ void _displaySettingsCases() {
         find.byKey(const Key('shared-reader-bottom-action-display')),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(
+            AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+                .novelTheme,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('novel-theme-sepia')));
       await tester.pump(const Duration(milliseconds: 600));
@@ -601,7 +688,15 @@ void _displaySettingsCases() {
         find.byKey(const Key('shared-reader-bottom-action-display')),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('novel-theme-sepia')));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(
+            AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+                .novelTheme,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('novel-theme-sepia')));
       await tester.pump(const Duration(milliseconds: 600));
@@ -618,7 +713,15 @@ void _displaySettingsCases() {
         find.byKey(const Key('shared-reader-bottom-action-display')),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('novel-theme-dark')));
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(
+            AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+                .novelTheme,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('novel-theme-dark')));
       await tester.tap(find.byKey(const Key('novel-theme-light')));
@@ -940,10 +1043,20 @@ void _displaySettingsCases() {
       find.byKey(const Key('shared-reader-bottom-action-display')),
     );
     await tester.pumpAndSettle();
-    final pagedLtr = find.byKey(
-      const ValueKey<String>('reader-segment-分页 LTR'),
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(
+          AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+              .novelReading,
+        ),
+      ),
     );
-    await tester.ensureVisible(pagedLtr);
+    await tester.pumpAndSettle();
+    final pagedLtr = find.descendant(
+      of: find.byKey(const Key('novel-reader-flow-mode-control')),
+      matching: find.text('分页 LTR'),
+    );
     await tester.tap(pagedLtr);
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
-import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 class BlogEditorAccessFields extends StatelessWidget {
@@ -43,56 +43,30 @@ class BlogEditorAccessFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        KeyedSubtree(
+        AppSelectField<UserBlogVisibility>(
           key: const Key('blog-editor-visibility'),
-          child: DropdownButtonFormField<UserBlogVisibility>(
-            key: ValueKey((
+          value: draft.visibility,
+          label: l10n.profileBlogAccessScope,
+          prefixIcon: Icon(_visibilityIcon(draft.visibility), size: 20),
+          textStyle: theme.textTheme.bodyMedium?.copyWith(color: native.body),
+          errorText: state.issue == BlogEditorIssue.visibilityUnavailable
+              ? l10n.profileBlogVisibilityUnavailable
+              : null,
+          enabled:
+              enabled && !readOnly && options.availableVisibilities.isNotEmpty,
+          options: [
+            for (final visibility in {
+              ...options.availableVisibilities,
               draft.visibility,
-              Object.hashAll(options.availableVisibilities),
-            )),
-            initialValue: draft.visibility,
-            decoration:
-                _settingDecoration(
-                  context,
-                  label: l10n.profileBlogAccessScope,
-                ).copyWith(
-                  prefixIcon: Icon(_visibilityIcon(draft.visibility), size: 20),
-                  errorText:
-                      state.issue == BlogEditorIssue.visibilityUnavailable
-                      ? l10n.profileBlogVisibilityUnavailable
-                      : null,
-                  errorMaxLines: 3,
-                ),
-            style: theme.textTheme.bodyMedium?.copyWith(color: native.body),
-            dropdownColor: native.card,
-            isExpanded: true,
-            itemHeight: null,
-            items: [
-              for (final visibility in {
-                ...options.availableVisibilities,
-                draft.visibility,
-              })
-                DropdownMenuItem(
-                  value: visibility,
-                  enabled: options.availableVisibilities.contains(visibility),
-                  child: Text(
-                    blogVisibilityLabel(l10n, visibility),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-            onChanged:
-                enabled && !readOnly && options.availableVisibilities.isNotEmpty
-                ? (visibility) {
-                    if (visibility != null) {
-                      onChanged(
-                        (draft) => draft.copyWith(visibility: visibility),
-                      );
-                    }
-                  }
-                : null,
-          ),
+            })
+              AppSelectOption(
+                value: visibility,
+                label: blogVisibilityLabel(l10n, visibility),
+                enabled: options.availableVisibilities.contains(visibility),
+              ),
+          ],
+          onSelected: (visibility) =>
+              onChanged((draft) => draft.copyWith(visibility: visibility)),
         ),
         if (draft.visibility == UserBlogVisibility.passwordProtected) ...[
           const SizedBox(height: 12),
@@ -140,8 +114,8 @@ class BlogEditorAccessFields extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 4),
-        BlogEditorSwitchRow(
-          controlKey: const Key('blog-editor-comments-enabled'),
+        AppSwitchRow.compact(
+          switchKey: const Key('blog-editor-comments-enabled'),
           title: l10n.profileBlogCommentsAllowed,
           titleStyle: theme.textTheme.bodyMedium?.copyWith(color: native.body),
           value: draft.commentsEnabled,
@@ -153,93 +127,6 @@ class BlogEditorAccessFields extends StatelessWidget {
       ],
     );
   }
-}
-
-/// 日志编辑表单里的开关行。
-///
-/// 表单是紧密排布的输入项，没有分组列表表面，套用 `AppSwitchRow` 会多出
-/// 缩进和最小行高；这里只取同一 prism 开关外观。整行与开关都可切换，
-/// 禁用态由空回调表达，原 `contentPadding: zero`／`dense` 的排布保持不变。
-class BlogEditorSwitchRow extends StatelessWidget {
-  const BlogEditorSwitchRow({
-    super.key,
-    required this.controlKey,
-    required this.title,
-    required this.value,
-    required this.onChanged,
-    this.titleStyle,
-  });
-
-  final Key controlKey;
-  final String title;
-  final TextStyle? titleStyle;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final enabled = onChanged != null;
-    void toggle() {
-      if (enabled) {
-        onChanged!(!value);
-      }
-    }
-
-    final disabledColor = theme.colorScheme.onSurface.withValues(alpha: 0.38);
-    return Semantics(
-      container: true,
-      label: title,
-      toggled: value,
-      enabled: enabled,
-      onTap: enabled ? toggle : null,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? toggle : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: (titleStyle ?? theme.textTheme.bodyLarge)?.copyWith(
-                      color: enabled
-                          ? (titleStyle?.color ?? theme.colorScheme.onSurface)
-                          : disabledColor,
-                    ),
-                  ),
-                ),
-                AppPrismTheme(
-                  child: prism.Switch(
-                    key: controlKey,
-                    value: value,
-                    onChanged: onChanged,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-InputDecoration _settingDecoration(
-  BuildContext context, {
-  required String label,
-}) {
-  final native = Theme.of(context).y300NativeContent;
-  return InputDecoration(
-    labelText: label,
-    labelStyle: TextStyle(color: native.supportingText),
-    floatingLabelStyle: TextStyle(color: native.author),
-    isDense: true,
-    filled: false,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-  );
 }
 
 String blogVisibilityLabel(AppLocalizations l10n, UserBlogVisibility value) =>

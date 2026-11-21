@@ -2798,16 +2798,30 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         ref.read(readerPreferencesControllerProvider).value ??
         ReaderPreferences.defaults();
     final controller = ref.read(readerPreferencesControllerProvider.notifier);
+    final baseTheme = Theme.of(context);
+    final canvasBackground = resolveReaderBackground(
+      themeSurface: baseTheme.colorScheme.surface,
+      background: preferences.background,
+      readerMode: preferences.readerMode,
+      pagedCanvasColor: _capability.pagedCanvasColor,
+    );
+    final panelPalette = ReaderPanelPalette.fromCanvas(
+      canvasBackground: canvasBackground,
+      baseTheme: baseTheme,
+    );
     await showAdaptivePanel<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: panelPalette.panelSurface,
       builder: (context) => ReaderDisplaySettingsSheet(
         preferences: preferences,
         backgroundNote: _capability.pagedBackgroundSettingsNote,
+        pagedCanvasColor: _capability.pagedCanvasColor,
         onModeChanged: (mode) => unawaited(_onReaderModeChanged(mode)),
         onPageFitChanged: (value) => unawaited(controller.setPageFit(value)),
         onBackgroundChanged: (value) =>
             unawaited(controller.setBackground(value)),
+        onPageSpacingPreview: controller.previewPageSpacing,
         onPageSpacingChanged: (value) =>
             unawaited(controller.setPageSpacing(value)),
         onShowPageIndicatorChanged: (value) =>
@@ -2822,12 +2836,28 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
   Future<void> _showModeSheet() async {
     _overlayController.hideMenu();
-    final currentMode =
-        ref.read(readerPreferencesControllerProvider).value?.readerMode ??
-        ReaderPreferences.defaults().readerMode;
+    final preferences =
+        ref.read(readerPreferencesControllerProvider).value ??
+        ReaderPreferences.defaults();
+    final currentMode = preferences.readerMode;
+    final baseTheme = Theme.of(context);
+    final canvasBackground = resolveReaderBackground(
+      themeSurface: baseTheme.colorScheme.surface,
+      background: preferences.background,
+      readerMode: currentMode,
+      pagedCanvasColor: _capability.pagedCanvasColor,
+    );
+    final panelPalette = ReaderPanelPalette.fromCanvas(
+      canvasBackground: canvasBackground,
+      baseTheme: baseTheme,
+    );
     final selected = await showAdaptivePanel<ReaderModePreference>(
       context: context,
-      builder: (context) => ReaderModeSheet(currentMode: currentMode),
+      backgroundColor: panelPalette.panelSurface,
+      builder: (context) => ReaderModeSheet(
+        currentMode: currentMode,
+        canvasBackground: canvasBackground,
+      ),
     );
     if (selected == null || !mounted) {
       return;

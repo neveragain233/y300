@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/dialog.dart' as prism;
+import 'package:y300/shared/widgets/app_checkbox_row.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -594,7 +595,7 @@ Future<void> _captureBatchCompose(_Harness harness) async {
   await tester.pumpAndSettle();
   expect(
     tester
-        .widget<CheckboxListTile>(find.byKey(const Key('message-friend-30')))
+        .widget<AppCheckboxRow>(find.byKey(const Key('message-friend-30')))
         .value,
     isTrue,
   );

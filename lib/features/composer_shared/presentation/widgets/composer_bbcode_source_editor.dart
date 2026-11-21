@@ -10,6 +10,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/sticker_picke
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class ComposerBbCodeSourceEditor extends StatelessWidget {
@@ -32,19 +33,6 @@ class ComposerBbCodeSourceEditor extends StatelessWidget {
   });
 
   static const _insertionService = ComposerBbCodeInsertionService();
-  static InputDecoration noBorderDecoration(String hintText) {
-    return InputDecoration(
-      hintText: hintText,
-      border: InputBorder.none,
-      enabledBorder: InputBorder.none,
-      focusedBorder: InputBorder.none,
-      disabledBorder: InputBorder.none,
-      errorBorder: InputBorder.none,
-      focusedErrorBorder: InputBorder.none,
-      filled: false,
-      isCollapsed: true,
-    );
-  }
 
   final TextEditingController controller;
   final bool enabled;
@@ -85,7 +73,7 @@ class ComposerBbCodeSourceEditor extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
-          TextField(
+          AppTextInput(
             key: inputKey ?? Key('$keyPrefix-input'),
             controller: controller,
             enabled: enabled,
@@ -95,9 +83,9 @@ class ComposerBbCodeSourceEditor extends StatelessWidget {
             textInputAction: TextInputAction.newline,
             contextMenuBuilder: ComposerBbCodeContextMenu.build,
             onChanged: onChanged,
-            decoration: noBorderDecoration(
-              hintText ?? AppLocalizations.of(context).composerSourceMode,
-            ),
+            hintText:
+                hintText ?? AppLocalizations.of(context).composerSourceMode,
+            variant: AppTextInputVariant.plain,
           ),
         ],
       ),

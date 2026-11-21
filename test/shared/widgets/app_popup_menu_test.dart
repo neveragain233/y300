@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/popup.dart' as prism_popup;
 import 'package:prism_ui/theme_data.dart' as prism;
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_theme.dart';
@@ -581,6 +582,72 @@ void main() {
     expect(route.reverseTransitionDuration, const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'dark menu opening paints single scrim without final brightness jump',
+    (tester) async {
+      final boundary = GlobalKey();
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          theme: AppTheme.dark(),
+          builder: (context, child) => RepaintBoundary(
+            key: boundary,
+            child: AppGlassEnvironment(
+              glassLevel: AppGlassLevel.standard,
+              child: child!,
+            ),
+          ),
+          home: Scaffold(
+            body: Stack(
+              children: [
+                const Positioned.fill(child: ColoredBox(color: Colors.white)),
+                Positioned(
+                  top: 24,
+                  right: 16,
+                  child: AppPopupMenuButton<String>(
+                    key: const Key('menu-button'),
+                    itemBuilder: (context) => const [
+                      AppPopupMenuItem<String>(value: 'short', label: 'A'),
+                      AppPopupMenuItem<String>(
+                        value: 'long',
+                        label: '从帖子图片设置自定义封面',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('menu-button')));
+      await tester.pump();
+      // 展开 400ms 时弹簧已接近终态，但 Morph 尚未退场（bare 仍为 true）。
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final cardRect = tester.getRect(find.byType(prism_popup.PopupMenuCard));
+      final sample = Offset(
+        cardRect.right - 20,
+        tester.getCenter(find.text('A')).dy,
+      );
+      final opening = await _capture(tester, boundary);
+      final openingLuminance = opening.at(sample).computeLuminance();
+
+      await tester.pumpAndSettle();
+      final settled = await _capture(tester, boundary);
+      final settledLuminance = settled.at(sample).computeLuminance();
+
+      // 若开合期 Morph 与 Card 重复绘制压黑层，展开末帧会明显偏暗，
+      // 收敛到稳态时亮度会出现大幅跳升。
+      expect((openingLuminance - settledLuminance).abs(), lessThan(0.05));
+      expect(
+        _colorDelta(opening.at(sample), settled.at(sample)),
+        lessThan(0.06),
+      );
+    },
+  );
 }
 
 double _sourceOpacity(WidgetTester tester) {

@@ -76,13 +76,9 @@ void _accessCases() {
       await tester.pumpAndSettle();
       await _openSettings(tester);
       final visibility = find.byKey(const Key('blog-editor-visibility'));
-      final dropdown = find.descendant(
-        of: visibility,
-        matching: find.byType(DropdownButton<UserBlogVisibility>),
-      );
       expect(
-        tester.widget<DropdownButton<UserBlogVisibility>>(dropdown).onChanged,
-        isNull,
+        tester.widget<AppSelectField<UserBlogVisibility>>(visibility).enabled,
+        isFalse,
       );
       expect(
         tester

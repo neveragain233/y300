@@ -140,10 +140,20 @@ void _readerToolbarCases() {
       );
       await pumpReaderUiTransition(tester);
 
+      final comicL10n = AppLocalizations.of(
+        tester.element(find.byType(ComicReaderPage)),
+      );
       expect(
         find.byKey(const Key('comic-reader-display-settings-sheet')),
         findsOneWidget,
       );
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(comicL10n.novelReading),
+        ),
+      );
+      await pumpReaderUiTransition(tester);
       expect(
         find.byKey(const Key('comic-reader-page-indicator-switch')),
         findsOneWidget,

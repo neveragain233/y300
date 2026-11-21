@@ -82,6 +82,103 @@ void main() {
     expect(find.byKey(AppSelectMenu.itemKeyOf('bookshelf')), findsNothing);
     expect(selected, isEmpty);
   });
+
+  testWidgets('disabled AppSelectOption cannot be selected', (tester) async {
+    final selected = <String>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: Center(
+            child: AppSelectMenu<String>(
+              key: const Key('select-menu'),
+              value: 'forum',
+              options: const [
+                AppSelectOption(value: 'forum', label: '论坛'),
+                AppSelectOption(value: 'locked', label: '不可用', enabled: false),
+              ],
+              onSelected: selected.add,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('select-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(AppSelectMenu.itemKeyOf('locked')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(selected, isEmpty);
+  });
+
+  testWidgets('AppSelectField renders chrome and commits selected option', (
+    tester,
+  ) async {
+    final selected = <String>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: AppSelectField<String>(
+              key: const Key('select-field'),
+              label: '分类',
+              hintText: '请选择分类',
+              errorText: '必填项',
+              prefixIcon: const Icon(Icons.folder_outlined),
+              value: null,
+              options: const [
+                AppSelectOption(value: 'a', label: '轻小说'),
+                AppSelectOption(value: 'b', label: '漫画'),
+              ],
+              onSelected: selected.add,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('分类'), findsOneWidget);
+    expect(find.text('请选择分类'), findsOneWidget);
+    expect(find.text('必填项'), findsOneWidget);
+    expect(find.byIcon(Icons.folder_outlined), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('select-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(AppSelectMenu.itemKeyOf('b')));
+    await tester.pumpAndSettle();
+
+    expect(selected, ['b']);
+  });
+
+  testWidgets('disabled AppSelectField does not open menu', (tester) async {
+    final selected = <String>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: Scaffold(
+          body: Center(
+            child: AppSelectField<String>(
+              key: const Key('select-field'),
+              enabled: false,
+              value: 'a',
+              options: const [
+                AppSelectOption(value: 'a', label: '轻小说'),
+                AppSelectOption(value: 'b', label: '漫画'),
+              ],
+              onSelected: selected.add,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('select-field')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(AppSelectMenu.itemKeyOf('b')), findsNothing);
+    expect(selected, isEmpty);
+  });
 }
 
 Widget _menuApp({

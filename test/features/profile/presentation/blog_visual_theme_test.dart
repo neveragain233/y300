@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/theme/app_theme_family.dart';
@@ -388,7 +389,10 @@ void main() {
           final toolbar = find.byKey(const Key('blog-editor-toolbar'));
           expect(toolbar, findsOneWidget);
           expect(
-            find.descendant(of: toolbar, matching: find.byType(IconButton)),
+            find.descendant(
+              of: toolbar,
+              matching: find.byType(AppToolbarIconButton),
+            ),
             findsNWidgets(6),
           );
           expect(

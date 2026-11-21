@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
 import 'package:y300/features/library_shared/presentation/selection/selection_action_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 class SelectionActionBar extends StatelessWidget {
   const SelectionActionBar({
@@ -21,7 +22,8 @@ class SelectionActionBar extends StatelessWidget {
     return Material(
       key: const Key('selection-action-bar'),
       color: colorScheme.surface,
-      elevation: 8,
+      elevation: 0,
+      shape: Border(top: BorderSide(color: colorScheme.outlineVariant)),
       child: SafeArea(
         top: false,
         child: SizedBox(
@@ -34,13 +36,17 @@ class SelectionActionBar extends StatelessWidget {
                       : null;
                   return Expanded(
                     child: Center(
-                      child: IconButton(
-                        key: ValueKey<String>('selection-action-${action.id}'),
+                      child: AppToolbarIconButton(
+                        buttonKey: ValueKey<String>(
+                          'selection-action-${action.id}',
+                        ),
+                        size: AppToolbarButtonSize.compact,
                         tooltip: SelectionActionTextResolver.label(
                           l10n,
                           action.id,
                         ),
-                        icon: Icon(action.icon, color: foregroundColor),
+                        foregroundColor: foregroundColor,
+                        icon: Icon(action.icon),
                         onPressed: () {
                           onActionTap(action);
                         },

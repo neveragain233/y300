@@ -27,6 +27,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_coll
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_sticker_group_panel.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:forum_content_renderer/forum_content_renderer.dart';
 
@@ -1426,7 +1427,15 @@ class _ToolbarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(tooltip: tooltip, icon: Icon(icon), onPressed: onPressed);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: AppToolbarIconButton(
+        size: AppToolbarButtonSize.compact,
+        tooltip: tooltip,
+        icon: Icon(icon),
+        onPressed: onPressed,
+      ),
+    );
   }
 }
 

@@ -1,10 +1,10 @@
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/posting/domain/models/posting_models.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/app_prism_theme.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 /// 投票编辑器。
 ///
@@ -91,7 +91,7 @@ class ThreadPollEditor extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,16 +139,12 @@ class ThreadPollEditor extends StatelessWidget {
                   Text('${i + 1}.', style: theme.textTheme.bodyMedium),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: TextFormField(
+                    child: _ControlledPollInput(
                       key: optionFieldKeyBuilder?.call(i),
+                      value: poll.options[i],
                       enabled: enabled,
-                      initialValue: poll.options[i],
+                      hintText: l10n.postingPollOption(i + 1),
                       onChanged: (value) => _updateOption(i, value),
-                      decoration: InputDecoration(
-                        hintText: l10n.postingPollOption(i + 1),
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                      ),
                     ),
                   ),
                   IconButton(
@@ -168,8 +164,8 @@ class ThreadPollEditor extends StatelessWidget {
               label: Text(l10n.postingPollAddOption),
             ),
           const SizedBox(height: 12),
-          _PollSwitchRow(
-            controlKey: multipleSwitchKey,
+          AppSwitchRow.compact(
+            switchKey: multipleSwitchKey,
             value: poll.multiple,
             onChanged: enabled ? onMultipleChanged : null,
             title: l10n.postingPollMultiple,
@@ -192,15 +188,16 @@ class ThreadPollEditor extends StatelessWidget {
             enabled: enabled,
             onChanged: onExpirationDaysChanged,
           ),
-          _PollSwitchRow(
-            controlKey: overtSwitchKey,
+          const SizedBox(height: 4),
+          AppSwitchRow.compact(
+            switchKey: overtSwitchKey,
             value: poll.overt,
             onChanged: enabled ? onOvertChanged : null,
             title: l10n.postingPollPublicVoters,
             subtitle: l10n.postingPollPublicVotersDescription,
           ),
-          _PollSwitchRow(
-            controlKey: visibilityPollSwitchKey,
+          AppSwitchRow.compact(
+            switchKey: visibilityPollSwitchKey,
             value: poll.visibilityPoll,
             onChanged: enabled ? onVisibilityPollChanged : null,
             title: l10n.postingPollShowResultsAfterVote,
@@ -230,7 +227,7 @@ class _MaxChoicesField extends StatelessWidget {
   Widget build(BuildContext context) {
     final upperBound = optionsCount < 2 ? 2 : optionsCount;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: _NumberField(
         fieldKey: fieldKey,
         label: AppLocalizations.of(context).postingPollMaxChoices(upperBound),
@@ -265,17 +262,13 @@ class _NumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return _ControlledPollInput(
       key: fieldKey,
+      label: label,
+      value: initial.toString(),
       enabled: enabled,
-      initialValue: initial.toString(),
       keyboardType: const TextInputType.numberWithOptions(decimal: false),
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        isDense: true,
-      ),
       onChanged: (value) {
         final parsed = int.tryParse(value);
         if (parsed == null) return;
@@ -286,91 +279,70 @@ class _NumberField extends StatelessWidget {
   }
 }
 
-/// 投票编辑器内的开关行。
+/// 让无本地状态的投票表单与 [AppTextInput] 保持受控同步。
 ///
-/// 编辑器在带边框的紧凑表单里，没有分组列表表面，套用 `AppSwitchRow` 会多出
-/// 一层缩进和最小行高；这里只取同一 prism 开关外观，整行与开关都可切换，
-/// 禁用态由空回调表达，仍由调用方传入稳定 key。
-class _PollSwitchRow extends StatelessWidget {
-  const _PollSwitchRow({
-    required this.controlKey,
-    required this.title,
+/// 删除选项或外部重置草稿时同位置槽位值会改变；只在外部输入发生变化且与
+/// 当前文本不一致时同步控制器，避免打断正在输入的内容。
+class _ControlledPollInput extends StatefulWidget {
+  const _ControlledPollInput({
+    super.key,
     required this.value,
+    required this.enabled,
     required this.onChanged,
-    this.subtitle,
+    this.label,
+    this.hintText,
+    this.keyboardType,
+    this.inputFormatters,
   });
 
-  final Key? controlKey;
-  final String title;
-  final String? subtitle;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
+  final String value;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+  final String? label;
+  final String? hintText;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+
+  @override
+  State<_ControlledPollInput> createState() => _ControlledPollInputState();
+}
+
+class _ControlledPollInputState extends State<_ControlledPollInput> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ControlledPollInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value && widget.value != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: widget.value,
+        selection: TextSelection.collapsed(offset: widget.value.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final enabled = onChanged != null;
-    void toggle() {
-      if (enabled) {
-        onChanged!(!value);
-      }
-    }
-
-    final titleColor = enabled
-        ? theme.colorScheme.onSurface
-        : theme.colorScheme.onSurface.withValues(alpha: 0.38);
-    final supportingColor = enabled
-        ? theme.colorScheme.onSurfaceVariant
-        : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.38);
-    return Semantics(
-      container: true,
-      label: subtitle == null ? title : '$title\n$subtitle',
-      toggled: value,
-      enabled: enabled,
-      onTap: enabled ? toggle : null,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? toggle : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: titleColor,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: supportingColor,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                AppPrismTheme(
-                  child: prism.Switch(
-                    key: controlKey,
-                    value: value,
-                    onChanged: onChanged,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return AppTextInput(
+      controller: _controller,
+      enabled: widget.enabled,
+      label: widget.label,
+      hintText: widget.hintText,
+      keyboardType: widget.keyboardType,
+      inputFormatters: widget.inputFormatters,
+      onChanged: widget.onChanged,
     );
   }
 }

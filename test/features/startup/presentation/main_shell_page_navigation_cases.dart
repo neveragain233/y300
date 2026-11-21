@@ -23,7 +23,7 @@ void _navigationCases() {
     final capsule = tester.widget<MainNavigationCapsule>(
       find.byType(MainNavigationCapsule),
     );
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(MainLegacyNavigationBar), findsNothing);
     expect(
       find.byKey(const Key('main-shell-immersive-navigation')),
       findsOneWidget,
@@ -102,7 +102,7 @@ void _navigationCases() {
           final selectedIndex = _selectedNavigationIndex(tester);
           final navigation = style == AppNavigationBarStyle.immersive
               ? find.byType(MainNavigationCapsule)
-              : find.byType(NavigationBar);
+              : find.byType(MainLegacyNavigationBar);
           final navigationPoint =
               tester.getTopLeft(navigation) + const Offset(30, 30);
           await tester.tap(
@@ -168,7 +168,7 @@ void _navigationCases() {
     await controller.setNavigationBarStyle(AppNavigationBarStyle.legacy);
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(MainLegacyNavigationBar), findsOneWidget);
     expect(find.byType(MainNavigationCapsule), findsNothing);
     expect(_navigationLabels(tester), hasLength(4));
     expect(
@@ -187,7 +187,7 @@ void _navigationCases() {
     await tester.pumpAndSettle();
 
     expect(find.byType(MainNavigationCapsule), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(MainLegacyNavigationBar), findsNothing);
     expect(
       tester.element(find.byKey(const Key('forum-home-list'))),
       same(home),

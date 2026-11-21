@@ -25,6 +25,7 @@ class AppTextInput extends StatelessWidget {
     this.focusNode,
     this.label,
     this.hintText,
+    this.hintStyle,
     this.helperText,
     this.helperMaxLines = 2,
     this.errorText,
@@ -33,6 +34,7 @@ class AppTextInput extends StatelessWidget {
     this.suffixIcon,
     this.suffixText,
     this.fillColor,
+    this.cursorColor,
     this.style,
     this.keyboardType,
     this.textInputAction,
@@ -64,6 +66,7 @@ class AppTextInput extends StatelessWidget {
   final String? label;
 
   final String? hintText;
+  final TextStyle? hintStyle;
 
   /// 字段下方的说明；出现 [errorText] 时由错误文案取代。
   final String? helperText;
@@ -79,6 +82,7 @@ class AppTextInput extends StatelessWidget {
 
   /// 填充表面的底色；默认取主题的上一层表面。
   final Color? fillColor;
+  final Color? cursorColor;
 
   final TextStyle? style;
   final TextInputType? keyboardType;
@@ -127,6 +131,7 @@ class AppTextInput extends StatelessWidget {
       expands: expands,
       maxLength: maxLength,
       style: style,
+      cursorColor: cursorColor,
       contextMenuBuilder: contextMenuBuilder,
       textAlignVertical: variant == AppTextInputVariant.underline
           ? TextAlignVertical.center
@@ -177,6 +182,7 @@ class AppTextInput extends StatelessWidget {
         : null;
     final decoration = prism.InputDecoration(
       hintText: hintText,
+      hintStyle: hintStyle,
       errorText: errorText,
       errorMaxLines: errorMaxLines,
       prefixIcon: prefixIcon,

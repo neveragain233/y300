@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:intl/date_symbol_data_local.dart' as date_symbol_data;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +14,7 @@ import 'package:y300/features/history/presentation/controllers/history_controlle
 import 'package:y300/features/history/presentation/history_page.dart';
 import 'package:y300/features/history/presentation/widgets/history_thumbnail.dart';
 import 'package:y300/l10n/app_localizations_zh.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 import '../test_support/history_test_support.dart';
 
@@ -619,7 +622,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('history-search-input')), findsOneWidget);
-    final input = tester.widget<TextField>(
+    final input = tester.widget<AppTextInput>(
       find.byKey(const Key('history-search-input')),
     );
     expect(input.controller?.text, '漫画');
@@ -644,9 +647,8 @@ Widget _testApp({
       theme: theme ?? AppTheme.light(),
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         );
       },

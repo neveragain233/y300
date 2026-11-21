@@ -268,28 +268,29 @@ void main() {
       );
       await _pumpReaderUiTransition(tester);
 
-      tester
-          .widget<Slider>(
-            find.byKey(const Key('comic-reader-page-spacing-slider')),
-          )
-          .onChanged!
-          .call(24);
-      await tester.pump();
-      await tester.pump();
+      Future<void> setSpacing(String text) async {
+        await tester.tap(
+          find.byKey(const Key('comic-reader-page-spacing-value')),
+        );
+        await _pumpReaderUiTransition(tester);
+        await tester.enterText(
+          find.byKey(const Key('comic-reader-page-spacing-input')),
+          text,
+        );
+        await tester.tap(
+          find.byKey(const Key('comic-reader-page-spacing-confirm')),
+        );
+        await _pumpReaderUiTransition(tester);
+      }
+
+      await setSpacing('24');
       expect(
         _verticalReaderView(tester).items.map((item) => item.spacingAfter),
         everyElement(24),
       );
       expect(_verticalSlotGap(tester, 0, 1), closeTo(24, 0.5));
 
-      tester
-          .widget<Slider>(
-            find.byKey(const Key('comic-reader-page-spacing-slider')),
-          )
-          .onChanged!
-          .call(48);
-      await tester.pump();
-      await tester.pump();
+      await setSpacing('48');
       expect(
         _verticalReaderView(tester).items.map((item) => item.spacingAfter),
         everyElement(48),
@@ -815,6 +816,13 @@ void main() {
           find.byKey(const Key('comic-reader-display-settings-sheet')),
         ),
       );
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text(l10n.novelReading),
+        ),
+      );
+      await _pumpReaderUiTransition(tester);
       await tester.tap(find.text(l10n.readerModeRtl));
       await tester.pump(const Duration(milliseconds: 350));
       Navigator.of(

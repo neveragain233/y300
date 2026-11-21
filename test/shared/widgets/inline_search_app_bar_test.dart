@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 
@@ -41,17 +42,26 @@ void main() {
     );
     await tester.pump();
 
-    final field = tester.widget<TextField>(
+    final field = tester.widget<AppTextInput>(
       find.byKey(const Key('search-field')),
     );
     expect(field.focusNode, same(focusNode));
     expect(focusNode.hasFocus, isTrue);
     expect(field.style?.color, foreground);
     expect(field.cursorColor, foreground);
-    expect(field.decoration?.filled, isFalse);
-    expect(field.decoration?.border, InputBorder.none);
-    expect(field.decoration?.enabledBorder, InputBorder.none);
-    expect(field.decoration?.focusedBorder, InputBorder.none);
+    expect(field.variant, AppTextInputVariant.plain);
+    expect(find.byType(TextField), findsNothing);
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const Key('search-field')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .cursorColor,
+      foreground,
+    );
   });
 
   testWidgets('clear and optional submit actions follow the query state', (

@@ -46,6 +46,7 @@ import 'package:y300/features/profile/presentation/friends/my_friends_page.dart'
 import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/features/thread/presentation/html_rendering/forum_html_renderer_prototype_page.dart';
 
 import '../../profile/test_support/blog_directory_fixture.dart';

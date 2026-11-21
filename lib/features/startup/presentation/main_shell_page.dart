@@ -302,34 +302,13 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                               offstage: !showLegacyBar,
                               child: ExcludeFocus(
                                 excluding: !showLegacyBar,
-                                child: NavigationBar(
+                                child: MainLegacyNavigationBar(
                                   key: const ValueKey<String>(
                                     'main-shell-navigation-bar',
                                   ),
-                                  animationDuration:
-                                      appearance.eInkMode ||
-                                          media.disableAnimations
-                                      ? Duration.zero
-                                      : null,
+                                  items: items,
                                   selectedIndex: selectedIndex,
-                                  onDestinationSelected: selectGroup,
-                                  destinations: [
-                                    for (
-                                      var index = 0;
-                                      index < groups.length;
-                                      index++
-                                    )
-                                      NavigationDestination(
-                                        key: ValueKey<String>(
-                                          'main-shell-destination-${groups[index].name}',
-                                        ),
-                                        icon: items[index].icon,
-                                        selectedIcon: items[index].selectedIcon,
-                                        label: groups[index].localizedLabel(
-                                          l10n,
-                                        ),
-                                      ),
-                                  ],
+                                  onSelected: selectGroup,
                                 ),
                               ),
                             ),

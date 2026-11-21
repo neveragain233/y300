@@ -32,6 +32,7 @@ import 'package:y300/features/posting/presentation/posting_composer_route.dart';
 import 'package:y300/features/posting/presentation/posting_composer_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 part 'posting_composer_page_test_fakes.dart';
 
@@ -191,10 +192,10 @@ void main() {
       rawBody,
     );
 
-    final subjectField = tester.widget<TextField>(
+    final subjectField = tester.widget<AppTextInput>(
       find.byKey(const Key('posting-composer-subject-input')),
     );
-    final bodyField = tester.widget<TextField>(
+    final bodyField = tester.widget<AppTextInput>(
       find.byKey(const Key('posting-composer-message-input')),
     );
     expect(subjectField.controller?.text, rawSubject);
@@ -311,7 +312,7 @@ void main() {
     );
     await tester.pump();
 
-    final messageField = tester.widget<TextField>(
+    final messageField = tester.widget<AppTextInput>(
       find.byKey(const Key('posting-composer-message-input')),
     );
     expect(messageField.controller?.text, '[b]正文[/b]');
@@ -328,7 +329,7 @@ void main() {
     await tester.tap(find.byKey(const Key('posting-composer-source-button')));
     await tester.pumpAndSettle();
 
-    final restoredField = tester.widget<TextField>(
+    final restoredField = tester.widget<AppTextInput>(
       find.byKey(const Key('posting-composer-message-input')),
     );
     expect(restoredField.controller?.text, '[b]正文[/b]');
@@ -402,7 +403,7 @@ void main() {
     await tester.tap(find.byKey(const Key('posting-composer-link-use-button')));
     await tester.pumpAndSettle();
 
-    final messageField = tester.widget<TextField>(
+    final messageField = tester.widget<AppTextInput>(
       find.byKey(const Key('posting-composer-message-input')),
     );
     final controller = messageField.controller!;
@@ -532,10 +533,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final subjectField = tester.widget<TextField>(
+      final subjectField = tester.widget<AppTextInput>(
         find.byKey(const Key('posting-composer-subject-input')),
       );
-      final messageField = tester.widget<TextField>(
+      final messageField = tester.widget<AppTextInput>(
         find.byKey(const Key('posting-composer-message-input')),
       );
       expect(subjectField.controller?.text, isEmpty);
@@ -1377,7 +1378,7 @@ void main() {
         '第一行\n第二行',
       );
       await tester.pump();
-      final field = tester.widget<TextField>(
+      final field = tester.widget<AppTextInput>(
         find.byKey(const Key('posting-composer-message-input')),
       );
       field.controller!.selection = const TextSelection.collapsed(offset: 3);

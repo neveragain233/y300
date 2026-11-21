@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:y300/features/composer_shared/presentation/widgets/composer_title_field_decoration.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 
 /// 发帖标题输入框。
 ///
@@ -34,46 +34,48 @@ class ThreadSubjectField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasLimit = maxLength > 0;
-    return TextField(
+    final input = AppTextInput(
       key: fieldKey,
       controller: controller,
       enabled: enabled,
       onChanged: onChanged,
       maxLines: 1,
       textInputAction: TextInputAction.next,
-      buildCounter: hasLimit ? _buildCounter : _hideDefaultCounter,
-      // 仅用 buildCounter 接管计数显示——不传 maxLength，避免 Flutter 把超限
-      // 的字符截断。preflight + state.canSubmit 已经在网络/按钮层兜住超限。
-      decoration: composerTitleFieldDecoration(
-        context,
-        hintText: hintText ?? AppLocalizations.of(context).postingSubjectHint,
-      ),
+      hintText: hintText ?? AppLocalizations.of(context).postingSubjectHint,
+      variant: AppTextInputVariant.underline,
     );
-  }
-
-  Widget? _hideDefaultCounter(
-    BuildContext context, {
-    required int currentLength,
-    required int? maxLength,
-    required bool isFocused,
-  }) {
-    return null;
-  }
-
-  Widget? _buildCounter(
-    BuildContext context, {
-    required int currentLength,
-    required int? maxLength,
-    required bool isFocused,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final exceeded = currentLength > this.maxLength;
-    return Text(
-      '$currentLength / ${this.maxLength}',
-      key: counterTextKey,
-      style: TextStyle(
-        color: exceeded ? colorScheme.error : colorScheme.onSurfaceVariant,
-      ),
+    if (!hasLimit) {
+      return input;
+    }
+    // 仅自主绘制计数而不向输入控件传 maxLength，避免超限字符被平台截断；
+    // preflight 与 state.canSubmit 已经在网络/按钮层兜住超限。
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        input,
+        const SizedBox(height: 4),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) {
+            final currentLength = value.text.length;
+            final colorScheme = Theme.of(context).colorScheme;
+            final exceeded = currentLength > maxLength;
+            return Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Text(
+                '$currentLength / $maxLength',
+                key: counterTextKey,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: exceeded
+                      ? colorScheme.error
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

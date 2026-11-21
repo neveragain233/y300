@@ -17,12 +17,12 @@ import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/more/presentation/more_account_avatar.dart';
 import 'package:y300/features/more/presentation/more_account_header.dart';
-import 'package:y300/features/more/presentation/more_account_identity_layout.dart';
 import 'package:y300/features/more/presentation/more_account_action.dart';
 import 'package:y300/features/profile/data/providers/daily_sign_in_storage_providers.dart';
 import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/profile/presentation/daily_auto_sign_in_toggle.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 import 'package:y300/features/profile/presentation/current_account_summary_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/forum_default_avatar.dart';
@@ -130,8 +130,8 @@ void main() {
       );
       await _pumpHeader(tester, repository: repository, pendingAction: true);
       final toggle = find.byKey(const Key('daily-auto-sign-in-toggle'));
-      expect(tester.widget<Switch>(toggle).value, isTrue);
-      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+      expect(tester.widget<AppSwitch>(toggle).value, isTrue);
+      expect(tester.widget<AppSwitch>(toggle).onChanged, isNotNull);
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MoreAccountHeader)),
       );
@@ -144,14 +144,14 @@ void main() {
           container.read(currentAccountSummaryControllerProvider).isLoading,
           isTrue,
         );
-        expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+        expect(tester.widget<AppSwitch>(toggle).onChanged, isNotNull);
         expect(_logoutButton(tester).onPressed, isNull);
 
         await tester.tap(toggle);
         await tester.pumpAndSettle();
 
-        expect(tester.widget<Switch>(toggle).value, isFalse);
-        expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+        expect(tester.widget<AppSwitch>(toggle).value, isFalse);
+        expect(tester.widget<AppSwitch>(toggle).onChanged, isNotNull);
         expect(
           await container
               .read(dailyAutoSignInSettingsProvider)
@@ -168,8 +168,8 @@ void main() {
         await refresh;
         await tester.pumpAndSettle();
       }
-      expect(tester.widget<Switch>(toggle).value, isFalse);
-      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+      expect(tester.widget<AppSwitch>(toggle).value, isFalse);
+      expect(tester.widget<AppSwitch>(toggle).onChanged, isNotNull);
     },
   );
 
@@ -484,7 +484,7 @@ void main() {
 
   for (final family in AppThemeFamily.values) {
     testWidgets(
-      'account header stays transparent with $family dark group colors',
+      'account header uses grouped card surface with $family dark group colors',
       (tester) async {
         final theme = AppTheme.build(
           family: family,
@@ -494,6 +494,9 @@ void main() {
           tester,
           repository: _Repository((_) async => _success()),
           theme: theme,
+        );
+        final cardClip = tester.widget<ClipRRect>(
+          find.byKey(const Key('more-account-header')),
         );
         final material = tester.widget<Material>(
           find
@@ -507,9 +510,8 @@ void main() {
           find.byKey(const Key('more-account-group')),
         );
 
-        expect(material.color, Colors.transparent);
-        expect(material.surfaceTintColor, Colors.transparent);
-        expect(material.shape, theme.cardTheme.shape);
+        expect(cardClip.borderRadius, BorderRadius.circular(20));
+        expect(material.color, theme.colorScheme.surfaceContainer);
         expect(
           (group.decoration as BoxDecoration).color,
           theme.colorScheme.secondaryContainer,
@@ -520,26 +522,27 @@ void main() {
   }
 
   for (final width in [360, 393]) {
-    testWidgets('$width dp header keeps fitting account controls on one row', (
-      tester,
-    ) async {
-      tester.view.physicalSize = Size(width.toDouble(), width * 20 / 9);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await _pumpHeader(
-        tester,
-        repository: _Repository(
-          (_) async => _success(name: '283475', group: '百合花蕾'),
-        ),
-      );
+    testWidgets(
+      '$width dp header arranges identity, stats, and toggle cleanly',
+      (tester) async {
+        tester.view.physicalSize = Size(width.toDouble(), width * 20 / 9);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _pumpHeader(
+          tester,
+          repository: _Repository(
+            (_) async => _success(name: '283475', group: '百合花蕾'),
+          ),
+        );
 
-      _expectAccountLayout(tester, toggleWraps: false);
-      expect(tester.takeException(), isNull);
-    });
+        _expectAccountLayout(tester);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
-  testWidgets('360dp header keeps fitting controls inline at 1.3x text', (
+  testWidgets('360dp header keeps stacked layout clean at 1.3x text', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -552,64 +555,28 @@ void main() {
       textScale: 1.3,
     );
 
-    _expectAccountLayout(tester, toggleWraps: false);
+    _expectAccountLayout(tester);
     expect(tester.takeException(), isNull);
   });
 
   for (final direction in TextDirection.values) {
     testWidgets(
-      'account controls preserve edge alignment across the fit boundary in $direction',
+      'account header preserves directional edge alignment in $direction',
       (tester) async {
-        for (final (width, wraps) in [(328.0, true), (344.0, false)]) {
-          await tester.pumpWidget(
-            Directionality(
-              textDirection: direction,
-              child: Center(
-                child: SizedBox(
-                  width: width,
-                  child: MoreAccountIdentityLayout(
-                    key: const Key('account-layout-fixture'),
-                    identity: const SizedBox(
-                      key: Key('account-identity-fixture'),
-                      width: 220,
-                      height: 32,
-                    ),
-                    action: const SizedBox(
-                      key: Key('account-action-fixture'),
-                      width: 112,
-                      height: 48,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
+        tester.view.physicalSize = const Size(393, 852);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _pumpHeader(
+          tester,
+          repository: _Repository(
+            (_) async => _success(name: '283475', group: '百合花蕾'),
+          ),
+          textDirection: direction,
+        );
 
-          final layout = tester.getRect(
-            find.byKey(const Key('account-layout-fixture')),
-          );
-          final identity = tester.getRect(
-            find.byKey(const Key('account-identity-fixture')),
-          );
-          final action = tester.getRect(
-            find.byKey(const Key('account-action-fixture')),
-          );
-          if (direction == TextDirection.ltr) {
-            expect(identity.left, layout.left);
-            expect(action.right, layout.right);
-          } else {
-            expect(identity.right, layout.right);
-            expect(action.left, layout.left);
-          }
-          if (wraps) {
-            expect(action.top, identity.bottom);
-            expect(layout.height, 80);
-          } else {
-            expect(action.center.dy, identity.center.dy);
-            expect(layout.height, 48);
-          }
-          expect(tester.takeException(), isNull);
-        }
+        _expectAccountLayout(tester, direction: direction);
+        expect(tester.takeException(), isNull);
       },
     );
   }
@@ -639,7 +606,7 @@ void main() {
     expect(find.byKey(const Key('more-logout-entry')), findsOneWidget);
     expect(_logoutButton(tester).tooltip, _l10n(tester).moreLogout);
     expect(find.text(_l10n(tester).moreLogout), findsNothing);
-    _expectAccountLayout(tester, groupWraps: true, toggleWraps: true);
+    _expectAccountLayout(tester);
     expect(tester.takeException(), isNull);
   });
 }
@@ -661,6 +628,7 @@ Future<void> _pumpHeader(
   Locale locale = const Locale('zh'),
   double textScale = 1,
   bool disableAnimations = false,
+  TextDirection? textDirection,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -677,13 +645,22 @@ Future<void> _pumpHeader(
       child: LocalizedTestApp(
         locale: locale,
         theme: theme ?? AppTheme.light(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
-            disableAnimations: disableAnimations,
-          ),
-          child: child!,
-        ),
+        builder: (context, child) {
+          Widget current = MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+              disableAnimations: disableAnimations,
+            ),
+            child: child!,
+          );
+          if (textDirection != null) {
+            current = Directionality(
+              textDirection: textDirection,
+              child: current,
+            );
+          }
+          return current;
+        },
         home: Scaffold(
           appBar: AppBar(
             actions: [
@@ -735,56 +712,48 @@ Finder _statistic(String name, String value) {
 
 void _expectAccountLayout(
   WidgetTester tester, {
-  bool groupWraps = false,
-  bool? toggleWraps,
+  TextDirection direction = TextDirection.ltr,
 }) {
   final avatar = tester.getRect(find.byKey(const Key('more-account-avatar')));
   final name = tester.getRect(find.byKey(const Key('more-account-name')));
   final group = tester.getRect(find.byKey(const Key('more-account-group')));
   final toggle = tester.getRect(find.byType(DailyAutoSignInToggle));
   final header = tester.getRect(find.byKey(const Key('more-account-header')));
+  final toggleLabel = tester.getRect(
+    find.descendant(
+      of: find.byType(DailyAutoSignInToggle),
+      matching: find.text(_l10n(tester).dailyAutoSignInToggle),
+    ),
+  );
+  final toggleSwitch = tester.getRect(
+    find.byKey(const Key('daily-auto-sign-in-toggle')),
+  );
 
-  expect(toggle.right, closeTo(header.right - 16, 0.1));
-  if (toggleWraps == true) {
-    expect(toggle.top, greaterThanOrEqualTo(name.bottom));
-    expect(toggle.top, greaterThanOrEqualTo(group.bottom));
-  } else if (toggleWraps == false) {
-    final toggleLabel = tester.getRect(
-      find.descendant(
-        of: find.byType(DailyAutoSignInToggle),
-        matching: find.text(_l10n(tester).dailyAutoSignInToggle),
-      ),
-    );
-    final toggleSwitch = tester.getRect(
-      find.byKey(const Key('daily-auto-sign-in-toggle')),
-    );
-    expect(toggle.left - group.right, greaterThanOrEqualTo(11.9));
-    expect(toggle.center.dy, closeTo(name.center.dy, 0.1));
-    expect(toggleLabel.center.dy, closeTo(name.center.dy, 0.1));
-    expect(toggleSwitch.center.dy, closeTo(name.center.dy, 0.1));
-    expect(group.center.dy, closeTo(name.center.dy, 0.1));
-  }
-
-  expect(name.top, greaterThan(avatar.bottom));
-  expect(name.left, avatar.left);
-  if (groupWraps) {
-    expect(group.top, greaterThan(name.bottom));
-    expect(group.left, avatar.left);
+  expect(group.top, greaterThanOrEqualTo(name.bottom));
+  if (direction == TextDirection.ltr) {
+    expect(name.left, closeTo(header.left + 16, 0.1));
+    expect(group.left, closeTo(header.left + 16, 0.1));
+    expect(avatar.right, closeTo(header.right - 16, 0.1));
+    expect(name.right, lessThanOrEqualTo(avatar.left));
+    expect(group.right, lessThanOrEqualTo(avatar.left));
+    expect(toggleLabel.right, lessThanOrEqualTo(toggleSwitch.left));
   } else {
-    expect(group.left, greaterThan(name.right));
-    expect(group.center.dy, closeTo(name.center.dy, 0.1));
+    expect(name.right, closeTo(header.right - 16, 0.1));
+    expect(group.right, closeTo(header.right - 16, 0.1));
+    expect(avatar.left, closeTo(header.left + 16, 0.1));
+    expect(avatar.right, lessThanOrEqualTo(name.left));
+    expect(avatar.right, lessThanOrEqualTo(group.left));
+    expect(toggleSwitch.right, lessThanOrEqualTo(toggleLabel.left));
   }
+
+  expect(toggle.left, closeTo(header.left + 16, 0.1));
+  expect(toggle.right, closeTo(header.right - 16, 0.1));
+
   for (final statistic in ['threads', 'replies', 'credits']) {
     final rect = tester.getRect(find.byKey(Key('more-account-$statistic')));
-    expect(rect.left, greaterThan(avatar.right));
-    expect(rect.bottom, closeTo(avatar.bottom, 0.1));
-    final label = find
-        .descendant(
-          of: find.byKey(Key('more-account-$statistic')),
-          matching: find.byType(Text),
-        )
-        .last;
-    expect(tester.getRect(label).bottom, closeTo(avatar.bottom, 0.1));
+    expect(rect.top, greaterThanOrEqualTo(avatar.bottom));
+    expect(rect.top, greaterThanOrEqualTo(group.bottom));
+    expect(toggle.top, greaterThanOrEqualTo(rect.bottom));
   }
 }
 

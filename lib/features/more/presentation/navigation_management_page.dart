@@ -11,6 +11,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_select_menu.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class NavigationManagementPage extends ConsumerWidget {
@@ -146,7 +147,7 @@ class NavigationManagementPage extends ConsumerWidget {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Switch(
+                                        AppSwitch(
                                           key: ValueKey<String>(
                                             'navigation-management-visible-${destination.name}',
                                           ),

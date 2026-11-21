@@ -2,28 +2,34 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_spacing.dart';
-import 'package:y300/features/novel/presentation/novel_text_resolver.dart';
 import 'package:y300/features/novel/presentation/controllers/novel_chapter_interactions_dock_controller.dart';
+import 'package:y300/features/novel/presentation/novel_text_resolver.dart';
+import 'package:y300/features/novel/presentation/services/novel_reader_display_resolvers.dart';
 import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/app_prism_theme.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 class NovelReaderDisplaySettingsSheet extends StatefulWidget {
   const NovelReaderDisplaySettingsSheet({
     super.key,
     required this.initialPreferences,
     required this.onPreferencesChanged,
+    this.onPreferencesCommitted,
     this.fontPreviewStyle,
+    this.initialTab = ReaderDisplayTab.typography,
   });
 
   final NovelReaderPreferences initialPreferences;
   final ValueChanged<NovelReaderPreferences> onPreferencesChanged;
+  final ValueChanged<NovelReaderPreferences>? onPreferencesCommitted;
   final TextStyle? fontPreviewStyle;
+  final ReaderDisplayTab initialTab;
 
   @override
   State<NovelReaderDisplaySettingsSheet> createState() =>
@@ -32,6 +38,9 @@ class NovelReaderDisplaySettingsSheet extends StatefulWidget {
 
 class _NovelReaderDisplaySettingsSheetState
     extends State<NovelReaderDisplaySettingsSheet> {
+  static const NovelReaderThemeResolver _themeResolver =
+      NovelReaderThemeResolver();
+
   late NovelReaderPreferences _draft;
   int _fontRequest = 0;
   bool _isChoosingFont = false;
@@ -59,260 +68,292 @@ class _NovelReaderDisplaySettingsSheetState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-        ),
-        child: SingleChildScrollView(
-          key: const Key('novel-reader-display-settings-sheet'),
-          padding: const EdgeInsets.only(bottom: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ReaderSheetTitle(title: l10n.novelDisplaySettings),
-              _SettingsSection(
-                title: l10n.novelTypography,
-                children: [
-                  ListTile(
-                    key: const Key('novel-reader-font-selector'),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                    title: Text(l10n.fontSelectorTitle),
-                    subtitle: Text(
-                      _draft.fontFamily == FontIdentity.system
-                          ? l10n.fontSelectorSystemDefault
-                          : l10n.novelCustomFont,
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: _isChoosingFont ? null : _chooseFont,
-                  ),
-                  _SettingsSlider(
-                    key: const Key('novel-reader-font-size-slider'),
-                    label: l10n.novelFontSize,
-                    value: _draft.fontSize,
-                    min: 14,
-                    max: 30,
-                    displayValue: _draft.fontSize.toStringAsFixed(1),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(fontSize: _snap(value, 0.5)),
-                    ),
-                  ),
-                  _SettingsSlider(
-                    key: const Key('novel-reader-line-height-slider'),
-                    label: l10n.novelLineSpacing,
-                    value: _draft.lineHeight,
-                    min: 1.2,
-                    max: 2.4,
-                    displayValue: _draft.lineHeight.toStringAsFixed(1),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(lineHeight: _snap(value, 0.05)),
-                    ),
-                  ),
-                  _SettingsSlider(
-                    key: const Key('novel-reader-page-padding-slider'),
-                    label: l10n.novelPagePadding,
-                    value: _draft.pagePadding,
-                    min: NovelReaderSpacing.minimumPagePadding,
-                    max: NovelReaderSpacing.maximumPagePadding,
-                    displayValue: _draft.pagePadding.toStringAsFixed(0),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(pagePadding: _snap(value, 1)),
-                    ),
-                  ),
-                  ReaderSegmentControl<NovelReaderParagraphIndentMode>(
-                    key: const Key('novel-reader-paragraph-indent-control'),
-                    scrollable: true,
-                    label: l10n.novelParagraphIndent,
-                    value: _draft.paragraphIndent,
-                    values: NovelReaderParagraphIndentMode.values,
-                    labelBuilder: (value) => _paragraphIndentLabel(l10n, value),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(paragraphIndent: value),
-                    ),
-                  ),
-                ],
-              ),
-              _SettingsSection(
-                title: l10n.novelTheme,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final preset in NovelReaderThemePreset.values)
-                          _ThemeChip(
-                            key: Key('novel-theme-${_themeKey(preset)}'),
-                            label: _themeLabel(l10n, preset),
-                            selected: _draft.themePreset == preset,
-                            onSelected: () => _applyPreferences(
-                              _draft.copyWith(themePreset: preset),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _SettingsSlider(
-                    key: const Key('novel-reader-body-brightness-slider'),
-                    label: l10n.novelBodyBrightness,
-                    value: _draft.bodyBrightness,
-                    min: NovelReaderPreferences.minimumBodyBrightness,
-                    max: NovelReaderPreferences.maximumBodyBrightness,
-                    displayValue: '${(_draft.bodyBrightness * 100).round()}%',
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(bodyBrightness: _snap(value, 0.05)),
-                    ),
-                  ),
-                  ReaderSegmentControl<NovelReaderBackgroundTexture>(
-                    key: const Key('novel-reader-background-texture-control'),
-                    label: l10n.novelBackgroundTexture,
-                    value: _draft.backgroundTexture,
-                    values: NovelReaderBackgroundTexture.values,
-                    labelBuilder: (value) => _textureLabel(l10n, value),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(backgroundTexture: value),
-                    ),
-                  ),
-                  ReaderSegmentControl<NovelReaderBodyColorMode>(
-                    key: const Key('novel-reader-body-color-mode-control'),
-                    scrollable: true,
-                    label: l10n.novelBodyColor,
-                    value: _draft.bodyColorMode,
-                    values: NovelReaderBodyColorMode.values,
-                    labelBuilder: (value) => _bodyColorLabel(l10n, value),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(bodyColorMode: value),
-                    ),
-                  ),
-                ],
-              ),
-              _SettingsSection(
-                title: l10n.novelReading,
-                children: [
-                  ReaderSegmentControl<NovelReaderFlowMode>(
-                    key: const Key('novel-reader-flow-mode-control'),
-                    label: l10n.novelReadingMode,
-                    value: _draft.flowMode,
-                    values: NovelReaderFlowMode.values,
-                    labelBuilder: (value) =>
-                        NovelTextResolver.flowMode(l10n, value),
-                    onChanged: (value) =>
-                        _applyPreferences(_draft.copyWith(flowMode: value)),
-                  ),
-                  if (_draft.flowMode != NovelReaderFlowMode.vertical) ...[
-                    ReaderSegmentControl<NovelReaderPageEffect>(
-                      key: const Key('novel-reader-page-effect-control'),
-                      scrollable: true,
-                      label: l10n.novelPageEffect,
-                      value: _draft.pageEffect,
-                      values: NovelReaderPageEffect.values,
-                      labelBuilder: (value) =>
-                          NovelTextResolver.pageEffect(l10n, value),
-                      onChanged: (value) =>
-                          _applyPreferences(_draft.copyWith(pageEffect: value)),
-                    ),
-                    ReaderSegmentControl<NovelReaderPageSpeed>(
-                      key: const Key('novel-reader-page-speed-control'),
-                      label: l10n.novelPageSpeed,
-                      value: _draft.pageSpeed,
-                      values: NovelReaderPageSpeed.values,
-                      labelBuilder: (value) =>
-                          NovelTextResolver.pageSpeed(l10n, value),
-                      onChanged: (value) =>
-                          _applyPreferences(_draft.copyWith(pageSpeed: value)),
-                    ),
-                  ],
-                  ReaderSegmentControl<NovelReaderConversionMode>(
-                    key: const Key('novel-reader-conversion-mode-control'),
-                    label: l10n.novelConversionMode,
-                    value: _draft.conversionMode,
-                    values: NovelReaderConversionMode.values,
-                    labelBuilder: (value) =>
-                        NovelTextResolver.conversionMode(l10n, value),
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(conversionMode: value),
-                    ),
-                  ),
-                  _PanelSwitchRow(
-                    controlKey: const Key('novel-reader-safe-area-switch'),
-                    title: l10n.novelSafeContent,
-                    value: _draft.safeAreaEnabled,
-                    onChanged: (value) => _applyPreferences(
-                      _draft.copyWith(safeAreaEnabled: value),
-                    ),
-                  ),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final enabled = ref.watch(
-                        hardwarePageKeysEnabledProvider,
-                      );
-                      return _PanelSwitchRow(
-                        controlKey: const Key(
-                          'novel-reader-hardware-page-keys-switch',
-                        ),
-                        title: l10n.readerHardwarePageKeys,
-                        value: enabled.value ?? false,
-                        onChanged: enabled.value == null
-                            ? null
-                            : (value) {
-                                unawaited(
-                                  ref
-                                      .read(
-                                        hardwarePageKeysEnabledProvider
-                                            .notifier,
-                                      )
-                                      .setEnabled(value),
-                                );
-                              },
-                      );
-                    },
-                  ),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final dock = ref.watch(
-                        novelChapterInteractionsDockControllerProvider,
-                      );
-                      return _PanelSwitchRow(
-                        controlKey: const Key(
-                          'novel-reader-chapter-interactions-dock-switch',
-                        ),
-                        title: l10n.novelChapterInteractionsDockSetting,
-                        value: dock.value?.enabled ?? true,
-                        onChanged: dock.value == null
-                            ? null
-                            : (enabled) {
-                                unawaited(() async {
-                                  final saved = await ref
-                                      .read(
-                                        novelChapterInteractionsDockControllerProvider
-                                            .notifier,
-                                      )
-                                      .setEnabled(enabled);
-                                  if (!saved && context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          ).novelChapterInteractionsSettingSaveFailed,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }());
-                              },
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+    final baseTheme = Theme.of(context);
+    final novelPalette = _themeResolver.resolve(
+      preferences: _draft,
+      theme: baseTheme,
+    );
+    final panelPalette = ReaderPanelPalette.fromNovelPalette(
+      brightness: novelPalette.brightness,
+      background: novelPalette.background,
+      surface: novelPalette.surface,
+      foreground: novelPalette.controlForeground,
+      muted: novelPalette.controlMuted,
+      accent: novelPalette.accent,
+      baseTheme: baseTheme,
+    );
+    final summary =
+        '${_draft.fontSize.toStringAsFixed(1)}${l10n.readerUnitPoint} · '
+        '${_draft.lineHeight.toStringAsFixed(2)}${l10n.readerUnitMultiple} · '
+        '${_paragraphIndentLabel(l10n, _draft.paragraphIndent)} · '
+        '${_themeLabel(l10n, _draft.themePreset)}';
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+      ),
+      child: ReaderDisplayPanel(
+        panelKey: const Key('novel-reader-display-settings-sheet'),
+        palette: panelPalette,
+        initialTab: widget.initialTab,
+        summary: summary,
+        typographyChildren: _buildTypographyTab(l10n),
+        themeChildren: _buildThemeTab(l10n),
+        readingChildren: _buildReadingTab(l10n),
       ),
     );
+  }
+
+  List<Widget> _buildTypographyTab(AppLocalizations l10n) {
+    return [
+      AppGroupedRow(
+        key: const Key('novel-reader-font-selector'),
+        title: l10n.fontSelectorTitle,
+        subtitle: _draft.fontFamily == FontIdentity.system
+            ? l10n.fontSelectorSystemDefault
+            : l10n.novelCustomFont,
+        showChevron: true,
+        minHeight: 50,
+        onTap: _isChoosingFont ? null : _chooseFont,
+      ),
+      ReaderStepper(
+        key: const Key('novel-reader-font-size-stepper'),
+        keyPrefix: 'novel-reader-font-size',
+        label: l10n.novelFontSize,
+        value: _draft.fontSize,
+        min: 14,
+        max: 30,
+        step: 0.5,
+        fractionDigits: 1,
+        unit: l10n.readerUnitPoint,
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(fontSize: _snap(value, 0.5))),
+        onChangeEnd: (value) => _commitStepperPreferences(
+          _draft.copyWith(fontSize: _snap(value, 0.5)),
+        ),
+      ),
+      ReaderStepper(
+        key: const Key('novel-reader-line-height-stepper'),
+        keyPrefix: 'novel-reader-line-height',
+        label: l10n.novelLineSpacing,
+        value: _draft.lineHeight,
+        min: 1.2,
+        max: 2.4,
+        step: 0.05,
+        fractionDigits: 2,
+        unit: l10n.readerUnitMultiple,
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(lineHeight: _snap(value, 0.05))),
+        onChangeEnd: (value) => _commitStepperPreferences(
+          _draft.copyWith(lineHeight: _snap(value, 0.05)),
+        ),
+      ),
+      ReaderStepper(
+        key: const Key('novel-reader-page-padding-stepper'),
+        keyPrefix: 'novel-reader-page-padding',
+        label: l10n.novelPagePadding,
+        value: _draft.pagePadding,
+        min: NovelReaderSpacing.minimumPagePadding,
+        max: NovelReaderSpacing.maximumPagePadding,
+        step: 1,
+        fractionDigits: 0,
+        unit: l10n.readerUnitPixel,
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(pagePadding: _snap(value, 1))),
+        onChangeEnd: (value) => _commitStepperPreferences(
+          _draft.copyWith(pagePadding: _snap(value, 1)),
+        ),
+      ),
+      ReaderOptionRow<NovelReaderParagraphIndentMode>(
+        key: const Key('novel-reader-paragraph-indent-control'),
+        label: l10n.novelParagraphIndent,
+        stacked: true,
+        value: _draft.paragraphIndent,
+        options: [
+          for (final mode in NovelReaderParagraphIndentMode.values)
+            (mode, _paragraphIndentLabel(l10n, mode)),
+        ],
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(paragraphIndent: value)),
+      ),
+    ];
+  }
+
+  List<Widget> _buildThemeTab(AppLocalizations l10n) {
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final preset in NovelReaderThemePreset.values)
+              _ThemeChip(
+                key: Key('novel-theme-${_themeKey(preset)}'),
+                label: _themeLabel(l10n, preset),
+                selected: _draft.themePreset == preset,
+                onSelected: () =>
+                    _applyPreferences(_draft.copyWith(themePreset: preset)),
+              ),
+          ],
+        ),
+      ),
+      ReaderStepper(
+        key: const Key('novel-reader-body-brightness-stepper'),
+        keyPrefix: 'novel-reader-body-brightness',
+        label: l10n.novelBodyBrightness,
+        value: _draft.bodyBrightness,
+        min: NovelReaderPreferences.minimumBodyBrightness,
+        max: NovelReaderPreferences.maximumBodyBrightness,
+        step: 0.05,
+        displayScale: 100,
+        fractionDigits: 0,
+        unit: l10n.readerUnitPercent,
+        onChanged: (value) => _applyPreferences(
+          _draft.copyWith(bodyBrightness: _snap(value, 0.05)),
+        ),
+        onChangeEnd: (value) => _commitStepperPreferences(
+          _draft.copyWith(bodyBrightness: _snap(value, 0.05)),
+        ),
+      ),
+      ReaderOptionRow<NovelReaderBackgroundTexture>(
+        key: const Key('novel-reader-background-texture-control'),
+        label: l10n.novelBackgroundTexture,
+        value: _draft.backgroundTexture,
+        options: [
+          for (final texture in NovelReaderBackgroundTexture.values)
+            (texture, _textureLabel(l10n, texture)),
+        ],
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(backgroundTexture: value)),
+      ),
+      ReaderOptionRow<NovelReaderBodyColorMode>(
+        key: const Key('novel-reader-body-color-mode-control'),
+        label: l10n.novelBodyColor,
+        stacked: true,
+        value: _draft.bodyColorMode,
+        options: [
+          for (final mode in NovelReaderBodyColorMode.values)
+            (mode, _bodyColorLabel(l10n, mode)),
+        ],
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(bodyColorMode: value)),
+      ),
+    ];
+  }
+
+  List<Widget> _buildReadingTab(AppLocalizations l10n) {
+    return [
+      ReaderOptionRow<NovelReaderFlowMode>(
+        key: const Key('novel-reader-flow-mode-control'),
+        label: l10n.novelReadingMode,
+        value: _draft.flowMode,
+        options: [
+          for (final mode in NovelReaderFlowMode.values)
+            (mode, NovelTextResolver.flowMode(l10n, mode)),
+        ],
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(flowMode: value)),
+      ),
+      if (_draft.flowMode != NovelReaderFlowMode.vertical)
+        _PagedEffectSpeedRow(
+          effectLabel: l10n.novelPageEffect,
+          effect: _draft.pageEffect,
+          effectOptions: [
+            for (final effect in NovelReaderPageEffect.values)
+              AppSelectOption(
+                value: effect,
+                label: NovelTextResolver.pageEffect(l10n, effect),
+              ),
+          ],
+          onEffectChanged: (value) =>
+              _applyPreferences(_draft.copyWith(pageEffect: value)),
+          speedLabel: l10n.novelPageSpeed,
+          speed: _draft.pageSpeed,
+          speedOptions: [
+            for (final speed in NovelReaderPageSpeed.values)
+              AppSelectOption(
+                value: speed,
+                label: NovelTextResolver.pageSpeed(l10n, speed),
+              ),
+          ],
+          onSpeedChanged: (value) =>
+              _applyPreferences(_draft.copyWith(pageSpeed: value)),
+        ),
+      ReaderOptionRow<NovelReaderConversionMode>(
+        key: const Key('novel-reader-conversion-mode-control'),
+        label: l10n.novelConversionMode,
+        value: _draft.conversionMode,
+        options: [
+          for (final mode in NovelReaderConversionMode.values)
+            (mode, NovelTextResolver.conversionMode(l10n, mode)),
+        ],
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(conversionMode: value)),
+      ),
+      AppSwitchRow(
+        switchKey: const Key('novel-reader-safe-area-switch'),
+        title: l10n.novelSafeContent,
+        value: _draft.safeAreaEnabled,
+        onChanged: (value) =>
+            _applyPreferences(_draft.copyWith(safeAreaEnabled: value)),
+      ),
+      Consumer(
+        builder: (context, ref, _) {
+          final enabled = ref.watch(hardwarePageKeysEnabledProvider);
+          return AppSwitchRow(
+            switchKey: const Key('novel-reader-hardware-page-keys-switch'),
+            title: l10n.readerHardwarePageKeys,
+            value: enabled.value ?? false,
+            onChanged: enabled.value == null
+                ? null
+                : (value) {
+                    unawaited(
+                      ref
+                          .read(hardwarePageKeysEnabledProvider.notifier)
+                          .setEnabled(value),
+                    );
+                  },
+          );
+        },
+      ),
+      Consumer(
+        builder: (context, ref, _) {
+          final dock = ref.watch(
+            novelChapterInteractionsDockControllerProvider,
+          );
+          return AppSwitchRow(
+            switchKey: const Key(
+              'novel-reader-chapter-interactions-dock-switch',
+            ),
+            title: l10n.novelChapterInteractionsDockSetting,
+            value: dock.value?.enabled ?? true,
+            onChanged: dock.value == null
+                ? null
+                : (enabled) {
+                    unawaited(() async {
+                      final saved = await ref
+                          .read(
+                            novelChapterInteractionsDockControllerProvider
+                                .notifier,
+                          )
+                          .setEnabled(enabled);
+                      if (!saved && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              AppLocalizations.of(context)
+                                  .novelChapterInteractionsSettingSaveFailed,
+                            ),
+                          ),
+                        );
+                      }
+                    }());
+                  },
+          );
+        },
+      ),
+    ];
   }
 
   String _themeKey(NovelReaderThemePreset preset) {
@@ -412,6 +453,13 @@ class _NovelReaderDisplaySettingsSheetState
     widget.onPreferencesChanged(next);
   }
 
+  void _commitStepperPreferences(NovelReaderPreferences next) {
+    if (next != _draft) {
+      _applyPreferences(next);
+    }
+    widget.onPreferencesCommitted?.call(next);
+  }
+
   Future<void> _chooseFont() async {
     if (_isChoosingFont) return;
     final request = ++_fontRequest;
@@ -445,139 +493,82 @@ class _NovelReaderDisplaySettingsSheetState
   }
 }
 
-class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-          ),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-/// 阅读设置面板中的开关行。
-///
-/// 面板自身已有水平内边距和紧凑行距，不套用分组列表的 `AppSwitchRow`；
-/// 这里只取同一 prism 开关外观，整行与尾部开关都可切换。
-class _PanelSwitchRow extends StatelessWidget {
-  const _PanelSwitchRow({
-    required this.controlKey,
-    required this.title,
-    required this.value,
-    required this.onChanged,
+class _PagedEffectSpeedRow extends StatelessWidget {
+  const _PagedEffectSpeedRow({
+    required this.effectLabel,
+    required this.effect,
+    required this.effectOptions,
+    required this.onEffectChanged,
+    required this.speedLabel,
+    required this.speed,
+    required this.speedOptions,
+    required this.onSpeedChanged,
   });
 
-  final Key controlKey;
-  final String title;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
+  final String effectLabel;
+  final NovelReaderPageEffect effect;
+  final List<AppSelectOption<NovelReaderPageEffect>> effectOptions;
+  final ValueChanged<NovelReaderPageEffect> onEffectChanged;
+  final String speedLabel;
+  final NovelReaderPageSpeed speed;
+  final List<AppSelectOption<NovelReaderPageSpeed>> speedOptions;
+  final ValueChanged<NovelReaderPageSpeed> onSpeedChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final enabled = onChanged != null;
-    void toggle() {
-      if (enabled) {
-        onChanged!(!value);
-      }
-    }
-
-    return Semantics(
-      container: true,
-      label: title,
-      toggled: value,
-      enabled: enabled,
-      onTap: enabled ? toggle : null,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? toggle : null,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: enabled
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+    final labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Text(effectLabel, style: labelStyle),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: AppSelectMenu<NovelReaderPageEffect>(
+                        key: const Key('novel-reader-page-effect-control'),
+                        value: effect,
+                        options: effectOptions,
+                        onSelected: onEffectChanged,
+                      ),
                     ),
                   ),
-                ),
-                AppPrismTheme(
-                  child: prism.Switch(
-                    key: controlKey,
-                    value: value,
-                    onChanged: onChanged,
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Row(
+                children: [
+                  Text(speedLabel, style: labelStyle),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: AppSelectMenu<NovelReaderPageSpeed>(
+                        key: const Key('novel-reader-page-speed-control'),
+                        value: speed,
+                        options: speedOptions,
+                        onSelected: onSpeedChanged,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _SettingsSlider extends StatelessWidget {
-  const _SettingsSlider({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.displayValue,
-    required this.onChanged,
-  });
-
-  final String label;
-  final double value;
-  final double min;
-  final double max;
-  final String displayValue;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-      child: Row(
-        children: [
-          SizedBox(width: 88, child: Text(label)),
-          Expanded(
-            child: Slider(
-              value: value.clamp(min, max).toDouble(),
-              min: min,
-              max: max,
-              onChanged: onChanged,
-            ),
-          ),
-          SizedBox(
-            width: 44,
-            child: Text(
-              displayValue,
-              textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -597,10 +588,22 @@ class _ThemeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return ChoiceChip(
       label: Text(label),
       selected: selected,
       showCheckmark: false,
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      backgroundColor: scheme.surfaceContainerHigh,
+      selectedColor: scheme.primary,
+      side: BorderSide(
+        color: selected ? scheme.primary : scheme.outlineVariant,
+      ),
+      labelStyle: TextStyle(
+        color: selected ? scheme.onPrimary : scheme.onSurface,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+      ),
       onSelected: (_) => onSelected(),
     );
   }

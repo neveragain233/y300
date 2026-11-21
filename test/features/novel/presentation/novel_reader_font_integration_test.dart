@@ -16,6 +16,7 @@ import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/library_shared/data/providers/library_state_providers.dart';
 import 'package:y300/features/library_shared/domain/models/library_state_models.dart';
 import 'package:y300/features/library_shared/domain/repositories/library_state_repository.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/features/novel/data/preferences/novel_chapter_interactions_dock_preferences_provider.dart';
 import 'package:y300/features/novel/data/providers/novel_providers.dart';
@@ -302,7 +303,7 @@ void main() {
       expect(_state(tester).editablePreferences.fontFamily, fonts.first.id);
 
       await _openDisplaySettings(tester);
-      _fontSizeSlider(tester).onChanged!(24);
+      _fontSizeStepper(tester).onChanged(24);
       await tester.pump(const Duration(milliseconds: 700));
       expect(preferences.value.fontFamily, fonts.first.id);
       expect(preferences.value.fontSize, 24);
@@ -387,7 +388,7 @@ void main() {
       await _openDisplaySettings(tester);
       final saving = Completer<void>();
       preferences.holdNext = saving;
-      _fontSizeSlider(tester).onChanged!(20);
+      _fontSizeStepper(tester).onChanged(20);
       await tester.pump(const Duration(milliseconds: 600));
       expect(preferences.saveAttempts, 1);
       _controller(
@@ -597,12 +598,10 @@ Future<void> _closeDisplaySettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Slider _fontSizeSlider(WidgetTester tester) => tester.widget<Slider>(
-  find.descendant(
-    of: find.byKey(const Key('novel-reader-font-size-slider')),
-    matching: find.byType(Slider),
-  ),
-);
+ReaderStepper _fontSizeStepper(WidgetTester tester) =>
+    tester.widget<ReaderStepper>(
+      find.byKey(const Key('novel-reader-font-size-stepper')),
+    );
 
 ScrollPosition _verticalPosition(WidgetTester tester) => tester
     .state<ScrollableState>(

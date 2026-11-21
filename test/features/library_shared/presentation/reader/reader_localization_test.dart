@@ -116,7 +116,7 @@ void main() {
     expect(find.text('Raw Chapter 章節'), findsOneWidget);
   });
 
-  testWidgets('reader segmented control localizes selected semantics', (
+  testWidgets('reader display panel and stepper localize in zh_TW', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -125,19 +125,32 @@ void main() {
       LocalizedTestApp(
         locale: const Locale('zh', 'TW'),
         home: Scaffold(
-          body: ReaderSegmentControl<String>(
-            label: '模式',
-            value: 'raw-mode',
-            values: const <String>['raw-mode', 'other-mode'],
-            labelBuilder: (value) => value,
-            onChanged: (_) {},
+          body: ReaderDisplayPanel(
+            summary: '18磅',
+            typographyChildren: [
+              ReaderStepper(
+                label: '字號',
+                value: 18,
+                min: 14,
+                max: 30,
+                step: 1,
+                unit: l10n.readerUnitPoint,
+                onChanged: (_) {},
+              ),
+            ],
+            themeChildren: const [SizedBox()],
+            readingChildren: const [SizedBox()],
           ),
         ),
       ),
     );
 
+    expect(find.text(l10n.novelTypography), findsOneWidget);
+    expect(find.text(l10n.novelTheme), findsOneWidget);
+    expect(find.text(l10n.novelReading), findsOneWidget);
+    expect(find.text('18${l10n.readerUnitPoint}'), findsOneWidget);
     expect(
-      find.bySemanticsLabel(l10n.readerSelectedSemantics('raw-mode')),
+      find.bySemanticsLabel(l10n.readerStepperDecrease('字號')),
       findsOneWidget,
     );
     semantics.dispose();

@@ -10,6 +10,7 @@ import 'package:y300/features/messages/presentation/message_feed_providers.dart'
 import 'package:y300/features/messages/presentation/message_friend_directory_controller.dart';
 import 'package:y300/features/messages/presentation/widgets/message_friend_picker_sheet.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_checkbox_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
 import '../support/message_recipient_test_helper.dart';
@@ -140,7 +141,7 @@ void main() {
       harness.repository.reads.single.result.complete(_page([1, 21]));
       await tester.pumpAndSettle();
       final extra = find.byKey(const Key('message-friend-21'));
-      expect(tester.widget<CheckboxListTile>(extra).onChanged, isNull);
+      expect(tester.widget<AppCheckboxRow>(extra).onChanged, isNull);
       expect(
         find.text(harness.strings.messageRecipientLimitReached),
         findsOneWidget,
@@ -148,7 +149,7 @@ void main() {
       await tester.tap(find.byKey(const Key('message-friend-1')));
       await tester.pumpAndSettle();
       expect(selection.length, 19);
-      expect(tester.widget<CheckboxListTile>(extra).onChanged, isNotNull);
+      expect(tester.widget<AppCheckboxRow>(extra).onChanged, isNotNull);
       await tester.tap(extra);
       await tester.pumpAndSettle();
       expect(selection.length, 20);

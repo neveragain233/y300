@@ -125,9 +125,17 @@ void _dockActionsCases() {
       find.byKey(const Key('shared-reader-bottom-action-display')),
     );
     await tester.pumpAndSettle();
-    const switchKey = Key('novel-reader-chapter-interactions-dock-switch');
-    await tester.ensureVisible(find.byKey(switchKey));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(
+          AppLocalizations.of(tester.element(find.byType(NovelReaderPage)))
+              .novelReading,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
+    const switchKey = Key('novel-reader-chapter-interactions-dock-switch');
     await tester.tap(find.byKey(switchKey));
     await tester.pumpAndSettle();
     expect(dockRepository.current.enabled, isFalse);
@@ -839,7 +847,17 @@ void _dockActionsCases() {
     await tester.tap(find.text(l10n.readerBookmarks));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const Key('novel-reader-chapter-novel:49:100:5001')),
+      find.byKey(
+        const Key('novel-reader-bookmark-episode-bookmark:novel:49:100:5001'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const Key(
+          'novel-reader-bookmark-delete-episode-bookmark:novel:49:100:5001',
+        ),
+      ),
       findsOneWidget,
     );
     expect(

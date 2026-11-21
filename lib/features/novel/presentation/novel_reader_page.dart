@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:y300/features/library_shared/presentation/reader/reader_chapter_panel.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
@@ -2619,11 +2618,16 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     NovelReaderController controller,
   ) async {
     await controller.refreshReadingState();
+    if (!mounted) {
+      return;
+    }
+    final panelPalette = _panelPaletteFor(viewState);
     await _runWithReaderSemanticsSuspended(() async {
       final selected = await showAdaptivePanel<_NovelReaderCatalogSelection>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
+        backgroundColor: panelPalette.panelSurface,
         builder: (context) => Consumer(
           builder: (context, ref, _) {
             final latest =
@@ -2631,6 +2635,8 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
                 viewState;
             return NovelReaderChapterListSheet(
               viewState: latest,
+              palette: panelPalette,
+              onDeleteBookmark: controller.removeBookmark,
               onToggleReadState:
                   ref.read(novelReadingStateRepositoryProvider) == null
                   ? null
@@ -2733,6 +2739,23 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     });
   }
 
+  ReaderPanelPalette _panelPaletteFor(NovelReaderViewState viewState) {
+    final baseTheme = Theme.of(context);
+    final palette = _themeResolver.resolve(
+      preferences: viewState.preferences,
+      theme: baseTheme,
+    );
+    return ReaderPanelPalette.fromNovelPalette(
+      brightness: palette.brightness,
+      background: palette.background,
+      surface: palette.surface,
+      foreground: palette.controlForeground,
+      muted: palette.controlMuted,
+      accent: palette.accent,
+      baseTheme: baseTheme,
+    );
+  }
+
   Future<void> _showDisplaySettingsSheet(
     NovelReaderViewState viewState,
     NovelReaderController controller,
@@ -2740,6 +2763,7 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     if (ref.read(novelReaderControllerProvider(_args)).isLoading) return;
     _overlayController.hideMenu();
     final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.5;
+    final panelPalette = _panelPaletteFor(viewState);
     final coordinator = _displayPreferencesCoordinatorFor(controller);
     coordinator.begin(
       preferences: viewState.editablePreferences,
@@ -2748,10 +2772,12 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     await _runWithReaderSemanticsSuspended(() async {
       await showAdaptivePanel<void>(
         context: context,
+        backgroundColor: panelPalette.panelSurface,
         constraints: BoxConstraints(maxHeight: maxSheetHeight),
         builder: (context) => NovelReaderDisplaySettingsSheet(
           initialPreferences: viewState.editablePreferences,
           onPreferencesChanged: coordinator.change,
+          onPreferencesCommitted: (_) => unawaited(coordinator.flush()),
           fontPreviewStyle: _typographyResolver
               .resolve(
                 preferences: viewState.preferences,
@@ -3134,10 +3160,14 @@ class NovelReaderChapterListSheet extends StatefulWidget {
     super.key,
     required this.viewState,
     this.onToggleReadState,
+    this.onDeleteBookmark,
+    this.palette,
   });
 
   final NovelReaderViewState viewState;
   final Future<void> Function(String episodeId, bool isRead)? onToggleReadState;
+  final Future<void> Function(String bookmarkId)? onDeleteBookmark;
+  final ReaderPanelPalette? palette;
 
   static const double itemExtent = 72;
 
@@ -3152,7 +3182,39 @@ class _NovelReaderChapterListSheetState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final media = MediaQuery.of(context);
+    final episodesById = {
+      for (final episode in viewState.episodes) episode.episodeId: episode,
+    };
+    final bookmarkEntries = [
+      for (final bookmark in viewState.bookmarks)
+        if (episodesById[bookmark.episodeId] case final episode?)
+          ReaderBookmarkEntry(
+            id: bookmark.bookmarkId,
+            rowKey: Key('novel-reader-bookmark-${bookmark.bookmarkId}'),
+            deleteKey: Key(
+              'novel-reader-bookmark-delete-${bookmark.bookmarkId}',
+            ),
+            title: NovelTextResolver.chapterTitle(
+              l10n,
+              bookmark.title.isEmpty ? episode.episodeTitle : bookmark.title,
+              episode.sourceTid,
+            ),
+            subtitle: bookmark.snippet.trim().isEmpty
+                ? null
+                : bookmark.snippet.trim(),
+            isCurrent: bookmark.episodeId == viewState.currentEpisode.episodeId,
+            onTap: () =>
+                Navigator.of(context)
+                    .pop(_NovelReaderCatalogSelection(episode)),
+            onDelete: widget.onDeleteBookmark == null
+                ? null
+                : () =>
+                      unawaited(widget.onDeleteBookmark!(bookmark.bookmarkId)),
+          ),
+    ];
+
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
@@ -3166,19 +3228,18 @@ class _NovelReaderChapterListSheetState
                   media.padding.vertical,
             ),
           ),
-          child: ReaderChapterPanel<NovelEpisodeItem>(
+          child: ReaderContentPanel(
             key: const Key('novel-reader-chapter-list-sheet'),
-            entries: viewState.episodes,
-            isBookmarked: (episode) =>
-                viewState.bookmarkEpisodeIds.contains(episode.episodeId),
-            builder: (context, episodes) =>
+            palette: widget.palette,
+            bookmarks: bookmarkEntries,
+            catalogBuilder: (context) =>
                 LibraryChapterBrowser<NovelEpisodeItem>(
                   workId: viewState.currentEpisode.novelId,
                   keyPrefix: 'novel-reader-chapter',
                   currentId: viewState.currentEpisode.episodeId,
                   itemExtent: _chapterItemExtent(context),
                   entries: [
-                    for (final episode in episodes)
+                    for (final episode in viewState.episodes)
                       ChapterSearchEntry(
                         id: episode.episodeId,
                         title: episode.episodeTitle,
@@ -3203,18 +3264,32 @@ class _NovelReaderChapterListSheetState
                               .pop(_NovelReaderCatalogSelection(episode));
                         },
                         onLongPress: () async {
+                          final panelPalette = widget.palette;
                           final fromBeginning = await showAdaptivePanel<bool>(
                             context: context,
-                            builder: (context) => SafeArea(
-                              child: ListTile(
-                                leading: const Icon(Icons.restart_alt),
-                                title: Text(
-                                  AppLocalizations.of(context)
-                                      .libraryDetailStartFromBeginning,
+                            backgroundColor: panelPalette?.panelSurface,
+                            builder: (context) {
+                              final tile = SafeArea(
+                                child: ListTile(
+                                  leading: const Icon(Icons.restart_alt),
+                                  title: Text(
+                                    AppLocalizations.of(context)
+                                        .libraryDetailStartFromBeginning,
+                                  ),
+                                  onTap: () => Navigator.of(context).pop(true),
                                 ),
-                                onTap: () => Navigator.of(context).pop(true),
-                              ),
-                            ),
+                              );
+                              if (panelPalette == null) {
+                                return tile;
+                              }
+                              return ReaderPanelTheme(
+                                palette: panelPalette,
+                                child: Material(
+                                  color: panelPalette.panelSurface,
+                                  child: tile,
+                                ),
+                              );
+                            },
                           );
                           if (mounted && fromBeginning == true) {
                             confirmSearch();

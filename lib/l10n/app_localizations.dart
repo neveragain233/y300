@@ -10890,6 +10890,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'墨水屏 eink 电子书 电纸书 边缘 翻页 动画 玻璃 灰度'**
   String get settingsSearchKeywordsEInk;
+
+  /// No description provided for @readerStepperDecrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'减小{label}'**
+  String readerStepperDecrease(String label);
+
+  /// No description provided for @readerStepperIncrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'增大{label}'**
+  String readerStepperIncrease(String label);
+
+  /// No description provided for @readerStepperValueSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}，当前{value}'**
+  String readerStepperValueSemantics(String label, String value);
+
+  /// No description provided for @readerStepperRangeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'范围：{min} – {max}'**
+  String readerStepperRangeHint(String min, String max);
+
+  /// No description provided for @readerUnitPoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'磅'**
+  String get readerUnitPoint;
+
+  /// No description provided for @readerUnitMultiple.
+  ///
+  /// In zh, this message translates to:
+  /// **'倍'**
+  String get readerUnitMultiple;
+
+  /// No description provided for @readerUnitPixel.
+  ///
+  /// In zh, this message translates to:
+  /// **'像素'**
+  String get readerUnitPixel;
+
+  /// No description provided for @readerUnitPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'%'**
+  String get readerUnitPercent;
+
+  /// No description provided for @readerBookmarkDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除书签：{title}'**
+  String readerBookmarkDelete(String title);
+
+  /// No description provided for @readerContentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容'**
+  String get readerContentTitle;
 }
 
 class _AppLocalizationsDelegate

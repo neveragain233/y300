@@ -477,7 +477,7 @@ void _routingCases() {
     );
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '混合关键词');
+    await tester.enterText(find.byType(AppTextInput), '混合关键词');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
     await _tapNavigationGroup(tester, l10n.appNavigationForum);
@@ -487,7 +487,7 @@ void _routingCases() {
       same(bookshelf),
     );
     expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      tester.widget<AppTextInput>(find.byType(AppTextInput)).controller!.text,
       '混合关键词',
     );
     expect(tester.takeException(), isNull);

@@ -36,16 +36,12 @@ void _submissionCases() {
     );
     final editable = tester.widget<EditableText>(find.byType(EditableText));
     expect(editable.controller.text, '[b]粗体内容[/b]');
-    final sourceField = tester.widget<TextField>(
+    final sourceField = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
-    final decoration = sourceField.decoration;
-    expect(decoration?.border, InputBorder.none);
-    expect(decoration?.enabledBorder, InputBorder.none);
-    expect(decoration?.focusedBorder, InputBorder.none);
-    expect(decoration?.disabledBorder, InputBorder.none);
-    expect(decoration?.filled, isFalse);
-    expect(decoration?.fillColor, isNull);
+    expect(sourceField.variant, AppTextInputVariant.plain);
+    expect(sourceField.fillColor, isNull);
+    expect(find.byType(TextField), findsNothing);
 
     await tester.tap(find.byKey(const Key('reply-composer-source-button')));
     await tester.pumpAndSettle();
@@ -223,10 +219,10 @@ void _submissionCases() {
     );
     await tester.pump();
 
-    final imageButton = tester.widget<IconButton>(
+    final imageButton = tester.widget<AppToolbarIconButton>(
       find.descendant(
         of: find.byKey(const Key('reply-composer-image-button')),
-        matching: find.byType(IconButton),
+        matching: find.byType(AppToolbarIconButton),
       ),
     );
     expect(imageButton.onPressed, isNull);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 
 /// A search-mode app bar whose text field is visually part of the toolbar.
@@ -70,7 +71,7 @@ class InlineSearchAppBar extends StatelessWidget
       leading: AppToolbarBackButton(key: backButtonKey, onPressed: _handleBack),
       titleSpacing: 0,
       bottom: bottom,
-      titleWidget: TextField(
+      titleWidget: AppTextInput(
         key: fieldKey,
         controller: controller,
         focusNode: focusNode,
@@ -79,22 +80,11 @@ class InlineSearchAppBar extends StatelessWidget
         textInputAction: TextInputAction.search,
         style: titleStyle,
         cursorColor: foreground,
-        decoration: InputDecoration(
-          isDense: true,
-          filled: false,
-          fillColor: Colors.transparent,
-          hintText: hintText,
-          hintStyle: titleStyle?.copyWith(
-            color: foreground.withValues(alpha: 0.68),
-          ),
-          contentPadding: EdgeInsets.zero,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          focusedErrorBorder: InputBorder.none,
+        hintText: hintText,
+        hintStyle: titleStyle?.copyWith(
+          color: foreground.withValues(alpha: 0.68),
         ),
+        variant: AppTextInputVariant.plain,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
       ),

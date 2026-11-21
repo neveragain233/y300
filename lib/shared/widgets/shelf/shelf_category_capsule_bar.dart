@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/core/motion/app_motion.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
 
 class ShelfCategoryCapsuleTab {
@@ -57,7 +61,7 @@ class _ShelfCategoryCapsuleBarState extends State<ShelfCategoryCapsuleBar> {
       if (!mounted || context == null) {
         return;
       }
-      final reduceMotion = MediaQuery.disableAnimationsOf(context);
+      final reduceMotion = AppMotion.reduceMotion(context);
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
@@ -113,63 +117,91 @@ class _ShelfCategoryCapsuleBarState extends State<ShelfCategoryCapsuleBar> {
     required ShelfThemePalette palette,
   }) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final reduceMotion = AppMotion.reduceMotion(context);
+    final glassEnabled =
+        !eInk &&
+        !MediaQuery.highContrastOf(context) &&
+        AppGlassSurface.levelOf(context).enabled;
     final selected = index == widget.selectedIndex;
     final foreground = selected
         ? palette.categorySelectedForeground
-        : theme.colorScheme.onSurfaceVariant;
-    final background = selected
-        ? palette.categorySelectedBackground
-        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72);
-    final capsule = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+        : scheme.onSurfaceVariant;
+    final label = AnimatedDefaultTextStyle(
+      duration: AppMotion.duration(context, const Duration(milliseconds: 180)),
       curve: Curves.easeOutCubic,
-      decoration: ShapeDecoration(
-        color: background,
-        shape: StadiumBorder(
-          side: selected
-              ? BorderSide.none
-              : BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.5,
-                  ),
-                ),
-        ),
+      style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+        color: foreground,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Text(
-        tab.label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: foreground,
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        ),
-      ),
+      child: Text(tab.label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
-    return ConstrainedBox(
-      key: widget.tabKeyBuilder(tab.id),
-      constraints: const BoxConstraints(minHeight: 48),
-      child: Semantics(
-        selected: selected,
-        button: true,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: () => widget.onTap(index),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: selected
-                  ? KeyedSubtree(
-                      key: _selectedCapsuleKey,
-                      child: KeyedSubtree(
-                        key: widget.indicatorKey,
-                        child: capsule,
+    final pillContent = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: label,
+    );
+    final Widget capsule = selected
+        ? (glassEnabled
+              ? AppGlassSurface(
+                  borderRadius: 999,
+                  baseColor: palette.categorySelectedBackground,
+                  child: DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: palette.categorySelectedBackground.withValues(
+                        alpha: 0.86,
                       ),
-                    )
-                  : capsule,
-            ),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: pillContent,
+                  ),
+                )
+              : DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: palette.categorySelectedBackground,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: pillContent,
+                ))
+        : (eInk
+              ? DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: scheme.surface,
+                    shape: StadiumBorder(
+                      side: BorderSide(color: scheme.outlineVariant),
+                    ),
+                  ),
+                  child: pillContent,
+                )
+              : AppGlassSurface(
+                  borderRadius: 999,
+                  baseColor: scheme.surfaceContainerHigh,
+                  child: pillContent,
+                ));
+    final taggedCapsule = selected
+        ? KeyedSubtree(
+            key: _selectedCapsuleKey,
+            child: KeyedSubtree(key: widget.indicatorKey, child: capsule),
+          )
+        : capsule;
+    return Semantics(
+      key: widget.tabKeyBuilder(tab.id),
+      container: true,
+      selected: selected,
+      button: true,
+      onTap: () => widget.onTap(index),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: GestureDetector(
+          excludeFromSemantics: true,
+          behavior: HitTestBehavior.opaque,
+          onTap: () => widget.onTap(index),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: reduceMotion
+                ? taggedCapsule
+                : ElasticPress(child: taggedCapsule),
           ),
         ),
       ),

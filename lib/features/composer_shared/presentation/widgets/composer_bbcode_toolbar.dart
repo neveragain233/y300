@@ -4,6 +4,7 @@ import 'package:y300/features/composer_shared/presentation/widgets/composer_bbco
 import 'package:y300/features/composer_shared/presentation/widgets/composer_link_sheet.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_toolbar_action.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class ComposerBbCodeToolbar extends StatelessWidget {
@@ -226,11 +227,15 @@ class _ToolbarIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      key: buttonKey,
-      tooltip: tooltip,
-      onPressed: enabled ? onPressed : null,
-      icon: Icon(icon),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: AppToolbarIconButton(
+        buttonKey: buttonKey,
+        size: AppToolbarButtonSize.compact,
+        tooltip: tooltip,
+        onPressed: enabled ? onPressed : null,
+        icon: Icon(icon),
+      ),
     );
   }
 }

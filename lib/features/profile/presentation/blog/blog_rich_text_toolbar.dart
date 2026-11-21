@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/features/composer_shared/presentation/quill/composer_quill_size_mapping.dart';
 import 'package:y300/features/composer_shared/presentation/widgets/composer_sticker_image.dart';
@@ -7,6 +8,7 @@ import 'package:y300/features/profile/presentation/blog/blog_rich_text_controlle
 import 'package:y300/features/profile/presentation/blog/blog_rich_text_embeds.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 class BlogRichTextToolbar extends StatelessWidget {
@@ -59,69 +61,78 @@ class BlogRichTextToolbar extends StatelessWidget {
                         l10n.composerUnderline,
                       ),
                     ])
-                      IconButton(
-                        key: Key('blog-format-${attribute.key}'),
-                        tooltip: label,
-                        isSelected: attributes[attribute.key]?.value == true,
-                        style: ButtonStyle(
-                          foregroundColor: WidgetStateProperty.resolveWith(
-                            (states) => states.contains(WidgetState.disabled)
-                                ? native.disabled
-                                : states.contains(WidgetState.selected)
-                                ? native.author
-                                : native.body,
-                          ),
-                          backgroundColor: WidgetStateProperty.resolveWith(
-                            (states) => states.contains(WidgetState.selected)
-                                ? native.selectionBackground
-                                : Colors.transparent,
-                          ),
-                          side: const WidgetStatePropertyAll(BorderSide.none),
-                          shape: WidgetStatePropertyAll(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      Builder(
+                        builder: (context) {
+                          final selected =
+                              attributes[attribute.key]?.value == true;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: AppToolbarIconButton(
+                              buttonKey: Key('blog-format-${attribute.key}'),
+                              size: AppToolbarButtonSize.compact,
+                              tooltip: label,
+                              glassLevel: selected ? AppGlassLevel.off : null,
+                              baseColor: selected
+                                  ? native.selectionBackground
+                                  : Colors.transparent,
+                              foregroundColor: selected
+                                  ? native.author
+                                  : native.body,
+                              onPressed: enabled
+                                  ? () {
+                                      controller.quill.formatSelection(
+                                        Attribute.clone(
+                                          attribute,
+                                          selected ? null : true,
+                                        ),
+                                      );
+                                      controller.focusNode.requestFocus();
+                                    }
+                                  : null,
+                              icon: Icon(icon),
                             ),
-                          ),
-                        ),
-                        onPressed: enabled
-                            ? () {
-                                controller.quill.formatSelection(
-                                  Attribute.clone(
-                                    attribute,
-                                    attributes[attribute.key]?.value == true
-                                        ? null
-                                        : true,
-                                  ),
-                                );
-                                controller.focusNode.requestFocus();
-                              }
-                            : null,
-                        icon: Icon(icon),
+                          );
+                        },
                       ),
-                    IconButton(
-                      key: const Key('blog-format-size'),
-                      tooltip: l10n.composerFontSize,
-                      color: native.body,
-                      onPressed: enabled ? () => _chooseSize(context) : null,
-                      icon: const Icon(Icons.format_size),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: AppToolbarIconButton(
+                        buttonKey: const Key('blog-format-size'),
+                        size: AppToolbarButtonSize.compact,
+                        tooltip: l10n.composerFontSize,
+                        baseColor: Colors.transparent,
+                        foregroundColor: native.body,
+                        onPressed: enabled ? () => _chooseSize(context) : null,
+                        icon: const Icon(Icons.format_size),
+                      ),
                     ),
                     if (onImagePressed != null)
-                      IconButton(
-                        key: const Key('blog-insert-image'),
-                        tooltip: l10n.composerImage,
-                        color: native.body,
-                        onPressed: enabled ? onImagePressed : null,
-                        icon: const Icon(Icons.image_outlined),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: AppToolbarIconButton(
+                          buttonKey: const Key('blog-insert-image'),
+                          size: AppToolbarButtonSize.compact,
+                          tooltip: l10n.composerImage,
+                          baseColor: Colors.transparent,
+                          foregroundColor: native.body,
+                          onPressed: enabled ? onImagePressed : null,
+                          icon: const Icon(Icons.image_outlined),
+                        ),
                       ),
                     if (smilies.isNotEmpty)
-                      IconButton(
-                        key: const Key('blog-insert-smiley'),
-                        tooltip: l10n.composerSticker,
-                        color: native.body,
-                        onPressed: enabled
-                            ? () => _chooseSmiley(context)
-                            : null,
-                        icon: const Icon(Icons.emoji_emotions_outlined),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: AppToolbarIconButton(
+                          buttonKey: const Key('blog-insert-smiley'),
+                          size: AppToolbarButtonSize.compact,
+                          tooltip: l10n.composerSticker,
+                          baseColor: Colors.transparent,
+                          foregroundColor: native.body,
+                          onPressed: enabled
+                              ? () => _chooseSmiley(context)
+                              : null,
+                          icon: const Icon(Icons.emoji_emotions_outlined),
+                        ),
                       ),
                   ],
                 );

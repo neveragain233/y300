@@ -2,6 +2,14 @@
 
 ## Local modifications (Y300)
 
+2026-11-21, `lib/popup.dart` only, against
+`63450c0ac0e8e1b2c0f3ed4ad7926dc94e083185`:
+
+- In `_RenderPopupMenuCard.paint`, skip painting `_scrim` while `_bare` is true
+  (during open/dismiss morph animations when `_RenderPopupMorph` already paints
+  the glass and scrim), preventing double-scrim darkening and a brightness jump
+  on the final settled frame.
+
 2026-11-17, `lib/popup.dart` only, against
 `63450c0ac0e8e1b2c0f3ed4ad7926dc94e083185`. The Y300 client wraps
 `PopupAnchor` + `PopupMenu` as its application menu. Four additive changes

@@ -10,11 +10,15 @@ class AppGroupedSection extends StatelessWidget {
     this.title,
     required this.children,
     this.margin = const EdgeInsets.only(bottom: 16),
+    this.dividerIndent = 54,
   });
 
   final String? title;
   final List<Widget> children;
   final EdgeInsetsGeometry margin;
+
+  /// 分隔线起始缩进；无前导图标的分组传 16，与行内容左缘对齐。
+  final double dividerIndent;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +56,7 @@ class AppGroupedSection extends StatelessWidget {
                       Divider(
                         height: 1,
                         thickness: 0.6,
-                        indent: 54,
+                        indent: dividerIndent,
                         color: dividerColor,
                       ),
                     children[index],
@@ -118,8 +122,8 @@ class AppGroupedRow extends StatelessWidget {
         ? scheme.onSurfaceVariant
         : scheme.onSurfaceVariant.withValues(alpha: 0.38);
     final hasTrailing = trailing != null || showChevron;
-    // 尾部控件（开关、拖动手柄、下拉）留在行的点击区之外，
-    // 避免操作开关时误触进入下级页面。
+    // 点击区覆盖整行（含上下留白、箭头与展示类尾部图标），
+    // 内置可交互尾部控件（开关、图标按钮等）通过手势竞技场独立响应。
     Widget content = Row(
       children: [
         if (leading != null) ...[
@@ -177,17 +181,14 @@ class AppGroupedRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: InkWell(
-              onTap: enabled ? onTap : null,
-              child: Padding(
-                padding: EdgeInsetsDirectional.only(
-                  start: 16,
-                  top: 10,
-                  bottom: 10,
-                  end: hasTrailing ? 8 : 16,
-                ),
-                child: content,
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(
+                start: 16,
+                top: 10,
+                bottom: 10,
+                end: hasTrailing ? 8 : 16,
               ),
+              child: content,
             ),
           ),
           if (trailing != null)
@@ -215,7 +216,10 @@ class AppGroupedRow extends StatelessWidget {
         ],
       ),
     );
-    return row;
+    if (onTap == null) {
+      return row;
+    }
+    return InkWell(onTap: enabled ? onTap : null, child: row);
   }
 }
 

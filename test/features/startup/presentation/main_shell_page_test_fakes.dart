@@ -109,21 +109,9 @@ List<MainNavigationItem> _navigationItems(WidgetTester tester) {
   if (capsule.evaluate().isNotEmpty) {
     return tester.widget<MainNavigationCapsule>(capsule).items;
   }
-  final bar = find.byType(NavigationBar);
+  final bar = find.byType(MainLegacyNavigationBar);
   if (bar.evaluate().isNotEmpty) {
-    return tester
-        .widget<NavigationBar>(bar)
-        .destinations
-        .cast<NavigationDestination>()
-        .map(
-          (destination) => MainNavigationItem(
-            id: destination.label,
-            label: destination.label,
-            icon: destination.icon,
-            selectedIcon: destination.selectedIcon ?? destination.icon,
-          ),
-        )
-        .toList(growable: false);
+    return tester.widget<MainLegacyNavigationBar>(bar).items;
   }
   return tester
       .widget<MainNavigationRail>(find.byType(MainNavigationRail))
@@ -138,9 +126,9 @@ int _selectedNavigationIndex(WidgetTester tester) {
   if (capsule.evaluate().isNotEmpty) {
     return tester.widget<MainNavigationCapsule>(capsule).selectedIndex;
   }
-  final bar = find.byType(NavigationBar);
+  final bar = find.byType(MainLegacyNavigationBar);
   if (bar.evaluate().isNotEmpty) {
-    return tester.widget<NavigationBar>(bar).selectedIndex;
+    return tester.widget<MainLegacyNavigationBar>(bar).selectedIndex;
   }
   return tester
       .widget<MainNavigationRail>(find.byType(MainNavigationRail))
@@ -149,8 +137,8 @@ int _selectedNavigationIndex(WidgetTester tester) {
 
 Future<void> _tapNavigationGroup(WidgetTester tester, String label) async {
   final capsule = find.byType(MainNavigationCapsule);
-  final rail = find.byType(NavigationRail);
-  final bar = find.byType(NavigationBar);
+  final rail = find.byType(MainNavigationRail);
+  final bar = find.byType(MainLegacyNavigationBar);
   final Finder target;
   if (capsule.evaluate().isNotEmpty) {
     target = find.descendant(of: capsule, matching: find.text(label));

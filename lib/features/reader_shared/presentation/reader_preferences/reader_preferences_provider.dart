@@ -104,6 +104,16 @@ class ReaderPreferencesController extends AsyncNotifier<ReaderPreferences> {
     );
   }
 
+  void previewPageSpacing(double value) {
+    final current = state.value ?? ReaderPreferences.defaults();
+    final next = current.copyWith(
+      pageSpacing: value.clamp(0.0, 48.0).toDouble(),
+    );
+    if (next != current) {
+      state = AsyncData(next);
+    }
+  }
+
   Future<void> setShowPageIndicator(bool value) async {
     final current = state.value ?? ReaderPreferences.defaults();
     await _persist(current.copyWith(showPageIndicator: value));

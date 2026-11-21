@@ -8,6 +8,7 @@ import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/fonts/domain/repositories/font_library_repository.dart';
 import 'package:y300/features/fonts/domain/services/font_import_picker.dart';
 import 'package:y300/features/fonts/domain/services/font_runtime_loader.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
 import 'package:y300/features/novel/presentation/widgets/novel_reader_display_settings_sheet.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -74,20 +75,14 @@ void main() {
   ) async {
     final changed = <NovelReaderPreferences>[];
     await _pump(tester, service: service, onChanged: changed.add);
-    final sizeSlider = tester.widget<Slider>(
-      find.descendant(
-        of: find.byKey(const Key('novel-reader-font-size-slider')),
-        matching: find.byType(Slider),
-      ),
+    final sizeStepper = tester.widget<ReaderStepper>(
+      find.byKey(const Key('novel-reader-font-size-stepper')),
     );
-    sizeSlider.onChanged!(25);
-    final lineSlider = tester.widget<Slider>(
-      find.descendant(
-        of: find.byKey(const Key('novel-reader-line-height-slider')),
-        matching: find.byType(Slider),
-      ),
+    sizeStepper.onChanged(25);
+    final lineStepper = tester.widget<ReaderStepper>(
+      find.byKey(const Key('novel-reader-line-height-stepper')),
     );
-    lineSlider.onChanged!(1.9);
+    lineStepper.onChanged(1.9);
     await tester.pump();
     await _open(tester);
     await tester.tap(find.byKey(Key('body-font-item-${_font.id}')));
@@ -197,21 +192,19 @@ void main() {
     await tester.pump();
     expect(changed.last.paragraphIndent, NovelReaderParagraphIndentMode.remove);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('novel-theme-paper-white')),
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('reader-display-panel-tabs')),
+        matching: find.text(strings.novelTheme),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('novel-theme-paper-white')));
     await tester.pump();
     expect(changed.last.themePreset, NovelReaderThemePreset.paperWhite);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('novel-reader-body-brightness-slider')),
-    );
-    await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const Key('novel-reader-body-brightness-slider')),
-      const Offset(-120, 0),
+    await tester.tap(
+      find.byKey(const Key('novel-reader-body-brightness-decrease')),
     );
     await tester.pump();
     expect(
@@ -219,17 +212,11 @@ void main() {
       lessThan(NovelReaderPreferences.defaults().bodyBrightness),
     );
 
-    await tester.ensureVisible(
-      find.byKey(const Key('novel-reader-background-texture-control')),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.text(strings.novelTexturePaper));
     await tester.pump();
     expect(changed.last.backgroundTexture, NovelReaderBackgroundTexture.paper);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('novel-reader-body-color-mode-control')),
-    );
+    await tester.ensureVisible(find.text(strings.novelBodyColorPreserveAuthor));
     await tester.pumpAndSettle();
     await tester.tap(find.text(strings.novelBodyColorPreserveAuthor));
     await tester.pump();

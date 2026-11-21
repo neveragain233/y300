@@ -2,7 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
+import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 
 import '../../domain/models/thread_controls_preferences.dart';
 import '../services/thread_floor_navigation_coordinator.dart';
@@ -66,9 +71,11 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
         widget.favorite != null && (!compact || preferences.showFavorite);
     final actionCount =
         2 + (showFavorite ? 1 : 0) + (widget.reply != null ? 1 : 0);
+    final reduceMotion = AppMotion.reduceMotion(context);
     final mainWidth = 8.0 + actionCount * 48 + (actionCount - 1) * 8;
     final navWidth = (preferences.singleNavigationButton ? 48.0 : 104.0) + 8;
     final main = _surface(
+      context,
       color,
       Row(
         mainAxisSize: MainAxisSize.min,
@@ -121,10 +128,7 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
             ),
             tooltip: label,
             onPressed: widget.hasContent && widget.navigation.canMove(forward)
-                ? () => widget.navigation.move(
-                    forward,
-                    animate: !MediaQuery.disableAnimationsOf(context),
-                  )
+                ? () => widget.navigation.move(forward, animate: !reduceMotion)
                 : null,
             icon: Icon(
               endAction
@@ -138,6 +142,7 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
         }
 
         return _surface(
+          context,
           color,
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -149,18 +154,31 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
                       triggerMode: TooltipTriggerMode.manual,
                       child: TextButton(
                         key: const Key('thread-single-navigation-button'),
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                          fixedSize: const Size(48, 48),
-                          padding: EdgeInsets.zero,
-                        ),
+                        style:
+                            TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              fixedSize: const Size(48, 48),
+                              padding: EdgeInsets.zero,
+                              splashFactory: NoSplash.splashFactory,
+                              overlayColor: Colors.transparent,
+                              animationDuration: Duration.zero,
+                            ).copyWith(
+                              backgroundColor: reduceMotion
+                                  ? WidgetStateProperty.resolveWith(
+                                      (states) =>
+                                          states.contains(WidgetState.pressed)
+                                          ? foreground.withValues(alpha: .10)
+                                          : Colors.transparent,
+                                    )
+                                  : const WidgetStatePropertyAll(
+                                      Colors.transparent,
+                                    ),
+                            ),
                         onPressed: singleEnabled
                             ? atEnd
                                   ? firstPost
                                   : () => widget.navigation.advance(
-                                      animate: !MediaQuery.disableAnimationsOf(
-                                        context,
-                                      ),
+                                      animate: !reduceMotion,
                                     )
                             : null,
                         onLongPress: !singleEnabled || atEnd
@@ -219,45 +237,63 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
           width: constraints.maxWidth,
           child: Padding(
             padding: EdgeInsets.only(left: leftInset, right: rightInset),
-            child: IconButtonTheme(
-              data: IconButtonThemeData(
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  fixedSize: const Size(48, 48),
-                  foregroundColor: foreground,
-                ),
+            child: Theme(
+              data: theme.copyWith(
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: Colors.transparent,
               ),
-              child: !navigationEnabled
-                  ? Align(
-                      alignment: mainAlignment,
-                      heightFactor: 1,
-                      child: mainControl,
-                    )
-                  : inline
-                  ? _inlineControls(
-                      compact: compact,
-                      side: preferences.side,
-                      mainAlignment: mainAlignment,
-                      mainControl: mainControl,
-                      nav: nav,
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerRight,
-                          heightFactor: 1,
-                          child: nav,
-                        ),
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: mainAlignment,
-                          heightFactor: 1,
-                          child: mainControl,
-                        ),
-                      ],
-                    ),
+              child: IconButtonTheme(
+                data: IconButtonThemeData(
+                  style:
+                      IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        fixedSize: const Size(48, 48),
+                        foregroundColor: foreground,
+                        splashFactory: NoSplash.splashFactory,
+                        overlayColor: Colors.transparent,
+                        animationDuration: Duration.zero,
+                      ).copyWith(
+                        backgroundColor: reduceMotion
+                            ? WidgetStateProperty.resolveWith(
+                                (states) => states.contains(WidgetState.pressed)
+                                    ? foreground.withValues(alpha: .10)
+                                    : Colors.transparent,
+                              )
+                            : const WidgetStatePropertyAll(Colors.transparent),
+                      ),
+                ),
+                child: !navigationEnabled
+                    ? Align(
+                        alignment: mainAlignment,
+                        heightFactor: 1,
+                        child: mainControl,
+                      )
+                    : inline
+                    ? _inlineControls(
+                        compact: compact,
+                        side: preferences.side,
+                        mainAlignment: mainAlignment,
+                        mainControl: mainControl,
+                        nav: nav,
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            heightFactor: 1,
+                            child: nav,
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: mainAlignment,
+                            heightFactor: 1,
+                            child: mainControl,
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         );
@@ -267,9 +303,10 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
             final visible =
                 (!preferences.hideOnScroll || shown) &&
                 MediaQuery.viewInsetsOf(context).bottom == 0;
-            final duration = MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 160);
+            final duration = AppMotion.duration(
+              context,
+              const Duration(milliseconds: 160),
+            );
             return ExcludeFocus(
               excluding: !visible,
               child: ExcludeSemantics(
@@ -321,12 +358,27 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
     return Row(children: [mainControl, const Spacer(), nav]);
   }
 
-  Widget _surface(Color color, Widget child) => Material(
-    color: color,
-    elevation: 3,
-    shadowColor: Colors.black.withValues(alpha: .18),
-    borderRadius: BorderRadius.circular(28),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(padding: const EdgeInsets.all(4), child: child),
-  );
+  Widget _surface(BuildContext context, Color color, Widget child) {
+    final scheme = Theme.of(context).colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final reduceMotion = AppMotion.reduceMotion(context);
+    final inner = Padding(padding: const EdgeInsets.all(4), child: child);
+    final bordered = eInk
+        ? DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: scheme.outlineVariant, width: 1),
+            ),
+            child: inner,
+          )
+        : inner;
+    final pill = AppGlassSurface(
+      borderRadius: 28,
+      level: eInk ? AppGlassLevel.off : null,
+      baseColor: eInk ? scheme.surface : color,
+      child: bordered,
+    );
+    return reduceMotion ? pill : ElasticPress(child: pill);
+  }
 }

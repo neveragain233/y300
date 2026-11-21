@@ -1,12 +1,16 @@
 export 'reader_bottom_overlay_panel.dart';
 export 'reader_chrome_palette.dart';
+export 'reader_content_panel.dart';
+export 'reader_display_panel.dart';
 export 'reader_gesture_coordinator.dart';
 export 'reader_models.dart';
+export 'reader_option_row.dart';
 export 'reader_overlay_scaffold.dart';
 export 'reader_paged_turn_motion.dart';
+export 'reader_panel_theme.dart';
 export 'reader_progress_control.dart';
 export 'reader_reading_status_bar.dart';
+export 'reader_stepper.dart';
 export 'reader_system_ui_controller.dart';
-export 'reader_sheet_widgets.dart';
 export 'reader_tap_zones.dart';
 export 'reader_top_overlay_bar.dart';

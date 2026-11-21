@@ -24,7 +24,7 @@ void _chromeCases() {
     expect(find.text('回覆帖子'), findsOneWidget);
     expect(find.byTooltip('送出'), findsOneWidget);
     await _enterReplySourceText(tester, rawReply);
-    final field = tester.widget<TextField>(
+    final field = tester.widget<AppTextInput>(
       find.byKey(const Key('reply-composer-message-input')),
     );
     expect(field.controller?.text, rawReply);
