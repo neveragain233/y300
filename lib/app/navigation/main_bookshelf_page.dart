@@ -21,6 +21,7 @@ import 'package:y300/features/library_shared/domain/services/library_shelf_refre
 import 'package:y300/features/library_shared/domain/services/recent_reading.dart';
 import 'package:y300/features/library_shared/presentation/adapters/mixed_shelf_adapter.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_shelf_page.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_shelf_loading.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_providers.dart';
 import 'package:y300/features/library_shared/presentation/services/recent_reading_action.dart';
 import 'package:y300/features/novel/data/providers/novel_providers.dart';
@@ -154,8 +155,8 @@ class _MainBookshelfPageState extends ConsumerState<MainBookshelfPage> {
       future: _ready,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return const LibraryShelfLoadingPage(
+            moduleKey: LibraryModuleKey.bookshelf,
           );
         }
         return UnifiedShelfPage(
@@ -168,7 +169,7 @@ class _MainBookshelfPageState extends ConsumerState<MainBookshelfPage> {
             resolve: () => ref.read(recentReadingResolverProvider).resolve(),
             open: _openRecentReading,
           ),
-          onOpenWork: (context, workId) async {
+          onOpenWork: (context, workId, item) async {
             final parsed = LibraryWorkId.tryParse(workId);
             if (parsed == null) {
               return;
@@ -178,14 +179,22 @@ class _MainBookshelfPageState extends ConsumerState<MainBookshelfPage> {
                 await openAdaptiveDetail(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => ComicDetailPage(comicId: parsed.workId),
+                    builder: (_) => ComicDetailPage(
+                      comicId: parsed.workId,
+                      initialTitle: item?.title,
+                      initialHasCover: item?.hasCoverSource ?? false,
+                    ),
                   ),
                 );
               case LibraryModuleKey.novel:
                 await openAdaptiveDetail(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => NovelDetailPage(novelId: parsed.workId),
+                    builder: (_) => NovelDetailPage(
+                      novelId: parsed.workId,
+                      initialTitle: item?.title,
+                      initialHasCover: item?.hasCoverSource ?? false,
+                    ),
                   ),
                 );
               case LibraryModuleKey.favorite:

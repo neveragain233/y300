@@ -8,7 +8,7 @@ void _layoutSortCases() {
           adapter: _FakeShelfAdapter(
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -50,7 +50,7 @@ void _layoutSortCases() {
       LocalizedTestApp(
         home: UnifiedShelfPage(
           adapter: adapter,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -124,7 +124,7 @@ void _layoutSortCases() {
               ],
             },
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -168,7 +168,7 @@ void _layoutSortCases() {
         LocalizedTestApp(
           home: UnifiedShelfPage(
             adapter: adapter,
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -196,7 +196,7 @@ void _layoutSortCases() {
           adapter: _FakeShelfAdapter(
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );

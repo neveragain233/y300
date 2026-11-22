@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../test_support/localized_test_app.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
 import 'package:y300/core/media/image_display_provider.dart';
 import 'package:y300/features/image_loading/data/app_image_cache_manager.dart';
@@ -287,6 +288,54 @@ void main() {
     expect(find.byType(RawImage), findsOneWidget);
   });
 
+  testWidgets('can fade an already decoded first frame exactly once', (
+    tester,
+  ) async {
+    final image = (await tester.runAsync(
+      () => createTestImage(width: 3, height: 5, cache: false),
+    ))!;
+    addTearDown(image.dispose);
+    final provider = _SynchronousImageProvider(image);
+    const placeholder = Key('cached-frame-placeholder');
+    const duration = Duration(milliseconds: 300);
+    Widget body() => LocalizedTestApp(
+      home: Center(
+        child: LibraryCachedImage(
+          imageProviderOverride: provider,
+          fit: BoxFit.cover,
+          width: 60,
+          height: 100,
+          placeholder: const SizedBox.expand(key: placeholder),
+          fadeInDuration: duration,
+          fadeInOnCacheHit: true,
+        ),
+      ),
+    );
+    final imageOpacity = find.ancestor(
+      of: find.byType(RawImage),
+      matching: find.byType(Opacity),
+    );
+    double opacity() => tester.widget<Opacity>(imageOpacity.first).opacity;
+
+    await tester.pumpWidget(body());
+    final rect = tester.getRect(find.byType(RawImage));
+    expect(find.byKey(placeholder), findsOneWidget);
+    expect(opacity(), 0);
+
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(opacity(), inExclusiveRange(0, 1));
+    expect(tester.getRect(find.byType(RawImage)), rect);
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(opacity(), 1);
+    expect(find.byKey(placeholder), findsNothing);
+
+    await tester.pumpWidget(body());
+    expect(opacity(), 1);
+    expect(tester.getRect(find.byType(RawImage)), rect);
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(opacity(), 1);
+  });
+
   testWidgets('disables the first-frame fade when animations are disabled', (
     tester,
   ) async {
@@ -306,6 +355,7 @@ void main() {
             fit: BoxFit.cover,
             placeholder: const SizedBox(key: Key('placeholder')),
             fadeInDuration: const Duration(milliseconds: 120),
+            fadeInOnCacheHit: true,
           ),
         ),
       ),
@@ -317,6 +367,38 @@ void main() {
 
     expect(find.byKey(const Key('placeholder')), findsNothing);
     expect(find.byType(RawImage), findsOneWidget);
+  });
+
+  testWidgets('e-ink mode bypasses first-frame fade animation', (tester) async {
+    final image = await tester.runAsync(
+      () => createTestImage(width: 3, height: 5, cache: false),
+    );
+    final testImage = image!;
+    addTearDown(testImage.dispose);
+    final provider = _DeferredImageProvider();
+
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: EInkModeScope(
+          enabled: true,
+          child: LibraryCachedImage(
+            imageProviderOverride: provider,
+            fit: BoxFit.cover,
+            placeholder: const SizedBox(key: Key('placeholder')),
+            fadeInDuration: const Duration(milliseconds: 120),
+            fadeInOnCacheHit: true,
+          ),
+        ),
+      ),
+    );
+
+    provider.complete(testImage);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('placeholder')), findsNothing);
+    expect(find.byType(RawImage), findsOneWidget);
+    expect(tester.hasRunningAnimations, isFalse);
   });
 
   testWidgets('does not replay the fade for an unchanged image source', (
@@ -352,6 +434,70 @@ void main() {
     expect(find.byKey(const Key('placeholder')), findsNothing);
     expect(find.byType(RawImage), findsOneWidget);
     expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('a local thumbnail stays visible while its decode size changes', (
+    tester,
+  ) async {
+    final image = (await tester.runAsync(
+      () => createTestImage(width: 24, height: 48, cache: false),
+    ))!;
+    addTearDown(image.dispose);
+
+    const path = 'refined-thumbnail.png';
+    const slot = Size.square(96);
+    const refinedSize = Size(48, 96);
+    final imageCache = PaintingBinding.instance.imageCache;
+    final first = Completer<ImageInfo>();
+    final refined = Completer<ImageInfo>();
+    for (final (size, result) in [(slot, first), (refinedSize, refined)]) {
+      final provider = resolveDownscaledFileImageProvider(
+        localPath: path,
+        fit: BoxFit.contain,
+        displaySize: size,
+        devicePixelRatio: 1,
+      );
+      final key = await provider.obtainKey(ImageConfiguration.empty);
+      imageCache.putIfAbsent(
+        key,
+        () => OneFrameImageStreamCompleter(result.future),
+      );
+      addTearDown(() => imageCache.evict(key));
+    }
+
+    Widget build(Size decodeSize) => LocalizedTestApp(
+      home: MediaQuery(
+        data: const MediaQueryData(devicePixelRatio: 1),
+        child: Center(
+          child: LibraryCachedImage(
+            localPath: path,
+            fit: BoxFit.contain,
+            width: slot.width,
+            height: slot.height,
+            decodeDisplaySize: decodeSize,
+            placeholder: const SizedBox(key: Key('placeholder')),
+            fadeInDuration: const Duration(milliseconds: 300),
+            onFirstFrameRendered: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(build(slot));
+    expect(find.byKey(const Key('placeholder')), findsOneWidget);
+    first.complete(ImageInfo(image: image.clone()));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('placeholder')), findsNothing);
+
+    await tester.pumpWidget(build(refinedSize));
+    expect(tester.widget<RawImage>(find.byType(RawImage)).image, isNotNull);
+    expect(find.byKey(const Key('placeholder')), findsNothing);
+    expect(tester.hasRunningAnimations, isFalse);
+
+    refined.complete(ImageInfo(image: image.clone()));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('placeholder')), findsNothing);
+    expect(tester.getSize(find.byType(RawImage)), slot);
   });
 
   testWidgets('bumping retryToken re-resolves a failed remote image', (

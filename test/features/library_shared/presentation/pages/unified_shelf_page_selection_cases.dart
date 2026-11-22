@@ -13,7 +13,7 @@ void _selectionCases() {
               initialDisplayMode: LibraryDisplayMode.grid,
             ),
             selectionHost: host,
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -46,7 +46,7 @@ void _selectionCases() {
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
           selectionHost: host,
-          onOpenWork: (context, workId) async {
+          onOpenWork: (context, workId, _) async {
             openCount += 1;
           },
         ),
@@ -97,7 +97,7 @@ void _selectionCases() {
             },
           ),
           selectionHost: host,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -140,7 +140,7 @@ void _selectionCases() {
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
           selectionHost: host,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -169,7 +169,7 @@ void _selectionCases() {
             initialDisplayMode: LibraryDisplayMode.list,
           ),
           selectionHost: host,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -218,7 +218,7 @@ void _selectionCases() {
             },
           ),
           selectionHost: host,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -268,7 +268,7 @@ void _selectionCases() {
             },
           ),
           selectionHost: host,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );

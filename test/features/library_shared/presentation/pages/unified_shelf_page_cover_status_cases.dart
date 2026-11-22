@@ -32,7 +32,7 @@ void _coverStatusCases() {
               initialDisplayMode: LibraryDisplayMode.grid,
               itemsByCategory: {'default': items},
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       ),
@@ -103,7 +103,7 @@ void _coverStatusCases() {
           featureFlags: ShelfFeatureFlags.defaults.copyWith(
             useShelfCoverImage: false,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -122,7 +122,7 @@ void _coverStatusCases() {
             adapter: _FakeShelfAdapter(
               initialDisplayMode: LibraryDisplayMode.list,
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -172,7 +172,7 @@ void _coverStatusCases() {
                     };
                   },
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       ),
@@ -229,7 +229,7 @@ void _coverStatusCases() {
                   ],
                 },
               ),
-              onOpenWork: (context, workId) async {},
+              onOpenWork: (context, workId, _) async {},
             ),
           ),
         ),
@@ -274,7 +274,7 @@ void _coverStatusCases() {
                   };
                 },
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -332,7 +332,7 @@ void _coverStatusCases() {
                   },
                 ),
                 selectionHost: host,
-                onOpenWork: (_, _) async {},
+                onOpenWork: (_, _, _) async {},
               ),
             ),
           ),
@@ -382,7 +382,7 @@ void _coverStatusCases() {
             adapter: _FakeShelfAdapter(
               initialDisplayMode: LibraryDisplayMode.grid,
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -421,7 +421,7 @@ void _coverStatusCases() {
             initialDisplayMode: LibraryDisplayMode.list,
             taskProgress: progress,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -464,7 +464,7 @@ void _coverStatusCases() {
               initialDisplayMode: LibraryDisplayMode.list,
               taskProgress: progress,
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );

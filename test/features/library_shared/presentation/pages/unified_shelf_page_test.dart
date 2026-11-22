@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
-import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';

@@ -9,6 +9,7 @@ import 'package:y300/core/media/image_downscale_policy.dart';
 import 'package:y300/core/network/site_url_resolver.dart';
 import 'package:y300/features/image_loading/data/app_image_providers.dart';
 import 'package:y300/shared/widgets/forum_default_avatar.dart';
+import 'package:y300/shared/widgets/image_first_frame_transition.dart';
 
 enum LibraryImageFrameSource { localFile, remote, override }
 
@@ -43,6 +44,7 @@ class LibraryCachedImage extends ConsumerStatefulWidget {
     this.onLocalImageDecodeFailed,
     this.onLocalFileMissing,
     this.fadeInDuration = Duration.zero,
+    this.fadeInOnCacheHit = false,
     this.retryToken = 0,
   });
 
@@ -70,9 +72,11 @@ class LibraryCachedImage extends ConsumerStatefulWidget {
   onLocalImageDecodeFailed;
   final VoidCallback? onLocalFileMissing;
 
-  /// Duration used to cross-fade the placeholder into an asynchronously
-  /// decoded first frame. Synchronous image-cache hits remain immediate.
+  /// Duration used when the first decoded frame replaces the placeholder.
   final Duration fadeInDuration;
+
+  /// Synchronous image-cache hits fade only when explicitly enabled.
+  final bool fadeInOnCacheHit;
 
   /// 重试代次。调用方自增即可让本控件重新解码一次同一来源。
   ///
@@ -229,19 +233,25 @@ class _LibraryCachedImageState extends ConsumerState<LibraryCachedImage> {
         alignment: widget.alignment,
         gaplessPlayback: true,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          final identity = 'file:${file.path}';
           final isResolved = frame != null || wasSynchronouslyLoaded;
           if (isResolved) {
             _reportFirstFrameRendered(
-              'file:${file.path}',
+              identity,
               LibraryImageFrameSource.localFile,
             );
           }
           return _buildFirstFrameTransition(
             context: context,
             child: child,
-            isResolved: isResolved,
+            // Gapless playback still has the visible frame while the same
+            // file is decoded at a refined size.
+            isResolved:
+                isResolved ||
+                (widget.fadeInDuration > Duration.zero &&
+                    _reportedFirstFrameIdentity == identity),
             wasSynchronouslyLoaded: wasSynchronouslyLoaded,
-            identity: 'file:${file.path}',
+            identity: identity,
           );
         },
         errorBuilder: (context, error, stackTrace) {
@@ -395,33 +405,16 @@ class _LibraryCachedImageState extends ConsumerState<LibraryCachedImage> {
     required bool isResolved,
     required bool wasSynchronouslyLoaded,
     required String identity,
-  }) {
-    final duration = widget.fadeInDuration;
-    if (wasSynchronouslyLoaded ||
-        duration <= Duration.zero ||
-        MediaQuery.disableAnimationsOf(context)) {
-      return isResolved ? child : widget.placeholder;
-    }
-    return AnimatedSwitcher(
-      duration: duration,
-      reverseDuration: duration,
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeOutCubic,
-      layoutBuilder: (currentChild, previousChildren) {
-        return Stack(
-          fit: StackFit.passthrough,
-          alignment: Alignment.center,
-          children: <Widget>[...previousChildren, ?currentChild],
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey<String>(
-          isResolved ? 'image:$identity' : 'placeholder:$identity',
-        ),
-        child: isResolved ? child : widget.placeholder,
-      ),
-    );
-  }
+  }) => buildImageFirstFrameTransition(
+    context,
+    child: child,
+    placeholder: widget.placeholder,
+    isResolved: isResolved,
+    wasSynchronouslyLoaded: wasSynchronouslyLoaded,
+    duration: widget.fadeInDuration,
+    identity: identity,
+    fadeInOnCacheHit: widget.fadeInOnCacheHit,
+  );
 
   /// 失败即从 Flutter 图片缓存驱逐，否则重试可能拿回同一个已失败的 completer。
   ///

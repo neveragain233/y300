@@ -299,7 +299,7 @@ Future<_FilterShelfAdapter> _pumpShelfPhone(
       home: UnifiedShelfPage(
         adapter: adapter,
         viewPreferencesRepository: repository,
-        onOpenWork: (_, _) async {},
+        onOpenWork: (_, _, _) async {},
       ),
     ),
   );

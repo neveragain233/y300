@@ -1,6 +1,50 @@
 part of 'unified_shelf_page_test.dart';
 
 void _categoryCases() {
+  testWidgets('slow first read keeps the category slot at its loaded height', (
+    tester,
+  ) async {
+    final pending = Completer<Map<String, List<LibraryWorkItem>>>();
+    final opened = <String>[];
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        home: UnifiedShelfPage(
+          adapter: _FakeShelfAdapter(
+            initialDisplayMode: LibraryDisplayMode.grid,
+            onQuery: ({
+              required categories,
+              required filters,
+              required sortOption,
+              required keyword,
+            }) => pending.future,
+          ),
+          onOpenWork: (_, workId, _) async => opened.add(workId),
+        ),
+      ),
+    );
+
+    final placeholder = find.byKey(
+      const Key('unified-shelf-category-placeholder'),
+    );
+    final loading = find.text(AppLocalizationsZh().libraryShelfLoading);
+    final reservedSlot = tester.getRect(placeholder);
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(loading, findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(loading, findsOneWidget);
+
+    pending.complete({
+      'default': [_item(workId: '1', title: 'Comic A')],
+    });
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(ShelfCategoryCapsuleBar)), reservedSlot);
+    expect(placeholder, findsNothing);
+    expect(loading, findsNothing);
+    await tester.tap(find.text('Comic A'));
+    expect(opened, ['1']);
+  });
+
   testWidgets(
     'restored non-first category aligns PageView content with selected capsule',
     (tester) async {
@@ -12,7 +56,7 @@ void _categoryCases() {
           home: UnifiedShelfPage(
             adapter: _FakeCategoryShelfAdapter(),
             viewPreferencesRepository: prefsRepo,
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -38,7 +82,7 @@ void _categoryCases() {
           home: UnifiedShelfPage(
             adapter: _FakeCategoryShelfAdapter(),
             viewPreferencesRepository: prefsRepo,
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -67,7 +111,7 @@ void _categoryCases() {
           child: LocalizedTestApp(
             home: UnifiedShelfPage(
               adapter: _FakeCategoryShelfAdapter(),
-              onOpenWork: (context, workId) async {},
+              onOpenWork: (context, workId, _) async {},
             ),
           ),
         ),
@@ -111,7 +155,7 @@ void _categoryCases() {
         LocalizedTestApp(
           home: UnifiedShelfPage(
             adapter: adapter,
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );

@@ -40,7 +40,7 @@ void _themeCases() {
                     };
                   },
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       ),
@@ -121,7 +121,7 @@ void _themeCases() {
             initialDisplayMode: LibraryDisplayMode.list,
             taskProgress: progress,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -155,7 +155,7 @@ void _themeCases() {
             initialDisplayMode: LibraryDisplayMode.list,
             taskProgress: progress,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -191,15 +191,20 @@ void _themeCases() {
       LocalizedTestApp(
         home: UnifiedShelfPage(
           adapter: adapter,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
 
-    expect(find.text('书架为空'), findsNothing);
-    expect(find.byType(AppLoadingState), findsOneWidget);
+    final l10n = AppLocalizationsZh();
+    expect(find.text(l10n.libraryShelfEmpty), findsNothing);
+    expect(find.text(l10n.libraryShelfLoading), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle();
+    expect(find.text(l10n.libraryShelfEmpty), findsNothing);
+    expect(find.text(l10n.libraryShelfLoading), findsNothing);
+    expect(find.text('Comic A'), findsOneWidget);
   });
 }

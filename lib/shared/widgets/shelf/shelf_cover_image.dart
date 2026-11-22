@@ -7,6 +7,7 @@ import 'package:y300/features/library_shared/data/providers/library_cover_provid
 import 'package:y300/features/library_shared/domain/models/library_cover_asset.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_image.dart';
 import 'package:y300/features/library_shared/presentation/images/library_cover_image_provider.dart';
+import 'package:y300/shared/widgets/forum_media_loading_style.dart';
 import 'package:y300/shared/widgets/library_cover_failure_placeholder.dart';
 
 /// 书架/详情共用封面展示：本地文件优先，来源封面兜底。
@@ -147,6 +148,7 @@ class _ShelfCoverImageState extends ConsumerState<ShelfCoverImage> {
       downscalePolicy: widget.downscalePolicy,
       placeholder: widget.placeholder,
       onImageFailed: _handleFailure,
+      fadeInDuration: ForumMediaLoadingStyle.fadeInDuration,
     );
   }
 }

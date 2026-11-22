@@ -12,7 +12,7 @@ void _searchFilterCases() {
               initialDisplayMode: LibraryDisplayMode.grid,
             ),
             viewPreferencesRepository: preferences,
-            onOpenWork: (_, _) async {},
+            onOpenWork: (_, _, _) async {},
           ),
         ),
       );
@@ -33,7 +33,7 @@ void _searchFilterCases() {
           adapter: _FakeShelfAdapter(
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -95,7 +95,7 @@ void _searchFilterCases() {
           adapter: _FakeShelfAdapter(
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -152,7 +152,7 @@ void _searchFilterCases() {
       LocalizedTestApp(
         home: UnifiedShelfPage(
           adapter: adapter,
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -184,7 +184,7 @@ void _searchFilterCases() {
           adapter: _FakeShelfAdapter(
             initialDisplayMode: LibraryDisplayMode.grid,
           ),
-          onOpenWork: (context, workId) async {},
+          onOpenWork: (context, workId, _) async {},
         ),
       ),
     );
@@ -241,7 +241,7 @@ void _searchFilterCases() {
             adapter: _FakeShelfAdapter(
               initialDisplayMode: LibraryDisplayMode.grid,
             ),
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );

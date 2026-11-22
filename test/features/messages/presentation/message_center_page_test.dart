@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/dialog.dart' as prism;
-import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/app/navigation/message_routes.dart';
@@ -142,11 +141,12 @@ void main() {
       expect(find.text(l10n(tester).profileNoNotifications), findsOneWidget);
 
       await swipeToTab(tester, MessageCenterTab.messages);
+      await tester.pump(const Duration(milliseconds: 180));
       expect(
         find
             .descendant(
               of: feedList(MessageCenterTab.messages),
-              matching: find.byType(AppLoadingState),
+              matching: find.text(l10n(tester).messageLoadingPrivate),
             )
             .hitTestable(),
         findsOneWidget,
@@ -430,6 +430,11 @@ void main() {
     'page failure retains items and retry requests the failed next page',
     (tester) async {
       await pumpCenter(tester);
+      final text = l10n(tester);
+      expect(find.text(text.messageLoadingPrivate), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(find.text(text.messageLoadingPrivate), findsOneWidget);
       repository.reads.single.result.complete(
         messageTestPage(
           [messageTestItem('1', sender: '10')],
@@ -438,9 +443,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n(tester).messageLoadMore));
+      final footer = find.byKey(const Key('message-feed-footer'));
+      final row = find.text('Alice');
+      final footerPosition = tester.getRect(footer);
+      final rowPosition = tester.getTopLeft(row);
+      await tester.tap(find.text(text.messageLoadMore));
       await tester.pump();
       expect(repository.reads.last.query.page, 2);
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(find.text(text.messageLoadingMore), findsOneWidget);
+      expect(tester.getRect(footer), footerPosition);
       repository.reads.last.result.complete(
         const DataReadFailure(
           kind: DataReadFailureKind.network,
@@ -449,10 +461,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Alice'), findsOneWidget);
-      await tester.tap(find.text(l10n(tester).commonRetry));
+      expect(tester.getTopLeft(row), rowPosition);
+      expect(tester.getRect(footer), footerPosition);
+      await tester.tap(find.text(text.commonRetry));
       await tester.pump();
       expect(repository.reads.last.query.page, 2);
+      expect(tester.getRect(footer), footerPosition);
       repository.reads.last.result.complete(
         messageTestPage([], page: 2, count: 1, perPage: 1),
       );

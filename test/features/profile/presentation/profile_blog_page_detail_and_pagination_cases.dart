@@ -300,16 +300,15 @@ void _detailAndPaginationCases() {
       expect(find.text(l10n.commonPage(1)), findsOneWidget);
       expect(_paginationButton(tester, 'previous-page').onPressed, isNull);
       expect(_paginationButton(tester, 'current-page').onPressed, isNull);
-      expect(
-        find.byKey(const Key('profile-blog-next-page-button')),
-        findsNothing,
-      );
+      expect(_paginationButton(tester, 'next-page').onPressed, isNull);
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(find.text(l10n.profileBlogLoadingPage), findsOneWidget);
       expect(
         find.descendant(
           of: find.byKey(const Key('profile-blog-pagination')),
           matching: find.byType(CircularProgressIndicator),
         ),
-        findsOneWidget,
+        findsNothing,
       );
 
       nextPageGate.complete();
@@ -342,6 +341,7 @@ void _detailAndPaginationCases() {
     expect(find.text(l10n.commonPage(1)), findsOneWidget);
     expect(_paginationButton(tester, 'previous-page').onPressed, isNull);
     expect(_paginationButton(tester, 'next-page').onPressed, isNotNull);
+    expect(find.text(l10n.profileBlogRetryPage(2)), findsOneWidget);
 
     repository.failedPages.clear();
     await tester.tap(find.byKey(const Key('profile-blog-next-page-button')));

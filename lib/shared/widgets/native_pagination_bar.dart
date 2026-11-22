@@ -23,6 +23,8 @@ class NativePaginationBar extends StatelessWidget {
     required this.menuKeyPrefix,
     this.padding = EdgeInsets.zero,
     this.spacing = 8,
+    this.loadingNextChild,
+    this.canLoadNext,
   });
 
   final int currentPage;
@@ -42,6 +44,8 @@ class NativePaginationBar extends StatelessWidget {
   final String menuKeyPrefix;
   final EdgeInsetsGeometry padding;
   final double spacing;
+  final Widget? loadingNextChild;
+  final bool? canLoadNext;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +76,7 @@ class NativePaginationBar extends StatelessWidget {
               style: buttonStyle,
               onSelected: onSelectPage,
             ),
-            if (isLoading)
+            if (isLoading && loadingNextChild == null)
               const SizedBox(
                 width: 72,
                 height: 34,
@@ -88,7 +92,10 @@ class NativePaginationBar extends StatelessWidget {
               NativePaginationButton(
                 key: nextButtonKey,
                 label: nextLabel,
-                onPressed: hasMore ? onLoadNext : null,
+                onPressed: !isLoading && (canLoadNext ?? hasMore)
+                    ? onLoadNext
+                    : null,
+                child: isLoading ? loadingNextChild! : null,
               ),
           ],
         ),
@@ -102,15 +109,19 @@ class NativePaginationBar extends StatelessWidget {
 /// Keeping the geometry and colors here means a surface that reuses the button
 /// renders the same enabled, disabled and pressed states as the forum list.
 class NativePaginationButton extends StatelessWidget {
-  /// Creates a page-navigation button with [label].
+  /// Creates a page-navigation button with [label] or an explicit [child].
   const NativePaginationButton({
     super.key,
     required this.label,
     required this.onPressed,
+    this.child,
   });
 
-  /// Visible label text.
+  /// Visible label text when [child] is null.
   final String label;
+
+  /// Optional replacement label widget (for delayed loading states).
+  final Widget? child;
 
   /// Action for an enabled button; null renders the disabled state.
   final VoidCallback? onPressed;
@@ -122,7 +133,7 @@ class NativePaginationButton extends StatelessWidget {
       child: TextButton(
         onPressed: onPressed,
         style: _pageButtonStyle(Theme.of(context)),
-        child: Text(label),
+        child: child ?? Text(label),
       ),
     );
   }

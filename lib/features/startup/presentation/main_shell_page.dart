@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart';
@@ -61,13 +63,17 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
   final Set<MainShellDestination> _builtDestinations = <MainShellDestination>{};
   double? _chromeHeight;
   late final MainShellStartupCoordinator _startup;
-  late final Future<void> _coverMigrationReady;
+  final _libraryReadiness = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
     _startup = ref.read(mainShellStartupCoordinatorFactoryProvider).call();
-    _coverMigrationReady = _startup.start();
+    unawaited(
+      _startup.start().then((_) {
+        if (mounted) _libraryReadiness.value = true;
+      }),
+    );
   }
 
   @override
@@ -76,6 +82,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
       browser.dispose();
     }
     _startup.dispose();
+    _libraryReadiness.dispose();
     super.dispose();
   }
 
@@ -83,16 +90,12 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
   Widget build(BuildContext context) {
     return ProviderScope(
       overrides: [
-        mainShellLibraryReadinessProvider.overrideWithValue(
-          _coverMigrationReady,
-        ),
+        mainShellLibraryReadinessProvider.overrideWithValue(_libraryReadiness),
       ],
       child: MainShellStartupHost(
-        child: FutureBuilder<void>(
-          future: _coverMigrationReady,
-          builder: (context, snapshot) {
-            final libraryReady =
-                snapshot.connectionState == ConnectionState.done;
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _libraryReadiness,
+          builder: (context, libraryReady, _) {
             return MainShellReadyTaskHost(
               isReady: libraryReady,
               child: _buildReadyShell(context, isReady: libraryReady),

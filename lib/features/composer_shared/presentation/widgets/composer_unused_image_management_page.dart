@@ -9,6 +9,8 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/forum_media_loading_style.dart';
+import 'package:y300/shared/widgets/image_first_frame_transition.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ComposerUnusedImageManagementPage extends ConsumerWidget {
@@ -112,7 +114,6 @@ class _UnusedImagesCatalog extends ConsumerWidget {
           return _UnusedImageCard(
             image: image,
             thumbnailPath: state.thumbnailPaths[image.aid],
-            isLoading: state.loadingThumbnailAids.contains(image.aid),
             didFail: state.failedThumbnailAids.contains(image.aid),
             isDeleting: state.deletingAids.contains(image.aid),
             onThumbnailDecodeFailed: controller.reportThumbnailDecodeFailure,
@@ -127,7 +128,6 @@ class _UnusedImageCard extends ConsumerWidget {
   const _UnusedImageCard({
     required this.image,
     required this.thumbnailPath,
-    required this.isLoading,
     required this.didFail,
     required this.isDeleting,
     required this.onThumbnailDecodeFailed,
@@ -135,7 +135,6 @@ class _UnusedImageCard extends ConsumerWidget {
 
   final ComposerUnusedImage image;
   final String? thumbnailPath;
-  final bool isLoading;
   final bool didFail;
   final bool isDeleting;
   final void Function({required String aid, required String localPath})
@@ -163,7 +162,7 @@ class _UnusedImageCard extends ConsumerWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Center(child: _buildThumbnail()),
+                      _buildThumbnail(),
                       PositionedDirectional(
                         top: 0,
                         end: 0,
@@ -198,12 +197,24 @@ class _UnusedImageCard extends ConsumerWidget {
   }
 
   Widget _buildThumbnail() {
+    const placeholder = Center(child: Icon(Icons.image_outlined, size: 40));
+    const failed = Center(child: Icon(Icons.broken_image_outlined, size: 40));
     final path = thumbnailPath?.trim();
     if (path != null && path.isNotEmpty) {
       return Image.file(
         File(path),
         key: Key('unused-image-thumbnail-${image.aid}'),
         fit: BoxFit.contain,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+            buildImageFirstFrameTransition(
+              context,
+              child: child,
+              placeholder: placeholder,
+              isResolved: frame != null || wasSynchronouslyLoaded,
+              wasSynchronouslyLoaded: wasSynchronouslyLoaded,
+              duration: ForumMediaLoadingStyle.fadeInDuration,
+              identity: path,
+            ),
         errorBuilder: (imageContext, _, _) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!imageContext.mounted) {
@@ -211,20 +222,11 @@ class _UnusedImageCard extends ConsumerWidget {
             }
             onThumbnailDecodeFailed(aid: image.aid, localPath: path);
           });
-          return const Icon(Icons.broken_image_outlined);
+          return failed;
         },
       );
     }
-    if (isLoading) {
-      return const SizedBox.square(
-        dimension: 28,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    }
-    return Icon(
-      didFail ? Icons.broken_image_outlined : Icons.image_outlined,
-      size: 40,
-    );
+    return didFail ? failed : placeholder;
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {

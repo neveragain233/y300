@@ -265,6 +265,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messageLoadMore => '加载更多';
 
   @override
+  String get messageLoadingPrivate => '正在读取私信…';
+
+  @override
+  String get messageLoadingNotifications => '正在读取提醒…';
+
+  @override
+  String get messageLoadingMore => '正在读取更多…';
+
+  @override
   String get messageIgnore => '屏蔽此类提醒';
 
   @override
@@ -756,6 +765,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get historyLoadMoreFailed => '加载失败，点击重试';
 
   @override
+  String get historyLoading => '正在读取浏览记录…';
+
+  @override
+  String get historyLoadingMore => '正在读取更多记录…';
+
+  @override
   String get historyTypeThread => '帖子';
 
   @override
@@ -1120,6 +1135,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryShelfEmpty => '书架为空';
 
   @override
+  String get libraryShelfLoading => '正在读取书架…';
+
+  @override
   String get libraryShelfSearch => '搜索书架';
 
   @override
@@ -1444,6 +1462,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryDetailNoIntro => '暂无简介';
+
+  @override
+  String get libraryDetailOpeningTitle => '作品详情';
+
+  @override
+  String get libraryDetailOpeningStatus => '正在读取作品详情…';
 
   @override
   String get libraryDetailContinue => '继续';
@@ -5252,6 +5276,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileBlogMoreComments => '更多评论';
 
   @override
+  String get profileBlogLoadingList => '正在读取日志…';
+
+  @override
+  String get profileBlogLoadingBody => '正在读取正文…';
+
+  @override
+  String get profileBlogLoadingPage => '正在读取该页…';
+
+  @override
+  String profileBlogRetryPage(int page) {
+    return '重试第 $page 页';
+  }
+
+  @override
+  String get profileBlogLoadingComments => '正在读取评论…';
+
+  @override
+  String get profileBlogRetryComments => '评论加载失败，重试';
+
+  @override
   String get profileBlogReplyComment => '回复评论';
 
   @override
@@ -6764,6 +6808,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get messageLoadMore => '載入更多';
 
   @override
+  String get messageLoadingPrivate => '正在讀取私訊…';
+
+  @override
+  String get messageLoadingNotifications => '正在讀取提醒…';
+
+  @override
+  String get messageLoadingMore => '正在讀取更多…';
+
+  @override
   String get messageIgnore => '屏蔽此類提醒';
 
   @override
@@ -7255,6 +7308,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get historyLoadMoreFailed => '載入失敗，點擊重試';
 
   @override
+  String get historyLoading => '正在讀取瀏覽記錄…';
+
+  @override
+  String get historyLoadingMore => '正在讀取更多記錄…';
+
+  @override
   String get historyTypeThread => '帖子';
 
   @override
@@ -7619,6 +7678,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryShelfEmpty => '書架為空';
 
   @override
+  String get libraryShelfLoading => '正在讀取書架…';
+
+  @override
   String get libraryShelfSearch => '搜尋書架';
 
   @override
@@ -7943,6 +8005,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get libraryDetailNoIntro => '目前沒有簡介';
+
+  @override
+  String get libraryDetailOpeningTitle => '作品詳情';
+
+  @override
+  String get libraryDetailOpeningStatus => '正在讀取作品詳情…';
 
   @override
   String get libraryDetailContinue => '繼續';
@@ -11750,6 +11818,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get profileBlogMoreComments => '更多留言';
+
+  @override
+  String get profileBlogLoadingList => '正在讀取日誌…';
+
+  @override
+  String get profileBlogLoadingBody => '正在讀取正文…';
+
+  @override
+  String get profileBlogLoadingPage => '正在讀取該頁…';
+
+  @override
+  String profileBlogRetryPage(int page) {
+    return '重試第 $page 頁';
+  }
+
+  @override
+  String get profileBlogLoadingComments => '正在讀取留言…';
+
+  @override
+  String get profileBlogRetryComments => '留言載入失敗，重試';
 
   @override
   String get profileBlogReplyComment => '回覆留言';

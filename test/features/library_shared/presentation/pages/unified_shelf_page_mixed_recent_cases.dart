@@ -47,7 +47,7 @@ void _mixedRecentCases() {
               },
             ),
             selectionHost: host,
-            onOpenWork: (context, workId) async {},
+            onOpenWork: (context, workId, _) async {},
           ),
         ),
       );
@@ -116,7 +116,7 @@ void _mixedRecentCases() {
                 ),
                 recentReadingAction: action,
                 isActive: isActive,
-                onOpenWork: (_, _) async {},
+                onOpenWork: (_, _, _) async {},
               );
             },
           ),
@@ -176,7 +176,7 @@ void _mixedRecentCases() {
                 ],
               },
             ),
-            onOpenWork: (_, _) async {},
+            onOpenWork: (_, _, _) async {},
           ),
         ),
       );
@@ -197,7 +197,7 @@ void _mixedRecentCases() {
     final adapter = _FakeMixedCategoryShelfAdapter();
     await tester.pumpWidget(
       LocalizedTestApp(
-        home: UnifiedShelfPage(adapter: adapter, onOpenWork: (_, _) async {}),
+        home: UnifiedShelfPage(adapter: adapter, onOpenWork: (_, _, _) async {}),
       ),
     );
     await tester.pumpAndSettle();
@@ -235,7 +235,7 @@ void _mixedRecentCases() {
             ),
             open: (_, _) async {},
           ),
-          onOpenWork: (_, _) async {},
+          onOpenWork: (_, _, _) async {},
         ),
       ),
     );
@@ -277,7 +277,7 @@ void _mixedRecentCases() {
                     ),
                     open: (_, _) async {},
                   ),
-                  onOpenWork: (_, _) async {},
+                  onOpenWork: (_, _, _) async {},
                 ),
               );
             },

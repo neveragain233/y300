@@ -155,6 +155,15 @@ void _destinationCases() {
       expect(find.text('Cached forum'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       final before = tester.element(find.byKey(const Key('forum-home-list')));
+      final l10n = AppLocalizations.of(before);
+      final bookshelfToolbar = find.widgetWithText(
+        AppBar,
+        l10n.libraryShelfTitle(LibraryModuleKey.bookshelf.name),
+      );
+      final shelfSearch = find.byKey(const Key('unified-shelf-search-button'));
+      final categoryPlaceholder = find.byKey(
+        const Key('unified-shelf-category-placeholder'),
+      );
       // Standalone shelves from navigation management use the same barrier.
       final route = ProviderScope.containerOf(
         before,
@@ -167,17 +176,19 @@ void _destinationCases() {
         findsOneWidget,
       );
       expect(find.byType(UnifiedShelfPage), findsNothing);
+      expect(bookshelfToolbar, findsOneWidget);
+      expect(categoryPlaceholder, findsOneWidget);
+      expect(tester.widget<IconButton>(shelfSearch).onPressed, isNull);
       navigator.pop();
       await tester.pumpAndSettle();
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(MainShellPage)),
-      );
       await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
       expect(
         find.byKey(const Key('main-shell-library-loading')),
         findsOneWidget,
       );
       expect(find.byType(UnifiedShelfPage), findsNothing);
+      final pendingToolbar = tester.getRect(bookshelfToolbar);
+      expect(categoryPlaceholder, findsOneWidget);
       await _tapNavigationGroup(tester, l10n.appNavigationForum);
       final reads = repository.cacheReads;
       covers.complete();
@@ -194,6 +205,8 @@ void _destinationCases() {
       await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
       expect(find.byKey(const Key('main-shell-library-loading')), findsNothing);
       expect(find.byType(UnifiedShelfPage), findsOneWidget);
+      expect(tester.getRect(bookshelfToolbar), pendingToolbar);
+      expect(tester.widget<IconButton>(shelfSearch).onPressed, isNotNull);
       expect(tester.takeException(), isNull);
     },
   );

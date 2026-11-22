@@ -295,6 +295,7 @@ class _FakeBlogDetailRepository implements UserBlogDetailRepository {
     this.emptyComments = false,
     this.viewCount = 39,
     this.commentCount = 1,
+    this.pagedComments = false,
   }) : readCapabilities = capabilities ?? _detailCapabilities();
 
   final UserBlogDetailReadCapabilities readCapabilities;
@@ -305,6 +306,8 @@ class _FakeBlogDetailRepository implements UserBlogDetailRepository {
   final bool emptyComments;
   final int? viewCount;
   final int? commentCount;
+  final bool pagedComments;
+  final failedCommentPages = <int>{};
   final policies = <CacheLoadPolicy>[];
   final Completer<void>? gate;
   final cancellations = <ForumRequestCancellation?>[];
@@ -325,6 +328,12 @@ class _FakeBlogDetailRepository implements UserBlogDetailRepository {
     policies.add(cachePolicy);
     cancellations.add(cancellation);
     await gate?.future;
+    if (failedCommentPages.contains(query.page)) {
+      return const DataReadFailure(
+        kind: DataReadFailureKind.network,
+        diagnosticMessage: 'network failure',
+      );
+    }
     return DataReadSuccess(
       data: UserBlogDetailData(
         blogId: query.blogId,
@@ -336,11 +345,15 @@ class _FakeBlogDetailRepository implements UserBlogDetailRepository {
         viewCount: viewCount,
         commentCount: commentCount,
         commentsOpen: true,
+        commentPagination: UserBlogPagination(
+          currentPage: query.page,
+          hasNext: pagedComments && query.page == 1,
+        ),
         actions: blogActions,
         comments: <UserBlogComment>[
           if (!emptyComments)
             UserBlogComment(
-              commentId: '646846',
+              commentId: pagedComments && query.page == 2 ? '646847' : '646846',
               authorName: 'thessky',
               authorUserId: commentAuthorId,
               bodyHtml: '<p>探险的感觉</p>',

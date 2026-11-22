@@ -49,11 +49,15 @@ class ComicShelfPage extends ConsumerWidget {
       imageReferer: ref.watch(forumImageRefererProvider),
       isActive: isActive,
       selectionHost: ref.watch(shelfSelectionHostControllerProvider),
-      onOpenWork: (context, workId) async {
+      onOpenWork: (context, workId, item) async {
         await openAdaptiveDetail(
           context,
           MaterialPageRoute<void>(
-            builder: (_) => ComicDetailPage(comicId: workId),
+            builder: (_) => ComicDetailPage(
+              comicId: workId,
+              initialTitle: item?.title,
+              initialHasCover: item?.hasCoverSource ?? false,
+            ),
           ),
         );
       },

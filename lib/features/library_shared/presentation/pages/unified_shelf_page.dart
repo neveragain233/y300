@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
-import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/theme/app_theme.dart';
@@ -38,12 +37,13 @@ import 'package:y300/features/library_shared/presentation/services/recent_readin
 import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:y300/features/library_shared/presentation/services/library_task_text_resolver.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_shelf_app_bar.dart';
+import 'package:y300/features/library_shared/presentation/widgets/library_shelf_loading.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/presentation/recent_search_view.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
-import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:y300/shared/widgets/shelf/shelf_category_capsule_bar.dart';
@@ -54,6 +54,7 @@ import 'package:y300/shared/widgets/shelf/shelf_theme_palette.dart';
 import 'package:y300/shared/widgets/shelf/library_cover_identity.dart';
 import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/shared/widgets/library_cover_placeholder.dart';
+import 'package:y300/shared/widgets/forum_media_loading_style.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
 import 'package:y300/features/library_shared/presentation/widgets/shelf_page_title_scope.dart';
 
@@ -73,7 +74,12 @@ class UnifiedShelfPage extends ConsumerStatefulWidget {
 
   final ShelfModuleAdapter adapter;
   final LibraryViewPreferencesRepository? viewPreferencesRepository;
-  final Future<void> Function(BuildContext context, String workId) onOpenWork;
+  final Future<void> Function(
+    BuildContext context,
+    String workId,
+    LibraryWorkItem? shelfItem,
+  )
+  onOpenWork;
   final String? imageReferer;
   final ShelfFeatureFlags featureFlags;
   final bool isActive;
@@ -246,9 +252,8 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
                     ? Column(
                         children: [
                           _buildTaskProgressBanner(),
-                          Expanded(
-                            child: AppLoadingState(label: l10n.commonLoading),
-                          ),
+                          const LibraryShelfCategoryPlaceholder(),
+                          const Expanded(child: LibraryShelfLoadingStatus()),
                         ],
                       )
                     : Column(
@@ -722,9 +727,9 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     return _currentCategoryItems.map((item) => item.identityKey).toSet();
   }
 
-  Future<void> _handleItemTap(String workId) async {
+  Future<void> _handleItemTap(LibraryWorkItem item) async {
     if (_selectionEnabled && _selectionController.isSelecting) {
-      _selectionController.toggle(workId);
+      _selectionController.toggle(item.identityKey);
       return;
     }
     if (_controller.state.keyword.trim().isNotEmpty) {
@@ -732,7 +737,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       // debounced intermediate fragments never reach this path.
       _recordRecentKeyword(_controller.state.keyword);
     }
-    await _openWorkAndRefreshShelf(workId);
+    await _openWorkAndRefreshShelf(item.identityKey, shelfItem: item);
   }
 
   Future<void> _handleItemLongPress(String workId) async {
@@ -863,64 +868,48 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     }
     final moduleActions = _moduleMenuActions();
     if (!state.isSearchMode) {
-      return AppRootPageAppBar(
-        leading: adaptiveDetailBackButton(context),
-        titleWidget: ShelfPageTitleScope.titleOf(context),
-        title: LibraryShelfTextResolver.moduleTitle(
-          AppLocalizations.of(context),
-          state.moduleKey,
-        ),
-        actions: [
-          IconButton(
-            key: const Key('unified-shelf-search-button'),
-            icon: const Icon(Icons.search),
-            tooltip: AppLocalizations.of(context).libraryShelfSearch,
-            onPressed: _enterSearchMode,
-          ),
-          IconButton(
-            key: const Key('unified-shelf-filter-button'),
-            icon: const Icon(Icons.filter_list),
-            tooltip: AppLocalizations.of(context).libraryShelfFilterAndSort,
-            onPressed: _showFilterSheet,
-          ),
-          AppPopupMenuButton<String>(
-            key: const Key('unified-shelf-more-button'),
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              AppPopupMenuItem<String>(
-                value: 'add-category',
-                label: AppLocalizations.of(context).libraryShelfCreateCategory,
-                icon: const Icon(Icons.add),
-              ),
-              AppPopupMenuItem<String>(
-                value: 'rename-category',
-                label: AppLocalizations.of(context).libraryShelfRenameCategory,
-                icon: const Icon(Icons.drive_file_rename_outline),
-              ),
-              AppPopupMenuItem<String>(
-                value: 'delete-category',
-                label: AppLocalizations.of(context).libraryShelfDeleteCategory,
-                icon: const Icon(Icons.delete_outline),
-                danger: true,
-              ),
-              if (moduleActions.isNotEmpty) ...[
-                const PopupMenuDivider(),
-                ..._moduleActionItems(moduleActions),
-              ],
+      return buildLibraryShelfAppBar(
+        context,
+        moduleKey: state.moduleKey,
+        onSearch: _enterSearchMode,
+        onFilter: _showFilterSheet,
+        menu: AppPopupMenuButton<String>(
+          key: const Key('unified-shelf-more-button'),
+          onSelected: _handleMenuAction,
+          itemBuilder: (context) => [
+            AppPopupMenuItem<String>(
+              value: 'add-category',
+              label: AppLocalizations.of(context).libraryShelfCreateCategory,
+              icon: const Icon(Icons.add),
+            ),
+            AppPopupMenuItem<String>(
+              value: 'rename-category',
+              label: AppLocalizations.of(context).libraryShelfRenameCategory,
+              icon: const Icon(Icons.drive_file_rename_outline),
+            ),
+            AppPopupMenuItem<String>(
+              value: 'delete-category',
+              label: AppLocalizations.of(context).libraryShelfDeleteCategory,
+              icon: const Icon(Icons.delete_outline),
+              danger: true,
+            ),
+            if (moduleActions.isNotEmpty) ...[
               const PopupMenuDivider(),
-              AppPopupMenuItem<String>(
-                value: 'refresh-shelf',
-                label: AppLocalizations.of(context).libraryShelfUpdate,
-                icon: const Icon(Icons.refresh),
-              ),
-              AppPopupMenuItem<String>(
-                value: 'random-open',
-                label: AppLocalizations.of(context).libraryShelfRandomOpen,
-                icon: const Icon(Icons.shuffle),
-              ),
+              ..._moduleActionItems(moduleActions),
             ],
-          ),
-        ],
+            const PopupMenuDivider(),
+            AppPopupMenuItem<String>(
+              value: 'refresh-shelf',
+              label: AppLocalizations.of(context).libraryShelfUpdate,
+              icon: const Icon(Icons.refresh),
+            ),
+            AppPopupMenuItem<String>(
+              value: 'random-open',
+              label: AppLocalizations.of(context).libraryShelfRandomOpen,
+              icon: const Icon(Icons.shuffle),
+            ),
+          ],
+        ),
       );
     }
 
@@ -1324,8 +1313,15 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
     );
   }
 
-  Future<void> _openWorkAndRefreshShelf(String workId) async {
-    await widget.onOpenWork(context, workId);
+  Future<void> _openWorkAndRefreshShelf(
+    String workId, {
+    LibraryWorkItem? shelfItem,
+  }) async {
+    // Random opening can choose a work outside the visible, filtered items.
+    shelfItem ??= _currentCategoryItems
+        .where((item) => item.identityKey == workId)
+        .firstOrNull;
+    await widget.onOpenWork(context, workId, shelfItem);
     if (!mounted) {
       return;
     }
@@ -1384,7 +1380,7 @@ class _ShelfCategoryPage extends ConsumerStatefulWidget {
   final String? imageReferer;
   final bool useShelfCoverImage;
   final bool showUnreadBadge;
-  final Future<void> Function(String workId) onTapItem;
+  final Future<void> Function(LibraryWorkItem item) onTapItem;
   final Future<void> Function(String workId) onLongPressItem;
   final bool selectionEnabled;
   final Set<String> selectedWorkIds;
@@ -1570,7 +1566,7 @@ class _WorkGrid extends StatefulWidget {
   final String? imageReferer;
   final bool useShelfCoverImage;
   final bool showUnreadBadge;
-  final Future<void> Function(String workId) onTapItem;
+  final Future<void> Function(LibraryWorkItem item) onTapItem;
   final Future<void> Function(String workId) onLongPressItem;
   final bool selectionEnabled;
   final Set<String> selectedWorkIds;
@@ -1669,7 +1665,7 @@ class _WorkGridState extends State<_WorkGrid> {
                   coverLayerBuilder: widget.useShelfCoverImage
                       ? null
                       : _legacyCoverLayerBuilder,
-                  onTap: () async => widget.onTapItem(item.identityKey),
+                  onTap: () async => widget.onTapItem(item),
                   onLongPress: widget.selectionEnabled
                       ? () async => widget.onLongPressItem(item.identityKey)
                       : null,
@@ -1711,6 +1707,7 @@ class _WorkGridState extends State<_WorkGrid> {
       alignment: config.alignment,
       placeholder: config.placeholder,
       referer: config.imageReferer,
+      fadeInDuration: ForumMediaLoadingStyle.fadeInDuration,
     );
   }
 }
@@ -1812,7 +1809,7 @@ class _WorkList extends StatefulWidget {
   final String? imageReferer;
   final bool useShelfCoverImage;
   final bool showUnreadBadge;
-  final Future<void> Function(String workId) onTapItem;
+  final Future<void> Function(LibraryWorkItem item) onTapItem;
   final Future<void> Function(String workId) onLongPressItem;
   final bool selectionEnabled;
   final Set<String> selectedWorkIds;
@@ -1902,7 +1899,7 @@ class _WorkListState extends State<_WorkList> {
                     ),
                     minTileHeight: 72,
                     selected: selected,
-                    onTap: () async => widget.onTapItem(item.identityKey),
+                    onTap: () async => widget.onTapItem(item),
                     onLongPress: widget.selectionEnabled
                         ? () async => widget.onLongPressItem(item.identityKey)
                         : null,
@@ -2002,6 +1999,7 @@ class _WorkListState extends State<_WorkList> {
         alignment: alignment,
         placeholder: placeholder,
         referer: widget.imageReferer,
+        fadeInDuration: ForumMediaLoadingStyle.fadeInDuration,
       );
     }
     return ShelfCoverImage(

@@ -164,6 +164,7 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
                         'private-message-list:${widget.accountId}',
                       ),
                       itemCount: (page) => page.items.length,
+                      loadingText: l10n.messageLoadingPrivate,
                       emptyText: l10n.profileNoMessages,
                       itemBuilder: (context, page, index) => _ConversationRow(
                         key: ValueKey(
@@ -185,6 +186,7 @@ class _MessageCenterBodyState extends ConsumerState<_MessageCenterBody>
                         'notification-list:${widget.accountId}',
                       ),
                       itemCount: (page) => page.items.length,
+                      loadingText: l10n.messageLoadingNotifications,
                       emptyText: l10n.profileNoNotifications,
                       itemBuilder: (context, page, index) => _NotificationRow(
                         key: ValueKey(page.items[index].id),

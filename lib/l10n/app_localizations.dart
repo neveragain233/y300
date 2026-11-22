@@ -583,6 +583,24 @@ abstract class AppLocalizations {
   /// **'加载更多'**
   String get messageLoadMore;
 
+  /// No description provided for @messageLoadingPrivate.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取私信…'**
+  String get messageLoadingPrivate;
+
+  /// No description provided for @messageLoadingNotifications.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取提醒…'**
+  String get messageLoadingNotifications;
+
+  /// No description provided for @messageLoadingMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取更多…'**
+  String get messageLoadingMore;
+
   /// No description provided for @messageIgnore.
   ///
   /// In zh, this message translates to:
@@ -1477,6 +1495,18 @@ abstract class AppLocalizations {
   /// **'加载失败，点击重试'**
   String get historyLoadMoreFailed;
 
+  /// No description provided for @historyLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取浏览记录…'**
+  String get historyLoading;
+
+  /// No description provided for @historyLoadingMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取更多记录…'**
+  String get historyLoadingMore;
+
   /// No description provided for @historyTypeThread.
   ///
   /// In zh, this message translates to:
@@ -1858,6 +1888,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'书架为空'**
   String get libraryShelfEmpty;
+
+  /// No description provided for @libraryShelfLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取书架…'**
+  String get libraryShelfLoading;
 
   /// No description provided for @libraryShelfSearch.
   ///
@@ -2402,6 +2438,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暂无简介'**
   String get libraryDetailNoIntro;
+
+  /// No description provided for @libraryDetailOpeningTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'作品详情'**
+  String get libraryDetailOpeningTitle;
+
+  /// No description provided for @libraryDetailOpeningStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取作品详情…'**
+  String get libraryDetailOpeningStatus;
 
   /// No description provided for @libraryDetailContinue.
   ///
@@ -8805,6 +8853,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'更多评论'**
   String get profileBlogMoreComments;
+
+  /// No description provided for @profileBlogLoadingList.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取日志…'**
+  String get profileBlogLoadingList;
+
+  /// No description provided for @profileBlogLoadingBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取正文…'**
+  String get profileBlogLoadingBody;
+
+  /// No description provided for @profileBlogLoadingPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取该页…'**
+  String get profileBlogLoadingPage;
+
+  /// No description provided for @profileBlogRetryPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试第 {page} 页'**
+  String profileBlogRetryPage(int page);
+
+  /// No description provided for @profileBlogLoadingComments.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取评论…'**
+  String get profileBlogLoadingComments;
+
+  /// No description provided for @profileBlogRetryComments.
+  ///
+  /// In zh, this message translates to:
+  /// **'评论加载失败，重试'**
+  String get profileBlogRetryComments;
 
   /// No description provided for @profileBlogReplyComment.
   ///

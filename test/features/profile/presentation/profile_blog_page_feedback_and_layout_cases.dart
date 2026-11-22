@@ -19,12 +19,15 @@ void _feedbackAndLayoutCases() {
     await tester.scrollUntilVisible(next, 500, scrollable: scrollable);
     await tester.pumpAndSettle();
     final oldOffset = tester.state<ScrollableState>(scrollable).position.pixels;
+    final tail = find.byKey(const Key('profile-blog-item-30'));
+    final tailPosition = tester.getTopLeft(tail);
     await tester.tap(next);
     await tester.pumpAndSettle();
     expect(
       tester.state<ScrollableState>(scrollable).position.pixels,
       closeTo(oldOffset, 0.5),
     );
+    expect(tester.getTopLeft(tail), tailPosition);
     expect(repository.queries.last.page, 2);
     expect(tester.takeException(), isNull);
   });
@@ -86,6 +89,8 @@ void _feedbackAndLayoutCases() {
       directoryRepository: repository,
       detailRepository: _FakeBlogDetailRepository(),
     );
+    final row = find.byKey(const Key('profile-blog-item-117558'));
+    final position = tester.getTopLeft(row);
     await tester
         .widget<RefreshIndicator>(find.byType(RefreshIndicator))
         .onRefresh();
@@ -93,10 +98,55 @@ void _feedbackAndLayoutCases() {
 
     expect(find.text('一种体验'), findsOneWidget);
     expect(find.textContaining('网络连接失败'), findsOneWidget);
+    expect(tester.getTopLeft(row), position);
     expect(repository.policies, <CacheLoadPolicy>[
       CacheLoadPolicy.cacheFirst,
       CacheLoadPolicy.networkFirst,
     ]);
+  });
+
+  testWidgets('article opens with its title and retries comments in place', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final details = _FakeBlogDetailRepository(gate: gate, pagedComments: true)
+      ..failedCommentPages.add(2);
+    await _pumpBlogPage(
+      tester,
+      directoryRepository: _FakeBlogDirectoryRepository(),
+      detailRepository: details,
+    );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(ProfileBlogPage)),
+    );
+    await tester.tap(find.byKey(const Key('profile-blog-item-117558')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileBlogDetailPage), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('一种体验'), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text(l10n.profileBlogLoadingBody), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    final more = find.text(l10n.profileBlogMoreComments);
+    await tester.ensureVisible(more);
+    await tester.pumpAndSettle();
+    final comment = find.byKey(const Key('profile-blog-comment-646846'));
+    final position = tester.getTopLeft(comment);
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(comment), position);
+
+    details.failedCommentPages.clear();
+    await tester.tap(find.byKey(const Key('profile-blog-comments-retry')));
+    await tester.pumpAndSettle();
+    expect(details.queries.map((query) => query.page), [1, 2, 2]);
+    expect(
+      find.byKey(const Key('profile-blog-comment-646847')),
+      findsOneWidget,
+    );
+    expect(tester.getTopLeft(comment), position);
   });
 
   testWidgets('initial failure shows retry and then loads content', (
