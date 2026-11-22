@@ -12,6 +12,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 章节管理面板。
 ///
@@ -642,8 +643,7 @@ class _UnifiedDetailChapterManagementSheetState
   void _notifyChanged() => widget.onChanged?.call();
 
   void _showMessage(String message) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 }
 

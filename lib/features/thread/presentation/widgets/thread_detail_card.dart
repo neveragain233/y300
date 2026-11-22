@@ -345,120 +345,127 @@ class _ThreadPostCardFooterEntry extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onLongPress: () => onOpenPostActions(sourcePost),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: ForumContentSpacing.postCardGap),
-        padding: EdgeInsets.fromLTRB(
-          ForumContentSpacing.postBodyHorizontal,
-          hasFooterContent ? ForumContentSpacing.postCardFooterTop : 0,
-          ForumContentSpacing.postBodyHorizontal,
-          ForumContentSpacing.postCardFooterBottom,
-        ),
-        decoration: _cardSegmentDecoration(
-          palette: palette,
-          highlighted: highlighted,
-          position: _ThreadPostCardSegmentPosition.footer,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (post.poll != null) ...[
-              ThreadPollCard(
-                imageOwnerId: state.tid,
-                imageReferer: imageReferer,
-                expanded: footerExpansion.value.poll,
-                onExpansionChanged: (expanded) => footerExpansion.value = (
-                  comments: footerExpansion.value.comments,
-                  ratings: footerExpansion.value.ratings,
-                  poll: expanded,
-                ),
-                poll: post.poll!,
-                onLongPressOption: onOpenPollOptionActions == null
-                    ? null
-                    : (option) => onOpenPollOptionActions!(sourcePost, option),
-                selectedOptionIds: state.selectedPollOptionIds,
-                isSubmitting: state.isPollVoteSubmitting,
-                commandAvailable: state.pollVoteCommandAvailable,
-                hint: state.pollVoteHint,
-                notice: state.pollVoteNotice,
-                onToggleOption: (option) {
-                  final sourcePoll = sourcePost.poll;
-                  ThreadPollOption? sourceOption;
-                  if (sourcePoll != null) {
-                    for (final candidate in sourcePoll.options) {
-                      if (candidate.id == option.id) {
-                        sourceOption = candidate;
-                        break;
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              ForumContentSpacing.postBodyHorizontal,
+              hasFooterContent ? ForumContentSpacing.postCardFooterTop : 0,
+              ForumContentSpacing.postBodyHorizontal,
+              ForumContentSpacing.postCardFooterBottom,
+            ),
+            decoration: _cardSegmentDecoration(
+              palette: palette,
+              highlighted: highlighted,
+              position: _ThreadPostCardSegmentPosition.footer,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (post.poll != null) ...[
+                  ThreadPollCard(
+                    imageOwnerId: state.tid,
+                    imageReferer: imageReferer,
+                    expanded: footerExpansion.value.poll,
+                    onExpansionChanged: (expanded) => footerExpansion.value = (
+                      comments: footerExpansion.value.comments,
+                      ratings: footerExpansion.value.ratings,
+                      poll: expanded,
+                    ),
+                    poll: post.poll!,
+                    onLongPressOption: onOpenPollOptionActions == null
+                        ? null
+                        : (option) =>
+                              onOpenPollOptionActions!(sourcePost, option),
+                    selectedOptionIds: state.selectedPollOptionIds,
+                    isSubmitting: state.isPollVoteSubmitting,
+                    commandAvailable: state.pollVoteCommandAvailable,
+                    hint: state.pollVoteHint,
+                    notice: state.pollVoteNotice,
+                    onToggleOption: (option) {
+                      final sourcePoll = sourcePost.poll;
+                      ThreadPollOption? sourceOption;
+                      if (sourcePoll != null) {
+                        for (final candidate in sourcePoll.options) {
+                          if (candidate.id == option.id) {
+                            sourceOption = candidate;
+                            break;
+                          }
+                        }
                       }
-                    }
-                  }
-                  if (sourcePoll != null && sourceOption != null) {
-                    onTogglePollOption(sourcePoll, sourceOption);
-                  }
-                },
-                onSubmit: () {
-                  final sourcePoll = sourcePost.poll;
-                  if (sourcePoll != null) {
-                    onSubmitPollVote(sourcePoll);
-                  }
-                },
-                palette: palette,
-              ),
-            ],
-            if (showComments) ...[
-              if (post.poll != null) const SizedBox(height: 10),
-              ThreadPostCommentSection(
-                expanded: footerExpansion.value.comments,
-                onExpansionChanged: (expanded) => footerExpansion.value = (
-                  comments: expanded,
-                  ratings: footerExpansion.value.ratings,
-                  poll: footerExpansion.value.poll,
-                ),
-                comments: visibleComments,
-                continuation: commentState,
-                nextPage: nextCommentPage,
-                onLoadMore: onLoadMoreComments == null
-                    ? null
-                    : () => onLoadMoreComments!(sourcePost),
-                imageReferer: imageReferer,
-                palette: palette,
-                onOpenAuthorProfile: (displayComment) {
-                  final index = visibleComments.indexOf(displayComment);
-                  if (index >= 0 && index < sourcePost.comments.length) {
-                    onOpenCommentAuthorProfile(sourcePost.comments[index]);
-                  } else if (index >= sourcePost.comments.length &&
-                      index - sourcePost.comments.length <
-                          (commentState?.comments.length ?? 0)) {
-                    onOpenCommentAuthorProfile(
-                      commentState!.comments[index -
-                          sourcePost.comments.length],
-                    );
-                  }
-                },
-              ),
-            ],
-            if (post.ratingSummary != null) ...[
-              if (post.poll != null || showComments) const SizedBox(height: 10),
-              ThreadPostRatingSection(
-                expanded: footerExpansion.value.ratings,
-                onExpansionChanged: (expanded) => footerExpansion.value = (
-                  comments: footerExpansion.value.comments,
-                  ratings: expanded,
-                  poll: footerExpansion.value.poll,
-                ),
-                summary: post.ratingSummary!,
-                viewState:
-                    displayRatingsByPostId[sourcePost.pid.trim()] ??
-                    const ThreadPostRatingsViewState.idle(),
-                palette: palette,
-                onLoadAllRatings: () => onLoadAllRatings(sourcePost),
-              ),
-            ],
-            if (showEmptyInteractionHint &&
-                !showComments &&
-                post.ratingSummary == null)
-              Text(AppLocalizations.of(context).threadInteractionsEmpty),
-          ],
-        ),
+                      if (sourcePoll != null && sourceOption != null) {
+                        onTogglePollOption(sourcePoll, sourceOption);
+                      }
+                    },
+                    onSubmit: () {
+                      final sourcePoll = sourcePost.poll;
+                      if (sourcePoll != null) {
+                        onSubmitPollVote(sourcePoll);
+                      }
+                    },
+                    palette: palette,
+                  ),
+                ],
+                if (showComments) ...[
+                  if (post.poll != null) const SizedBox(height: 10),
+                  ThreadPostCommentSection(
+                    expanded: footerExpansion.value.comments,
+                    onExpansionChanged: (expanded) => footerExpansion.value = (
+                      comments: expanded,
+                      ratings: footerExpansion.value.ratings,
+                      poll: footerExpansion.value.poll,
+                    ),
+                    comments: visibleComments,
+                    continuation: commentState,
+                    nextPage: nextCommentPage,
+                    onLoadMore: onLoadMoreComments == null
+                        ? null
+                        : () => onLoadMoreComments!(sourcePost),
+                    imageReferer: imageReferer,
+                    palette: palette,
+                    onOpenAuthorProfile: (displayComment) {
+                      final index = visibleComments.indexOf(displayComment);
+                      if (index >= 0 && index < sourcePost.comments.length) {
+                        onOpenCommentAuthorProfile(sourcePost.comments[index]);
+                      } else if (index >= sourcePost.comments.length &&
+                          index - sourcePost.comments.length <
+                              (commentState?.comments.length ?? 0)) {
+                        onOpenCommentAuthorProfile(
+                          commentState!.comments[index -
+                              sourcePost.comments.length],
+                        );
+                      }
+                    },
+                  ),
+                ],
+                if (post.ratingSummary != null) ...[
+                  if (post.poll != null || showComments)
+                    const SizedBox(height: 10),
+                  ThreadPostRatingSection(
+                    expanded: footerExpansion.value.ratings,
+                    onExpansionChanged:
+                        footerExpansion.setRatingsExpandedByUser,
+                    summary: post.ratingSummary!,
+                    viewState:
+                        displayRatingsByPostId[sourcePost.pid.trim()] ??
+                        const ThreadPostRatingsViewState.idle(),
+                    palette: palette,
+                    onLoadAllRatings: () => onLoadAllRatings(sourcePost),
+                  ),
+                ],
+                if (showEmptyInteractionHint &&
+                    !showComments &&
+                    post.ratingSummary == null)
+                  Text(AppLocalizations.of(context).threadInteractionsEmpty),
+              ],
+            ),
+          ),
+          _ThreadFloorSeparatorBand(
+            palette: palette,
+            isFirstPost: sourcePost.isFirst,
+          ),
+        ],
       ),
     );
   }

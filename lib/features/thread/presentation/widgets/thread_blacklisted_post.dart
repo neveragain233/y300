@@ -22,9 +22,11 @@ class ThreadBlacklistedPostPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    return Container(
+    final card = Container(
       key: Key('thread-blacklisted-post-${post.pid}'),
-      margin: const EdgeInsets.only(bottom: ForumContentSpacing.postCardGap),
+      margin: continuous
+          ? EdgeInsets.zero
+          : const EdgeInsets.only(bottom: ForumContentSpacing.postCardGap),
       padding: const EdgeInsets.fromLTRB(
         ForumContentSpacing.postBodyHorizontal,
         ForumContentSpacing.postCardHeaderTop,
@@ -32,12 +34,7 @@ class ThreadBlacklistedPostPlaceholder extends StatelessWidget {
         ForumContentSpacing.postCardSingleBottom,
       ),
       decoration: continuous
-          ? BoxDecoration(
-              color: palette.background,
-              border: Border(
-                bottom: BorderSide(color: palette.border, width: 0.5),
-              ),
-            )
+          ? BoxDecoration(color: palette.background)
           : _cardDecoration(palette),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,6 +76,16 @@ class ThreadBlacklistedPostPlaceholder extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (!continuous) {
+      return card;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card,
+        _ThreadFloorSeparatorBand(palette: palette, isFirstPost: post.isFirst),
+      ],
     );
   }
 }

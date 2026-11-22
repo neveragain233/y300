@@ -12,6 +12,7 @@ import 'package:y300/features/reader_shared/domain/rich_text/typography/rich_tex
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ForumHtmlReaderSettingsSheet extends ConsumerStatefulWidget {
   const ForumHtmlReaderSettingsSheet({
@@ -240,12 +241,9 @@ class _ForumHtmlReaderSettingsSheetState
       await saving;
     } catch (_) {
       if (mounted && request == _fontRequest) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).fontSelectorStorageFailure,
-            ),
-          ),
+        showTransientSnackBar(
+          context,
+          AppLocalizations.of(context).fontSelectorStorageFailure,
         );
       }
     } finally {

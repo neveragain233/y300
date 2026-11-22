@@ -17,6 +17,7 @@ import 'package:y300/features/profile/presentation/widgets/profile_page_body.dar
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 export 'user_profile_controller.dart';
@@ -77,12 +78,9 @@ class _ProfilePageState extends ConsumerState<_ProfilePage> {
       return;
     }
     // A transient failure must be visible without inserting height into the list.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _errorText(AppLocalizations.of(context), current!.failure),
-        ),
-      ),
+    showTransientSnackBar(
+      context,
+      _errorText(AppLocalizations.of(context), current!.failure),
     );
   }
 
@@ -154,8 +152,9 @@ class _ProfilePageState extends ConsumerState<_ProfilePage> {
   Future<void> _copyUid(String uid) async {
     await Clipboard.setData(ClipboardData(text: uid));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).profileUidCopied)),
+      showTransientSnackBar(
+        context,
+        AppLocalizations.of(context).profileUidCopied,
       );
     }
   }

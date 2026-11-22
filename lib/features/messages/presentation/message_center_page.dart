@@ -19,6 +19,7 @@ import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/native_primary_tab_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 enum MessageCenterTab { messages, notifications }
 
@@ -419,9 +420,7 @@ class _NotificationRow extends ConsumerWidget {
                     if (receipt != null &&
                         context.mounted &&
                         ref.read(messageAccountIdProvider) == accountId) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.messageIgnoreApplied)),
-                      );
+                      showTransientSnackBar(context, l10n.messageIgnoreApplied);
                     }
                   },
                 ),

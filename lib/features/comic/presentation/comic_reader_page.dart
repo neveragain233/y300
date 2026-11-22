@@ -324,9 +324,7 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
       return;
     }
     if (tid == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.comicSourceThreadUnavailable)),
-      );
+      showTransientSnackBar(context, l10n.comicSourceThreadUnavailable);
       return;
     }
     await _openThreadByTid(tid, null);

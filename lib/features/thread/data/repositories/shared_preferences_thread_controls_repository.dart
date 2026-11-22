@@ -39,6 +39,7 @@ final class SharedPreferencesThreadControlsRepository
         singleNavigationButton: flag('singleNavigationButton', false),
         holdToFirstPost: flag('holdToFirstPost', false),
         hideOnScroll: flag('hideOnScroll', false),
+        expandRatingsByDefault: flag('expandRatingsByDefault', true),
       );
     } on FormatException {
       return const ThreadControlsPreferences();
@@ -57,6 +58,7 @@ final class SharedPreferencesThreadControlsRepository
       'singleNavigationButton': preferences.singleNavigationButton,
       'holdToFirstPost': preferences.holdToFirstPost,
       'hideOnScroll': preferences.hideOnScroll,
+      'expandRatingsByDefault': preferences.expandRatingsByDefault,
     }),
   );
 }

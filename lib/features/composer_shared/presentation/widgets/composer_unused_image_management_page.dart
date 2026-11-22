@@ -9,6 +9,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ComposerUnusedImageManagementPage extends ConsumerWidget {
   const ComposerUnusedImageManagementPage({super.key});
@@ -244,9 +245,7 @@ class _UnusedImageCard extends ConsumerWidget {
         .read(composerUnusedImageManagementControllerProvider.notifier)
         .deleteImage(image.aid);
     if (!deleted && context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(l10n.unusedImagesDeleteFailed)));
+      showTransientSnackBar(context, l10n.unusedImagesDeleteFailed);
     }
   }
 }

@@ -11,6 +11,7 @@ import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/auth/presentation/auth_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 基于 WebView 的登录页。
 ///
@@ -136,13 +137,10 @@ class _LoginWebViewPageState extends ConsumerState<LoginWebViewPage> {
           ref
               .read(authSessionControllerProvider.notifier)
               .acceptSession(session);
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).authLoginSuccess),
-              ),
-            );
+          showTransientSnackBar(
+            context,
+            AppLocalizations.of(context).authLoginSuccess,
+          );
           Navigator.of(context).pop(true);
         case WebViewLoginFailed(:final message):
           setState(

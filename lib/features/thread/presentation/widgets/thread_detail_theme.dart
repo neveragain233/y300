@@ -11,6 +11,8 @@ class ThreadDetailNativePalette {
     required this.metricBackground,
     required this.chipBackground,
     required this.panelBackground,
+    required this.floorDividerBand,
+    required this.ratingBar,
     required this.accent,
     required this.onAccent,
     required this.title,
@@ -32,6 +34,8 @@ class ThreadDetailNativePalette {
   final Color metricBackground;
   final Color chipBackground;
   final Color panelBackground;
+  final Color floorDividerBand;
+  final Color ratingBar;
   final Color accent;
   final Color onAccent;
   final Color title;
@@ -60,6 +64,9 @@ class ThreadDetailNativePalette {
         theme.extension<Y300ThemeExtension>()?.usesDynamicColor ?? false;
 
     if (!isDark) {
+      final resolvedAccent = usesDynamicColor
+          ? native.accent
+          : appBarBackground;
       final listTagChipBackground =
           (Color.lerp(scheme.secondaryContainer, native.card, 0.58) ??
                   scheme.secondaryContainer)
@@ -71,7 +78,11 @@ class ThreadDetailNativePalette {
         metricBackground: native.metricBackground,
         chipBackground: listTagChipBackground,
         panelBackground: native.panelBackground,
-        accent: usesDynamicColor ? native.accent : appBarBackground,
+        floorDividerBand:
+            Color.lerp(native.background, scheme.outlineVariant, 0.30) ??
+            scheme.surfaceContainerHighest,
+        ratingBar: resolvedAccent.withValues(alpha: 0.52),
+        accent: resolvedAccent,
         onAccent: usesDynamicColor ? native.onAccent : appBarForeground,
         title: native.title,
         author: native.author,
@@ -87,6 +98,9 @@ class ThreadDetailNativePalette {
       );
     }
 
+    final darkGroove = theme.scaffoldBackgroundColor == const Color(0xFF000000)
+        ? Color.lerp(theme.scaffoldBackgroundColor, scheme.outlineVariant, 0.32)
+        : Color.lerp(theme.scaffoldBackgroundColor, Colors.black, 0.28);
     return ThreadDetailNativePalette(
       background: theme.scaffoldBackgroundColor,
       card: continuous
@@ -98,6 +112,8 @@ class ThreadDetailNativePalette {
       metricBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.72),
       chipBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.42),
       panelBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.28),
+      floorDividerBand: darkGroove ?? scheme.surfaceContainerLowest,
+      ratingBar: scheme.primary.withValues(alpha: 0.56),
       accent: scheme.primary,
       onAccent: scheme.onPrimary,
       title: scheme.onSurface,

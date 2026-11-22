@@ -5,6 +5,7 @@ import 'package:y300/features/forum/presentation/webview/forum_webview_route_fac
 import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
 import 'package:y300/features/profile/presentation/blog/blog_read_providers.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 /// The package owns every protocol parameter. Browser return deliberately has
@@ -23,8 +24,9 @@ Future<void> openBlogWebPage(
   final navigation = ref.read(userBlogNavigationProvider);
   final uri = navigation == null ? null : destination(navigation);
   if (uri == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).commonRequestError)),
+    showTransientSnackBar(
+      context,
+      AppLocalizations.of(context).commonRequestError,
     );
     return;
   }

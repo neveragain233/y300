@@ -6,8 +6,15 @@ part of 'thread_detail_widgets.dart';
 // can remount footer widgets without expanding previously collapsed sections.
 final class _ThreadPostFooterExpansion
     extends ValueNotifier<({bool comments, bool ratings, bool poll})> {
-  _ThreadPostFooterExpansion()
-    : super((comments: true, ratings: true, poll: true));
+  _ThreadPostFooterExpansion({bool ratings = true})
+    : super((comments: true, ratings: ratings, poll: true));
+
+  bool ratingsOverridden = false;
+
+  void setRatingsExpandedByUser(bool expanded) {
+    ratingsOverridden = true;
+    value = (comments: value.comments, ratings: expanded, poll: value.poll);
+  }
 }
 
 class ThreadPostCommentSection extends StatefulWidget {
@@ -48,10 +55,11 @@ class _ThreadPostCommentSectionState extends State<ThreadPostCommentSection> {
     final l10n = AppLocalizations.of(context);
     return Container(
       key: const Key('thread-post-comment-section'),
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+      padding: const EdgeInsets.fromLTRB(10, 5, 4, 5),
       decoration: BoxDecoration(
-        color: widget.palette.panelBackground,
-        borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(color: widget.palette.ratingBar, width: 2.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,10 +475,11 @@ class _ThreadPostRatingSectionState extends State<ThreadPostRatingSection> {
     );
     return Container(
       key: const Key('thread-post-rating-section'),
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+      padding: const EdgeInsets.fromLTRB(10, 5, 4, 5),
       decoration: BoxDecoration(
-        color: widget.palette.panelBackground,
-        borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(color: widget.palette.ratingBar, width: 2.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

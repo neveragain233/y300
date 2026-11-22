@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:carousel_slider/carousel_slider.dart';
 
 import 'package:flutter/material.dart';
+import 'package:prism_ui/liquid_glass.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -10,7 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' as riverpod_misc;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/shared/widgets/app_glass_environment.dart';
 import 'package:y300/app/navigation/forum_link_routes.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
 import 'package:y300/core/clipboard/clipboard_text_writer.dart';

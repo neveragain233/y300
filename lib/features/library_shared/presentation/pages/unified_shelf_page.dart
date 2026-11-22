@@ -6,9 +6,11 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
+import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_category_name_dialog.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +35,7 @@ import 'package:y300/features/library_shared/presentation/selection/shelf_select
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_controller.dart';
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/services/recent_reading_action.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:y300/features/library_shared/presentation/services/library_task_text_resolver.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
@@ -620,21 +623,68 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
   Widget _buildRecentReadingButton() {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final eInk = EInkModeScope.of(context);
     final enabled =
         _recentReadingTarget != null &&
         !_recentReadingBusy &&
         _recentReadingVisible;
+    final glassActive =
+        AppGlassSurface.levelOf(context).enabled &&
+        !eInk &&
+        !MediaQuery.highContrastOf(context);
+    final foreground = enabled
+        ? scheme.onSurface
+        : scheme.onSurface.withValues(alpha: 0.38);
+    final tooltip = enabled
+        ? l10n.libraryShelfContinueReading
+        : l10n.libraryShelfNoRecentReading;
     return TransientFeedbackObstacle(
-      bottom: 80,
-      child: FloatingActionButton.extended(
-        key: const Key('unified-shelf-recent-reading'),
-        onPressed: enabled ? _openRecentReading : null,
-        tooltip: enabled
-            ? l10n.libraryShelfContinueReading
-            : l10n.libraryShelfNoRecentReading,
-        icon: const Icon(Icons.play_arrow),
-        label: Text(l10n.libraryShelfContinueReading),
-      ),
+      bottom: 72,
+      child: glassActive
+          ? FloatingActionButton(
+              key: const Key('unified-shelf-recent-reading'),
+              onPressed: enabled ? _openRecentReading : null,
+              tooltip: tooltip,
+              backgroundColor: Colors.transparent,
+              foregroundColor: foreground,
+              elevation: 0,
+              highlightElevation: 0,
+              focusElevation: 0,
+              hoverElevation: 0,
+              disabledElevation: 0,
+              shape: const CircleBorder(),
+              child: AppGlassSurface(
+                borderRadius: 28,
+                child: SizedBox.square(
+                  dimension: 56,
+                  child: Icon(Icons.play_arrow, color: foreground),
+                ),
+              ),
+            )
+          : FloatingActionButton(
+              key: const Key('unified-shelf-recent-reading'),
+              onPressed: enabled ? _openRecentReading : null,
+              tooltip: tooltip,
+              backgroundColor: eInk
+                  ? scheme.surface
+                  : scheme.surfaceContainerHigh,
+              foregroundColor: foreground,
+              elevation: eInk ? 0 : null,
+              highlightElevation: eInk ? 0 : null,
+              focusElevation: eInk ? 0 : null,
+              hoverElevation: eInk ? 0 : null,
+              disabledElevation: eInk ? 0 : null,
+              shape: eInk
+                  ? CircleBorder(
+                      side: BorderSide(
+                        color: AppTheme.eInkBorderColor(scheme.brightness),
+                      ),
+                    )
+                  : const CircleBorder(),
+              child: const Icon(Icons.play_arrow),
+            ),
     );
   }
 
@@ -1067,6 +1117,7 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
   Future<void> _handleMenuAction(String value) async {
     final messenger = ScaffoldMessenger.of(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
 
     if (value.startsWith(_moduleActionPrefix)) {
       final Object adapter = widget.adapter;
@@ -1088,15 +1139,13 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         }
         setState(() {});
       }
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            LibraryShelfTextResolver.menuOutcome(
-              AppLocalizations.of(context),
-              action,
-              result,
-            ),
-          ),
+      showTransientSnackBarWithMessenger(
+        messenger,
+        feedbackStyle,
+        LibraryShelfTextResolver.menuOutcome(
+          AppLocalizations.of(context),
+          action,
+          result,
         ),
       );
       return;
@@ -1117,12 +1166,10 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         return;
       }
       if (workId == null) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).libraryShelfNoRandomWork,
-            ),
-          ),
+        showTransientSnackBarWithMessenger(
+          messenger,
+          feedbackStyle,
+          AppLocalizations.of(context).libraryShelfNoRandomWork,
         );
         return;
       }
@@ -1142,13 +1189,10 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
         await _controller.createCategory(name.trim());
       } catch (_) {
         if (mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)
-                    .libraryShelfCategoryOperationFailed,
-              ),
-            ),
+          showTransientSnackBarWithMessenger(
+            messenger,
+            feedbackStyle,
+            AppLocalizations.of(context).libraryShelfCategoryOperationFailed,
           );
         }
         return;
@@ -1177,13 +1221,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
   Future<void> _renameCategory(LibraryCategory category) async {
     final messenger = ScaffoldMessenger.of(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     if (category.isSystemCategory || category.isSynthetic) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).libraryShelfSystemCategoryCannotRename,
-          ),
-        ),
+      showTransientSnackBarWithMessenger(
+        messenger,
+        feedbackStyle,
+        AppLocalizations.of(context).libraryShelfSystemCategoryCannotRename,
       );
       return;
     }
@@ -1201,12 +1244,10 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
       );
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).libraryShelfCategoryOperationFailed,
-            ),
-          ),
+        showTransientSnackBarWithMessenger(
+          messenger,
+          feedbackStyle,
+          AppLocalizations.of(context).libraryShelfCategoryOperationFailed,
         );
       }
       return;
@@ -1219,13 +1260,12 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
   Future<void> _deleteCategory(LibraryCategory category) async {
     final messenger = ScaffoldMessenger.of(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     if (category.isSystemCategory || category.isSynthetic) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).libraryShelfSystemCategoryCannotDelete,
-          ),
-        ),
+      showTransientSnackBarWithMessenger(
+        messenger,
+        feedbackStyle,
+        AppLocalizations.of(context).libraryShelfSystemCategoryCannotDelete,
       );
       return;
     }

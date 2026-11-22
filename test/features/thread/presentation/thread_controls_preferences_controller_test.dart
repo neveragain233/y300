@@ -24,6 +24,7 @@ void main() {
     expect(value.singleNavigationButton, isFalse);
     expect(value.navigationEnabled, isTrue);
     expect(value.showFavorite, isTrue);
+    expect(value.expandRatingsByDefault, isTrue);
   });
   test('legacy side is read without enabling scroll hiding', () async {
     SharedPreferences.setMockInitialValues({
@@ -49,6 +50,7 @@ void main() {
             singleNavigationButton: true,
             holdToFirstPost: true,
             hideOnScroll: true,
+            expandRatingsByDefault: false,
           ),
         );
     first.dispose();
@@ -61,6 +63,7 @@ void main() {
     expect(restored.singleNavigationButton, isTrue);
     expect(restored.holdToFirstPost, isTrue);
     expect(restored.hideOnScroll, isTrue);
+    expect(restored.expandRatingsByDefault, isFalse);
   });
   for (final raw in [
     'broken',

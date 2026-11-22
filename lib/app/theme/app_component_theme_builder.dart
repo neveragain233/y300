@@ -107,12 +107,19 @@ final class AppComponentThemeBuilder {
   }
 
   static SnackBarThemeData snackBarTheme(ColorScheme scheme) {
+    final background = scheme.brightness == Brightness.dark
+        ? scheme.surfaceContainerHigh
+        : scheme.surfaceContainerLowest;
     return SnackBarThemeData(
-      backgroundColor: scheme.inverseSurface,
-      contentTextStyle: TextStyle(color: scheme.onInverseSurface),
-      actionTextColor: scheme.inversePrimary,
+      backgroundColor: background,
+      contentTextStyle: TextStyle(color: scheme.onSurface),
+      actionTextColor: scheme.primary,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
     );
   }
 

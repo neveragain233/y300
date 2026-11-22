@@ -5,6 +5,7 @@ import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 已屏蔽帖子子页：只展示本地屏蔽的帖子并提供解除入口。
 ///
@@ -108,23 +109,20 @@ class _BlockedThreadsPageState extends ConsumerState<BlockedThreadsPage> {
   Future<void> _unblockThread(BlockedThread rule) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     final restored = await ref
         .read(blockedThreadsControllerProvider.notifier)
         .unblock(rule.tid);
     if (!mounted) {
       return;
     }
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            restored
-                ? l10n.contentFilterUnblocked(rule.subject)
-                : l10n.contentFilterSaveFailed,
-          ),
-        ),
-      );
+    showTransientSnackBarWithMessenger(
+      messenger,
+      feedbackStyle,
+      restored
+          ? l10n.contentFilterUnblocked(rule.subject)
+          : l10n.contentFilterSaveFailed,
+    );
   }
 }
 

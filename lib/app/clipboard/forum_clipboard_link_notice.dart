@@ -22,6 +22,7 @@ SnackBar buildForumClipboardLinkSnackBar({
     // Consecutive presentations need fresh visibility and action state.
     key: UniqueKey(),
     behavior: SnackBarBehavior.floating,
+    dismissDirection: DismissDirection.down,
     duration: const Duration(seconds: 6),
     // The SDK otherwise keeps snackbars with an action visible indefinitely.
     persist: false,

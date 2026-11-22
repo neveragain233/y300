@@ -12,6 +12,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_category_name_dialog.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// Shares selection actions between tabbed and independently opened shelves.
 class ShelfSelectionBottomBar extends ConsumerStatefulWidget {
@@ -226,12 +227,6 @@ class _ShelfSelectionBottomBarState
   }
 
   void _showSelectionMessage(String message) {
-    final trimmed = message.trim();
-    if (trimmed.isEmpty) {
-      return;
-    }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(trimmed)));
+    showTransientSnackBar(context, message);
   }
 }

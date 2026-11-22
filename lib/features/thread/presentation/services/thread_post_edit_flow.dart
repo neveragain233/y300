@@ -12,6 +12,7 @@ import 'package:y300/features/forum/presentation/webview/forum_webview_driver.da
 import 'package:y300/features/forum/presentation/webview/forum_webview_route_factory.dart';
 import 'package:y300/features/forum/domain/models/forum_webview_launch_models.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ThreadPostEditFlow {
   const ThreadPostEditFlow({
@@ -76,9 +77,7 @@ class ThreadPostEditFlow {
           result.readAccess,
         );
         if (feedback != null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(feedback)));
+          showTransientSnackBar(context, feedback);
         }
       }
       await onMutation();

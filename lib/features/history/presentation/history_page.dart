@@ -22,6 +22,7 @@ import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/shared/widgets/inline_search_app_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 typedef HistoryEntryOpenCallback = Future<HistoryOpenResult> Function(
   BuildContext context,
@@ -381,33 +382,24 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ? null
         : HistoryTextResolver.safeErrorSummary(unavailable.detail);
     final message = HistoryTextResolver.unavailableMessage(l10n, unavailable);
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: detail == null
-              ? Text(message)
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Text(message), Text(detail)],
-                ),
-          action: fallbackTid != null
-              ? SnackBarAction(
-                  label: l10n.historyOpenSourceThread,
-                  onPressed: () {
-                    unawaited(_openSourceThread(entry, fallbackTid));
-                  },
-                )
-              : SnackBarAction(
-                  label: l10n.historyDelete,
-                  onPressed: () {
-                    unawaited(_deleteEntry(entry));
-                  },
-                ),
-        ),
-      );
+    showTransientSnackBar(
+      context,
+      message,
+      detail: detail,
+      action: fallbackTid != null
+          ? SnackBarAction(
+              label: l10n.historyOpenSourceThread,
+              onPressed: () {
+                unawaited(_openSourceThread(entry, fallbackTid));
+              },
+            )
+          : SnackBarAction(
+              label: l10n.historyDelete,
+              onPressed: () {
+                unawaited(_deleteEntry(entry));
+              },
+            ),
+    );
   }
 
   Future<void> _openSourceThread(HistoryEntry source, String tid) async {
@@ -458,18 +450,14 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       return;
     }
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(l10n.historyDeleted),
-          action: SnackBarAction(
-            label: l10n.historyUndoDelete,
-            onPressed: () =>
-                _restoreDeletedEntry(entry, controller, generation),
-          ),
-        ),
-      );
+    showTransientSnackBar(
+      context,
+      l10n.historyDeleted,
+      action: SnackBarAction(
+        label: l10n.historyUndoDelete,
+        onPressed: () => _restoreDeletedEntry(entry, controller, generation),
+      ),
+    );
   }
 
   Future<void> _restoreDeletedEntry(
@@ -523,9 +511,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 
   String _dateKey(DateTime value) {

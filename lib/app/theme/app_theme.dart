@@ -264,7 +264,16 @@ final class AppTheme {
         elevation: 0,
         shadowColor: shadow,
       ),
-      snackBarTheme: theme.snackBarTheme.copyWith(elevation: 0),
+      snackBarTheme: theme.snackBarTheme.copyWith(
+        backgroundColor: palette.surface,
+        contentTextStyle: TextStyle(color: palette.onSurface),
+        actionTextColor: palette.onSurface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: border, width: 1),
+        ),
+      ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 0,
         focusElevation: 0,

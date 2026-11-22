@@ -3562,6 +3562,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get threadControlsHideOnScrollHint => '向上滚动时恢复，默认关闭';
 
   @override
+  String get threadExpandRatingsByDefault => '默认展开帖子评分';
+
+  @override
+  String get threadExpandRatingsByDefaultHint => '关闭后评分默认折叠为摘要，点击可展开详情';
+
+  @override
   String get threadControlsSaveFailed => '保存失败，已恢复上次设置';
 
   @override
@@ -6314,10 +6320,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSearchKeywordsNavigationManagement => '底栏、入口、排序、显隐、启动页、导航';
 
   @override
-  String get settingsSearchSummaryBrowsingPosts => '内容屏蔽与帖子悬浮操作';
+  String get settingsSearchSummaryBrowsingPosts => '内容屏蔽、帖子评分折叠与悬浮操作';
 
   @override
-  String get settingsSearchKeywordsBrowsingPosts => '设置主页、浏览、帖子、屏蔽、分组';
+  String get settingsSearchKeywordsBrowsingPosts => '设置主页、浏览、帖子、屏蔽、评分、折叠、分组';
 
   @override
   String get settingsSearchSummaryContentFilter => '黑名单作者、屏蔽帖子与过滤规则';
@@ -10055,6 +10061,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get threadControlsHideOnScrollHint => '向上捲動時恢復，預設關閉';
 
   @override
+  String get threadExpandRatingsByDefault => '預設展開帖子評分';
+
+  @override
+  String get threadExpandRatingsByDefaultHint => '關閉後評分預設折疊為摘要，點擊可展開詳情';
+
+  @override
   String get threadControlsSaveFailed => '儲存失敗，已恢復上次設定';
 
   @override
@@ -12810,10 +12822,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
       '底欄、入口、排序、顯示隱藏、啟動頁、導覽';
 
   @override
-  String get settingsSearchSummaryBrowsingPosts => '內容屏蔽與帖子懸浮操作';
+  String get settingsSearchSummaryBrowsingPosts => '內容屏蔽、帖子評分折疊與懸浮操作';
 
   @override
-  String get settingsSearchKeywordsBrowsingPosts => '設定主頁、瀏覽、帖子、屏蔽、分組';
+  String get settingsSearchKeywordsBrowsingPosts => '設定主頁、瀏覽、帖子、屏蔽、評分、折疊、分組';
 
   @override
   String get settingsSearchSummaryContentFilter => '黑名單作者、屏蔽帖子與過濾規則';

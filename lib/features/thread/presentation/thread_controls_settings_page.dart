@@ -5,6 +5,7 @@ import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 import '../domain/models/thread_controls_preferences.dart';
 import 'thread_controls_preferences_controller.dart';
@@ -23,9 +24,7 @@ class ThreadControlsSettingsPage extends ConsumerWidget {
           .read(threadControlsPreferencesControllerProvider.notifier)
           .savePreferences(next);
       if (!saved && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.threadControlsSaveFailed)));
+        showTransientSnackBar(context, l10n.threadControlsSaveFailed);
       }
     }
 

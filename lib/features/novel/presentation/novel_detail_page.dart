@@ -31,6 +31,7 @@ import 'package:y300/features/novel/presentation/widgets/novel_chapter_open_mode
 import 'package:y300/features/novel/presentation/services/novel_source_thread_route_launcher.dart';
 import 'package:y300/features/library_shared/presentation/services/library_error_summary.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 const _progressDiagnostics = NovelReaderProgressDiagnostics();
 
@@ -457,8 +458,6 @@ class _NovelDetailPageState extends ConsumerState<NovelDetailPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 }

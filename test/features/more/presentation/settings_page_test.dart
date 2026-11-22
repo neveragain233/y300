@@ -7,9 +7,11 @@ import 'package:y300/features/more/presentation/appearance_page.dart';
 import 'package:y300/features/more/presentation/more_debug_tools.dart';
 import 'package:y300/features/more/presentation/navigation_management_page.dart';
 import 'package:y300/features/more/presentation/settings_page.dart';
+import 'package:y300/features/thread/presentation/thread_controls_preferences_controller.dart';
 import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
@@ -44,6 +46,7 @@ void main() {
       'more-appearance-entry',
       'more-navigation-management-entry',
       'more-content-filter-entry',
+      'settings-expand-ratings-by-default',
       'more-thread-controls-entry',
       'more-data-storage-entry',
       'more-about-entry',
@@ -115,6 +118,32 @@ void main() {
     }
     expect(find.byType(AboutPage), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expand ratings switch toggles and persists preference', (
+    tester,
+  ) async {
+    await _pumpSettings(tester);
+    final switchRow = find.byKey(
+      const Key('settings-expand-ratings-by-default'),
+    );
+    await _scrollTo(tester, switchRow);
+    expect(tester.widget<AppSwitchRow>(switchRow).value, isTrue);
+
+    await tester.tap(switchRow);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<AppSwitchRow>(switchRow).value, isFalse);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byKey(const Key('settings-page'))),
+    );
+    expect(
+      container
+          .read(threadControlsPreferencesControllerProvider)
+          .requireValue
+          .expandRatingsByDefault,
+      isFalse,
+    );
   });
 
   testWidgets('debug group disappears when debug tools provide no rows', (

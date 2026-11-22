@@ -9,6 +9,7 @@ final class ThreadControlsPreferences {
     this.singleNavigationButton = false,
     this.holdToFirstPost = false,
     this.hideOnScroll = false,
+    this.expandRatingsByDefault = true,
   });
 
   final bool compact;
@@ -18,6 +19,7 @@ final class ThreadControlsPreferences {
   final bool singleNavigationButton;
   final bool holdToFirstPost;
   final bool hideOnScroll;
+  final bool expandRatingsByDefault;
 
   ThreadControlsPreferences copyWith({
     bool? compact,
@@ -27,6 +29,7 @@ final class ThreadControlsPreferences {
     bool? singleNavigationButton,
     bool? holdToFirstPost,
     bool? hideOnScroll,
+    bool? expandRatingsByDefault,
   }) => ThreadControlsPreferences(
     compact: compact ?? this.compact,
     side: side ?? this.side,
@@ -36,5 +39,7 @@ final class ThreadControlsPreferences {
         singleNavigationButton ?? this.singleNavigationButton,
     holdToFirstPost: holdToFirstPost ?? this.holdToFirstPost,
     hideOnScroll: hideOnScroll ?? this.hideOnScroll,
+    expandRatingsByDefault:
+        expandRatingsByDefault ?? this.expandRatingsByDefault,
   );
 }

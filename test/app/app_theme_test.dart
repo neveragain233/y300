@@ -150,6 +150,14 @@ void main() {
       AnimationStyle.noAnimation,
     );
     expect(eInkLight.snackBarTheme.elevation, 0);
+    expect(eInkLight.snackBarTheme.backgroundColor, Colors.white);
+    expect(
+      eInkLight.snackBarTheme.shape,
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppTheme.eInkBorderColor(Brightness.light)),
+      ),
+    );
     expect(eInkLight.floatingActionButtonTheme.elevation, 0);
     expect(eInkLight.floatingActionButtonTheme.highlightElevation, 0);
     expect(eInkLight.floatingActionButtonTheme.backgroundColor, Colors.white);
@@ -689,7 +697,13 @@ void _expectComponentThemesMatchScheme(ThemeData theme) {
   expect(theme.bottomSheetTheme.modalBackgroundColor, scheme.surfaceContainer);
   expect(theme.bottomSheetTheme.showDragHandle, isFalse);
   expect(theme.dialogTheme.backgroundColor, scheme.surfaceContainer);
-  expect(theme.snackBarTheme.backgroundColor, scheme.inverseSurface);
+  expect(
+    theme.snackBarTheme.backgroundColor,
+    scheme.brightness == Brightness.dark
+        ? scheme.surfaceContainerHigh
+        : scheme.surfaceContainerLowest,
+  );
+  expect(theme.snackBarTheme.actionTextColor, scheme.primary);
   expect(
     theme.segmentedButtonTheme.style?.backgroundColor?.resolve(
       const <WidgetState>{WidgetState.selected},

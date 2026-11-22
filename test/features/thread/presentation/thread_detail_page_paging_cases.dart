@@ -839,7 +839,11 @@ void _pagingCases() {
       find.byKey(const Key('thread-post-comment-section')),
     );
     final commentSectionDecoration = commentSection.decoration as BoxDecoration;
-    expect(commentSectionDecoration.color, detailPalette.panelBackground);
+    expect(commentSectionDecoration.color, isNull);
+    expect(
+      commentSectionDecoration.border,
+      Border(left: BorderSide(color: detailPalette.ratingBar, width: 2.5)),
+    );
     expect(find.text('花実'), findsOneWidget);
     expect(find.text('活该你日和你国同性恋权益烂的要死'), findsOneWidget);
     expect(find.text('2026-6-21 12:31'), findsOneWidget);
@@ -848,7 +852,11 @@ void _pagingCases() {
       find.byKey(const Key('thread-post-rating-section')),
     );
     final ratingSectionDecoration = ratingSection.decoration as BoxDecoration;
-    expect(ratingSectionDecoration.color, detailPalette.panelBackground);
+    expect(ratingSectionDecoration.color, isNull);
+    expect(
+      ratingSectionDecoration.border,
+      Border(left: BorderSide(color: detailPalette.ratingBar, width: 2.5)),
+    );
     expect(find.text('参与人数 1'), findsOneWidget);
     expect(find.text('积分 +2'), findsOneWidget);
     expect(find.text('子子子车'), findsOneWidget);

@@ -15,6 +15,8 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
   ThreadDetailQuickScrollTarget? get _endpointTarget;
   int get _endpointViewRevision;
   set _endpointViewRevision(int value);
+  bool get _anchorToRepliesHeader;
+  set _anchorToRepliesHeader(bool value);
   set _pendingChunkAnchor(ThreadPostViewportAnchorSnapshot? value);
   Iterable<String> _sourcePidsFor(ThreadDetailContent target);
   Future<ThreadDetailEndpointNavigationResult> _navigateToEndpoint({
@@ -25,6 +27,7 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
   });
 
   String? _floorTargetPid;
+  bool _ignoreInitialWidgetTarget = false;
   final _floorHeaderKeys = <String, GlobalKey>{};
   GlobalKey _floorHeaderKey(String pid) => _floorHeaderKeys.putIfAbsent(
     pid,
@@ -47,6 +50,7 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     GlobalKey center,
     int revision,
     ThreadDetailQuickScrollTarget? endpoint,
+    bool anchorRepliesHeader,
   })?
   _pendingFloorBuild;
 
@@ -58,9 +62,12 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
     _targetCenterKey = pending.center;
     _endpointViewRevision = pending.revision;
     _endpointTarget = pending.endpoint;
+    _anchorToRepliesHeader = pending.anchorRepliesHeader;
   }
 
-  String? get _activeTargetPid => _floorTargetPid ?? widget.targetPid?.trim();
+  String? get _activeTargetPid =>
+      _floorTargetPid ??
+      (_ignoreInitialWidgetTarget ? null : widget.targetPid?.trim());
   ThreadPostLanding get _activeLanding =>
       _floorTargetPid == null ? widget.landing : ThreadPostLanding.top;
 
@@ -81,6 +88,16 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
       _floorGeneration++;
     }
     if (previous.state.tid != widget.state.tid ||
+        previous.targetPid != widget.targetPid ||
+        previous.landing != widget.landing) {
+      _ignoreInitialWidgetTarget = false;
+    } else if (previous.state.queryParameters['authorid'] !=
+            widget.state.queryParameters['authorid'] ||
+        previous.state.queryParameters['ordertype'] !=
+            widget.state.queryParameters['ordertype']) {
+      _ignoreInitialWidgetTarget = true;
+    }
+    if (previous.state.tid != widget.state.tid ||
         previous.state.currentPage != widget.state.currentPage ||
         previous.targetPid != widget.targetPid ||
         previous.landing != widget.landing ||
@@ -89,6 +106,8 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
             widget.state.queryParameters['authorid'] ||
         previous.state.queryParameters['ordertype'] !=
             widget.state.queryParameters['ordertype'] ||
+        previous.repliesHeaderAnchorRevision !=
+            widget.repliesHeaderAnchorRevision ||
         !identical(previous.scrollController, widget.scrollController)) {
       _floorGeneration++;
       _floorTargetPid = null;
@@ -372,9 +391,11 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
         center: _targetCenterKey,
         revision: _endpointViewRevision,
         endpoint: _endpointTarget,
+        anchorRepliesHeader: _anchorToRepliesHeader,
       );
       // 沿用已支持楼层定位的居中列表，按真实条目落点，避免估算长正文高度。
       setState(() {
+        _anchorToRepliesHeader = false;
         _floorTargetPid = pid;
         _endpointTarget = null;
         _endpointViewRevision++;

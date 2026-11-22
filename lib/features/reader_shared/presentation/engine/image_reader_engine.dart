@@ -44,6 +44,7 @@ import 'package:y300/features/reader_shared/presentation/services/reader_image_s
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
 import 'package:y300/features/reader_shared/presentation/widgets/reader_thumbnail_strip.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 通用图片阅读壳：垂直/横向模式、缩放、overlay 工具栏、进度滑块、页码浮层、
 /// 显示设置、滚动锚定补偿、解码预热。
@@ -2771,10 +2772,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (!mounted) {
       return;
     }
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 
   Future<void> _showDisplaySettingsSheet() async {

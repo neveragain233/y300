@@ -73,6 +73,7 @@ import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.da
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
 import 'package:y300/shared/widgets/reader_content_region.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 const _progressDiagnostics = NovelReaderProgressDiagnostics();
 
@@ -3131,15 +3132,11 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   }
 
   void _showReaderSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-        ),
-      );
+    showTransientSnackBar(
+      context,
+      message,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+    );
   }
 
   Future<void> _updateWorkFromErrorView() async {

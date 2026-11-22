@@ -23,7 +23,7 @@ void _carouselCases() {
           matching: find.byType(ClipRRect),
         ),
       );
-      expect(carouselClip.borderRadius, BorderRadius.circular(4));
+      expect(carouselClip.borderRadius, BorderRadius.circular(16));
       expect(find.text('综合区'), findsOneWidget);
       expect(find.text('公告区'), findsOneWidget);
       expect(find.text('今日'), findsOneWidget);

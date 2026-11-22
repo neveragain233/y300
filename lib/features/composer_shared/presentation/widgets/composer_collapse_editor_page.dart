@@ -19,6 +19,7 @@ import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 typedef ComposerCollapseSaveCommitter =
     Future<ComposerCollapseCommitStatus> Function(ComposerCollapseDraft draft);
@@ -374,15 +375,11 @@ class _ComposerCollapseEditorPageState
 
   void _showUploadStatus() {
     final host = widget.hostController.value;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalizations.of(context).composerUploadingImages(
-            host.imageUploadCurrent,
-            host.imageUploadTotal,
-          ),
-        ),
-      ),
+    showTransientSnackBar(
+      context,
+      AppLocalizations.of(
+        context,
+      ).composerUploadingImages(host.imageUploadCurrent, host.imageUploadTotal),
     );
   }
 
@@ -498,10 +495,9 @@ class _ComposerCollapseEditorPageState
   }
 
   void _showConflict() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).composerCollapseConflict),
-      ),
+    showTransientSnackBar(
+      context,
+      AppLocalizations.of(context).composerCollapseConflict,
     );
   }
 }

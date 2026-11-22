@@ -131,6 +131,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   final _controlsVisibility = ThreadControlsVisibilityController();
   double _controlsHeight = 56;
   double _repliesHeaderHeight = 0;
+  int _repliesHeaderAnchorRevision = 0;
   Timer? _highlightClearTimer;
   String? _highlightPostPid;
   bool _targetHighlightStarted = false;
@@ -630,6 +631,10 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                   child: ThreadDetailContent(
                                     key: _titleObserver.viewportKey,
                                     firstPostTitleKey: _titleObserver.titleKey,
+                                    repliesHeaderAnchorRevision:
+                                        _repliesHeaderAnchorRevision,
+                                    defaultRatingsExpanded: controlsPreferences
+                                        .expandRatingsByDefault,
                                     floorNavigation: _floorNavigation,
                                     onRepliesHeaderHeightChanged: (height) {
                                       if (mounted &&
@@ -697,13 +702,14 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                               : controller.openOnlyAuthor,
                                           userNavigation: true,
                                         ),
-                                    onOrderChanged: (reverse) =>
-                                        _runReadingViewAction(
-                                          reverse
-                                              ? controller.openReverseOrder
-                                              : controller.openNormalOrder,
-                                          userNavigation: true,
-                                        ),
+                                    onOrderChanged: (reverse) => unawaited(
+                                      _runOrderViewAction(
+                                        reverse
+                                            ? controller.openReverseOrder
+                                            : controller.openNormalOrder,
+                                        anchorRepliesHeader: !reverse,
+                                      ),
+                                    ),
                                     onOpenAuthorProfile: _openAuthorProfile,
                                     onOpenCommentAuthorProfile:
                                         _openCommentAuthorProfile,
@@ -815,15 +821,19 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             controller.openAllPosts,
             userNavigation: true,
           ),
-          onReverseOrder: () => _runReadingViewAction(
-            controller.openReverseOrder,
-            userNavigation: true,
+          onReverseOrder: () => unawaited(
+            _runOrderViewAction(
+              controller.openReverseOrder,
+              anchorRepliesHeader: false,
+            ),
           ),
-          onNormalOrder: () => _runReadingViewAction(
-            controller.openNormalOrder,
-            userNavigation: true,
+          onNormalOrder: () => unawaited(
+            _runOrderViewAction(
+              controller.openNormalOrder,
+              anchorRepliesHeader: true,
+            ),
           ),
-          onCopyUrl: _copyUrl,
+          onReturnHome: () => unawaited(_returnHome()),
           onDisplaySettings: _openDisplaySettings,
           onControlsSettings: _openControlsSettings,
           onBlockThread: () => unawaited(_blockCurrentThread(state)),
@@ -1338,6 +1348,95 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     }
   }
 
+  /// 切换正序／倒序后显式重置落点：倒序直跳页首，正序若含首楼则锚定至回复栏。
+  Future<void> _runOrderViewAction(
+    Future<void> Function() action, {
+    required bool anchorRepliesHeader,
+  }) async {
+    final provider = threadDetailControllerProvider(_currentThreadArgs);
+    final beforeState = ref.read(provider).value;
+    final beforeQuery = beforeState == null
+        ? null
+        : _queryIdentityFor(beforeState);
+    final observer = widget.bodyReadingObserver;
+    final ownerRevision = _readingOwnerRevision;
+    _cancelFloorNavigation();
+    _controlsVisibility.reset();
+    if (observer != null) {
+      _readingSuspensions++;
+      _bodyReadingCoordinator?.markUserNavigation();
+      _bodyReadingCoordinator?.setActive(false);
+      _pauseReading(observer);
+      await _flushReading(observer);
+    }
+    try {
+      if (!mounted || ownerRevision != _readingOwnerRevision) return;
+      await action();
+      if (!mounted || ownerRevision != _readingOwnerRevision) return;
+      final afterState = ref.read(provider).value;
+      if (afterState == null ||
+          afterState.loadFailure != null ||
+          _queryIdentityFor(afterState) == beforeQuery) {
+        return;
+      }
+      final shouldAnchorReplies =
+          anchorRepliesHeader &&
+          !afterState.isReverseOrderView &&
+          afterState.posts.any((post) => post.isFirst);
+      if (shouldAnchorReplies) {
+        setState(() => _repliesHeaderAnchorRevision++);
+      }
+      if (_scrollController.hasClients) {
+        final position = _scrollController.position;
+        final preTarget = shouldAnchorReplies ? 0.0 : position.minScrollExtent;
+        final clamped = preTarget
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble();
+        if ((position.pixels - clamped).abs() >= 1) {
+          _scrollController.jumpTo(clamped);
+        }
+      }
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted ||
+          ownerRevision != _readingOwnerRevision ||
+          !_scrollController.hasClients) {
+        return;
+      }
+      final position = _scrollController.position;
+      final targetOffset = shouldAnchorReplies ? 0.0 : position.minScrollExtent;
+      final clamped = targetOffset
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      if ((position.pixels - clamped).abs() >= 1) {
+        _scrollController.jumpTo(clamped);
+      }
+    } finally {
+      if (observer != null && ownerRevision == _readingOwnerRevision) {
+        _readingSuspensions--;
+        if (mounted) {
+          _readingVisible = false;
+          _syncReadingVisibility();
+        }
+      }
+    }
+  }
+
+  Future<void> _returnHome() async {
+    _cancelFloorNavigation();
+    _controlsVisibility.reset();
+    final observer = widget.bodyReadingObserver;
+    if (observer != null && !_readingClosing) {
+      _readingClosing = true;
+      _readingVisibilityRevision++;
+      _bodyReadingCoordinator?.setActive(false);
+      _pauseReading(observer);
+      await _flushReading(observer);
+      observer.retire();
+    }
+    if (!mounted) return;
+    await returnToAdaptiveRoot(context);
+  }
+
   Future<void> _openThreadReplyComposer(
     ThreadDetailArgs args,
     ThreadDetailPageState state,
@@ -1615,7 +1714,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
     required this.onAllPosts,
     required this.onReverseOrder,
     required this.onNormalOrder,
-    required this.onCopyUrl,
+    this.onReturnHome,
     required this.onDisplaySettings,
     required this.onControlsSettings,
     required this.onBlockThread,
@@ -1627,7 +1726,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
   final VoidCallback onAllPosts;
   final VoidCallback onReverseOrder;
   final VoidCallback onNormalOrder;
-  final void Function(String label, String url) onCopyUrl;
+  final VoidCallback? onReturnHome;
   final VoidCallback onDisplaySettings;
   final VoidCallback onControlsSettings;
   final VoidCallback onBlockThread;
@@ -1681,8 +1780,9 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
             icon: const Icon(Icons.person_off_outlined),
             danger: true,
           ),
-        if (state.homeUrl?.trim().isNotEmpty == true)
+        if (onReturnHome != null)
           AppPopupMenuItem<String>(
+            key: const Key('thread-detail-back-home-menu-item'),
             value: 'home',
             label: l10n.threadDetailBackHome,
             icon: const Icon(Icons.home_outlined),
@@ -1715,7 +1815,7 @@ class _ThreadDetailMoreMenu extends StatelessWidget {
             onBlockAuthor?.call();
             return;
           case 'home':
-            onCopyUrl(l10n.threadDetailHomeLink, state.homeUrl!);
+            onReturnHome?.call();
             return;
         }
       },

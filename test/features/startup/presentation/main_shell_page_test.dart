@@ -41,6 +41,8 @@ import 'package:y300/features/messages/presentation/widgets/message_attention_ic
 import '../../messages/support/message_test_repository.dart';
 
 import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/network/api_result.dart';
 import 'package:y300/core/network/cookie_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';

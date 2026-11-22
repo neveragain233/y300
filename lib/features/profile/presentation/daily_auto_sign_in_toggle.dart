@@ -4,6 +4,7 @@ import 'package:y300/features/profile/presentation/daily_sign_in_controller.dart
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// Loads only the account preference; displaying this control never checks
 /// remote sign-in status or starts an automatic attempt.
@@ -88,12 +89,9 @@ class DailyAutoSignInToggle extends ConsumerWidget {
       return;
     }
     if (ref.read(dailySignInControllerProvider).settingsUnavailable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).dailyAutoSignInStorageUnavailable,
-          ),
-        ),
+      showTransientSnackBar(
+        context,
+        AppLocalizations.of(context).dailyAutoSignInStorageUnavailable,
       );
     }
   }

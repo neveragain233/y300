@@ -1551,9 +1551,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 
   Future<void> _showEditMetadataSheet() async {

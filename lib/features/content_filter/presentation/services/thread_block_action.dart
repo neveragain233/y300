@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// Shared "block this thread" gesture used by native cards and thread detail.
 final class ThreadBlockAction {
@@ -20,48 +21,47 @@ final class ThreadBlockAction {
   }) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     final controller = ref.read(blockedThreadsControllerProvider.notifier);
     final result = await controller.block(tid: tid, subject: subject);
     switch (result.status) {
       case BlockedThreadBlockStatus.failed:
-        messenger
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(l10n.contentFilterSaveFailed)));
+        showTransientSnackBarWithMessenger(
+          messenger,
+          feedbackStyle,
+          l10n.contentFilterSaveFailed,
+        );
         return false;
       case BlockedThreadBlockStatus.alreadyBlocked:
-        messenger
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                l10n.contentFilterAlreadyBlocked(result.entry!.subject),
-              ),
-            ),
-          );
+        showTransientSnackBarWithMessenger(
+          messenger,
+          feedbackStyle,
+          l10n.contentFilterAlreadyBlocked(result.entry!.subject),
+        );
         return true;
       case BlockedThreadBlockStatus.created:
         final entry = result.entry!;
-        messenger
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(l10n.contentFilterBlocked(entry.subject)),
-              action: SnackBarAction(
-                label: l10n.contentFilterUndo,
-                onPressed: () {
-                  unawaited(
-                    controller.undo(entry).then((restored) {
-                      if (!restored) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text(l10n.contentFilterSaveFailed)),
-                        );
-                      }
-                    }),
-                  );
-                },
-              ),
-            ),
-          );
+        showTransientSnackBarWithMessenger(
+          messenger,
+          feedbackStyle,
+          l10n.contentFilterBlocked(entry.subject),
+          action: SnackBarAction(
+            label: l10n.contentFilterUndo,
+            onPressed: () {
+              unawaited(
+                controller.undo(entry).then((restored) {
+                  if (!restored) {
+                    showTransientSnackBarWithMessenger(
+                      messenger,
+                      feedbackStyle,
+                      l10n.contentFilterSaveFailed,
+                    );
+                  }
+                }),
+              );
+            },
+          ),
+        );
         return true;
     }
   }

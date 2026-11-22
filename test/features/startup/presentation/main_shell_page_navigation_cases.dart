@@ -461,4 +461,153 @@ void _navigationCases() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'immersive bottom dock animates on detail route push/pop, snaps in e-ink, and preserves source inset',
+    (tester) async {
+      final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+        ComicSearchRefreshQueueSnapshot.empty,
+      );
+      final selection = ShelfSelectionHostController();
+      addTearDown(queue.dispose);
+      addTearDown(selection.dispose);
+      var eInk = false;
+      late StateSetter setMode;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
+            novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
+            libraryStateRepositoryProvider.overrideWithValue(
+              _FakeLibraryStateRepository(),
+            ),
+            localFavoriteRepositoryProvider.overrideWith(
+              (ref) => _FakeLocalFavoriteRepository(),
+            ),
+            favoriteSyncServiceProvider.overrideWith(
+              (ref) => _FakeFavoriteSyncService(),
+            ),
+            comicSearchRefreshQueueSnapshotProvider.overrideWithValue(queue),
+            mainShellBackgroundTaskStarterProvider.overrideWithValue(
+              (_) async {},
+            ),
+            mainShellNotificationInitializerProvider.overrideWithValue(
+              (_) async {},
+            ),
+            mainShellYamiboSessionWarmupProvider.overrideWithValue(() async {}),
+            ...forumAuthOverrides(_FakeAuthRepository()),
+            shelfSelectionHostControllerProvider.overrideWithValue(selection),
+            forumHomeRepositoryProvider.overrideWithValue(
+              _FakeForumHomeRepository(),
+            ),
+            forumWebViewDriverFactoryProvider.overrideWithValue(
+              () => _FakeForumWebViewDriver(),
+            ),
+            cookieStoreProvider.overrideWithValue(_FakeCookieStore()),
+            historyRepositoryProvider.overrideWithValue(
+              const _FakeHistoryRepository(),
+            ),
+          ],
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              setMode = setState;
+              return LocalizedTestApp(
+                builder: (context, child) =>
+                    EInkModeScope(enabled: eInk, child: child!),
+                home: const MainShellPage(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MainShellPage)),
+      );
+      await _tapNavigationGroup(tester, l10n.appNavigationBookshelf);
+      final fabFinder = find.byKey(const Key('unified-shelf-recent-reading'));
+      expect(fabFinder, findsOneWidget);
+      final fabBeforeDetail = tester.getTopLeft(fabFinder).dy;
+      final insetBeforeDetail = MainShellBottomInset.of(
+        tester.element(fabFinder),
+      );
+      expect(insetBeforeDetail, greaterThan(0));
+
+      unawaited(
+        openAdaptiveDetail<void>(
+          tester.element(fabFinder),
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(
+              key: Key('detail-route-body'),
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      // During normal exit animation the capsule stays mounted briefly while sliding/fading.
+      expect(find.byType(MainNavigationCapsule), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      expect(find.byType(MainNavigationCapsule), findsNothing);
+      expect(find.byKey(const Key('detail-route-body')), findsOneWidget);
+      // Source pane keeps its bottom inset while the detail route is active so
+      // the bookshelf FAB never jumps upward and downward across transitions.
+      final offstageFab = find.byKey(
+        const Key('unified-shelf-recent-reading'),
+        skipOffstage: false,
+      );
+      expect(tester.getTopLeft(offstageFab).dy, fabBeforeDetail);
+      expect(
+        MainShellBottomInset.of(tester.element(offstageFab)),
+        insetBeforeDetail,
+      );
+
+      Navigator.of(tester.element(find.byKey(const Key('detail-route-body'))))
+          .pop();
+      // Wait for the platform pop transition to retire so the dock begins sliding back in.
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byType(MainNavigationCapsule).evaluate().isNotEmpty) {
+          break;
+        }
+      }
+      expect(find.byType(MainNavigationCapsule), findsOneWidget);
+      final capsuleTopMidReturn = tester
+          .getTopLeft(find.byType(MainNavigationCapsule))
+          .dy;
+      await tester.pumpAndSettle();
+      final capsuleTopSettled = tester
+          .getTopLeft(find.byType(MainNavigationCapsule))
+          .dy;
+      expect(capsuleTopMidReturn, greaterThan(capsuleTopSettled));
+      expect(tester.getTopLeft(fabFinder).dy, fabBeforeDetail);
+
+      // In e-ink mode the dock hides and reappears instantaneously on a single frame.
+      setMode(() => eInk = true);
+      await tester.pumpAndSettle();
+      unawaited(
+        openAdaptiveDetail<void>(
+          tester.element(fabFinder),
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(
+              key: Key('eink-detail-route-body'),
+              body: SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(MainNavigationCapsule), findsNothing);
+      Navigator.of(
+        tester.element(find.byKey(const Key('eink-detail-route-body'))),
+      ).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(MainNavigationCapsule), findsOneWidget);
+    },
+  );
 }

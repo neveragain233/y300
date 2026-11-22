@@ -5940,6 +5940,18 @@ abstract class AppLocalizations {
   /// **'向上滚动时恢复，默认关闭'**
   String get threadControlsHideOnScrollHint;
 
+  /// No description provided for @threadExpandRatingsByDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认展开帖子评分'**
+  String get threadExpandRatingsByDefault;
+
+  /// No description provided for @threadExpandRatingsByDefaultHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后评分默认折叠为摘要，点击可展开详情'**
+  String get threadExpandRatingsByDefaultHint;
+
   /// No description provided for @threadControlsSaveFailed.
   ///
   /// In zh, this message translates to:
@@ -10612,13 +10624,13 @@ abstract class AppLocalizations {
   /// 设置主页浏览与帖子分组的摘要
   ///
   /// In zh, this message translates to:
-  /// **'内容屏蔽与帖子悬浮操作'**
+  /// **'内容屏蔽、帖子评分折叠与悬浮操作'**
   String get settingsSearchSummaryBrowsingPosts;
 
   /// 设置主页浏览与帖子分组搜索的关键词
   ///
   /// In zh, this message translates to:
-  /// **'设置主页、浏览、帖子、屏蔽、分组'**
+  /// **'设置主页、浏览、帖子、屏蔽、评分、折叠、分组'**
   String get settingsSearchKeywordsBrowsingPosts;
 
   /// 内容屏蔽页的摘要

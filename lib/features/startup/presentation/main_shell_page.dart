@@ -21,6 +21,7 @@ import 'package:y300/app/startup/main_shell_startup_coordinator.dart';
 import 'package:y300/app/startup/main_shell_startup_host.dart';
 import 'package:y300/app/startup/main_shell_startup_providers.dart';
 import 'package:y300/app/startup/message_attention_visibility_host.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_bottom_bar.dart';
 import 'package:y300/features/library_shared/presentation/selection/shelf_selection_host_providers.dart';
 import 'package:y300/features/messages/application/message_attention_providers.dart';
@@ -235,11 +236,20 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                 final showLegacyBar = !useRail && showChrome;
                 final showImmersiveChrome =
                     isImmersive && !useRail && showChrome;
-                // 沉浸式正文铺到屏幕底部，覆盖层高度只作为滚动尾部预留，
-                // 不压缩视口，内容才能从底栏后方滚过。
-                final overlayInset = showImmersiveChrome
-                    ? _chromeHeight ??
-                          media.padding.bottom + _immersiveChromeFallbackHeight
+                final chromeHeight =
+                    _chromeHeight ??
+                    media.padding.bottom + _immersiveChromeFallbackHeight;
+                // 源页底部预留高度在打开详情页时保持稳定，避免退回主壳瞬间把书架 FAB 顶起；
+                // 详情页内部在 AdaptiveDetailHost 中归零覆盖，提示条避让只看底栏当前可见性。
+                final keepSourceImmersiveInset =
+                    isImmersive &&
+                    !useRail &&
+                    (media.viewInsets.bottom == 0 || selection.isActive);
+                final sourceOverlayInset = keepSourceImmersiveInset
+                    ? chromeHeight
+                    : 0.0;
+                final feedbackBottomOverlap = showImmersiveChrome
+                    ? chromeHeight
                     : 0.0;
                 final contentBottomPadding = showImmersiveChrome
                     ? 0.0
@@ -247,7 +257,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                 // 正文容器在所有样式下保持同一层结构，切换样式、宽屏侧栏或
                 // 键盘显隐时页面实例与滚动位置不因重新挂载而丢失。
                 return TransientFeedbackLayout(
-                  bottomOverlap: overlayInset,
+                  bottomOverlap: feedbackBottomOverlap,
                   child: Scaffold(
                     // 玻璃来源由应用根 AppGlassEnvironment 提供，主壳不再自建
                     // scope/host，菜单、面板与分栏详情共用同一捕获。
@@ -261,32 +271,35 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                               ),
                             ),
                             child: MainShellBottomInset(
-                              bottom: overlayInset,
+                              bottom: sourceOverlayInset,
                               child: content,
                             ),
                           ),
                         ),
-                        if (showImmersiveChrome)
+                        if (isImmersive && !useRail)
                           Positioned(
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            child: _BottomChromeSizeReporter(
-                              onHeight: _updateChromeHeight,
-                              child: ShelfSelectionBottomBar(
-                                fallback: MainNavigationCapsule(
-                                  items: items,
-                                  selectedIndex: selectedIndex,
-                                  glassLevel: appearance.glassLevel,
-                                  swipeEnabled:
-                                      appearance.navigationSwipeEnabled &&
-                                      !selection.isActive,
-                                  dragFromSelection: appearance
-                                      .navigationLensMotion
-                                      .dragFromSelection,
-                                  onSelected: selection.isActive
-                                      ? null
-                                      : selectGroup,
+                            child: _AnimatedImmersiveBottomChrome(
+                              visible: showImmersiveChrome,
+                              child: _BottomChromeSizeReporter(
+                                onHeight: _updateChromeHeight,
+                                child: ShelfSelectionBottomBar(
+                                  fallback: MainNavigationCapsule(
+                                    items: items,
+                                    selectedIndex: selectedIndex,
+                                    glassLevel: appearance.glassLevel,
+                                    swipeEnabled:
+                                        appearance.navigationSwipeEnabled &&
+                                        !selection.isActive,
+                                    dragFromSelection: appearance
+                                        .navigationLensMotion
+                                        .dragFromSelection,
+                                    onSelected: selection.isActive
+                                        ? null
+                                        : selectGroup,
+                                  ),
                                 ),
                               ),
                             ),
@@ -413,6 +426,105 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
         globalOrigin: _contentGlobalOrigin,
       ),
     };
+  }
+}
+
+/// 沉浸式底栏显隐过渡：进出详情页和键盘弹起时下沉淡出／上滑淡入，
+/// 墨水屏或系统减动效时瞬时切换。隐藏完成后离台，不参与玻璃采样或测试命中。
+class _AnimatedImmersiveBottomChrome extends StatefulWidget {
+  const _AnimatedImmersiveBottomChrome({
+    required this.visible,
+    required this.child,
+  });
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  State<_AnimatedImmersiveBottomChrome> createState() =>
+      _AnimatedImmersiveBottomChromeState();
+}
+
+class _AnimatedImmersiveBottomChromeState
+    extends State<_AnimatedImmersiveBottomChrome>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _offset;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+      reverseDuration: const Duration(milliseconds: 190),
+      value: widget.visible ? 1.0 : 0.0,
+    );
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    _opacity = curved;
+    _offset = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(curved);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AppMotion.reduceMotion(context) && _controller.isAnimating) {
+      _controller.value = widget.visible ? 1.0 : 0.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedImmersiveBottomChrome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.visible == widget.visible) {
+      return;
+    }
+    if (AppMotion.reduceMotion(context)) {
+      _controller.value = widget.visible ? 1.0 : 0.0;
+      return;
+    }
+    if (widget.visible) {
+      _controller.forward();
+    } else {
+      _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = IgnorePointer(
+      ignoring: !widget.visible,
+      child: ExcludeFocus(
+        excluding: !widget.visible,
+        child: ExcludeSemantics(
+          excluding: !widget.visible,
+          child: FadeTransition(
+            opacity: _opacity,
+            child: SlideTransition(position: _offset, child: widget.child),
+          ),
+        ),
+      ),
+    );
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, animatedChild) =>
+          Offstage(offstage: _controller.isDismissed, child: animatedChild),
+      child: child,
+    );
   }
 }
 

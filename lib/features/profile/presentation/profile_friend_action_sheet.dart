@@ -13,6 +13,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 
 /// The caller re-reads its profile only after this sheet confirms applied.
@@ -108,8 +109,7 @@ class _ProfileFriendActionSheetState
         ForumFriendAction.approve => l10n.profileFriendApproved,
         ForumFriendAction.remove => l10n.profileFriendRemoved,
       };
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      showTransientSnackBar(context, message);
       Navigator.of(context).pop(true);
     }
   }

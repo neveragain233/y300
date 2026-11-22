@@ -23,9 +23,12 @@ import 'package:y300/features/thread/domain/services/thread_post_navigation_sess
 import 'package:y300/features/thread/presentation/services/thread_post_route_launcher.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
-typedef PrivateConversationRouteFactory =
-    Route<void> Function(ForumConversationTarget target, {String title});
+typedef PrivateConversationRouteFactory = Route<void> Function(
+  ForumConversationTarget target, {
+  String title,
+});
 
 class MessageCenterDestination extends ConsumerWidget {
   const MessageCenterDestination({
@@ -205,9 +208,9 @@ final messageLinkOpenerProvider = Provider<MessageLinkOpener>((ref) {
                     query['mod'] == 'space' &&
                     (!query.containsKey('do') || query['do'] == 'profile')
                 ? query['uid']
-                : RegExp(
-                    r'^/space-uid-(\d+)\.html$',
-                  ).firstMatch(uri.path)?.group(1);
+                : RegExp(r'^/space-uid-(\d+)\.html$')
+                      .firstMatch(uri.path)
+                      ?.group(1);
             if (_positiveId(profileId)) page = UserProfilePage(uid: profileId!);
           }
           if (page == null) {
@@ -238,9 +241,8 @@ final messageLinkOpenerProvider = Provider<MessageLinkOpener>((ref) {
       }
       if (context.mounted) {
         unawaited(
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute<void>(builder: (_) => page!)),
+          Navigator.of(context)
+              .push(MaterialPageRoute<void>(builder: (_) => page!)),
         );
       }
     } on Object {
@@ -254,7 +256,7 @@ final messageLinkOpenerProvider = Provider<MessageLinkOpener>((ref) {
 bool _positiveId(String? value) =>
     value != null && RegExp(r'^[1-9]\d*$').hasMatch(value);
 
-void _showLinkFailure(BuildContext context) =>
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).messageLinkFailed)),
-    );
+void _showLinkFailure(BuildContext context) => showTransientSnackBar(
+  context,
+  AppLocalizations.of(context).messageLinkFailed,
+);

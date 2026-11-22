@@ -7,6 +7,7 @@ import 'package:y300/features/library_shared/presentation/services/library_error
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ComicDownloadQueuePage extends ConsumerWidget {
   const ComicDownloadQueuePage({super.key});
@@ -120,9 +121,7 @@ class ComicDownloadQueuePage extends ConsumerWidget {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failureMessage(error))));
+      showTransientSnackBar(context, failureMessage(error));
     }
   }
 }

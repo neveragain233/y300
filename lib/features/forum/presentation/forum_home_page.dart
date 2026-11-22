@@ -116,29 +116,6 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
     return Y300PageScaffold(
       appBar: AppRootPageAppBar(
         title: l10n.forumHomeTitle,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(72),
-          child: ColoredBox(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 960),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: ForumHomeSearchEntry(
-                    key: const Key('forum-home-search-button'),
-                    label: l10n.forumHomeSearch,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ForumSearchPage(),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
         actions: [
           IconButton(
             key: const Key('forum-home-messages-button'),
@@ -210,6 +187,21 @@ class _ForumHomePageState extends ConsumerState<ForumHomePage>
                     ),
                   ),
                   if (_isSwitchingAuthContext) const _ForumHomeBlankBody(),
+                  if (!_isSwitchingAuthContext)
+                    Positioned(
+                      top: 8,
+                      left: 16,
+                      right: 16,
+                      child: ForumHomeSearchEntry(
+                        key: const Key('forum-home-search-button'),
+                        label: l10n.forumHomeSearch,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ForumSearchPage(),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -507,6 +499,7 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
     // 空态要占满可视区又保留下拉刷新，因此按视口高度放在列表里滚动。
     return LayoutBuilder(
       builder: (context, constraints) => RefreshIndicator(
+        edgeOffset: 64,
         onRefresh: () => ref
             .read(forumHomeControllerProvider.notifier)
             .refresh(forceNetwork: true),
@@ -527,7 +520,8 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
                   key: const Key('forum-home-list'),
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.only(
-                    bottom: 10 + mainShellBottomScrollInset(context),
+                    top: 64,
+                    bottom: 16 + mainShellBottomScrollInset(context),
                   ),
                   children: [
                     for (final section in widget.projection.sections.where(
@@ -543,7 +537,10 @@ class _ForumHomeContentState extends ConsumerState<_ForumHomeContent> {
                     ),
                     if (isEmpty)
                       SizedBox(
-                        height: constraints.maxHeight,
+                        height: (constraints.maxHeight - 64).clamp(
+                          0.0,
+                          double.infinity,
+                        ),
                         child: AppEmptyState(
                           key: const Key('forum-home-empty-state'),
                           title: l10n.forumHomeEmpty,

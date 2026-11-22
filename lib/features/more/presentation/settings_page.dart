@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
@@ -14,10 +16,14 @@ import 'package:y300/features/more/presentation/navigation_management_page.dart'
 import 'package:y300/features/more/presentation/settings_search/settings_search_anchor.dart';
 import 'package:y300/features/more/presentation/settings_search/settings_search_index.dart';
 import 'package:y300/features/more/presentation/settings_search/settings_search_page.dart';
+import 'package:y300/features/thread/domain/models/thread_controls_preferences.dart';
+import 'package:y300/features/thread/presentation/thread_controls_preferences_controller.dart';
 import 'package:y300/features/thread/presentation/thread_controls_settings_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 全屏设置主页：把原先散在“我的”里的应用偏好收敛为四个分组。
 ///
@@ -54,6 +60,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final l10n = AppLocalizations.of(context);
     final navigationReady =
         ref.watch(mainNavigationSettingsControllerProvider).value != null;
+    final controlsPreferences = ref
+        .watch(threadControlsPreferencesControllerProvider)
+        .value;
     final debugTiles = widget.debugTools.buildTiles(context, l10n);
     return Scaffold(
       key: const Key('settings-page'),
@@ -128,6 +137,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           showChevron: true,
                           onTap: () =>
                               _pushPage(const ThreadControlsSettingsPage()),
+                        ),
+                        AppSwitchRow(
+                          key: const Key('settings-expand-ratings-by-default'),
+                          leading: const Icon(Icons.favorite_outline),
+                          title: l10n.threadExpandRatingsByDefault,
+                          subtitle: l10n.threadExpandRatingsByDefaultHint,
+                          disabled: controlsPreferences == null,
+                          value:
+                              controlsPreferences?.expandRatingsByDefault ??
+                              true,
+                          onChanged: controlsPreferences == null
+                              ? null
+                              : (value) => unawaited(
+                                  _saveThreadPreferences(
+                                    context,
+                                    l10n,
+                                    controlsPreferences.copyWith(
+                                      expandRatingsByDefault: value,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -228,6 +258,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _pushPage(Widget page) {
     return Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+  Future<void> _saveThreadPreferences(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThreadControlsPreferences next,
+  ) async {
+    final saved = await ref
+        .read(threadControlsPreferencesControllerProvider.notifier)
+        .savePreferences(next);
+    if (!saved && context.mounted) {
+      showTransientSnackBar(context, l10n.threadControlsSaveFailed);
+    }
   }
 
   Future<void> _pushContentFilter() {

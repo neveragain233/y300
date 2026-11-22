@@ -34,6 +34,7 @@ import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ForumDisplayPage extends ConsumerStatefulWidget {
   const ForumDisplayPage({
@@ -340,6 +341,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     });
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     final result = await ref
         .read(forumFavoriteActionServiceProvider)
         .apply(fid: state.fid, action: action);
@@ -350,27 +352,21 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
       _isFavoriteMutationLoading = false;
     });
     if (result case DataCommandApplied<ForumFavoriteReceipt>()) {
-      messenger
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              action == ForumDisplayFavoriteAction.favorite
-                  ? l10n.forumFavoriteSuccess
-                  : l10n.forumUnfavoriteSuccess,
-            ),
-          ),
-        );
+      showTransientSnackBarWithMessenger(
+        messenger,
+        feedbackStyle,
+        action == ForumDisplayFavoriteAction.favorite
+            ? l10n.forumFavoriteSuccess
+            : l10n.forumUnfavoriteSuccess,
+      );
       await controller.refresh(forceNetwork: true);
       return;
     }
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(ForumTextResolver.favoriteActionFailure(l10n, result)),
-        ),
-      );
+    showTransientSnackBarWithMessenger(
+      messenger,
+      feedbackStyle,
+      ForumTextResolver.favoriteActionFailure(l10n, result),
+    );
   }
 
   ForumDisplayContentProjection _projectionOrRaw(
@@ -555,8 +551,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
       result!.readAccess,
     );
     if (feedback != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(feedback)));
+      showTransientSnackBar(context, feedback);
     }
   }
 }

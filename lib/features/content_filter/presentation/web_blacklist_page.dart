@@ -11,6 +11,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 网页版黑名单子页：同步、成员列表、网页维护入口与屏蔽显示开关。
 ///
@@ -45,6 +46,7 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
     }
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     setState(() => _syncing = true);
     final outcome = await ref
         .read(blacklistSyncControllerProvider.notifier)
@@ -56,17 +58,13 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
     if (outcome == BlacklistSyncOutcome.success) {
       return;
     }
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            outcome == BlacklistSyncOutcome.noOwner
-                ? l10n.contentFilterWebBlacklistLoginRequired
-                : l10n.contentFilterWebBlacklistSyncFailed,
-          ),
-        ),
-      );
+    showTransientSnackBarWithMessenger(
+      messenger,
+      feedbackStyle,
+      outcome == BlacklistSyncOutcome.noOwner
+          ? l10n.contentFilterWebBlacklistLoginRequired
+          : l10n.contentFilterWebBlacklistSyncFailed,
+    );
   }
 
   Future<void> _openManagedBlacklist() async {
@@ -188,15 +186,18 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
   Future<void> _setHideBlacklistedThreads(bool value) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     final saved = await ref
         .read(blacklistDisplayPreferencesControllerProvider.notifier)
         .setHideThreadsStartedByBlacklistedUsers(value);
     if (!mounted || saved) {
       return;
     }
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.contentFilterSaveFailed)));
+    showTransientSnackBarWithMessenger(
+      messenger,
+      feedbackStyle,
+      l10n.contentFilterSaveFailed,
+    );
   }
 }
 

@@ -8,6 +8,7 @@ mixin _ThreadDetailEndpointNavigation on ConsumerState<ThreadDetailContent> {
   set _pendingChunkAnchor(ThreadPostViewportAnchorSnapshot? value);
   GlobalKey get _targetCenterKey;
   set _targetCenterKey(GlobalKey value);
+  set _anchorToRepliesHeader(bool value);
   GlobalKey get _viewportKey;
   List<ThreadDetailPostProjection> get _postProjections;
   Object? get _renderLayoutIdentity;
@@ -43,6 +44,12 @@ mixin _ThreadDetailEndpointNavigation on ConsumerState<ThreadDetailContent> {
     final ownerChanged =
         previous.state.tid != widget.state.tid ||
         previous.state.currentPage != widget.state.currentPage ||
+        previous.state.queryParameters['authorid'] !=
+            widget.state.queryParameters['authorid'] ||
+        previous.state.queryParameters['ordertype'] !=
+            widget.state.queryParameters['ordertype'] ||
+        previous.repliesHeaderAnchorRevision !=
+            widget.repliesHeaderAnchorRevision ||
         previous.targetPid != widget.targetPid ||
         previous.landing != widget.landing ||
         !identical(previous.scrollController, widget.scrollController) ||
@@ -125,6 +132,7 @@ mixin _ThreadDetailEndpointNavigation on ConsumerState<ThreadDetailContent> {
       center: _targetCenterKey,
     );
     setState(() {
+      _anchorToRepliesHeader = false;
       _endpointTarget = target;
       _endpointViewRevision++;
       // Both the ScrollPosition and sliver layout offsets belong to the old

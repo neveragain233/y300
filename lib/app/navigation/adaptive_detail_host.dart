@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/app/clipboard/forum_clipboard_runtime.dart';
 import 'package:y300/app/clipboard/forum_clipboard_route_observer.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/l10n/app_localizations.dart';
 
 class AdaptiveDetailController extends ChangeNotifier {
@@ -425,7 +426,9 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
                   revision: _revision,
                   canSplit: _canSplit,
                   expanded: _expanded,
-                  child: child,
+                  child: inDetail
+                      ? MainShellBottomInset(bottom: 0, child: child)
+                      : child,
                 ),
               ),
             ),

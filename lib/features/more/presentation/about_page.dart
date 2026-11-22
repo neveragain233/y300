@@ -10,6 +10,7 @@ import 'package:y300/features/more/presentation/more_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class AboutPage extends ConsumerStatefulWidget {
@@ -107,13 +108,10 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     if (!mounted || opened) {
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).moreAboutOpenGitHubFailed),
-        ),
-      );
+    showTransientSnackBar(
+      context,
+      AppLocalizations.of(context).moreAboutOpenGitHubFailed,
+    );
   }
 }
 

@@ -249,4 +249,71 @@ void _mixedRecentCases() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('unified-shelf-recent-reading')), findsNothing);
   });
+
+  testWidgets(
+    'recent reading button is icon-only without label and uses e-ink solid circle border',
+    (tester) async {
+      final l10n = AppLocalizationsZh();
+      var eInk = false;
+      late StateSetter setMode;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              setMode = setState;
+              return LocalizedTestApp(
+                builder: (context, child) =>
+                    EInkModeScope(enabled: eInk, child: child!),
+                home: UnifiedShelfPage(
+                  adapter: _FakeShelfAdapter(
+                    initialDisplayMode: LibraryDisplayMode.grid,
+                  ),
+                  recentReadingAction: RecentReadingAction(
+                    resolve: () async => RecentReadingTarget(
+                      moduleKey: LibraryModuleKey.comic,
+                      workId: 'comic:1',
+                      episodeId: 'e1',
+                      readAt: DateTime(2026, 6, 1),
+                    ),
+                    open: (_, _) async {},
+                  ),
+                  onOpenWork: (_, _) async {},
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final buttonFinder = find.byKey(
+        const Key('unified-shelf-recent-reading'),
+      );
+      expect(buttonFinder, findsOneWidget);
+      expect(
+        find.descendant(
+          of: buttonFinder,
+          matching: find.text(l10n.libraryShelfContinueReading),
+        ),
+        findsNothing,
+      );
+      final fab = tester.widget<FloatingActionButton>(buttonFinder);
+      expect(fab.tooltip, l10n.libraryShelfContinueReading);
+      expect(fab.onPressed, isNotNull);
+
+      setMode(() => eInk = true);
+      await tester.pumpAndSettle();
+
+      final eInkFab = tester.widget<FloatingActionButton>(buttonFinder);
+      expect(
+        eInkFab.shape,
+        CircleBorder(
+          side: BorderSide(
+            color: AppTheme.eInkBorderColor(Brightness.light),
+            width: 1,
+          ),
+        ),
+      );
+    },
+  );
 }

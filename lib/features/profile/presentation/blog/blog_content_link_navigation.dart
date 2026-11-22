@@ -9,6 +9,7 @@ import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 /// The source resolves native blog identities; other forum flows keep the
@@ -45,9 +46,8 @@ Future<void> openBlogContentLink(
     null => null,
   };
   if (page != null) {
-    await Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute(builder: (_) => page));
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => page));
     return;
   }
 
@@ -57,12 +57,9 @@ Future<void> openBlogContentLink(
       ModalRoute.of(context)?.isCurrent != false;
   void failed() {
     if (!stillCurrent()) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppLocalizations.of(context).forumWebViewOpenExternalFailed,
-        ),
-      ),
+    showTransientSnackBar(
+      context,
+      AppLocalizations.of(context).forumWebViewOpenExternalFailed,
     );
   }
 

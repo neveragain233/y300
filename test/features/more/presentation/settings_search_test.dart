@@ -105,6 +105,9 @@ void main() {
 
     expect(await search('缓存'), ['settings-search-result-data-storage']);
     expect(await search('黑名单'), ['settings-search-result-content-filter']);
+    expect(await search('评分'), [
+      'settings-search-result-settings-section-browsing-posts',
+    ]);
     expect(await search('浅色'), [
       'settings-search-result-appearance',
       'settings-search-result-appearance-theme-mode',

@@ -7,6 +7,7 @@ import 'package:y300/features/auth/presentation/login_state.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class LoginPage extends ConsumerWidget {
   const LoginPage({super.key});
@@ -48,9 +49,7 @@ class LoginPage extends ConsumerWidget {
                       ref
                           .read(authSessionControllerProvider.notifier)
                           .acceptSession(session);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.authLoginSuccess)),
-                      );
+                      showTransientSnackBar(context, l10n.authLoginSuccess);
                       Navigator.of(context).pop(true);
                     }
                   },

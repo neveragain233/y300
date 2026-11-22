@@ -31,6 +31,7 @@ import 'package:y300/features/profile/presentation/profile_action_navigation.dar
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:y300/shared/widgets/y300_page_scaffold.dart';
 
 class MorePage extends ConsumerStatefulWidget {
@@ -465,10 +466,9 @@ class _MorePageState extends ConsumerState<MorePage> {
 
       if (success) {
         ref.invalidate(forumHomeControllerProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).moreLogoutSuccess),
-          ),
+        showTransientSnackBar(
+          context,
+          AppLocalizations.of(context).moreLogoutSuccess,
         );
         return;
       }
@@ -482,8 +482,7 @@ class _MorePageState extends ConsumerState<MorePage> {
       final message = logoutL10n.moreLogoutFailed(
         LocalizedErrorSummary.resolve(logoutL10n, failure),
       );
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      showTransientSnackBar(context, message);
     } finally {
       if (mounted) setState(() => _confirmingLogout = false);
     }

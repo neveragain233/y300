@@ -134,8 +134,34 @@ BoxDecoration _cardSegmentDecoration({
 }) {
   return BoxDecoration(
     color: highlighted ? palette.accent.withValues(alpha: 0.10) : palette.card,
-    border: position == _ThreadPostCardSegmentPosition.footer
-        ? Border(bottom: BorderSide(color: palette.border, width: 0.5))
-        : null,
   );
+}
+
+/// 连续楼层间适度加厚的分隔槽：比 0.5 像素细线更易识别楼界，同时保持克制。
+class _ThreadFloorSeparatorBand extends StatelessWidget {
+  const _ThreadFloorSeparatorBand({
+    required this.palette,
+    this.isFirstPost = false,
+  });
+
+  final ThreadDetailNativePalette palette;
+  final bool isFirstPost;
+
+  @override
+  Widget build(BuildContext context) {
+    final eInk = EInkModeScope.of(context);
+    final edgeColor = eInk ? palette.outlineSoft : palette.border;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.floorDividerBand,
+        border: isFirstPost || eInk
+            ? Border(
+                top: BorderSide(color: edgeColor, width: eInk ? 0.8 : 0.5),
+                bottom: BorderSide(color: edgeColor, width: eInk ? 0.8 : 0.5),
+              )
+            : null,
+      ),
+      child: SizedBox(height: isFirstPost ? 4.5 : 3.5, width: double.infinity),
+    );
+  }
 }

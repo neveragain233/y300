@@ -15,6 +15,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class NovelReaderDisplaySettingsSheet extends StatefulWidget {
   const NovelReaderDisplaySettingsSheet({
@@ -358,13 +359,10 @@ class _NovelReaderDisplaySettingsSheetState
                           )
                           .setEnabled(enabled);
                       if (!saved && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              AppLocalizations.of(context)
-                                  .novelChapterInteractionsSettingSaveFailed,
-                            ),
-                          ),
+                        showTransientSnackBar(
+                          context,
+                          AppLocalizations.of(context)
+                              .novelChapterInteractionsSettingSaveFailed,
                         );
                       }
                     }());

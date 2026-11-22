@@ -22,6 +22,7 @@ import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_pull_to_refresh.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 typedef FriendLinkOpener = void Function(BuildContext context, String url);
 typedef FriendConversationOpener = void Function(
@@ -242,8 +243,7 @@ class _MyFriendsPageState extends ConsumerState<MyFriendsPage> {
     final message = result is DataCommandApplied<ForumFriendRemovalReceipt>
         ? l10n.profileFriendsRemoved
         : LocalizedErrorSummary.resolve(l10n, result);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBar(context, message);
   }
 
   /// 账号会话变化必须在确认生效前关闭旧确认框，命令仍由调用方复核归属。

@@ -2408,6 +2408,8 @@
   "threadControlsHoldToFirstHint": "关闭时长按切换翻楼方向",
   "threadControlsHideOnScroll": "向下滚动时隐藏操作栏",
   "threadControlsHideOnScrollHint": "向上滚动时恢复，默认关闭",
+  "threadExpandRatingsByDefault": "默认展开帖子评分",
+  "threadExpandRatingsByDefaultHint": "关闭后评分默认折叠为摘要，点击可展开详情",
   "threadControlsSaveFailed": "保存失败，已恢复上次设置",
   "threadControlsJumpPage": "跳页",
   "threadControlsPreviousPost": "上一楼",
@@ -4242,11 +4244,11 @@
   "@settingsSearchKeywordsNavigationManagement": {
     "description": "导航管理页搜索的关键词"
   },
-  "settingsSearchSummaryBrowsingPosts": "内容屏蔽与帖子悬浮操作",
+  "settingsSearchSummaryBrowsingPosts": "内容屏蔽、帖子评分折叠与悬浮操作",
   "@settingsSearchSummaryBrowsingPosts": {
     "description": "设置主页浏览与帖子分组的摘要"
   },
-  "settingsSearchKeywordsBrowsingPosts": "设置主页、浏览、帖子、屏蔽、分组",
+  "settingsSearchKeywordsBrowsingPosts": "设置主页、浏览、帖子、屏蔽、评分、折叠、分组",
   "@settingsSearchKeywordsBrowsingPosts": {
     "description": "设置主页浏览与帖子分组搜索的关键词"
   },

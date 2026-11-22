@@ -52,6 +52,7 @@ import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ForumWebViewPage extends ConsumerStatefulWidget {
   const ForumWebViewPage({super.key, this.isAccountCurrent});
@@ -1294,6 +1295,7 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     final controller = ref.read(forumWebViewControllerProvider.notifier);
     final navigator = ref.read(forumWebViewNavigatorProvider);
     final messenger = ScaffoldMessenger.of(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     return showAdaptivePanel<void>(
       context: context,
       useRootNavigator: true,
@@ -1305,7 +1307,11 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
             if (!_isCurrent || !messenger.mounted) {
               return;
             }
-            _showSnackBar(messenger, l10n.forumUnfavoriteSuccess);
+            _showSnackBar(
+              messenger,
+              l10n.forumUnfavoriteSuccess,
+              style: feedbackStyle,
+            );
             final referrerUri =
                 ref
                     .read(forumWebViewControllerProvider)
@@ -1332,29 +1338,35 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     required Future<DataCommandResult<ForumFavoriteReceipt>> Function() action,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
     final l10n = AppLocalizations.of(context);
     final result = await action();
     if (!_isCurrent || !messenger.mounted) {
       return;
     }
     if (result case DataCommandApplied<ForumFavoriteReceipt>()) {
-      _showSnackBar(messenger, successMessage);
+      _showSnackBar(messenger, successMessage, style: feedbackStyle);
       await _loadManagedUri(driver, reloadUri, referrerUri: reloadUri);
       return;
     }
     _showSnackBar(
       messenger,
       ForumTextResolver.favoriteActionFailure(l10n, result),
+      style: feedbackStyle,
     );
   }
 
-  void _showSnackBar(ScaffoldMessengerState messenger, String message) {
-    if (!messenger.mounted) {
+  void _showSnackBar(
+    ScaffoldMessengerState messenger,
+    String message, {
+    TransientFeedbackStyle? style,
+  }) {
+    final resolvedStyle =
+        style ?? (mounted ? TransientFeedbackStyle.capture(context) : null);
+    if (resolvedStyle == null) {
       return;
     }
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showTransientSnackBarWithMessenger(messenger, resolvedStyle, message);
   }
 
   Future<void> _loadManagedUri(

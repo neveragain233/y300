@@ -28,6 +28,7 @@ import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 typedef BlogEditorResult = ({UserBlogReceipt receipt, String subject});
@@ -161,14 +162,11 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
               return;
             }
             final l10n = AppLocalizations.of(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  saved.visibility == UserBlogVisibility.passwordProtected
-                      ? l10n.profileBlogDraftPasswordRestored
-                      : l10n.composerRestoredDraft,
-                ),
-              ),
+            showTransientSnackBar(
+              context,
+              saved.visibility == UserBlogVisibility.passwordProtected
+                  ? l10n.profileBlogDraftPasswordRestored
+                  : l10n.composerRestoredDraft,
             );
           });
         }
@@ -293,12 +291,9 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
     if (receipt != null) {
       final cleared = await _drafts?.complete();
       if (mounted && cleared == false) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).profileBlogDraftCleanupFailed,
-            ),
-          ),
+        showTransientSnackBar(
+          context,
+          AppLocalizations.of(context).profileBlogDraftCleanupFailed,
         );
       }
     } else if (_drafts?.pending == true &&
@@ -311,10 +306,9 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
     if (receipt == null) {
       final issue = _controller.value.issue;
       if (issue != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_issueText(AppLocalizations.of(context), issue)),
-          ),
+        showTransientSnackBar(
+          context,
+          _issueText(AppLocalizations.of(context), issue),
         );
         if ({
           BlogEditorIssue.siteCategoryRequired,
@@ -354,14 +348,11 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
     final failure = _media?.value.failure;
     if (failure != null) {
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _media!.value.outcomeUnknown
-                ? l10n.profileBlogImageUploadUnknown
-                : LocalizedErrorSummary.resolve(l10n, failure),
-          ),
-        ),
+      showTransientSnackBar(
+        context,
+        _media!.value.outcomeUnknown
+            ? l10n.profileBlogImageUploadUnknown
+            : LocalizedErrorSummary.resolve(l10n, failure),
       );
     }
   }
@@ -426,12 +417,9 @@ class _BlogEditorPageState extends ConsumerState<BlogEditorPage>
       _closing = false;
       if (!mounted) return;
       if (!saved) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).profileBlogDraftSaveFailed,
-            ),
-          ),
+        showTransientSnackBar(
+          context,
+          AppLocalizations.of(context).profileBlogDraftSaveFailed,
         );
         return;
       }

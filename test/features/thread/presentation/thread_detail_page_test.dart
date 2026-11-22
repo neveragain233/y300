@@ -17,6 +17,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
+import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/auth/application/auth_session_controller.dart';
 import 'package:y300/features/profile/data/providers/profile_read_providers.dart';
@@ -118,6 +119,7 @@ part 'thread_detail_page_profile_and_social_cases.dart';
 part 'thread_detail_page_blacklist_cases.dart';
 part 'thread_detail_page_page_keys_cases.dart';
 part 'thread_detail_page_post_load_reconcile_cases.dart';
+part 'thread_detail_page_order_and_menu_cases.dart';
 
 void main() {
   setUp(() {
@@ -138,5 +140,6 @@ void main() {
     _blacklistCases();
     _pageKeysCases();
     _postLoadReconcileCases();
+    _orderAndMenuCases();
   });
 }

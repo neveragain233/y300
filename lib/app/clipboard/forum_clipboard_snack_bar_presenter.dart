@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 import 'forum_clipboard_link_notice.dart';
 import 'forum_clipboard_link_policy.dart';
@@ -59,6 +60,7 @@ final class ForumClipboardSnackBarPresenter {
           onOpen();
         },
       ),
+      snackBarAnimationStyle: transientSnackBarAnimationStyle(context),
     );
     controller.closed.then((_) {
       presentation.closed = true;

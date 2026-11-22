@@ -1,6 +1,129 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/motion/app_motion.dart';
+
+const Duration kTransientSnackBarDuration = Duration(seconds: 3);
+const Duration kTransientSnackBarActionDuration = Duration(seconds: 4);
+const AnimationStyle kTransientSnackBarAnimationStyle = AnimationStyle(
+  duration: Duration(milliseconds: 280),
+  reverseDuration: Duration(milliseconds: 220),
+);
+
+/// Returns an explicit animation style for SnackBars.
+///
+/// Always returns a non-null [AnimationStyle] because Flutter's
+/// `ScaffoldMessengerState` only updates its controller durations when a
+/// non-null style is passed; returning `null` after showing an e-ink toast
+/// would leave `_snackBarController` stuck at `Duration.zero`.
+AnimationStyle transientSnackBarAnimationStyle(BuildContext context) {
+  return AppMotion.reduceMotion(context)
+      ? AnimationStyle.noAnimation
+      : kTransientSnackBarAnimationStyle;
+}
+
+/// Captures themed SnackBar styling before async gaps or overlay actions.
+@immutable
+final class TransientFeedbackStyle {
+  const TransientFeedbackStyle({
+    required this.backgroundColor,
+    required this.textStyle,
+    required this.detailTextStyle,
+    required this.actionTextColor,
+    required this.elevation,
+    required this.shape,
+    required this.animationStyle,
+  });
+
+  factory TransientFeedbackStyle.capture(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final background = eInk
+        ? scheme.surface
+        : scheme.brightness == Brightness.dark
+        ? scheme.surfaceContainerHigh
+        : scheme.surfaceContainerLowest;
+    final borderColor = eInk
+        ? AppTheme.eInkBorderColor(scheme.brightness)
+        : scheme.outlineVariant.withValues(alpha: 0.6);
+    return TransientFeedbackStyle(
+      backgroundColor: background,
+      textStyle: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+      detailTextStyle: theme.textTheme.bodySmall?.copyWith(
+        color: eInk ? scheme.onSurface : scheme.onSurfaceVariant,
+      ),
+      actionTextColor: eInk ? scheme.onSurface : scheme.primary,
+      elevation: eInk ? 0 : 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: borderColor, width: 1),
+      ),
+      animationStyle: transientSnackBarAnimationStyle(context),
+    );
+  }
+
+  final Color backgroundColor;
+  final TextStyle? textStyle;
+  final TextStyle? detailTextStyle;
+  final Color actionTextColor;
+  final double elevation;
+  final ShapeBorder shape;
+  final AnimationStyle animationStyle;
+
+  SnackBar buildSnackBar(
+    String message, {
+    String? detail,
+    SnackBarAction? action,
+    Key? snackBarKey,
+    Duration? duration,
+    EdgeInsetsGeometry? margin,
+    double actionOverflowThreshold = 0.25,
+  }) {
+    final trimmed = message.trim();
+    final trimmedDetail = detail?.trim();
+    final hasDetail = trimmedDetail != null && trimmedDetail.isNotEmpty;
+    return SnackBar(
+      key: snackBarKey,
+      content: hasDetail
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(trimmed, style: textStyle),
+                Text(trimmedDetail, style: detailTextStyle),
+              ],
+            )
+          : Text(trimmed, style: textStyle),
+      behavior: margin != null ? SnackBarBehavior.floating : null,
+      margin: margin,
+      dismissDirection: DismissDirection.down,
+      duration:
+          duration ??
+          (action != null
+              ? kTransientSnackBarActionDuration
+              : kTransientSnackBarDuration),
+      // Flutter otherwise keeps snackbars with an action visible indefinitely.
+      persist: false,
+      // 主题的动作色面向反向表面；换到页面表面后按主色或墨水屏前景色重新着色。
+      action: action == null
+          ? null
+          : SnackBarAction(
+              key: action.key,
+              label: action.label,
+              onPressed: action.onPressed,
+              textColor: action.textColor ?? actionTextColor,
+              disabledTextColor: action.disabledTextColor,
+              backgroundColor: action.backgroundColor,
+              disabledBackgroundColor: action.disabledBackgroundColor,
+            ),
+      actionOverflowThreshold: actionOverflowThreshold,
+      backgroundColor: backgroundColor,
+      elevation: elevation,
+      shape: shape,
+    );
+  }
+}
 
 /// 构造与页面表面协调的短时提示。
 ///
@@ -11,74 +134,82 @@ import 'package:y300/core/motion/app_motion.dart';
 SnackBar buildTransientSnackBar(
   BuildContext context,
   String message, {
+  String? detail,
   SnackBarAction? action,
   Key? snackBarKey,
+  Duration? duration,
+  EdgeInsetsGeometry? margin,
   double actionOverflowThreshold = 0.25,
 }) {
-  final theme = Theme.of(context);
-  final scheme = theme.colorScheme;
-  final background = scheme.brightness == Brightness.dark
-      ? scheme.surfaceContainerHigh
-      : scheme.surfaceContainerLowest;
-  return SnackBar(
-    key: snackBarKey,
-    content: Text(
-      message.trim(),
-      style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
-    ),
-    duration: const Duration(seconds: 4),
-    // Flutter otherwise keeps snackbars with an action visible indefinitely.
-    persist: false,
-    // 主题的动作色面向反向表面；换到页面表面后按主色重新着色。
-    action: action == null
-        ? null
-        : SnackBarAction(
-            key: action.key,
-            label: action.label,
-            onPressed: action.onPressed,
-            textColor: action.textColor ?? scheme.primary,
-            disabledTextColor: action.disabledTextColor,
-            backgroundColor: action.backgroundColor,
-            disabledBackgroundColor: action.disabledBackgroundColor,
-          ),
+  return TransientFeedbackStyle.capture(context).buildSnackBar(
+    message,
+    detail: detail,
+    action: action,
+    snackBarKey: snackBarKey,
+    duration: duration,
+    margin: margin,
     actionOverflowThreshold: actionOverflowThreshold,
-    backgroundColor: background,
-    elevation: EInkModeScope.of(context) ? 0 : 3,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-    ),
   );
 }
 
 /// Shows short-lived user feedback without adding a persistent layout region.
-void showTransientSnackBar(
+ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
+showTransientSnackBar(
   BuildContext context,
   String message, {
+  String? detail,
   SnackBarAction? action,
   Key? snackBarKey,
+  Duration? duration,
+  EdgeInsetsGeometry? margin,
   double actionOverflowThreshold = 0.25,
+  bool replaceCurrent = true,
+}) {
+  return showTransientSnackBarWithMessenger(
+    ScaffoldMessenger.maybeOf(context),
+    TransientFeedbackStyle.capture(context),
+    message,
+    detail: detail,
+    action: action,
+    snackBarKey: snackBarKey,
+    duration: duration,
+    margin: margin,
+    actionOverflowThreshold: actionOverflowThreshold,
+    replaceCurrent: replaceCurrent,
+  );
+}
+
+/// Shows short-lived user feedback using a pre-captured messenger and style.
+ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
+showTransientSnackBarWithMessenger(
+  ScaffoldMessengerState? messenger,
+  TransientFeedbackStyle style,
+  String message, {
+  String? detail,
+  SnackBarAction? action,
+  Key? snackBarKey,
+  Duration? duration,
+  EdgeInsetsGeometry? margin,
+  double actionOverflowThreshold = 0.25,
+  bool replaceCurrent = true,
 }) {
   final trimmed = message.trim();
-  if (trimmed.isEmpty) {
-    return;
+  if (trimmed.isEmpty || messenger == null || !messenger.mounted) {
+    return null;
   }
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  if (messenger == null) {
-    return;
+  if (replaceCurrent) {
+    messenger.hideCurrentSnackBar();
   }
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      buildTransientSnackBar(
-        context,
-        trimmed,
-        action: action,
-        snackBarKey: snackBarKey,
-        actionOverflowThreshold: actionOverflowThreshold,
-      ),
-      snackBarAnimationStyle: AppMotion.reduceMotion(context)
-          ? AnimationStyle.noAnimation
-          : null,
-    );
+  return messenger.showSnackBar(
+    style.buildSnackBar(
+      trimmed,
+      detail: detail,
+      action: action,
+      snackBarKey: snackBarKey,
+      duration: duration,
+      margin: margin,
+      actionOverflowThreshold: actionOverflowThreshold,
+    ),
+    snackBarAnimationStyle: style.animationStyle,
+  );
 }

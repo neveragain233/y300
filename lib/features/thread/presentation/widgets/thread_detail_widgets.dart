@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:y300/app/content_rendering/native_forum_html_render_theme_factory.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, setEquals;
 import 'package:flutter/material.dart';
@@ -116,6 +117,8 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.bottomInset = 0,
     this.onRepliesHeaderHeightChanged,
     this.firstPostTitleKey,
+    this.repliesHeaderAnchorRevision = 0,
+    this.defaultRatingsExpanded = true,
   });
 
   final ThreadDetailPageState state;
@@ -128,6 +131,12 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
 
   /// 首楼标题测点，同时覆盖整卡与分块 header 两条渲染路径。
   final GlobalKey? firstPostTitleKey;
+
+  /// 从倒序切回正序时递增，令列表将回复栏作为锚点落在首屏顶部。
+  final int repliesHeaderAnchorRevision;
+
+  /// 帖子评分默认是否展开，由偏好设置注入。
+  final bool defaultRatingsExpanded;
   final bool enableBodyChunking;
 
   /// Blocked replies collected for the end of the last page.
@@ -242,6 +251,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   double? _repliesHeaderContentOffset;
   @override
   bool _repliesHeaderPinned = false;
+  @override
+  bool _anchorToRepliesHeader = false;
   bool _stickyHeaderSyncScheduled = false;
   List<ThreadDetailRenderEntry> _lastEntries = const [];
   bool _lastAnchoredListMode = false;
@@ -289,6 +300,21 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     }
     _updateEndpointNavigation(oldWidget);
     _updateFloorNavigation(oldWidget);
+    if (widget.repliesHeaderAnchorRevision !=
+            oldWidget.repliesHeaderAnchorRevision &&
+        !widget.state.isReverseOrderView) {
+      _anchorToRepliesHeader = true;
+    } else if (oldWidget.state.tid != widget.state.tid ||
+        oldWidget.state.currentPage != widget.state.currentPage ||
+        oldWidget.state.queryParameters['authorid'] !=
+            widget.state.queryParameters['authorid'] ||
+        oldWidget.state.queryParameters['ordertype'] !=
+            widget.state.queryParameters['ordertype'] ||
+        oldWidget.targetPid != widget.targetPid ||
+        oldWidget.landing != widget.landing ||
+        !identical(oldWidget.scrollController, widget.scrollController)) {
+      _anchorToRepliesHeader = false;
+    }
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage ||
         oldWidget.state.queryParameters['authorid'] !=
@@ -312,6 +338,17 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage) {
       _clearFooterExpansions();
+    } else if (oldWidget.defaultRatingsExpanded !=
+        widget.defaultRatingsExpanded) {
+      for (final expansion in _footerExpansions.values) {
+        if (!expansion.ratingsOverridden) {
+          expansion.value = (
+            comments: expansion.value.comments,
+            ratings: widget.defaultRatingsExpanded,
+            poll: expansion.value.poll,
+          );
+        }
+      }
     }
     if (oldWidget.state.tid != widget.state.tid) {
       _expandedBlacklistedPids.clear();
@@ -505,9 +542,19 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     );
     _imageAspectRatioTracker.resetFor(_imageAspectRatioSignature());
     final endpointAnchored = _endpointTarget != null && entries.isNotEmpty;
+    final repliesHeaderAnchorIndex =
+        _anchorToRepliesHeader && !endpointAnchored && _floorTargetPid == null
+        ? entries.indexWhere(
+            (entry) => entry.kind == ThreadDetailRenderEntryKind.repliesHeader,
+          )
+        : -1;
+    final repliesHeaderAnchored = repliesHeaderAnchorIndex > 0;
     final targetPid = _activeTargetPid?.trim();
     final targetEntryIndex =
-        endpointAnchored || targetPid == null || targetPid.isEmpty
+        endpointAnchored ||
+            repliesHeaderAnchored ||
+            targetPid == null ||
+            targetPid.isEmpty
         ? -1
         : entries.indexWhere(
             (entry) =>
@@ -522,7 +569,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                               ThreadDetailRenderEntryKind.blacklistedPost) &&
                 entry.sourcePost?.pid == targetPid,
           );
-    final anchored = endpointAnchored || targetEntryIndex >= 0;
+    final anchored =
+        endpointAnchored || repliesHeaderAnchored || targetEntryIndex >= 0;
     if (anchored != _lastAnchoredListMode) {
       // 切换居中定位列表与标准列表时坐标系不同，丢弃旧偏移避免误判吸顶。
       _repliesHeaderContentOffset = null;
@@ -535,6 +583,14 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         targetEntryIndex: _endpointTarget == ThreadDetailQuickScrollTarget.top
             ? 0
             : entries.length - 1,
+        palette: palette,
+      );
+    }
+    if (repliesHeaderAnchored) {
+      return _buildTargetAnchoredList(
+        entries: entries,
+        targetEntryIndex: repliesHeaderAnchorIndex,
+        anchorAtRepliesHeader: true,
         palette: palette,
       );
     }
@@ -648,7 +704,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   }
 
   _ThreadPostFooterExpansion _footerExpansionFor(String pid) =>
-      _footerExpansions.putIfAbsent(pid, _ThreadPostFooterExpansion.new);
+      _footerExpansions.putIfAbsent(
+        pid,
+        () =>
+            _ThreadPostFooterExpansion(ratings: widget.defaultRatingsExpanded),
+      );
 
   ThreadBodyPresentation? _wholeBodyPresentationFor(String pid, String html) =>
       widget.bodyReadingCoordinator != null || _preparedBodies[pid] != null
@@ -863,15 +923,21 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     required List<ThreadDetailRenderEntry> entries,
     required int targetEntryIndex,
     required ThreadDetailNativePalette palette,
+    bool anchorAtRepliesHeader = false,
   }) {
     final endpoint = _endpointTarget;
     final atBodyEnd =
-        endpoint == null && _activeLanding == ThreadPostLanding.bodyEnd;
-    if (endpoint == null) _scheduleTargetVisibilityCheck();
+        endpoint == null &&
+        !anchorAtRepliesHeader &&
+        _activeLanding == ThreadPostLanding.bodyEnd;
+    if (endpoint == null && !anchorAtRepliesHeader) {
+      _scheduleTargetVisibilityCheck();
+    }
     final targetPid = _activeTargetPid?.trim();
     // 落点位于回复栏之下时，为吸顶栏留出与正文一致的顶部遮挡量。
     final headerOcclusion =
         endpoint == null &&
+            !anchorAtRepliesHeader &&
             targetPid != null &&
             _targetBelowRepliesHeader(targetPid)
         ? _repliesHeaderHeight
@@ -894,7 +960,9 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             final reveal = atBodyEnd
                 ? (lineHeight * 2.5).clamp(height * 0.06, height * 0.18)
                 : 0.0;
-            final topOffset = headerOcclusion + reveal;
+            final topOffset = anchorAtRepliesHeader
+                ? 0.0
+                : headerOcclusion + reveal;
             return NotificationListener<ScrollNotification>(
               onNotification: (_) {
                 _scheduleTargetVisibilityCheck();

@@ -11,6 +11,7 @@ import 'package:y300/features/thread/domain/services/thread_post_body_plain_text
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/forum_content_action_sheet.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 bool blogCanReplyToArticle(
   UserBlogDetailData article,
@@ -255,15 +256,10 @@ class _BlogContentActionsState extends ConsumerState<BlogContentActions> {
     if (text.trim().isEmpty || !_canAct(owner, identity)) return;
     await ref.read(clipboardTextWriterProvider).writeText(text);
     if (!mounted || !_canAct(owner, identity)) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).threadDetailCopySuccess(label),
-          ),
-        ),
-      );
+    showTransientSnackBar(
+      context,
+      AppLocalizations.of(context).threadDetailCopySuccess(label),
+    );
   }
 
   @override

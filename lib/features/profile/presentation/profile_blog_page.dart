@@ -45,6 +45,7 @@ import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_content_spacing.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 export 'package:y300/features/profile/presentation/blog/blog_feed_controller.dart';
 export 'package:y300/features/profile/presentation/blog/blog_detail_controller.dart';
@@ -501,16 +502,12 @@ class _ProfileBlogDetailPageState extends ConsumerState<ProfileBlogDetailPage> {
       return;
     }
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(switch (action) {
-          UserBlogCommentAction.add ||
-          UserBlogCommentAction.reply => l10n.profileBlogCommentSubmitted,
-          UserBlogCommentAction.edit => l10n.profileBlogCommentSaved,
-          UserBlogCommentAction.delete => l10n.profileBlogCommentDeleted,
-        }),
-      ),
-    );
+    showTransientSnackBar(context, switch (action) {
+      UserBlogCommentAction.add ||
+      UserBlogCommentAction.reply => l10n.profileBlogCommentSubmitted,
+      UserBlogCommentAction.edit => l10n.profileBlogCommentSaved,
+      UserBlogCommentAction.delete => l10n.profileBlogCommentDeleted,
+    });
   }
 }
 

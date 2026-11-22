@@ -293,21 +293,26 @@ void _sectionsCases() {
         find.byKey(const Key('forum-section-indicator-favorite:2,55')),
       );
       expect(indicator.icon, Icons.expand_more);
+      AnimatedRotation rotation() => tester.widget<AnimatedRotation>(
+        find.ancestor(
+          of: find.byKey(const Key('forum-section-indicator-favorite:2,55')),
+          matching: find.byType(AnimatedRotation),
+        ),
+      );
+      expect(rotation().turns, 0.0);
       final palette = ForumHomeNativePalette.resolve(
         Theme.of(tester.element(find.byType(ForumHomePage))),
       );
       final header = tester.widget<Material>(
         find.byKey(const Key('forum-section-title-favorite:2,55')),
       );
-      expect(header.color, palette.sectionHeaderBackground);
-      expect(indicator.color, palette.sectionHeaderForeground);
+      expect(header.color, Colors.transparent);
       final body = tester.widget<DecoratedBox>(
         find.byKey(const ValueKey('forum-home-section-expanded-favorite:2,55')),
       );
-      expect(
-        (body.decoration as BoxDecoration).color,
-        palette.sectionBodyBackground,
-      );
+      final bodyDecoration = body.decoration as BoxDecoration;
+      expect(bodyDecoration.color, palette.sectionCardBackground);
+      expect(bodyDecoration.borderRadius, BorderRadius.circular(20));
 
       await tester.tap(
         find.byKey(const Key('forum-section-toggle-favorite:2,55')),
@@ -320,10 +325,7 @@ void _sectionsCases() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('forum-favorite-card-2')), findsNothing);
-      indicator = tester.widget<Icon>(
-        find.byKey(const Key('forum-section-indicator-favorite:2,55')),
-      );
-      expect(indicator.icon, Icons.chevron_right);
+      expect(rotation().turns, -0.25);
 
       await tester.tap(
         find.byKey(const Key('forum-section-toggle-favorite:2,55')),
@@ -335,6 +337,61 @@ void _sectionsCases() {
         find.byKey(const Key('forum-section-indicator-favorite:2,55')),
       );
       expect(indicator.icon, Icons.expand_more);
+      expect(rotation().turns, 0.0);
+    },
+  );
+
+  testWidgets(
+    'floating search entry uses liquid glass in normal mode and solid border in e-ink mode',
+    (tester) async {
+      final repository = _FakeForumHomeRepository(
+        () async => forumHomeReadSuccess(_loggedOutPayload()),
+      );
+      var eInk = false;
+      late StateSetter setMode;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(repository),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              setMode = setState;
+              return LocalizedTestApp(
+                builder: (context, child) => EInkModeScope(
+                  enabled: eInk,
+                  child: AppGlassEnvironment(
+                    glassLevel: AppGlassLevel.standard,
+                    child: child!,
+                  ),
+                ),
+                home: const ForumHomePage(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final searchButton = find.byKey(const Key('forum-home-search-button'));
+      expect(searchButton, findsOneWidget);
+      expect(
+        find.descendant(of: searchButton, matching: find.byType(LiquidGlass)),
+        findsOneWidget,
+      );
+
+      setMode(() => eInk = true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: searchButton, matching: find.byType(LiquidGlass)),
+        findsNothing,
+      );
+      final material = tester.widget<Material>(
+        find
+            .descendant(of: searchButton, matching: find.byType(Material))
+            .first,
+      );
+      final shape = material.shape as RoundedRectangleBorder;
+      expect(shape.side.color, AppTheme.eInkBorderColor(Brightness.light));
     },
   );
 }

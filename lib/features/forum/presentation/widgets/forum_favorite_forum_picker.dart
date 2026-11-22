@@ -6,6 +6,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/forum/presentation/forum_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
+import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ForumFavoriteForumPicker extends StatefulWidget {
   const ForumFavoriteForumPicker({
@@ -171,18 +172,13 @@ class _ForumFavoriteForumPickerState extends State<ForumFavoriteForumPicker> {
       return;
     }
 
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            ForumTextResolver.favoriteActionFailure(
-              AppLocalizations.of(context),
-              result,
-            ),
-          ),
-        ),
-      );
+    showTransientSnackBar(
+      context,
+      ForumTextResolver.favoriteActionFailure(
+        AppLocalizations.of(context),
+        result,
+      ),
+    );
     setState(() {
       _submittingRemoteFavoriteId = null;
     });
