@@ -22,6 +22,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
     private companion object {
@@ -51,8 +52,20 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 关闭 Activity 层窗口转场，避免墨水屏上多一次整屏重绘。
-        window.setWindowAnimations(0)
+        // 仅在持久化偏好开启墨水屏模式时关闭 Activity 层窗口转场，普通设备保留系统过渡。
+        if (isSavedEInkModeEnabled()) {
+            window.setWindowAnimations(0)
+        }
+    }
+
+    private fun isSavedEInkModeEnabled(): Boolean {
+        return try {
+            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val snapshot = prefs.getString("flutter.app.appearance.snapshot.v1", null) ?: return false
+            JSONObject(snapshot).optBoolean("eInkMode", false)
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     private var einkKeysChannel: MethodChannel? = null

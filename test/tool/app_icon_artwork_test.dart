@@ -216,22 +216,53 @@ void main() {
       expect(splash.getPixel(480, 180).a, 0);
       expect(splash.getPixel(0, 0).a, 0);
     }
-    // 单包只保留一套浅色启动主题；夜间不再覆盖系统启动屏底色。
-    final style = File('android/app/src/main/res/values-v31/styles.xml')
-        .readAsStringSync();
-    expect(
-      style,
-      contains(
-        'name="android:windowSplashScreenIconBackgroundColor">#FFF4F4F4',
-      ),
-    );
-    expect(
-      style,
-      contains('name="android:windowSplashScreenBackground">#FFF4F4F4'),
-    );
-    expect(
-      File('android/app/src/main/res/values-night-v31/styles.xml').existsSync(),
-      isFalse,
-    );
+    // Android 12+ 启动屏恢复浅深色自适应底色与前景色匹配，系统统一裁切轮廓。
+    for (final variant in {
+      'values-v31': '#FFF9E2',
+      'values-night-v31': '#20201D',
+    }.entries) {
+      final styleFile = File(
+        'android/app/src/main/res/${variant.key}/styles.xml',
+      );
+      expect(styleFile.existsSync(), isTrue);
+      final style = styleFile.readAsStringSync();
+      expect(
+        style,
+        contains(
+          'name="android:windowSplashScreenBackground">${variant.value}',
+        ),
+      );
+      expect(
+        style,
+        contains(
+          'name="android:windowSplashScreenIconBackgroundColor">${variant.value}',
+        ),
+      );
+      expect(
+        style,
+        contains(
+          'name="android:windowSplashScreenAnimatedIcon">@drawable/android12splash',
+        ),
+      );
+      expect(style, isNot(contains('windowDisablePreview')));
+    }
+    for (final variant in ['values', 'values-night']) {
+      final style = File('android/app/src/main/res/$variant/styles.xml')
+          .readAsStringSync();
+      expect(style, contains('@drawable/launch_background'));
+      expect(style, isNot(contains('windowDisablePreview')));
+    }
+    for (final qualifier in [
+      'drawable',
+      'drawable-v21',
+      'drawable-night',
+      'drawable-night-v21',
+    ]) {
+      expect(
+        File('android/app/src/main/res/$qualifier/launch_background.xml')
+            .existsSync(),
+        isTrue,
+      );
+    }
   });
 }
