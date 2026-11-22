@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/liquid_glass.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
@@ -374,6 +375,57 @@ void main() {
       );
       expect(closeButton.baseColor, const Color(0xFF171717));
       expect(closeButton.foregroundColor!.computeLuminance(), greaterThan(0.5));
+    },
+  );
+
+  testWidgets(
+    'promotes nested panel to root navigator when immersive bottom inset is active',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final root = GlobalKey<NavigatorState>();
+      final nested = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          navigatorKey: root,
+          home: MainShellBottomInset(
+            bottom: 88,
+            child: Scaffold(
+              body: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 200),
+                child: Navigator(
+                  key: nested,
+                  onGenerateRoute: (_) => MaterialPageRoute<void>(
+                    builder: (context) => Center(
+                      child: TextButton(
+                        onPressed: () => showAdaptivePanel<void>(
+                          context: context,
+                          builder: (_) => const Text('panel-content'),
+                        ),
+                        child: const Text('open'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final panel = find.byKey(const Key('adaptive-side-panel'));
+      expect(panel, findsOneWidget);
+      expect(tester.getRect(panel), const Rect.fromLTWH(720, 0, 480, 800));
+      expect(Navigator.of(tester.element(panel)), same(root.currentState));
+      expect(
+        Navigator.of(tester.element(panel)),
+        isNot(same(nested.currentState)),
+      );
     },
   );
 }

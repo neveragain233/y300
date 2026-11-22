@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:prism_ui/press_region.dart' as prism_press;
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -14,6 +16,9 @@ import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.d
 import 'package:y300/features/forum/presentation/forum_display_content_projection.dart';
 import 'package:y300/features/forum/presentation/forum_display_state.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
+import 'package:y300/shared/widgets/app_capsule_tab_bar.dart';
+import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:y300/shared/widgets/forum_cached_avatar.dart';
 import 'package:y300/shared/widgets/forum_media_loading_style.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
@@ -104,6 +109,17 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     ];
     final hiddenByRules =
         allDisplayThreads.isNotEmpty && displayThreads.isEmpty;
+    final filterPadding = EdgeInsets.fromLTRB(
+      16,
+      4,
+      displayTypeFilters.isNotEmpty ? 8 : 16,
+      4,
+    );
+    final filterHeaderHeight = AppCapsuleTabBar.preferredHeight(
+      context,
+      labels: displayPrimaryFilters.map((item) => item.label),
+      padding: filterPadding,
+    );
     return ColoredBox(
       color: palette.background,
       child: CustomScrollView(
@@ -127,6 +143,8 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
               pinned: true,
               delegate: _ForumDisplayFilterHeaderDelegate(
                 anchorKey: widget.filterAnchorKey,
+                height: filterHeaderHeight,
+                filterPadding: filterPadding,
                 primaryItems: displayPrimaryFilters,
                 typeItems: displayTypeFilters,
                 onSelected: (item) => widget.onOpenFilter(
@@ -336,6 +354,8 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
 class _ForumDisplayFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   const _ForumDisplayFilterHeaderDelegate({
     required this.anchorKey,
+    required this.height,
+    required this.filterPadding,
     required this.primaryItems,
     required this.typeItems,
     required this.onSelected,
@@ -343,18 +363,18 @@ class _ForumDisplayFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   final GlobalKey anchorKey;
+  final double height;
+  final EdgeInsetsGeometry filterPadding;
   final List<ForumDisplayFilterItem> primaryItems;
   final List<ForumDisplayFilterItem> typeItems;
   final ValueChanged<ForumDisplayFilterItem> onSelected;
   final ForumDisplayThemePalette palette;
 
   @override
-  double get minExtent => _height;
+  double get minExtent => height;
 
   @override
-  double get maxExtent => _height;
-
-  double get _height => 44;
+  double get maxExtent => height;
 
   @override
   Widget build(
@@ -364,6 +384,8 @@ class _ForumDisplayFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return _ForumDisplayFilterBand(
       anchorKey: anchorKey,
+      height: height,
+      filterPadding: filterPadding,
       primaryItems: primaryItems,
       typeItems: typeItems,
       onSelected: onSelected,
@@ -374,7 +396,9 @@ class _ForumDisplayFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _ForumDisplayFilterHeaderDelegate oldDelegate) {
-    return primaryItems != oldDelegate.primaryItems ||
+    return height != oldDelegate.height ||
+        filterPadding != oldDelegate.filterPadding ||
+        primaryItems != oldDelegate.primaryItems ||
         anchorKey != oldDelegate.anchorKey ||
         typeItems != oldDelegate.typeItems ||
         onSelected != oldDelegate.onSelected ||
@@ -385,6 +409,8 @@ class _ForumDisplayFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
 class _ForumDisplayFilterBand extends StatelessWidget {
   const _ForumDisplayFilterBand({
     required this.anchorKey,
+    required this.height,
+    required this.filterPadding,
     required this.primaryItems,
     required this.typeItems,
     required this.onSelected,
@@ -393,6 +419,8 @@ class _ForumDisplayFilterBand extends StatelessWidget {
   });
 
   final GlobalKey anchorKey;
+  final double height;
+  final EdgeInsetsGeometry filterPadding;
   final List<ForumDisplayFilterItem> primaryItems;
   final List<ForumDisplayFilterItem> typeItems;
   final ValueChanged<ForumDisplayFilterItem> onSelected;
@@ -401,21 +429,27 @@ class _ForumDisplayFilterBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final eInk = EInkModeScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
     return KeyedSubtree(
       key: anchorKey,
       child: ColoredBox(
         key: const Key('forum-display-filter-header'),
         color: palette.background,
         child: SizedBox(
-          height: 44,
+          height: height,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: palette.outlineSoft.withValues(alpha: 0.72),
-                ),
-              ),
-              boxShadow: overlapsContent
+              border: overlapsContent
+                  ? Border(
+                      bottom: BorderSide(
+                        color: eInk
+                            ? scheme.outlineVariant
+                            : palette.outlineSoft.withValues(alpha: 0.72),
+                      ),
+                    )
+                  : null,
+              boxShadow: overlapsContent && !eInk
                   ? [
                       BoxShadow(
                         color: palette.stateLayer.withValues(alpha: 0.18),
@@ -425,28 +459,27 @@ class _ForumDisplayFilterBand extends StatelessWidget {
                     ]
                   : null,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: SizedBox(
-                height: 44,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _FilterStrip(
-                        items: primaryItems,
-                        onSelected: onSelected,
-                        palette: palette,
-                      ),
-                    ),
-                    if (typeItems.isNotEmpty)
-                      _TypeFilterMenu(
-                        items: typeItems,
-                        onSelected: onSelected,
-                        palette: palette,
-                      ),
-                  ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: _FilterStrip(
+                    items: primaryItems,
+                    padding: filterPadding,
+                    onSelected: onSelected,
+                  ),
                 ),
-              ),
+                if (typeItems.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _TypeFilterMenu(
+                      items: typeItems,
+                      height: height,
+                      onSelected: onSelected,
+                      palette: palette,
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -658,33 +691,35 @@ class _ForumHeadImageState extends ConsumerState<_ForumHeadImage> {
 class _FilterStrip extends StatelessWidget {
   const _FilterStrip({
     required this.items,
+    required this.padding,
     required this.onSelected,
-    required this.palette,
   });
 
   final List<ForumDisplayFilterItem> items;
+  final EdgeInsetsGeometry padding;
   final ValueChanged<ForumDisplayFilterItem> onSelected;
-  final ForumDisplayThemePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: items.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return _FilterChipButton(
-            key: Key('forum-display-filter-${_filterIdentity(item)}'),
-            item: item,
-            palette: palette,
-            onSelected: onSelected,
-          );
-        },
-      ),
+    final selectedIdx = items.indexWhere((item) => item.isSelected);
+    return AppCapsuleTabBar(
+      tabs: [
+        for (final item in items)
+          AppCapsuleTabItem(id: _filterIdentity(item), label: item.label),
+      ],
+      selectedIndex: selectedIdx >= 0 ? selectedIdx : null,
+      indicatorKey: const Key('forum-display-filter-indicator'),
+      tabKeyBuilder: (id) => Key('forum-display-filter-$id'),
+      padding: padding,
+      onTap: (index) {
+        if (index < 0 || index >= items.length) {
+          return;
+        }
+        final item = items[index];
+        if (!item.isSelected) {
+          onSelected(item);
+        }
+      },
     );
   }
 }
@@ -692,11 +727,13 @@ class _FilterStrip extends StatelessWidget {
 class _TypeFilterMenu extends StatefulWidget {
   const _TypeFilterMenu({
     required this.items,
+    required this.height,
     required this.onSelected,
     required this.palette,
   });
 
   final List<ForumDisplayFilterItem> items;
+  final double height;
   final ValueChanged<ForumDisplayFilterItem> onSelected;
   final ForumDisplayThemePalette palette;
 
@@ -705,78 +742,55 @@ class _TypeFilterMenu extends StatefulWidget {
 }
 
 class _TypeFilterMenuState extends State<_TypeFilterMenu> {
-  final LayerLink _layerLink = LayerLink();
   bool _isMenuOpen = false;
-  OverlayEntry? _overlayEntry;
 
   void _setMenuOpen(bool value) {
-    if (_isMenuOpen == value) {
+    if (!mounted || _isMenuOpen == value) {
       return;
     }
     setState(() => _isMenuOpen = value);
   }
 
   @override
-  void dispose() {
-    _removeOverlay();
-    super.dispose();
-  }
-
-  void _toggleMenu() {
-    if (_overlayEntry != null) {
-      _removeOverlay();
-      return;
-    }
-    _showOverlay();
-  }
-
-  void _showOverlay() {
-    final overlay = Overlay.of(context);
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null || !renderBox.hasSize) {
-      return;
-    }
-    _setMenuOpen(true);
-    _overlayEntry = OverlayEntry(
-      builder: (context) {
-        return _TypeFilterMenuOverlay(
-          layerLink: _layerLink,
-          anchorSize: renderBox.size,
-          items: widget.items,
-          selectedItem: _selectedFilterItem(widget.items),
-          palette: widget.palette,
-          onDismiss: _removeOverlay,
-          onSelected: (item) {
-            _removeOverlay();
-            widget.onSelected(item);
-          },
-        );
-      },
-    );
-    overlay.insert(_overlayEntry!);
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-    if (mounted) {
-      _setMenuOpen(false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: SizedBox(
-        width: 40,
-        height: 44,
-        child: Material(
+    return AppPopupMenuButton<int>(
+      useRootNavigator: true,
+      onOpened: () => _setMenuOpen(true),
+      onCanceled: () => _setMenuOpen(false),
+      onSelected: (index) {
+        if (!mounted) {
+          return;
+        }
+        _setMenuOpen(false);
+        if (index < 0 || index >= widget.items.length) {
+          return;
+        }
+        final item = widget.items[index];
+        if (!item.isSelected) {
+          widget.onSelected(item);
+        }
+      },
+      itemBuilder: (_) => [
+        for (var index = 0; index < widget.items.length; index++)
+          AppPopupMenuItem<int>(
+            key: Key(
+              'forum-display-type-filter-'
+              '${_filterIdentity(widget.items[index])}',
+            ),
+            value: index,
+            label: widget.items[index].label,
+            checked: widget.items[index].isSelected,
+          ),
+      ],
+      targetBuilder: (_, open) => AppPrismTheme(
+        child: SizedBox(
           key: const Key('forum-display-type-filter-menu'),
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _toggleMenu,
-            customBorder: const CircleBorder(),
+          width: 44,
+          height: widget.height,
+          child: prism_press.PressRegion(
+            onTap: open,
+            overlay: prism_press.PressRegion.pressOverlay,
+            shape: const CircleBorder(),
             child: Center(
               child: _RotatingArrowIcon(
                 isExpanded: _isMenuOpen,
@@ -786,135 +800,6 @@ class _TypeFilterMenuState extends State<_TypeFilterMenu> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TypeFilterMenuOverlay extends StatelessWidget {
-  const _TypeFilterMenuOverlay({
-    required this.layerLink,
-    required this.anchorSize,
-    required this.items,
-    required this.selectedItem,
-    required this.palette,
-    required this.onDismiss,
-    required this.onSelected,
-  });
-
-  static const double _width = 112;
-  static const double _maxHeight = 320;
-  static const double _itemHeight = 44;
-
-  final LayerLink layerLink;
-  final Size anchorSize;
-  final List<ForumDisplayFilterItem> items;
-  final ForumDisplayFilterItem? selectedItem;
-  final ForumDisplayThemePalette palette;
-  final VoidCallback onDismiss;
-  final ValueChanged<ForumDisplayFilterItem> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final menuHeight = (items.length * _itemHeight).clamp(0, _maxHeight);
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: onDismiss,
-            child: const SizedBox.expand(),
-          ),
-        ),
-        CompositedTransformFollower(
-          link: layerLink,
-          showWhenUnlinked: false,
-          targetAnchor: Alignment.bottomRight,
-          followerAnchor: Alignment.topRight,
-          offset: const Offset(0, 4),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: 1),
-            duration: AppMotion.duration(
-              context,
-              const Duration(milliseconds: 160),
-            ),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  alignment: Alignment.topRight,
-                  scaleY: value,
-                  child: child,
-                ),
-              );
-            },
-            child: Material(
-              color: Colors.transparent,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: _width,
-                  maxWidth: _width,
-                  maxHeight: _maxHeight,
-                ),
-                child: DecoratedBox(
-                  key: const Key('forum-display-type-filter-panel'),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: palette.stateLayer.withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      width: _width,
-                      height: menuHeight.toDouble(),
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemExtent: _itemHeight,
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          final isSelected = item == selectedItem;
-                          return InkWell(
-                            key: Key(
-                              'forum-display-type-filter-'
-                              '${_filterIdentity(item)}',
-                            ),
-                            onTap: isSelected ? null : () => onSelected(item),
-                            child: Center(
-                              child: Text(
-                                item.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  color: isSelected
-                                      ? palette.selectedForeground
-                                      : palette.title,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -940,90 +825,6 @@ class _RotatingArrowIcon extends StatelessWidget {
       child: Icon(Icons.keyboard_arrow_down, color: color, size: 20),
     );
   }
-}
-
-class _FilterChipButton extends StatelessWidget {
-  const _FilterChipButton({
-    super.key,
-    required this.item,
-    required this.palette,
-    required this.onSelected,
-  });
-
-  final ForumDisplayFilterItem item;
-  final ForumDisplayThemePalette palette;
-  final ValueChanged<ForumDisplayFilterItem> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = item.isSelected;
-    final radius = BorderRadius.circular(12);
-    final indicatorColor = isSelected
-        ? palette.selectedForeground
-        : Colors.transparent;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: radius,
-      child: InkWell(
-        borderRadius: radius,
-        overlayColor: WidgetStatePropertyAll<Color>(palette.stateLayer),
-        onTap: isSelected ? null : () => onSelected(item),
-        child: SizedBox(
-          height: 44,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Center(
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: isSelected
-                          ? palette.selectedForeground
-                          : palette.softText,
-                      fontWeight: isSelected
-                          ? FontWeight.w800
-                          : FontWeight.w400,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: AnimatedContainer(
-                    duration: AppMotion.duration(
-                      context,
-                      const Duration(milliseconds: 160),
-                    ),
-                    curve: Curves.easeOutCubic,
-                    width: isSelected ? 18 : 0,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: indicatorColor,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-ForumDisplayFilterItem? _selectedFilterItem(
-  List<ForumDisplayFilterItem> items,
-) {
-  for (final item in items) {
-    if (item.isSelected) {
-      return item;
-    }
-  }
-  return null;
 }
 
 class _SubForumList extends StatefulWidget {

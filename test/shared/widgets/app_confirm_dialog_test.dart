@@ -97,6 +97,59 @@ void main() {
     expect(harness.result, isTrue);
     expect(harness.calls, 1);
   });
+
+  testWidgets('pushes onto root navigator when invoked from nested navigator', (
+    tester,
+  ) async {
+    final root = GlobalKey<NavigatorState>();
+    final nested = GlobalKey<NavigatorState>();
+    bool? result;
+    await tester.pumpWidget(
+      LocalizedTestApp(
+        navigatorKey: root,
+        home: Scaffold(
+          body: Navigator(
+            key: nested,
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                body: Builder(
+                  builder: (context) => Center(
+                    child: TextButton(
+                      key: const Key('nested-open-dialog'),
+                      onPressed: () async {
+                        result = await showAppConfirmDialog(
+                          context: context,
+                          title: '删除这个分类？',
+                          confirmLabel: '删除',
+                          cancelLabel: '取消',
+                          confirmKey: const Key('confirm'),
+                        );
+                      },
+                      child: const Text('open'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('nested-open-dialog')));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text('删除这个分类？');
+    expect(titleFinder, findsOneWidget);
+    expect(Navigator.of(tester.element(titleFinder)), same(root.currentState));
+    expect(
+      Navigator.of(tester.element(titleFinder)),
+      isNot(same(nested.currentState)),
+    );
+
+    await tester.tap(find.byKey(const Key('confirm')));
+    await tester.pumpAndSettle();
+    expect(result, isTrue);
+  });
 }
 
 class _DialogHarness {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/segmented_control.dart' as prism_segmented;
 import 'package:prism_ui/switch.dart' as prism;
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_controller.dart';
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_repository_provider.dart';
@@ -115,7 +116,7 @@ void main() {
     expect(_lineHeight(tester).onChangeEnd, isNull);
     expect(_authorSwitch(tester).onChanged, isNull);
     expect(_reset(tester).onPressed, isNull);
-    expect(_conversion(tester).onSelectionChanged, isNull);
+    expect(_conversion(tester).enabled, isFalse);
     expect(repository.saved, isEmpty);
 
     completion.complete(loaded);
@@ -125,7 +126,7 @@ void main() {
     expect(_font(tester).value, 1.35);
     expect(_lineHeight(tester).value, 1.8);
     expect(_authorSwitch(tester).value, isFalse);
-    expect(_conversion(tester).selected, {TextConversionMode.toTraditional});
+    expect(_conversion(tester).value, TextConversionMode.toTraditional);
 
     _font(tester).onChanged!(1.5);
     _font(tester).onChangeEnd!(1.5);
@@ -231,10 +232,11 @@ TextButton _reset(WidgetTester tester) => tester.widget<TextButton>(
   find.byKey(const Key('forum-html-reader-reset-button')),
 );
 
-SegmentedButton<TextConversionMode> _conversion(WidgetTester tester) =>
-    tester.widget<SegmentedButton<TextConversionMode>>(
-      find.byKey(const Key('forum-html-reader-conversion-mode-control')),
-    );
+prism_segmented.SegmentedControl<TextConversionMode> _conversion(
+  WidgetTester tester,
+) => tester.widget<prism_segmented.SegmentedControl<TextConversionMode>>(
+  find.byKey(const Key('forum-html-reader-conversion-mode-control')),
+);
 
 Future<_Host> _mount(
   WidgetTester tester, {

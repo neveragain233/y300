@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:y300/app/layout/app_window_layout.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/core/motion/app_motion.dart';
@@ -19,8 +20,11 @@ Future<T?> showAdaptivePanel<T>({
   BoxConstraints? constraints,
   Color? backgroundColor,
 }) {
-  // 根页面操作覆盖主壳导航；阅读器与分栏详情默认仍归所属区域。
-  final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
+  // 根页面操作覆盖主壳导航；沉浸式底栏可见时同步提升至根导航器，
+  // 避免嵌套来源栈打开的面板落到底栏下方。
+  final effectiveUseRoot =
+      useRootNavigator || MainShellBottomInset.of(context) > 0;
+  final navigator = Navigator.of(context, rootNavigator: effectiveUseRoot);
   final overlay = navigator.overlay!.context.findRenderObject() as RenderBox;
   final source = context.findRenderObject();
   final sourceCenter = source is RenderBox && source.hasSize
@@ -40,7 +44,7 @@ Future<T?> showAdaptivePanel<T>({
       context: context,
       isScrollControlled: isScrollControlled,
       useSafeArea: useSafeArea,
-      useRootNavigator: useRootNavigator,
+      useRootNavigator: effectiveUseRoot,
       constraints: constraints,
       backgroundColor: backgroundColor,
       anchorPoint: anchor,
@@ -53,7 +57,7 @@ Future<T?> showAdaptivePanel<T>({
   return showGeneralDialog<T>(
     context: context,
     anchorPoint: anchor,
-    useRootNavigator: useRootNavigator,
+    useRootNavigator: effectiveUseRoot,
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     transitionDuration: AppLayoutTokens.motionDuration(context),

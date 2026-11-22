@@ -534,6 +534,7 @@ class _UnifiedDetailChapterManagementSheetState
     // 返回 null = 用户取消，返回对象且 customTitle 为 null = 用户要求恢复。
     final result = await prism.showFloatingDialog<_ChapterRenameResult>(
       context: context,
+      useRootNavigator: true,
       child: _ChapterRenameDialog(
         chapter: chapter,
         initialTitle: LibraryDetailTextResolver.chapterTitle(

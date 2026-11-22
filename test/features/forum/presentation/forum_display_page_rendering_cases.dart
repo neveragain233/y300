@@ -76,45 +76,52 @@ void _renderingCases() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('forum-thread-list-group')), findsOneWidget);
-    final selectedFilterIndicatorSize = tester.getSize(
-      find
-          .descendant(
-            of: find.byKey(
-              const Key(
-                'forum-display-filter-'
-                'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&'
-                'mobile=2',
-              ),
-            ),
-            matching: find.byType(AnimatedContainer),
-          )
-          .last,
+    final selectedFilter = find.byKey(
+      const Key(
+        'forum-display-filter-'
+        'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&mobile=2',
+      ),
     );
-    expect(selectedFilterIndicatorSize.width, 18);
-    expect(selectedFilterIndicatorSize.height, 3);
-    final selectedFilterIndicatorBottom = tester
-        .getBottomLeft(
-          find
-              .descendant(
-                of: find.byKey(
-                  const Key(
-                    'forum-display-filter-'
-                    'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&'
-                    'mobile=2',
-                  ),
-                ),
-                matching: find.byType(AnimatedContainer),
-              )
-              .last,
-        )
-        .dy;
-    final filterHeaderBottom = tester
-        .getBottomLeft(find.byKey(const Key('forum-display-filter-header')))
-        .dy;
+    final unselectedFilter = find.byKey(
+      const Key(
+        'forum-display-filter-'
+        'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&'
+        'filter=lastpost&mobile=2',
+      ),
+    );
+    final indicator = find.byKey(const Key('forum-display-filter-indicator'));
+    expect(indicator, findsOneWidget);
     expect(
-      (filterHeaderBottom - selectedFilterIndicatorBottom).abs(),
-      lessThanOrEqualTo(1),
+      find.descendant(of: selectedFilter, matching: indicator),
+      findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: find.byType(AppCapsuleTabBar),
+        matching: find.byType(InkWell),
+      ),
+      findsNothing,
+    );
+    final capsuleDecorated = tester.widget<DecoratedBox>(
+      find.descendant(of: indicator, matching: find.byType(DecoratedBox)),
+    );
+    final capsuleShape = capsuleDecorated.decoration as ShapeDecoration;
+    expect(capsuleShape.shape, isA<StadiumBorder>());
+    expect(
+      capsuleShape.color,
+      Theme.of(tester.element(indicator)).colorScheme.primary,
+    );
+    final semanticsHandle = tester.ensureSemantics();
+    try {
+      final selectedSemantics = tester.getSemantics(selectedFilter);
+      expect(selectedSemantics.flagsCollection.isButton, isTrue);
+      expect(selectedSemantics.flagsCollection.isSelected, Tristate.isTrue);
+      final unselectedSemantics = tester.getSemantics(unselectedFilter);
+      expect(unselectedSemantics.flagsCollection.isButton, isTrue);
+      expect(unselectedSemantics.flagsCollection.isSelected, Tristate.isFalse);
+    } finally {
+      semanticsHandle.dispose();
+    }
     final filterHeaderCenterY = tester
         .getCenter(find.byKey(const Key('forum-display-filter-header')))
         .dy;
@@ -470,4 +477,135 @@ void _renderingCases() {
     await tester.pump();
     _expectCardFullyVisible(tester, '10000');
   });
+
+  testWidgets(
+    'primary filter capsules support re-tap noop, no horizontal swipe, empty selection, and eInk fallback',
+    (tester) async {
+      var loadCount = 0;
+      final repository = _FakeForumDisplayRepository((_, page, query) async {
+        loadCount += 1;
+        return ApiSuccess(
+          _displayData(
+            page: page,
+            total: 1,
+            threads: [
+              ForumThreadSummary(
+                tid: '100',
+                subject: '帖子A',
+                author: 'alice',
+                replies: 1,
+                views: 5,
+                dateline: 'today',
+              ),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+      expect(loadCount, 1);
+
+      expect(find.byType(PageView), findsNothing);
+      await tester.tap(
+        find.byKey(
+          const Key(
+            'forum-display-filter-'
+            'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&mobile=2',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(loadCount, 1);
+
+      await tester.drag(
+        find.byKey(const Key('forum-display-list')),
+        const Offset(-240, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(loadCount, 1);
+
+      final emptySelectionRepo = _FakeForumDisplayRepository((
+        _,
+        page,
+        query,
+      ) async {
+        return ApiSuccess(
+          _displayData(
+            page: page,
+            total: 1,
+            primaryFilters: const <ForumDisplayFilterItem>[
+              ForumDisplayFilterItem(
+                label: '全部',
+                url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&mobile=2',
+              ),
+              ForumDisplayFilterItem(
+                label: '最新',
+                url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=lastpost&mobile=2',
+              ),
+            ],
+            threads: const <ForumThreadSummary>[],
+          ),
+        );
+      });
+      final eInkTheme = AppTheme.build(
+        family: AppThemeFamily.warmPaper,
+        brightness: Brightness.light,
+        eInkMode: true,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            forumDisplayRepositoryProvider.overrideWithValue(
+              emptySelectionRepo,
+            ),
+            imageCacheServiceProvider.overrideWithValue(
+              _NoopImageCacheService(),
+            ),
+          ],
+          child: LocalizedTestApp(
+            theme: eInkTheme,
+            home: const EInkModeScope(
+              enabled: true,
+              child: ForumDisplayPage(fid: '2', title: '公告区'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('forum-display-filter-indicator')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AppCapsuleTabBar),
+          matching: find.byType(ElasticPress),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AppCapsuleTabBar),
+          matching: find.byType(AppGlassSurface),
+        ),
+        findsNothing,
+      );
+      final eInkUnselected = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byKey(
+            const Key(
+              'forum-display-filter-'
+              'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&mobile=2',
+            ),
+          ),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      final shape =
+          (eInkUnselected.decoration as ShapeDecoration).shape as StadiumBorder;
+      expect(shape.side.color, eInkTheme.colorScheme.outlineVariant);
+    },
+  );
 }

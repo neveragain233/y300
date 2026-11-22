@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' as riverpod_misc;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
+import 'package:prism_ui/popup.dart' as prism_popup;
+import 'package:y300/app/theme/app_theme_family.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/shared/widgets/app_capsule_tab_bar.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';

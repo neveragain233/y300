@@ -886,8 +886,7 @@ void main() {
         find.byKey(const Key('posting-composer-special-switch')),
       );
       await tester.tap(find.byKey(const Key('posting-composer-type-toggle')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 160));
+      await tester.pumpAndSettle();
 
       final openArrowFinder = find.descendant(
         of: find.byKey(const Key('posting-composer-type-toggle')),
@@ -919,8 +918,7 @@ void main() {
       await tester.tap(
         find.byKey(const Key('posting-composer-special-switch')),
       );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 160));
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('posting-composer-special-poll')),
         findsOneWidget,

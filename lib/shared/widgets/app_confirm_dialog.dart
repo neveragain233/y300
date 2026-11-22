@@ -22,10 +22,12 @@ Future<bool> showAppConfirmDialog({
   Key? confirmKey,
   Key? cancelKey,
   bool dismissible = true,
+  bool useRootNavigator = true,
 }) async {
   final result = await prism.showFloatingDialog<bool>(
     context: context,
     dismissible: dismissible,
+    useRootNavigator: useRootNavigator,
     child: _AppConfirmDialog(
       title: title,
       message: message,
@@ -107,11 +109,13 @@ Future<T?> showAppFormDialog<T>({
   bool destructive = false,
   bool hasFields = false,
   bool dismissible = true,
+  bool useRootNavigator = true,
   Key? dialogKey,
 }) {
   return prism.showFloatingDialog<T>(
     context: context,
     dismissible: dismissible,
+    useRootNavigator: useRootNavigator,
     child: AppFormDialog(
       key: dialogKey,
       title: title,

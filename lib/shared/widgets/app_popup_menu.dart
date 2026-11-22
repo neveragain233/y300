@@ -28,11 +28,15 @@ class AppPopupMenuButton<T> extends StatelessWidget {
     required this.itemBuilder,
     this.onSelected,
     this.onCanceled,
+    this.onOpened,
     this.tooltip,
     this.icon,
     this.child,
     this.targetBuilder,
     this.enabled = true,
+    this.useRootNavigator = true,
+    this.placement = prism.PopupPlacement.overAnchorEnd,
+    this.maxVisibleItems,
   }) : assert(child == null || icon == null, '自定义触发控件已经提供内容，不再同时接受 icon'),
        assert(
          targetBuilder == null || (child == null && icon == null),
@@ -42,6 +46,7 @@ class AppPopupMenuButton<T> extends StatelessWidget {
   final PopupMenuItemBuilder<T> itemBuilder;
   final PopupMenuItemSelected<T>? onSelected;
   final PopupMenuCanceled? onCanceled;
+  final VoidCallback? onOpened;
   final String? tooltip;
   final Widget? icon;
 
@@ -52,6 +57,12 @@ class AppPopupMenuButton<T> extends StatelessWidget {
   final Widget Function(BuildContext context, VoidCallback open)? targetBuilder;
 
   final bool enabled;
+
+  /// 默认推入应用根导航器，确保主壳沉浸式底栏无法遮挡锚定菜单。
+  final bool useRootNavigator;
+
+  final prism.PopupPlacement placement;
+  final int? maxVisibleItems;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +79,9 @@ class AppPopupMenuButton<T> extends StatelessWidget {
       runsPickedAfterReturn: false,
       // 顶栏按钮和文字触发控件都没有自己的表面，液滴从透明淡入而不是先铺底色。
       bare: true,
+      useRootNavigator: useRootNavigator,
+      placement: placement,
+      onOpened: onOpened,
       // 系统减少动态效果时直接开关：不做液滴展开与收回，来源按钮一直可见。
       reduceMotion: AppMotion.reduceMotion(context),
       theme: theme,
@@ -90,6 +104,7 @@ class AppPopupMenuButton<T> extends StatelessWidget {
             ),
       popupBuilder: (context) => _AppPopupMenu<T>(
         entries: entries,
+        maxVisibleItems: maxVisibleItems,
         onSelected: onSelected,
         onCanceled: onCanceled,
       ),
@@ -129,11 +144,13 @@ class AppPopupMenuItem<T> extends PopupMenuItem<T> {
 class _AppPopupMenu<T> extends StatefulWidget {
   const _AppPopupMenu({
     required this.entries,
+    this.maxVisibleItems,
     this.onSelected,
     this.onCanceled,
   });
 
   final List<PopupMenuEntry<T>> entries;
+  final int? maxVisibleItems;
   final PopupMenuItemSelected<T>? onSelected;
   final PopupMenuCanceled? onCanceled;
 
@@ -161,7 +178,11 @@ class _AppPopupMenuState<T> extends State<_AppPopupMenu<T>> {
   @override
   Widget build(BuildContext context) {
     // 界面库主题随菜单路由挂载（见 [AppPopupMenuButton]），内容直接继承。
-    return prism.PopupMenu(items: _items(), onWillSelect: () => _picked = true);
+    return prism.PopupMenu(
+      items: _items(),
+      maxVisibleItems: widget.maxVisibleItems,
+      onWillSelect: () => _picked = true,
+    );
   }
 
   List<prism.PopupMenuItem> _items() {

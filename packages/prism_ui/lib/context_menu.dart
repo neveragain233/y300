@@ -87,7 +87,7 @@ class _ContextMenuRegionState extends State<ContextMenuRegion> {
 
   void _open(Offset globalPosition, {bool avoid = false}) {
     final items = widget.menuItems;
-    final navigator = Navigator.maybeOf(context);
+    final navigator = Navigator.maybeOf(context, rootNavigator: true);
     final navigatorBox = navigator?.context.findRenderObject();
     final box = context.findRenderObject();
     if (items == null ||

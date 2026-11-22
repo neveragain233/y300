@@ -232,28 +232,29 @@ void _paginationCases() {
     final openTypeArrow =
         openTypeArrowFinder.evaluate().single.widget as RotationTransition;
     expect(openTypeArrow.turns.value, 0.5);
-    final menuItemCenter = tester.getCenter(
-      find.byKey(
-        const Key(
-          'forum-display-type-filter-65:'
-          'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&'
-          'filter=typeid&typeid=65&mobile=2',
-        ),
+    expect(find.byType(prism_popup.PopupMenuCard), findsOneWidget);
+    final menuItem = find.byKey(
+      const Key(
+        'forum-display-type-filter-65:'
+        'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&'
+        'filter=typeid&typeid=65&mobile=2',
       ),
     );
+    final menuItemCenter = tester.getCenter(menuItem);
     final menuTextCenter = tester.getCenter(find.text('公告').last);
-    expect((menuItemCenter.dx - menuTextCenter.dx).abs(), lessThan(1));
+    expect((menuItemCenter.dy - menuTextCenter.dy).abs(), lessThan(1));
 
-    await tester.tap(
-      find.byKey(
-        const Key(
-          'forum-display-type-filter-65:'
-          'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&'
-          'filter=typeid&typeid=65&mobile=2',
-        ),
-      ),
-    );
+    await tester.tap(menuItem);
     await tester.pumpAndSettle();
+    final closedTypeArrow = tester
+        .widgetList<RotationTransition>(
+          find.descendant(
+            of: find.byKey(const Key('forum-display-type-filter-menu')),
+            matching: find.byType(RotationTransition),
+          ),
+        )
+        .single;
+    expect(closedTypeArrow.turns.value, 0);
 
     expect(repository.lastQuery?.parameters['filter'], 'typeid');
     expect(repository.lastQuery?.parameters['typeid'], '65');
@@ -498,7 +499,8 @@ void _paginationCases() {
     );
     await tester.tap(find.byKey(const Key('forum-display-page-option-3')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 550));
+    await tester.pump();
 
     expect(repository.lastQuery?.page, 3);
     expect(find.text('第3页结果'), findsOneWidget);
@@ -507,9 +509,14 @@ void _paginationCases() {
       find.byKey(const Key('forum-display-current-page-button')),
     );
     await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('forum-display-page-option-8')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('forum-display-page-option-8')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 550));
+    await tester.pump();
 
     expect(repository.lastQuery?.page, 8);
     expect(find.text('第8页结果'), findsOneWidget);

@@ -63,6 +63,7 @@ ForumDisplayData _displayData({
   int rank = 1,
   List<ForumDisplayTopEntry>? topEntries,
   String? headImageUrl,
+  List<ForumDisplayFilterItem>? primaryFilters,
   List<ForumDisplaySubForum>? subForums,
   int? lastPage,
   ForumDisplayFavoriteAction favoriteAction =
@@ -86,17 +87,19 @@ ForumDisplayData _displayData({
         : null,
     hasMoreOverride: page < (lastPage ?? total),
     favoriteAction: favoriteAction,
-    primaryFilters: const <ForumDisplayFilterItem>[
-      ForumDisplayFilterItem(
-        label: '全部',
-        url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&mobile=2',
-        isSelected: true,
-      ),
-      ForumDisplayFilterItem(
-        label: '最新',
-        url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=lastpost&mobile=2',
-      ),
-    ],
+    primaryFilters:
+        primaryFilters ??
+        const <ForumDisplayFilterItem>[
+          ForumDisplayFilterItem(
+            label: '全部',
+            url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&mobile=2',
+            isSelected: true,
+          ),
+          ForumDisplayFilterItem(
+            label: '最新',
+            url: 'https://bbs.yamibo.com/forum.php?mod=forumdisplay&fid=2&filter=lastpost&mobile=2',
+          ),
+        ],
     typeFilters: const <ForumDisplayFilterItem>[
       ForumDisplayFilterItem(
         label: '公告',

@@ -12,6 +12,8 @@ class SegmentedControl<T> extends StatelessWidget {
     required this.segments,
     required this.value,
     required this.onChanged,
+    this.enabled = true,
+    this.segmentKeyBuilder,
   });
 
   static const double _height = 44;
@@ -20,13 +22,15 @@ class SegmentedControl<T> extends StatelessWidget {
   final List<(T, String)> segments;
   final T value;
   final ValueChanged<T> onChanged;
+  final bool enabled;
+  final Key? Function(T value)? segmentKeyBuilder;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final count = segments.length;
     final index = segments.indexWhere((segment) => segment.$1 == value);
-    return Container(
+    final control = Container(
       height: _height,
       padding: const EdgeInsets.all(_inset),
       decoration: ShapeDecoration(
@@ -61,6 +65,7 @@ class SegmentedControl<T> extends StatelessWidget {
               for (final (option, label) in segments)
                 Expanded(
                   child: PressSurface(
+                    key: segmentKeyBuilder?.call(option),
                     fill: const Color(0x00000000),
                     shape: AppShape.full,
                     look: option == value ? PressLook.none : PressLook.ink,
@@ -68,7 +73,9 @@ class SegmentedControl<T> extends StatelessWidget {
                     selected: option == value,
                     childFills: true,
                     // A null onPressed would unfocus the selected segment.
-                    onPressed: option == value
+                    onPressed: !enabled
+                        ? null
+                        : option == value
                         ? () {}
                         : () => onChanged(option),
                     child: Center(
@@ -97,5 +104,9 @@ class SegmentedControl<T> extends StatelessWidget {
         ],
       ),
     );
+    if (enabled) {
+      return control;
+    }
+    return IgnorePointer(child: Opacity(opacity: 0.45, child: control));
   }
 }

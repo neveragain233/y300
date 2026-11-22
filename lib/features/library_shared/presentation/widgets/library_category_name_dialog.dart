@@ -20,6 +20,7 @@ Future<String?> showLibraryCategoryNameDialog(
 }) {
   return prism.showFloatingDialog<String>(
     context: context,
+    useRootNavigator: true,
     child: _LibraryCategoryNameDialog(
       title: title,
       hintText: hintText,

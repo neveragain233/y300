@@ -45,8 +45,9 @@ Future<T?> showFloatingDialog<T>({
   required BuildContext context,
   required Widget child,
   bool dismissible = true,
+  bool useRootNavigator = false,
 }) {
-  return Navigator.of(context).push<T>(
+  return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
     _AlertRoute<T>(
       barrierColor: context.colorScheme.alertScrim,
       barrierDismissible: dismissible,

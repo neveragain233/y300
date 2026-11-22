@@ -35,6 +35,7 @@ Future<bool> showProfileFriendAction({
   if (!_validFriendDestination(actionLink, targetUserId)) return false;
   final applied = await showAdaptivePanel<bool>(
     context: context,
+    useRootNavigator: true,
     builder: (_) => ProfileFriendActionSheet(
       owner: owner,
       targetUserId: targetUserId,

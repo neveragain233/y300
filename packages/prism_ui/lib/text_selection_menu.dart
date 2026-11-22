@@ -218,7 +218,7 @@ class _TextSelectionMenuState extends State<TextSelectionMenu> {
       return;
     }
     final items = _menuItems();
-    final navigator = Navigator.maybeOf(owner);
+    final navigator = Navigator.maybeOf(owner, rootNavigator: true);
     final navigatorBox = navigator?.context.findRenderObject();
     if (items.isEmpty || navigator == null || navigatorBox is! RenderBox) {
       return;
@@ -244,7 +244,10 @@ class _TextSelectionMenuState extends State<TextSelectionMenu> {
   }
 
   void _updateSelection() {
-    final box = Navigator.maybeOf(widget.owner)?.context.findRenderObject();
+    final box = Navigator.maybeOf(
+      widget.owner,
+      rootNavigator: true,
+    )?.context.findRenderObject();
     if (box is! RenderBox || !box.attached) {
       return;
     }

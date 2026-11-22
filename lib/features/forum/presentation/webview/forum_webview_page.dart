@@ -1296,6 +1296,7 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     final messenger = ScaffoldMessenger.of(context);
     return showAdaptivePanel<void>(
       context: context,
+      useRootNavigator: true,
       builder: (_) {
         return ForumFavoriteForumPicker(
           loadFavoriteForums: controller.loadFavoriteForums,

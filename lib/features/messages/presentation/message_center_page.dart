@@ -410,6 +410,7 @@ class _NotificationRow extends ConsumerWidget {
                     final receipt = await prism
                         .showFloatingDialog<ForumNotificationIgnoreReceipt>(
                           context: context,
+                          useRootNavigator: true,
                           child: NotificationIgnoreDialog(
                             accountId: accountId,
                             item: item,

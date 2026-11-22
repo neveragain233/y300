@@ -49,6 +49,7 @@ class CoverFocalPointPicker extends StatefulWidget {
   }) {
     return prism.showFloatingDialog<CoverFocalPoint>(
       context: context,
+      useRootNavigator: true,
       child: CoverFocalPointPicker(
         image: image,
         initialFocus: initialFocus,

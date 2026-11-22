@@ -119,6 +119,7 @@ class _MyFriendsPageState extends ConsumerState<MyFriendsPage> {
     try {
       final action = await showAdaptivePanel<FriendAction>(
         context: context,
+        useRootNavigator: true,
         builder: (_) => FriendActionSheet(
           target: target,
           controller: controller,

@@ -648,6 +648,74 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'pushes onto root navigator above nested shell navigator and aligns anchor',
+    (tester) async {
+      final root = GlobalKey<NavigatorState>();
+      final nested = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          navigatorKey: root,
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 100),
+                  child: Navigator(
+                    key: nested,
+                    onGenerateRoute: (_) => MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        body: Center(
+                          child: AppPopupMenuButton<String>(
+                            key: const Key('nested-menu-button'),
+                            itemBuilder: (_) => const [
+                              AppPopupMenuItem<String>(
+                                key: Key('nested-menu-item'),
+                                value: 'refresh',
+                                label: '刷新页面',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 80,
+                  child: ColoredBox(color: Colors.red),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final buttonRect = tester.getRect(
+        find.byKey(const Key('nested-menu-button')),
+      );
+      await tester.tap(find.byKey(const Key('nested-menu-button')));
+      await tester.pumpAndSettle();
+
+      final item = find.byKey(const Key('nested-menu-item'));
+      expect(item, findsOneWidget);
+      expect(Navigator.of(tester.element(item)), same(root.currentState));
+      expect(
+        Navigator.of(tester.element(item)),
+        isNot(same(nested.currentState)),
+      );
+      final menuCardRect = tester.getRect(
+        find.byType(prism_popup.PopupMenuCard),
+      );
+      expect(menuCardRect.right, closeTo(buttonRect.right, 2));
+    },
+  );
 }
 
 double _sourceOpacity(WidgetTester tester) {

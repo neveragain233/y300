@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prism_ui/segmented_control.dart' as prism;
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_controller.dart';
 import 'package:y300/features/content_rendering_shared/application/forum_html_typography_preview.dart';
 import 'package:y300/features/content_rendering_shared/domain/models/forum_html_reader_preferences.dart';
@@ -9,6 +10,7 @@ import 'package:y300/features/fonts/fonts.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/typography/rich_text_typography.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 class ForumHtmlReaderSettingsSheet extends ConsumerStatefulWidget {
@@ -268,37 +270,35 @@ class _ConversionModeSegmentedControl extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return SizedBox(
       width: double.infinity,
-      child: SegmentedButton<TextConversionMode>(
-        key: const Key('forum-html-reader-conversion-mode-control'),
-        segments: [
-          ButtonSegment(
-            value: TextConversionMode.none,
-            label: Text(
-              l10n.threadHtmlConversionOriginal,
-              key: const Key('forum-html-reader-conversion-none'),
-            ),
-          ),
-          ButtonSegment(
-            value: TextConversionMode.toSimplified,
-            label: Text(
+      child: AppPrismTheme(
+        child: prism.SegmentedControl<TextConversionMode>(
+          key: const Key('forum-html-reader-conversion-mode-control'),
+          enabled: onChanged != null,
+          segments: [
+            (TextConversionMode.none, l10n.threadHtmlConversionOriginal),
+            (
+              TextConversionMode.toSimplified,
               l10n.threadHtmlConversionSimplified,
-              key: const Key('forum-html-reader-conversion-simplified'),
             ),
-          ),
-          ButtonSegment(
-            value: TextConversionMode.toTraditional,
-            label: Text(
+            (
+              TextConversionMode.toTraditional,
               l10n.threadHtmlConversionTraditional,
-              key: const Key('forum-html-reader-conversion-traditional'),
             ),
-          ),
-        ],
-        selected: {mode},
-        onSelectionChanged: onChanged == null
-            ? null
-            : (selection) {
-                onChanged!(selection.single);
-              },
+          ],
+          value: mode,
+          segmentKeyBuilder: (value) => switch (value) {
+            TextConversionMode.none => const Key(
+              'forum-html-reader-conversion-none',
+            ),
+            TextConversionMode.toSimplified => const Key(
+              'forum-html-reader-conversion-simplified',
+            ),
+            TextConversionMode.toTraditional => const Key(
+              'forum-html-reader-conversion-traditional',
+            ),
+          },
+          onChanged: onChanged ?? (_) {},
+        ),
       ),
     );
   }

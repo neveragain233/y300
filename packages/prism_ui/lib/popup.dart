@@ -33,7 +33,12 @@ typedef PopupAnchorResolver = Rect? Function();
 
 typedef PopupOpen = void Function();
 
-enum PopupPlacement { overAnchorEnd, overAnchorStart, belowPoint }
+enum PopupPlacement {
+  overAnchorEnd,
+  overAnchorStart,
+  overAnchorCenter,
+  belowPoint,
+}
 
 const _screenMargin = 16.0;
 
@@ -1418,6 +1423,10 @@ class _PopupLayoutDelegate extends SingleChildLayoutDelegate {
               anchor.left,
               anchor.top - _anchorOverlap,
             ),
+            PopupPlacement.overAnchorCenter => (
+              anchor.center.dx - childSize.width / 2,
+              anchor.top - _anchorOverlap,
+            ),
             PopupPlacement.belowPoint => (
               anchor.left,
               _yBelowPoint(childSize.height, insets.top, maxY),
@@ -1501,6 +1510,8 @@ class PopupAnchor extends StatefulWidget {
     this.bare = false,
     this.blursContent = true,
     this.runsPickedAfterReturn = true,
+    this.useRootNavigator = false,
+    this.onOpened,
     this.theme,
     this.reduceMotion = false,
   });
@@ -1519,6 +1530,13 @@ class PopupAnchor extends StatefulWidget {
 
   /// Whether a picked item runs once the popup has returned into the control.
   final bool runsPickedAfterReturn;
+
+  /// Whether the popup route pushes onto the root navigator instead of the
+  /// nearest enclosing navigator.
+  final bool useRootNavigator;
+
+  /// Called when the popup route is pushed open.
+  final VoidCallback? onOpened;
 
   /// The theme the popup's own surface paints with; see
   /// [AnchoredPopupRoute.theme].
@@ -1556,7 +1574,11 @@ class _PopupAnchorState extends State<PopupAnchor> {
       return null;
     }
     final navigatorBox =
-        Navigator.maybeOf(context)?.context.findRenderObject() as RenderBox?;
+        Navigator.maybeOf(
+              context,
+              rootNavigator: widget.useRootNavigator,
+            )?.context.findRenderObject()
+            as RenderBox?;
     final origin = renderBox.localToGlobal(Offset.zero, ancestor: navigatorBox);
     return origin & renderBox.size;
   }
@@ -1648,9 +1670,21 @@ class _PopupAnchorState extends State<PopupAnchor> {
 
   // A navigator cancels the presses it tracks as it navigates (flutter#4770).
   void _releaseFromNavigator(int pointer) {
-    final listener = Navigator.maybeOf(context)?.context.findRenderObject();
-    if (listener is RenderPointerListener) {
-      listener.onPointerCancel?.call(PointerCancelEvent(pointer: pointer));
+    final localNavigator = Navigator.maybeOf(context);
+    final localListener = localNavigator?.context.findRenderObject();
+    if (localListener is RenderPointerListener) {
+      localListener.onPointerCancel?.call(PointerCancelEvent(pointer: pointer));
+    }
+    if (widget.useRootNavigator) {
+      final rootNavigator = Navigator.maybeOf(context, rootNavigator: true);
+      if (rootNavigator != null && !identical(rootNavigator, localNavigator)) {
+        final rootListener = rootNavigator.context.findRenderObject();
+        if (rootListener is RenderPointerListener) {
+          rootListener.onPointerCancel?.call(
+            PointerCancelEvent(pointer: pointer),
+          );
+        }
+      }
     }
   }
 
@@ -1693,6 +1727,7 @@ class _PopupAnchorState extends State<PopupAnchor> {
     if (_route != null) {
       return;
     }
+    widget.onOpened?.call();
     final snapshot = ValueNotifier<ui.Image?>(null);
     final route = _route = AnchoredPopupRoute<void>(
       barrierLabel: UiLocalizations.of(context).close,
@@ -1708,7 +1743,7 @@ class _PopupAnchorState extends State<PopupAnchor> {
       theme: widget.theme,
       reduceMotion: widget.reduceMotion,
     );
-    Navigator.of(context).push(route);
+    Navigator.of(context, rootNavigator: widget.useRootNavigator).push(route);
     void reveal() {
       if (mounted) {
         _sourceHidden.value = false;
@@ -2002,10 +2037,36 @@ class PopupMenu extends StatefulWidget {
     super.key,
     required this.items,
     this.maxVisibleItems,
+    this.minWidth,
+    this.listKey,
     this.onWillSelect,
-  });
+  }) : itemCount = null,
+       itemBuilder = null,
+       checkedIndex = null,
+       widthSampleLabels = const <String>[];
+
+  /// Builds rows lazily on demand for large uniform menus (such as page pickers),
+  /// measuring card width from [widthSampleLabels] in O(1) without materializing
+  /// all items up front.
+  const PopupMenu.builder({
+    super.key,
+    required int this.itemCount,
+    required PopupMenuItem Function(int index) this.itemBuilder,
+    this.checkedIndex,
+    int this.maxVisibleItems = _defaultMaxVisibleItems,
+    this.widthSampleLabels = const <String>[],
+    this.minWidth,
+    this.listKey,
+    this.onWillSelect,
+  }) : items = const <PopupMenuItem>[];
 
   final List<PopupMenuItem> items;
+  final int? itemCount;
+  final PopupMenuItem Function(int index)? itemBuilder;
+  final int? checkedIndex;
+  final List<String> widthSampleLabels;
+  final double? minWidth;
+  final Key? listKey;
 
   /// Half of the next row shows past these, so the cut tells the menu scrolls.
   /// Setting them builds only the rows in view, which needs rows of one height.
@@ -2149,19 +2210,25 @@ class _PopupMenuState extends State<PopupMenu>
     super.dispose();
   }
 
+  bool get _isBuilder => widget.itemBuilder != null;
+
   /// A menu given its own cap builds only the rows in view, since building
   /// them all costs its first frame a row each; its rows share one height.
   bool _buildsLazily(_MenuLevel level) =>
-      widget.maxVisibleItems != null &&
       level.owner == null &&
-      level.items.every(
-        (item) =>
-            item.subItems.isEmpty &&
-            item.subtitle == null &&
-            item.section == null,
-      );
+      (_isBuilder ||
+          (widget.maxVisibleItems != null &&
+              level.items.every(
+                (item) =>
+                    item.subItems.isEmpty &&
+                    item.subtitle == null &&
+                    item.section == null,
+              )));
 
   void _revealChecked() {
+    if (_isBuilder) {
+      return;
+    }
     final row = _checkedKey.currentContext;
     if (!mounted || row == null) {
       return;
@@ -2196,8 +2263,28 @@ class _PopupMenuState extends State<PopupMenu>
     final root = DefaultTextStyle.of(context).style.merge(style);
     final textScaler = MediaQuery.textScalerOf(context);
     final boldText = MediaQuery.boldTextOf(context);
-    const limit = _menuMaxWidth - 2 * _cardInset;
+    final maxCardWidth = math.max(
+      widget.minWidth ?? _menuMinWidth,
+      _menuMaxWidth,
+    );
+    final limit = maxCardWidth - 2 * _cardInset;
     var width = 0.0;
+    if (_isBuilder) {
+      for (final text in widget.widthSampleLabels) {
+        if (_labelWidths.length >= 1024) {
+          _labelWidths.clear();
+        }
+        final label = _labelWidths[(text, root, textScaler, boldText)] ??=
+            EmojiText.widthOf(context, text, root);
+        final row =
+            _itemArrowPadding.horizontal + label + 8 + _submenuArrowSize;
+        width = math.max(width, row);
+        if (width >= limit) {
+          break;
+        }
+      }
+      return width;
+    }
     for (final item in items) {
       if (_labelWidths.length >= 1024) {
         _labelWidths.clear();
@@ -2222,47 +2309,58 @@ class _PopupMenuState extends State<PopupMenu>
 
   Widget _buildLazyContent(BuildContext context, _MenuLevel level) {
     final items = level.items;
+    final count = _isBuilder ? widget.itemCount! : items.length;
     final extent = _rowExtentOf(context);
     final visible = _maxVisibleItems;
-    final height = math.min(items.length, visible + 0.5) * extent;
+    final height = math.min(count, visible + 0.5) * extent;
     final controller = _lazyController ??= () {
-      final checked = items.indexWhere((item) => item.checked == true);
+      final checked = _isBuilder
+          ? (widget.checkedIndex ?? -1)
+          : items.indexWhere((item) => item.checked == true);
       // Whole rows above, as _revealChecked leaves them.
       return ScrollController(
         initialScrollOffset: ((checked - visible ~/ 2) * extent).clamp(
           0.0,
-          math.max(0.0, items.length * extent - height),
+          math.max(0.0, count * extent - height),
         ),
       );
     }();
+    final itemBuilder = widget.itemBuilder;
     return SizedBox(
       width: _lazyWidthOf(context, items),
       height: height,
       child: ListView.builder(
+        key: widget.listKey,
         controller: controller,
         padding: EdgeInsets.zero,
         physics: const ClampingScrollPhysics(),
         itemExtent: extent,
-        itemCount: items.length,
-        itemBuilder: (context, index) =>
-            _buildItem(context, items[index], index, active: true),
+        itemCount: count,
+        itemBuilder: (context, index) => _buildItem(
+          context,
+          itemBuilder != null ? itemBuilder(index) : items[index],
+          index,
+          active: true,
+        ),
       ),
     );
   }
 
   List<_MenuLevel> _resolveLevels() {
+    final rootMinWidth = widget.minWidth ?? _menuMinWidth;
     final levels = [
       _MenuLevel(
         items: widget.items,
         top: 0,
-        fromWidth: _menuMinWidth,
-        minWidth: _menuMinWidth,
-        maxWidth: _menuMaxWidth,
+        fromWidth: rootMinWidth,
+        minWidth: rootMinWidth,
+        maxWidth: math.max(rootMinWidth, _menuMaxWidth),
       ),
     ];
     for (final step in _path) {
       final parent = levels.last;
-      if (step.index >= parent.items.length) {
+      if ((parent.owner == null && _isBuilder) ||
+          step.index >= parent.items.length) {
         break;
       }
       final item = parent.items[step.index];
