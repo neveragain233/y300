@@ -21,11 +21,13 @@ final class DiscuzDailySignInAdapter {
     required this.requestProfiles,
     this.parser = const DiscuzDailySignInPageParser(),
     this.createPreparationTimer = Stopwatch.new,
-  }) : _pageUri = config.siteOrigin.replace(
+  }) : _config = config,
+       _pageUri = config.siteOrigin.replace(
          path: '/plugin.php',
          queryParameters: const {'id': 'zqlj_sign', 'mobile': '2'},
        );
 
+  final ForumClientConfig _config;
   final Uri _pageUri;
 
   /// Shared transport owned by the host.
@@ -129,6 +131,7 @@ final class DiscuzDailySignInAdapter {
   Future<DataCommandResult<ForumDailySignInReceipt>> execute(
     ForumDailySignInRequest request,
   ) async {
+    if (_config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     var proof = request.preparationToken;
     if (proof == null) {
       final prepared = await prepare(

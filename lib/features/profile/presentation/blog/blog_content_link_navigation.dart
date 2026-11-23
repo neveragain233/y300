@@ -1,3 +1,4 @@
+import 'package:y300/core/links/external_link_opener.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
@@ -90,6 +91,10 @@ Future<void> openBlogContentLink(
         ),
       );
     } else {
+      if (await ref.read(externalLinkOpenerProvider).launch(uri) ||
+          !context.mounted) {
+        return;
+      }
       await copyLinkWithFeedback(
         context,
         url: uri.toString(),

@@ -616,7 +616,7 @@ void _dockActionsCases() {
     NovelReaderFlowMode.vertical,
     NovelReaderFlowMode.pagedLtr,
   ]) {
-    testWidgets('reader external links are copied in ${flowMode.name}', (
+    testWidgets('reader external links open in browser in ${flowMode.name}', (
       tester,
     ) async {
       const url = 'https://elsewhere.test/read?a=1&a=2#section';
@@ -644,12 +644,12 @@ void _dockActionsCases() {
         tester.getTopLeft(_readerText('External link')) + const Offset(8, 8),
       );
       await tester.pumpAndSettle();
-      expect(clipboard.writes, [url]);
-      expect(launcher.opened, isEmpty);
+      expect(clipboard.writes, isEmpty);
+      expect(launcher.opened, [Uri.parse(url)]);
       final l10n = AppLocalizations.of(
         tester.element(find.byType(NovelReaderPage)),
       );
-      expect(find.text(l10n.linkCopied), findsOneWidget);
+      expect(find.text(l10n.linkCopied), findsNothing);
       expect(find.byType(ThreadDetailPage), findsNothing);
     });
   }
@@ -691,6 +691,7 @@ void _dockActionsCases() {
               '<p><a href="https://elsewhere.test/read">External link</a></p>',
           firstParagraphs: const ['External link'],
         ),
+        externalLauncher: _FakeForumWebViewExternalLauncher()..succeeds = false,
         clipboardWriter: clipboard,
       ),
     );

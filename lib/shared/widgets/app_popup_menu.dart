@@ -5,8 +5,85 @@ import 'package:prism_ui/common_button.dart' as prism_button;
 import 'package:prism_ui/popup.dart' as prism;
 import 'package:prism_ui/press_region.dart' as prism_press;
 import 'package:prism_ui/theme_data.dart' as prism_theme;
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
+
+Future<T?> showAppPointMenu<T>({
+  required BuildContext context,
+  required Offset position,
+  required List<AppPopupMenuItem<T>> entries,
+  Key? menuKey,
+  double bottomInset = 0,
+}) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final overlay = navigator.overlay!.context.findRenderObject() as RenderBox;
+  final scheme = Theme.of(context).colorScheme;
+  final eInk = EInkModeScope.of(context);
+  final result = Completer<T?>();
+  final route = prism.AnchoredPopupRoute<void>(
+    anchorOf: () => overlay.globalToLocal(position) & const Size(1, 1),
+    placement: prism.PopupPlacement.belowPoint,
+    contentInsets: EdgeInsets.only(top: kToolbarHeight, bottom: bottomInset),
+    theme: prism_theme.ThemeData(colorScheme: prismColorSchemeOf(scheme)),
+    bareSource: true,
+    blursContent: !eInk,
+    reduceMotion: AppMotion.reduceMotion(context),
+    solidSurface: eInk,
+    runsPickedAfterReturn: false,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    builder: (popup) {
+      if (eInk) {
+        return Material(
+          key: menuKey,
+          color: scheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: AppTheme.eInkBorderColor(scheme.brightness),
+            ),
+          ),
+          child: IntrinsicWidth(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final entry in entries)
+                    TextButton.icon(
+                      key: entry.key,
+                      style: TextButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        splashFactory: NoSplash.splashFactory,
+                        animationDuration: Duration.zero,
+                      ),
+                      icon: entry.icon,
+                      label: Text(entry.label),
+                      onPressed: entry.enabled
+                          ? () {
+                              Navigator.pop(popup);
+                              result.complete(entry.value);
+                            }
+                          : null,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+      return KeyedSubtree(
+        key: menuKey,
+        child: _AppPopupMenu<T>(entries: entries, onSelected: result.complete),
+      );
+    },
+  );
+  unawaited(navigator.push(route));
+  route.completed.then((_) {
+    if (!result.isCompleted) result.complete(null);
+  });
+  return result.future;
+}
 
 /// 应用统一菜单入口：外观、开合运动与来源按钮接续由 prism_ui 锚定菜单提供。
 ///

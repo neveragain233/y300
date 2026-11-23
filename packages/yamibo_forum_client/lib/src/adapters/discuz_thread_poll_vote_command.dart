@@ -30,6 +30,7 @@ final class DiscuzThreadPollVoteCommand implements ThreadPollVoteCommand {
   Future<DataCommandResult<ThreadPollVoteReceipt>> execute(
     ThreadPollVoteSubmission submission,
   ) async {
+    if (_config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final fid = submission.fid.trim();
     final tid = submission.tid.trim();
     final optionIds = submission.optionIds;

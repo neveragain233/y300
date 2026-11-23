@@ -1,10 +1,9 @@
-import 'package:y300/core/motion/app_motion.dart';
-import 'package:y300/features/thread/presentation/services/thread_post_navigation.dart';
-import 'package:y300/features/thread/presentation/services/thread_image_reader_return_coordinator.dart';
-import 'package:y300/features/thread/presentation/services/thread_post_actions.dart';
-
 import 'dart:async';
 
+import 'package:y300/core/motion/app_motion.dart';
+import 'package:y300/features/thread/presentation/services/thread_image_reader_return_coordinator.dart';
+import 'package:y300/features/thread/presentation/services/thread_post_actions.dart';
+import 'package:y300/features/thread/presentation/services/thread_post_navigation.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 
 import 'package:y300/features/thread/domain/models/thread_controls_preferences.dart';
@@ -564,7 +563,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
               controller: _scrollController,
               cornerPadding: EdgeInsets.only(
                 right: 12,
-                bottom: 16 + _controlsHeight,
+                bottom: 24 + _controlsHeight,
               ),
               edgeTapAllowed: true,
               edgeTopInset: _repliesHeaderHeight > 0
@@ -716,7 +715,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                     onCopyActionUrl: _copyActionUrl,
                                     onOpenPostLink: _openForumLink,
                                     onOpenPostImages: _openPostImages,
-                                    onOpenPostActions: (post) {
+                                    onOpenPostActions: (press) {
+                                      final (post, position) = press;
                                       final postProjection = projection
                                           .findByPid(post.pid);
                                       _openPostActions(
@@ -725,22 +725,25 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                         controller,
                                         post,
                                         postProjection?.displayPost ?? post,
+                                        position: position,
                                       );
                                     },
                                     htmlImagePrecacheService:
                                         htmlFirstPrecacheService,
-                                    onOpenPollOptionActions: (post, option) =>
-                                        _openPostActions(
-                                          args,
-                                          state,
-                                          controller,
-                                          post,
-                                          projection
-                                                  .findByPid(post.pid)
-                                                  ?.displayPost ??
+                                    onOpenPollOptionActions:
+                                        (post, option, point) =>
+                                            _openPostActions(
+                                              args,
+                                              state,
+                                              controller,
                                               post,
-                                          pollOption: option,
-                                        ),
+                                              projection
+                                                      .findByPid(post.pid)
+                                                      ?.displayPost ??
+                                                  post,
+                                              position: point,
+                                              pollOption: option,
+                                            ),
                                     onTogglePollOption:
                                         controller.togglePollOption,
                                     onSubmitPollVote: controller.submitPollVote,
@@ -1560,6 +1563,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     ThreadDetailController controller,
     ThreadPost sourcePost,
     ThreadPost displayPost, {
+    Offset? position,
     ThreadPollOption? pollOption,
   }) async {
     if (_postActionActive) return;
@@ -1601,6 +1605,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                   )
                 : null,
           ).show(
+            position: position,
+            bottomInset: _controlsHeight + 16,
             sourcePost: sourcePost,
             displayPost: displayPost,
             pollOption: pollOption,

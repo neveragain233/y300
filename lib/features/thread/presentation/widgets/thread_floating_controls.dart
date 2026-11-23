@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
+import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/motion/app_motion.dart';
@@ -72,7 +73,9 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
     final actionCount =
         2 + (showFavorite ? 1 : 0) + (widget.reply != null ? 1 : 0);
     final reduceMotion = AppMotion.reduceMotion(context);
-    final mainWidth = 8.0 + actionCount * 48 + (actionCount - 1) * 8;
+    final replyExtra = !compact && widget.reply != null ? 64.0 : 0.0;
+    final mainWidth =
+        8.0 + actionCount * 48 + (actionCount - 1) * 8 + replyExtra;
     final navWidth = (preferences.singleNavigationButton ? 48.0 : 104.0) + 8;
     final main = _surface(
       context,
@@ -80,14 +83,49 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
       Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (showFavorite) ...[widget.favorite!, const SizedBox(width: 8)],
+          if (compact && showFavorite) ...[
+            widget.favorite!,
+            const SizedBox(width: 8),
+          ],
           if (widget.reply != null) ...[
-            IconButton(
-              key: const Key('thread-detail-appbar-reply-button'),
-              tooltip: l10n.threadDetailReplyPost,
-              onPressed: widget.reply,
-              icon: const Icon(Icons.reply),
-            ),
+            if (!compact)
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextButton.icon(
+                    key: const Key('thread-detail-appbar-reply-button'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      backgroundColor: theme.colorScheme.surface,
+                      splashFactory: NoSplash.splashFactory,
+                      side: EInkModeScope.of(context)
+                          ? BorderSide(
+                              color: AppTheme.eInkBorderColor(theme.brightness),
+                            )
+                          : null,
+                      animationDuration: Duration.zero,
+                    ),
+                    onPressed: widget.reply,
+                    icon: const Icon(Icons.reply),
+                    label: Text(
+                      l10n.threadDetailReply,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              )
+            else
+              IconButton(
+                key: const Key('thread-detail-appbar-reply-button'),
+                tooltip: l10n.threadDetailReplyPost,
+                onPressed: widget.reply,
+                icon: const Icon(Icons.reply),
+              ),
+            const SizedBox(width: 8),
+          ],
+          if (!compact && showFavorite) ...[
+            widget.favorite!,
             const SizedBox(width: 8),
           ],
           widget.jumpPage,
@@ -219,21 +257,24 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
           constraints.maxWidth - leftInset - rightInset,
         );
         final navigationEnabled =
-            !EInkModeScope.of(context) &&
+            (!compact || !EInkModeScope.of(context)) &&
             preferences.navigationEnabled &&
             widget.hasContent;
-        // 非紧凑主栏居中，只有整条栏本身放得下、且不与右侧导航重叠时才并排。
         final inline =
             !navigationEnabled ||
-            (compact
-                ? mainWidth + navWidth + 12 <= usableWidth
-                : mainWidth + 2 * (navWidth + 12) <= usableWidth);
+            mainWidth - replyExtra / 2 + navWidth + 12 <= usableWidth;
         final mainAlignment = !compact
             ? Alignment.center
             : preferences.side == ThreadControlsSide.right
             ? Alignment.centerRight
             : Alignment.centerLeft;
-        final mainControl = SizedBox(width: mainWidth, child: main);
+        final minWidth = mainWidth - replyExtra;
+        final mainControl = usableWidth < minWidth
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(width: mainWidth, child: main),
+              )
+            : SizedBox(width: math.min(mainWidth, usableWidth), child: main);
         final controls = SizedBox(
           key: _measureKey,
           width: constraints.maxWidth,
@@ -274,7 +315,6 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
                     ? _inlineControls(
                         compact: compact,
                         side: preferences.side,
-                        mainAlignment: mainAlignment,
                         mainControl: mainControl,
                         nav: nav,
                       )
@@ -338,16 +378,16 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
   Widget _inlineControls({
     required bool compact,
     required ThreadControlsSide side,
-    required AlignmentGeometry mainAlignment,
     required Widget mainControl,
     required Widget nav,
   }) {
     // 单键导航始终贴视口右缘；紧凑主栏按停靠侧靠在它左边。
     if (!compact) {
-      return Stack(
+      return Row(
         children: [
-          Align(alignment: mainAlignment, heightFactor: 1, child: mainControl),
-          Align(alignment: Alignment.centerRight, heightFactor: 1, child: nav),
+          Expanded(child: mainControl),
+          const SizedBox(width: 12),
+          nav,
         ],
       );
     }

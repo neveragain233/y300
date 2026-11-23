@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:y300/app/startup/main_shell_startup_coordinator.dart';
 import 'package:y300/app/storage/storage_accounting_providers.dart';
 import 'package:y300/core/network/yamibo_forum_client_provider.dart';
@@ -117,6 +118,9 @@ final mainShellYamiboSessionWarmupProvider = Provider<Future<void> Function()>((
 ) {
   return () async {
     try {
+      final availability = ref.read(forumAvailabilityProvider);
+      await availability.ready;
+      if (!ref.mounted || availability.blocked) return;
       await ref
           .read(yamiboForumClientProvider)
           .loadCurrentUserProfile(

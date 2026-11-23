@@ -136,6 +136,7 @@ final class DiscuzThreadCreationAdapter
   Future<DataCommandResult<ThreadCreationReceipt>> execute(
     ThreadCreationSubmission submission,
   ) async {
+    if (config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final preparation = submission.preparation;
     final token = preparation.token;
     if (token is! _DiscuzThreadCreationToken || token.owner != this) {
@@ -469,6 +470,7 @@ final class DiscuzThreadReplyAdapter
   Future<DataCommandResult<ThreadReplyReceipt>> execute(
     ThreadReplySubmission submission,
   ) async {
+    if (config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final target = submission.target;
     if (!_validTarget(target) || submission.message.trim().isEmpty) {
       return _notSent('thread_reply_submission_invalid');

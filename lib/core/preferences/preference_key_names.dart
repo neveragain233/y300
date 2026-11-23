@@ -1,5 +1,8 @@
 /// Raw names behind the typed preference registry and compatibility aliases.
 abstract final class PreferenceKeyNames {
+  static const externalBrowser = 'app.links.external_browser.v1';
+  static const restoreReader = 'reader.restore.enabled.v1';
+  static const activeReader = 'reader.active.session.v1';
   static const appThemeColorSource = 'app_theme_color_source';
   static const appAppearanceSnapshotV1 = 'app.appearance.snapshot.v1';
   static const appThemeFamily = 'app_theme_family';

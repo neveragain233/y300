@@ -560,12 +560,13 @@ class _RecordingForumImagePrecacheService
 
 class _FakeForumWebViewExternalLauncher
     implements ForumWebViewExternalLauncher {
+  bool succeeds = true;
   final launchedUris = <Uri>[];
 
   @override
   Future<bool> launch(Uri uri) async {
     launchedUris.add(uri);
-    return true;
+    return succeeds;
   }
 }
 

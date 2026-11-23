@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/segmented_control.dart' as prism;
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/features/content_rendering_shared/application/forum_html_reader_preferences_controller.dart';
 import 'package:y300/features/content_rendering_shared/application/forum_html_typography_preview.dart';
 import 'package:y300/features/content_rendering_shared/domain/models/forum_html_reader_preferences.dart';
@@ -138,60 +139,68 @@ class _ForumHtmlReaderSettingsSheetState
               ),
               const SizedBox(height: 20),
             ],
-            ListTile(
-              key: const Key('forum-html-reader-font-family'),
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.fontSelectorTitle),
-              subtitle: Text(
-                preferences.fontFamily == FontIdentity.system
-                    ? l10n.fontSelectorSystemDefault
-                    : l10n.fontSelectorCustomFont,
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: ready && !_isChoosingFont
-                  ? () => _chooseFont(preferences, typography)
-                  : null,
-            ),
-            const SizedBox(height: 8),
-            _TypographySlider(
-              key: const Key('forum-html-reader-font-scale-slider'),
-              label: l10n.threadHtmlFontSize,
-              value: typography.fontScale,
-              min: 0.7,
-              max: 2.0,
-              divisions: 26,
-              display: '${(typography.fontScale * 100).round()}%',
-              onChanged: ready ? _changeFont : null,
-              onChangeEnd: ready ? _endDrag : null,
-            ),
-            const SizedBox(height: 16),
-            _TypographySlider(
-              key: const Key('forum-html-reader-line-height-slider'),
-              label: l10n.threadHtmlLineSpacing,
-              value: typography.lineHeightScale,
-              min: 1.0,
-              max: 2.5,
-              divisions: 30,
-              display: '${typography.lineHeightScale.toStringAsFixed(1)}×',
-              onChanged: ready ? _changeLineHeight : null,
-              onChangeEnd: ready ? _endDrag : null,
-            ),
-            if (widget.showAuthorStyleControls) ...[
-              const SizedBox(height: 16),
-              AppSwitchRow.compact(
-                switchKey: const Key(
-                  'forum-html-reader-preserve-font-size-switch',
+            AppGroupedSection(
+              children: [
+                AppGroupedRow(
+                  key: const Key('forum-html-reader-font-family'),
+                  title: l10n.fontSelectorTitle,
+                  subtitle: preferences.fontFamily == FontIdentity.system
+                      ? l10n.fontSelectorSystemDefault
+                      : l10n.fontSelectorCustomFont,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: ready && !_isChoosingFont
+                      ? () => _chooseFont(preferences, typography)
+                      : null,
                 ),
-                title: l10n.threadHtmlPreserveAuthorFontSize,
-                value: preferences.preserveAuthorFontSize,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                onChanged: ready
-                    ? (value) => _replacePreview(
-                        () => controller.setPreserveAuthorFontSize(value),
-                      )
-                    : null,
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _TypographySlider(
+                    key: const Key('forum-html-reader-font-scale-slider'),
+                    label: l10n.threadHtmlFontSize,
+                    value: typography.fontScale,
+                    min: 0.7,
+                    max: 2.0,
+                    divisions: 26,
+                    display: '${(typography.fontScale * 100).round()}%',
+                    onChanged: ready ? _changeFont : null,
+                    onChangeEnd: ready ? _endDrag : null,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _TypographySlider(
+                    key: const Key('forum-html-reader-line-height-slider'),
+                    label: l10n.threadHtmlLineSpacing,
+                    value: typography.lineHeightScale,
+                    min: 1.0,
+                    max: 2.5,
+                    divisions: 30,
+                    display:
+                        '${typography.lineHeightScale.toStringAsFixed(1)}×',
+                    onChanged: ready ? _changeLineHeight : null,
+                    onChangeEnd: ready ? _endDrag : null,
+                  ),
+                ),
+                if (widget.showAuthorStyleControls) ...[
+                  AppSwitchRow.compact(
+                    switchKey: const Key(
+                      'forum-html-reader-preserve-font-size-switch',
+                    ),
+                    title: l10n.threadHtmlPreserveAuthorFontSize,
+                    value: preferences.preserveAuthorFontSize,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    onChanged: ready
+                        ? (value) => _replacePreview(
+                            () => controller.setPreserveAuthorFontSize(value),
+                          )
+                        : null,
+                  ),
+                ],
+              ],
+            ),
             if (widget.showResetButton) ...[
               const SizedBox(height: 8),
               Center(

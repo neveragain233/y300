@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/composer_shared/presentation/services/read_access_feedback.dart';
@@ -114,7 +115,10 @@ void main() {
           ),
         ),
       );
-      expect(tester.widget<ListTile>(find.byType(ListTile)).onTap, isNull);
+      expect(
+        tester.widget<AppGroupedRow>(find.byType(AppGroupedRow)).onTap,
+        isNull,
+      );
     }
   });
 }

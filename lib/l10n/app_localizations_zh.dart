@@ -10,6 +10,39 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get cacheOnlyReadMiss => '缓存中没有这项内容，请恢复连接后重试';
+
+  @override
+  String get cacheOnlyWriteBlocked => '当前正在离线或缓存浏览，恢复连接后可提交';
+
+  @override
+  String get externalBrowserPreference => '外部链接打开方式';
+
+  @override
+  String get externalBrowserInApp => '浏览器自定义标签页';
+
+  @override
+  String get externalBrowserStandalone => '外部浏览器';
+
+  @override
+  String get restoreActiveReader => '启动时恢复上次打开的阅读器';
+
+  @override
+  String get networkOffline => '当前无网络连接，已切换至离线浏览';
+
+  @override
+  String get networkMaintenance => '站点暂不可用，正在使用本地缓存';
+
+  @override
+  String get networkForceCache => '使用本地缓存浏览';
+
+  @override
+  String get networkRetry => '重试连接';
+
+  @override
+  String get networkLeave => '退出缓存模式';
+
+  @override
   String get comicInteractionLoadFailed => '互动信息加载失败，点击评分或回复重试';
 
   @override
@@ -6591,6 +6624,39 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
 class AppLocalizationsZhTw extends AppLocalizationsZh {
   AppLocalizationsZhTw() : super('zh_TW');
+
+  @override
+  String get cacheOnlyReadMiss => '快取中沒有這項內容，請恢復連線後重試';
+
+  @override
+  String get cacheOnlyWriteBlocked => '目前正在離線或快取瀏覽，恢復連線後可提交';
+
+  @override
+  String get externalBrowserPreference => '外部連結開啟方式';
+
+  @override
+  String get externalBrowserInApp => '瀏覽器自訂分頁';
+
+  @override
+  String get externalBrowserStandalone => '外部瀏覽器';
+
+  @override
+  String get restoreActiveReader => '啟動時恢復上次開啟的閱讀器';
+
+  @override
+  String get networkOffline => '目前沒有網路連線，已切換至離線瀏覽';
+
+  @override
+  String get networkMaintenance => '站點暫時無法使用，正在使用本機快取';
+
+  @override
+  String get networkForceCache => '使用本機快取瀏覽';
+
+  @override
+  String get networkRetry => '重試連線';
+
+  @override
+  String get networkLeave => '離開快取模式';
 
   @override
   String get comicInteractionLoadFailed => '互動資訊載入失敗，點擊評分或回覆重試';

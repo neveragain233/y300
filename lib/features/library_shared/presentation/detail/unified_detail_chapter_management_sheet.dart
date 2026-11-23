@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:prism_ui/dialog.dart' as prism;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
@@ -322,12 +323,10 @@ class _UnifiedDetailChapterManagementSheetState
     final titleColor = dimmed
         ? theme.colorScheme.onSurfaceVariant
         : theme.colorScheme.onSurface;
-    return ListTile(
+    return AppGroupedRow.content(
       key: ValueKey<String>(
         'unified-detail-chapter-management-row-${chapter.episodeId}',
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      dense: true,
       // 隐藏状态用行首图标而不是行尾开关：用户扫这一列就能看出哪些章节不显示。
       leading: IconButton(
         key: ValueKey<String>(

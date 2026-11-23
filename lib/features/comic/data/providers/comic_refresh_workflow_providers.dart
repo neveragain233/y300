@@ -1,3 +1,4 @@
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/comic/data/services/comic_favorite_auto_refresh_coordinator.dart';
@@ -37,6 +38,11 @@ final comicSearchRefreshQueueServiceProvider =
         queueRepository: ref.watch(comicSearchRefreshQueueRepositoryProvider),
         refreshService: ref.watch(comicEpisodeRefreshServiceProvider),
         refreshOutcomeApplier: ref.watch(comicRefreshOutcomeApplierProvider),
+      );
+      ref.listen(
+        forumAvailabilityProvider.select((state) => state.blocked),
+        (_, blocked) => service.setPaused(blocked),
+        fireImmediately: true,
       );
       ref.onDispose(service.dispose);
       return service;

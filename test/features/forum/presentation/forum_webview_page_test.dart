@@ -682,12 +682,13 @@ class _NoopImageCacheService implements ImageCacheService {
 
 class _FakeForumWebViewExternalLauncher
     implements ForumWebViewExternalLauncher {
+  bool succeeds = true;
   final List<Uri> launchedUris = <Uri>[];
 
   @override
   Future<bool> launch(Uri uri) async {
     launchedUris.add(uri);
-    return true;
+    return succeeds;
   }
 }
 

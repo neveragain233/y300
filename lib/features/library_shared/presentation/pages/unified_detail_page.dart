@@ -1,10 +1,10 @@
-import 'package:y300/shared/widgets/app_toolbar_actions.dart';
-
 import 'dart:async';
 import 'dart:io' as io;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_toolbar_actions.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
@@ -1377,83 +1377,43 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_page.onOpenChapterFromBeginning != null)
-                  ListTile(
-                    key: ValueKey<String>(
-                      'unified-detail-chapter-start-action-${chapter.episodeId}',
+            child: SingleChildScrollView(
+              child: AppGroupedSection(
+                children: [
+                  if (_page.onOpenChapterFromBeginning != null)
+                    AppGroupedRow(
+                      key: ValueKey<String>(
+                        'unified-detail-chapter-start-action-${chapter.episodeId}',
+                      ),
+                      leading: const Icon(Icons.first_page),
+                      title: l10n.libraryDetailStartFromBeginning,
+                      onTap: () async {
+                        Navigator.of(sheetContext).pop();
+                        await _page.onOpenChapterFromBeginning!(
+                          context,
+                          chapter,
+                        );
+                        if (!mounted) return;
+                        await _controller.reload();
+                        if (mounted) setState(() {});
+                      },
                     ),
-                    leading: const Icon(Icons.first_page),
-                    title: Text(l10n.libraryDetailStartFromBeginning),
-                    onTap: () async {
-                      Navigator.of(sheetContext).pop();
-                      await _page.onOpenChapterFromBeginning!(context, chapter);
-                      if (!mounted) return;
-                      await _controller.reload();
-                      if (mounted) setState(() {});
-                    },
-                  ),
-                ListTile(
-                  key: ValueKey<String>(
-                    'unified-detail-chapter-bookmark-action-${chapter.episodeId}',
-                  ),
-                  leading: Icon(
-                    chapter.isBookmarked
-                        ? Icons.bookmark_remove_outlined
-                        : Icons.bookmark_add_outlined,
-                  ),
-                  title: Text(
-                    chapter.isBookmarked
+                  AppGroupedRow(
+                    key: ValueKey<String>(
+                      'unified-detail-chapter-bookmark-action-${chapter.episodeId}',
+                    ),
+                    leading: Icon(
+                      chapter.isBookmarked
+                          ? Icons.bookmark_remove_outlined
+                          : Icons.bookmark_add_outlined,
+                    ),
+                    title: chapter.isBookmarked
                         ? l10n.libraryDetailRemoveBookmark
                         : l10n.libraryDetailAddBookmark,
-                  ),
-                  onTap: () async {
-                    await _controller.markChapterBookmarked(
-                      episodeId: chapter.episodeId,
-                      isBookmarked: !chapter.isBookmarked,
-                    );
-                    if (!mounted || !sheetContext.mounted) {
-                      return;
-                    }
-                    Navigator.of(sheetContext).pop();
-                    setState(() {});
-                  },
-                ),
-                if (_supportsChapterReadThrough)
-                  ListTile(
-                    key: ValueKey<String>(
-                      'unified-detail-chapter-mark-read-through-action-${chapter.episodeId}',
-                    ),
-                    leading: const Icon(Icons.done_all),
-                    title: Text(l10n.libraryChapterMarkReadThrough),
-                    subtitle: Text(l10n.libraryChapterMarkReadThroughScope),
                     onTap: () async {
-                      Navigator.of(sheetContext).pop();
-                      await _markReadThroughChapter(chapter);
-                    },
-                  ),
-                if (_workReadingResetAdapter != null)
-                  ListTile(
-                    key: const Key('unified-detail-work-reset-reading-action'),
-                    leading: const Icon(Icons.remove_done),
-                    title: Text(l10n.libraryDetailResetWorkReading),
-                    onTap: () async {
-                      if (!sheetContext.mounted) {
-                        return;
-                      }
-                      Navigator.of(sheetContext).pop();
-                      await _confirmAndResetWorkReadingState();
-                    },
-                  ),
-                if (_supportsChapterDownloads && chapter.isDownloaded)
-                  ListTile(
-                    leading: const Icon(Icons.delete_outline),
-                    title: Text(l10n.libraryDetailDeleteChapterDownload),
-                    onTap: () async {
-                      await _controller.deleteChapterDownload(
+                      await _controller.markChapterBookmarked(
                         episodeId: chapter.episodeId,
+                        isBookmarked: !chapter.isBookmarked,
                       );
                       if (!mounted || !sheetContext.mounted) {
                         return;
@@ -1462,20 +1422,66 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                       setState(() {});
                     },
                   ),
-                if (_chapterManagementAdapter != null)
-                  ListTile(
-                    key: const Key('unified-detail-chapter-management-action'),
-                    leading: const Icon(Icons.playlist_add_check),
-                    title: Text(l10n.libraryDetailManageChapters),
-                    onTap: () async {
-                      if (!sheetContext.mounted) {
-                        return;
-                      }
-                      Navigator.of(sheetContext).pop();
-                      await _showChapterManagementSheet();
-                    },
-                  ),
-              ],
+                  if (_supportsChapterReadThrough)
+                    AppGroupedRow(
+                      key: ValueKey<String>(
+                        'unified-detail-chapter-mark-read-through-action-${chapter.episodeId}',
+                      ),
+                      leading: const Icon(Icons.done_all),
+                      title: l10n.libraryChapterMarkReadThrough,
+                      subtitle: l10n.libraryChapterMarkReadThroughScope,
+                      onTap: () async {
+                        Navigator.of(sheetContext).pop();
+                        await _markReadThroughChapter(chapter);
+                      },
+                    ),
+                  if (_workReadingResetAdapter != null)
+                    AppGroupedRow(
+                      key: const Key(
+                        'unified-detail-work-reset-reading-action',
+                      ),
+                      leading: const Icon(Icons.remove_done),
+                      title: l10n.libraryDetailResetWorkReading,
+                      onTap: () async {
+                        if (!sheetContext.mounted) {
+                          return;
+                        }
+                        Navigator.of(sheetContext).pop();
+                        await _confirmAndResetWorkReadingState();
+                      },
+                    ),
+                  if (_supportsChapterDownloads && chapter.isDownloaded)
+                    AppGroupedRow(
+                      leading: const Icon(Icons.delete_outline),
+                      title: l10n.libraryDetailDeleteChapterDownload,
+                      onTap: () async {
+                        await _controller.deleteChapterDownload(
+                          episodeId: chapter.episodeId,
+                        );
+                        if (!mounted || !sheetContext.mounted) {
+                          return;
+                        }
+                        Navigator.of(sheetContext).pop();
+                        setState(() {});
+                      },
+                    ),
+                  if (_chapterManagementAdapter != null)
+                    AppGroupedRow(
+                      key: const Key(
+                        'unified-detail-chapter-management-action',
+                      ),
+                      leading: const Icon(Icons.playlist_add_check),
+                      title: l10n.libraryDetailManageChapters,
+                      onTap: () async {
+                        if (!sheetContext.mounted) {
+                          return;
+                        }
+                        Navigator.of(sheetContext).pop();
+                        await _showChapterManagementSheet();
+                      },
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -1635,10 +1641,10 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                         itemCount: tags.length,
                         itemBuilder: (context, index) {
                           final tag = tags[index];
-                          return ListTile(
+                          return AppGroupedRow(
                             key: Key('unified-detail-source-tag-${tag.tagId}'),
                             leading: const Icon(Icons.sell_outlined),
-                            title: Text(tag.label),
+                            title: tag.label,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -2203,23 +2209,22 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
         }
 
         return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: <Widget>[
-              for (final item in targets)
-                ListTile(
-                  title: Text(
-                    LibraryShelfTextResolver.categoryName(l10n, item),
+          child: SingleChildScrollView(
+            child: AppGroupedSection(
+              children: <Widget>[
+                for (final item in targets)
+                  AppGroupedRow(
+                    title: LibraryShelfTextResolver.categoryName(l10n, item),
+                    onTap: () => moveTo(item.categoryId),
                   ),
-                  onTap: () => moveTo(item.categoryId),
-                ),
-              if (canRemoveFromCollection)
-                ListTile(
-                  leading: const Icon(Icons.playlist_remove),
-                  title: Text(l10n.libraryShelfRemoveFromCategory),
-                  onTap: () => moveTo(LibraryCategoryTargets.home),
-                ),
-            ],
+                if (canRemoveFromCollection)
+                  AppGroupedRow(
+                    leading: const Icon(Icons.playlist_remove),
+                    title: l10n.libraryShelfRemoveFromCategory,
+                    onTap: () => moveTo(LibraryCategoryTargets.home),
+                  ),
+              ],
+            ),
           ),
         );
       },

@@ -131,16 +131,24 @@ final class DiscuzForumHomeHtmlRepository
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) async {
     final profile = _profile(query);
-    if (cachePolicy == CacheLoadPolicy.cacheFirst) {
+    if (_config.isCacheOnly || cachePolicy == CacheLoadPolicy.cacheFirst) {
       final cached = await readCached(query);
       if (cached != null &&
-          cached.metadata.freshness == DataReadFreshness.freshCache) {
+          (_config.isCacheOnly ||
+              cached.metadata.freshness == DataReadFreshness.freshCache)) {
         return DataReadSuccess(
           data: cached.data,
           capabilities: cached.capabilities,
           metadata: cached.metadata,
         );
       }
+    }
+    if (_config.isCacheOnly) {
+      return const DataReadFailure(
+        kind: DataReadFailureKind.network,
+        code: 'forum_cache_only',
+        diagnosticMessage: 'forum_cache_only',
+      );
     }
     final result = await network.send(
       ForumRequest(

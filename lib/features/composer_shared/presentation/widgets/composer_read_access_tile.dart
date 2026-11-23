@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -39,8 +40,7 @@ class ComposerReadAccessTile extends StatelessWidget {
         value != 0 &&
         (access.currentValue ?? 0) == 0;
     final selectable = access.canModify || canReleaseInvalidDraft;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
+    return AppGroupedRow.content(
       leading: const Icon(Icons.lock_outline),
       title: Text(l10n.composerReadAccess),
       subtitle: Text(
@@ -121,7 +121,7 @@ class ComposerReadAccessTile extends StatelessWidget {
     required int value,
     required String title,
     String? subtitle,
-  }) => ListTile(
+  }) => AppGroupedRow.content(
     key: ValueKey('read-access-option-$value'),
     title: Text(title),
     subtitle: subtitle == null || subtitle.isEmpty ? null : Text(subtitle),

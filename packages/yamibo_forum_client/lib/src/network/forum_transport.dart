@@ -72,6 +72,13 @@ final class ForumTransportError<T> extends ForumTransportResult<T> {
   /// Creates a failed transport result.
   const ForumTransportError(this.failure);
 
+  /// A cache-aware read skipped transmission under the host's read-only policy.
+  const ForumTransportError.cacheOnly()
+    : failure = const ForumTransportFailure(
+        kind: ForumTransportFailureKind.network,
+        code: 'forum_cache_only',
+      );
+
   /// Safe transport failure.
   final ForumTransportFailure failure;
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/links/external_link_opener.dart';
 import 'package:y300/app/navigation/forum_link_routes.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
@@ -35,6 +36,7 @@ final forumLinkOpenerProvider = Provider<ForumLinkOpener>((ref) {
     unawaited(subscription.cancel());
   });
   return ForumLinkOpener(
+    openExternal: (uri) => ref.read(externalLinkOpenerProvider).launch(uri),
     readViewerUserId: () => ref.read(verifiedSessionOwnerProvider)?.uid,
     readOwner: () => identity,
     isActive: () => active,
@@ -51,6 +53,7 @@ final forumLinkOpenerProvider = Provider<ForumLinkOpener>((ref) {
 /// provide source validity; renderer callbacks only pass the clicked URL.
 final class ForumLinkOpener {
   ForumLinkOpener({
+    required this.openExternal,
     required this.readViewerUserId,
     required this.readOwner,
     required this.isActive,
@@ -60,6 +63,7 @@ final class ForumLinkOpener {
     Future<void> Function(String text)? writeText,
   }) : writeText = writeText ?? _writePlatformText;
 
+  final Future<bool> Function(Uri) openExternal;
   final String? Function() readViewerUserId;
   final Object? Function() readOwner;
   final bool Function() isActive;
@@ -154,6 +158,7 @@ final class ForumLinkOpener {
               requestCurrent() && sourceRoute?.isCurrent != false;
           if (!requestCurrent() || sourceRoute?.isCurrent == false) return;
           if (destination.kind == YamiboForumLinkKind.external) {
+            if (await openExternal(destination.uri) || !context.mounted) return;
             await copyLinkWithFeedback(
               context,
               url: destination.uri.toString(),

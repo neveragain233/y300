@@ -9,6 +9,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/composer_shared/domain/repositories/composer_draft_repository.dart';
@@ -549,7 +550,7 @@ void main() {
         find.byKey(const Key('posting-composer-use-signature-switch')),
       );
       expect(signatureSwitch.value, isFalse);
-      final resetTile = tester.widget<ListTile>(
+      final resetTile = tester.widget<AppGroupedRow>(
         find.byKey(const Key('posting-composer-reset-draft-button')),
       );
       expect(resetTile.enabled, isFalse);

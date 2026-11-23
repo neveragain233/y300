@@ -22,10 +22,17 @@ Future<void> _pumpSelectionShell(
   MainNavigationSettingsRepository? navigationRepository,
   HistoryRepository? historyRepository,
   HistoryEntryRouter? historyEntryRouter,
+  ForumAvailability? availability,
+  Future<Widget?> Function(ActiveReaderTarget)? restorePage,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        forumAvailabilityProvider.overrideWith(
+          (_) => availability ?? ForumAvailability(),
+        ),
+        if (restorePage != null)
+          readerRestorePageProvider.overrideWithValue(restorePage),
         if (navigationRepository != null)
           mainNavigationSettingsRepositoryProvider.overrideWithValue(
             navigationRepository,

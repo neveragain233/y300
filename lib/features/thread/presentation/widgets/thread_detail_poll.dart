@@ -32,7 +32,7 @@ class ThreadPollCard extends StatefulWidget {
   final ValueChanged<bool>? onExpansionChanged;
   final String imageOwnerId;
   final String? imageReferer;
-  final ValueChanged<ThreadPollOption>? onLongPressOption;
+  final void Function(ThreadPollOption, Offset)? onLongPressOption;
 
   @override
   State<ThreadPollCard> createState() => _ThreadPollCardState();
@@ -103,7 +103,7 @@ class _ThreadPollCardState extends State<ThreadPollCard> {
                     onTap: () => widget.onToggleOption(option),
                     onLongPress: widget.onLongPressOption == null
                         ? null
-                        : () => widget.onLongPressOption!(option),
+                        : (point) => widget.onLongPressOption!(option, point),
                   ),
                 ],
                 if (statusText != null && statusText.isNotEmpty) ...[
@@ -258,9 +258,8 @@ class _ThreadPollFooter extends StatelessWidget {
     final showSelectionCount =
         poll.canVote && poll.isMultipleChoice && selectedCount > 0;
     final hasInfo = showSelectionCount || deadline?.isNotEmpty == true;
-    final style = Theme.of(
-      context,
-    ).textTheme.labelMedium?.copyWith(color: palette.muted);
+    final style = Theme.of(context).textTheme.labelMedium
+        ?.copyWith(color: palette.muted);
     final info = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,10 +349,17 @@ class ThreadPollOptionTile extends StatelessWidget {
   final VoidCallback onTap;
   final String imageOwnerId;
   final String? imageReferer;
-  final VoidCallback? onLongPress;
+  final ValueChanged<Offset>? onLongPress;
 
   @override
   Widget build(BuildContext context) {
+    void openAtVisibleCenter() {
+      final box = context.findRenderObject() as RenderBox;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      final visible = rect.intersect(Offset.zero & MediaQuery.sizeOf(context));
+      onLongPress?.call(visible.center);
+    }
+
     final sourcePercent = option.percent;
     final percent = sourcePercent?.isFinite == true ? sourcePercent : null;
     final color = _parseColor(option.colorHex) ?? palette.accent;
@@ -410,12 +416,10 @@ class ThreadPollOptionTile extends StatelessWidget {
               children: [
                 if (option.voteCount != null)
                   Text(
-                    AppLocalizations.of(
-                      context,
-                    ).threadPollVotes(option.voteCount!),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelMedium?.copyWith(color: palette.muted),
+                    AppLocalizations.of(context)
+                        .threadPollVotes(option.voteCount!),
+                    style: Theme.of(context).textTheme.labelMedium
+                        ?.copyWith(color: palette.muted),
                   ),
                 if (percent != null)
                   Text(
@@ -454,7 +458,7 @@ class ThreadPollOptionTile extends StatelessWidget {
         onLongPressHint: AppLocalizations.of(context).threadPollOptionActions,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onLongPress: onLongPress,
+          onLongPressStart: (details) => onLongPress!(details.globalPosition),
           child: tile,
         ),
       );
@@ -471,7 +475,7 @@ class ThreadPollOptionTile extends StatelessWidget {
         child: TextButton(
           key: Key('thread-poll-option-${option.id}'),
           onPressed: enabled ? onTap : null,
-          onLongPress: onLongPress,
+          onLongPress: onLongPress == null ? null : openAtVisibleCenter,
           style: TextButton.styleFrom(
             foregroundColor: palette.accent,
             backgroundColor: selected

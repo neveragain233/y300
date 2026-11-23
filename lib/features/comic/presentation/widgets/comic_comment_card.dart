@@ -93,12 +93,13 @@ class _ComicCommentCardState extends ConsumerState<ComicCommentCard> {
     super.dispose();
   }
 
-  Future<void> _openActions(ThreadPostActions actions) async {
+  Future<void> _openActions(ThreadPostActions actions, Offset position) async {
     ThreadPostMutation? mutation;
     final source = widget.projection.sourceItem;
     await widget.interactionController?.perform(
       invoke: (_, current) async {
         mutation = await actions.show(
+          position: position,
           sourcePost: source.post,
           displayPost: widget.projection.displayPost,
         );
@@ -191,7 +192,9 @@ class _ComicCommentCardState extends ConsumerState<ComicCommentCard> {
               true
           ? (_) => _loadRatings()
           : null,
-      onOpenPostActions: actions == null ? null : (_) => _openActions(actions),
+      onOpenPostActions: actions == null
+          ? null
+          : (press) => _openActions(actions, press.$2),
       avatarFallbackPolicy: ForumAvatarFallbackPolicy.localDefaultAvatar,
       renderContext: renderContext,
     );

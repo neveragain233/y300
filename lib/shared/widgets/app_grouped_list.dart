@@ -1,3 +1,5 @@
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:flutter/material.dart';
 
 /// FlClash 风格分组列表：外置组标题、圆角分组表面与内缩分隔线。
@@ -24,7 +26,10 @@ class AppGroupedSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final cardColor = scheme.brightness == Brightness.dark
+    final eInk = EInkModeScope.of(context);
+    final cardColor = eInk
+        ? scheme.surface
+        : scheme.brightness == Brightness.dark
         ? scheme.surfaceContainer
         : scheme.surfaceContainerLowest;
     final dividerColor = scheme.outlineVariant.withValues(alpha: 0.6);
@@ -48,6 +53,14 @@ class AppGroupedSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             child: Material(
               color: cardColor,
+              shape: eInk
+                  ? RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: AppTheme.eInkBorderColor(scheme.brightness),
+                      ),
+                    )
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -89,11 +102,31 @@ class AppGroupedRow extends StatelessWidget {
     this.minHeight = 56,
     this.selected,
     this.semanticsValue,
-  }) : assert(
+  }) : titleWidget = null,
+       subtitleWidget = null,
+       assert(
          selected == null || semanticsValue == null,
          '多选一状态行与当前值行分开表达，避免读屏同时朗读选中和取值',
        );
 
+  const AppGroupedRow.content({
+    super.key,
+    required Widget title,
+    Widget? subtitle,
+    this.leading,
+    this.trailing,
+    this.onTap,
+    this.enabled = true,
+    this.selected,
+    this.minHeight = 56,
+  }) : title = '',
+       subtitle = null,
+       titleWidget = title,
+       subtitleWidget = subtitle,
+       semanticsValue = null,
+       showChevron = false;
+  final Widget? titleWidget;
+  final Widget? subtitleWidget;
   final Widget? leading;
   final String title;
   final String? subtitle;
@@ -127,8 +160,8 @@ class AppGroupedRow extends StatelessWidget {
     Widget content = Row(
       children: [
         if (leading != null) ...[
-          SizedBox(
-            width: 24,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 24),
             child: IconTheme(
               data: IconThemeData(
                 size: 22,
@@ -144,25 +177,27 @@ class AppGroupedRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: titleColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: subtitleColor,
+              titleWidget ??
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: titleColor,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
+              if (subtitleWidget != null || subtitle != null) ...[
+                const SizedBox(height: 2),
+                subtitleWidget ??
+                    Text(
+                      subtitle!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: subtitleColor,
+                      ),
+                    ),
               ],
             ],
           ),

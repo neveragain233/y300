@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/links/external_link_opener.dart';
+import 'package:y300/core/network/forum_availability.dart';
+import 'package:y300/features/reader_shared/application/active_reader_session.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
@@ -63,6 +66,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final controlsPreferences = ref
         .watch(threadControlsPreferencesControllerProvider)
         .value;
+    final externalBrowser = ref.watch(externalBrowserPreferenceProvider).value;
     final debugTiles = widget.debugTools.buildTiles(context, l10n);
     return Scaffold(
       key: const Key('settings-page'),
@@ -137,6 +141,95 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           showChevron: true,
                           onTap: () =>
                               _pushPage(const ThreadControlsSettingsPage()),
+                        ),
+                        AppSwitchRow(
+                          key: const Key('settings-restore-active-reader'),
+                          title: l10n.restoreActiveReader,
+                          leading: const Icon(Icons.auto_stories_outlined),
+                          value:
+                              ref
+                                  .watch(restoreReaderPreferenceProvider)
+                                  .value ??
+                              false,
+                          disabled: !ref
+                              .watch(restoreReaderPreferenceProvider)
+                              .hasValue,
+                          onChanged: (enabled) async {
+                            try {
+                              await ref
+                                  .read(
+                                    restoreReaderPreferenceProvider.notifier,
+                                  )
+                                  .set(enabled);
+                            } catch (_) {
+                              if (context.mounted) {
+                                showTransientSnackBar(
+                                  context,
+                                  l10n.threadControlsSaveFailed,
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        AppSwitchRow(
+                          key: const Key('settings-cache-only'),
+                          title: l10n.networkForceCache,
+                          leading: const Icon(Icons.offline_bolt_outlined),
+                          value: ref.watch(forumAvailabilityProvider).forced,
+                          onChanged: ref
+                              .read(forumAvailabilityProvider)
+                              .setManual,
+                        ),
+                        AppGroupedRow(
+                          leading: const Icon(Icons.open_in_browser),
+                          key: const Key('settings-external-browser'),
+                          title: l10n.externalBrowserPreference,
+                          subtitle: externalBrowser == true
+                              ? l10n.externalBrowserStandalone
+                              : l10n.externalBrowserInApp,
+                          enabled: externalBrowser != null,
+                          onTap: externalBrowser == null
+                              ? null
+                              : () async {
+                                  final next = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialog) => SimpleDialog(
+                                      title: Text(
+                                        l10n.externalBrowserPreference,
+                                      ),
+                                      children: [
+                                        for (final value in [false, true])
+                                          AppGroupedRow(
+                                            title: value
+                                                ? l10n.externalBrowserStandalone
+                                                : l10n.externalBrowserInApp,
+                                            selected: value == externalBrowser,
+                                            trailing: value == externalBrowser
+                                                ? const Icon(Icons.check)
+                                                : null,
+                                            onTap: () =>
+                                                Navigator.pop(dialog, value),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                  if (next == null || !mounted) return;
+                                  try {
+                                    await ref
+                                        .read(
+                                          externalBrowserPreferenceProvider
+                                              .notifier,
+                                        )
+                                        .set(next);
+                                  } catch (_) {
+                                    if (context.mounted) {
+                                      showTransientSnackBar(
+                                        context,
+                                        l10n.threadControlsSaveFailed,
+                                      );
+                                    }
+                                  }
+                                },
                         ),
                         AppSwitchRow(
                           key: const Key('settings-expand-ratings-by-default'),

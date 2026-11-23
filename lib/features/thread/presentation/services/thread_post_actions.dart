@@ -17,7 +17,7 @@ import 'package:y300/features/thread/presentation/services/thread_post_rating_fl
 import 'package:y300/features/thread/presentation/services/thread_post_rating_service.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_post_action_sheet.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_popup_menu.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 enum ThreadPostMutation { post, reply }
@@ -95,6 +95,8 @@ class ThreadPostActions {
   Future<ThreadPostMutation?> show({
     required ThreadPost sourcePost,
     required ThreadPost displayPost,
+    Offset? position,
+    double bottomInset = 0,
     ThreadPollOption? pollOption,
   }) async {
     if (!active) return null;
@@ -111,16 +113,19 @@ class ThreadPostActions {
         onViewOnlyAuthor != null &&
         authorId.isNotEmpty &&
         target.supports(ThreadDetailCapability.alternateViews);
-    final action = await showAdaptivePanel<ThreadPostAction>(
+    final action = await showAppPointMenu<ThreadPostAction>(
+      menuKey: const Key('thread-post-action-sheet'),
+      position: position ?? MediaQuery.sizeOf(context).center(Offset.zero),
+      bottomInset: bottomInset,
       context: context,
-      builder: (_) => ThreadPostActionSheet(
+      entries: ThreadPostActionSheet(
         post: sourcePost,
         editUri: editTarget?.editUri,
         capabilities: target.capabilities,
         canCopyPollOption: canCopyOption,
         canViewOnlyAuthor: canViewOnlyAuthor,
         canBlockUser: canBlockUser,
-      ),
+      ).entries(context),
     );
     if (!context.mounted || !isCurrent() || action == null) return null;
     switch (action) {

@@ -191,7 +191,16 @@ class ComicSearchRefreshQueueService
     _snapshot.dispose();
   }
 
+  bool _paused = false;
+
+  void setPaused(bool paused) {
+    if (_paused == paused) return;
+    _paused = paused;
+    if (!paused && _started) _schedulePump();
+  }
+
   void _schedulePump() {
+    if (_paused) return;
     if (_disposed) {
       return;
     }
@@ -219,7 +228,7 @@ class ComicSearchRefreshQueueService
     _processing = true;
     _wakeTimer?.cancel();
     try {
-      while (!_disposed) {
+      while (!_disposed && !_paused) {
         final task = await _queueRepository.claimNextPending(
           now: _nowProvider(),
         );

@@ -26,7 +26,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
   final ThreadDetailNativePalette palette;
   final String? imageReferer;
   final ValueChanged<ThreadPost> onOpenAuthorProfile;
-  final ValueChanged<ThreadPost> onOpenPostActions;
+  final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
 
   /// 首楼标题测点；页面据此换算标题在正文可读区中的可见性。
   final GlobalKey? firstPostTitleKey;
@@ -36,7 +36,8 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
     final post = displayPost;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: () => onOpenPostActions(sourcePost),
+      onLongPressStart: (details) =>
+          onOpenPostActions((sourcePost, details.globalPosition)),
       child: Container(
         key: Key('thread-post-card-${post.pid}'),
         padding: const EdgeInsets.fromLTRB(
@@ -166,14 +167,15 @@ class _ThreadPostCardBodyEntry extends StatelessWidget {
   final Object? layoutIdentity;
   final int? chunkOrdinal;
   final bool enableSafeDisplayPlanning;
-  final ValueChanged<ThreadPost> onOpenPostActions;
+  final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
 
   @override
   Widget build(BuildContext context) {
     final post = displayPost;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: () => onOpenPostActions(sourcePost),
+      onLongPressStart: (details) =>
+          onOpenPostActions((sourcePost, details.globalPosition)),
       child: Container(
         padding: EdgeInsets.fromLTRB(
           ForumContentSpacing.postBodyHorizontal,
@@ -297,7 +299,7 @@ class _ThreadPostCardFooterEntry extends StatelessWidget {
   final ThreadDetailPageState state;
   final bool highlighted;
   final String? imageReferer;
-  final ValueChanged<ThreadPost> onOpenPostActions;
+  final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
   final ThreadPollOptionActionCallback? onOpenPollOptionActions;
   final ValueChanged<String> onOpenPostLink;
   final ValueChanged<ThreadPostCommentEntry> onOpenCommentAuthorProfile;
@@ -344,7 +346,8 @@ class _ThreadPostCardFooterEntry extends StatelessWidget {
         showEmptyInteractionHint;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: () => onOpenPostActions(sourcePost),
+      onLongPressStart: (details) =>
+          onOpenPostActions((sourcePost, details.globalPosition)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -376,8 +379,11 @@ class _ThreadPostCardFooterEntry extends StatelessWidget {
                     poll: post.poll!,
                     onLongPressOption: onOpenPollOptionActions == null
                         ? null
-                        : (option) =>
-                              onOpenPollOptionActions!(sourcePost, option),
+                        : (option, point) => onOpenPollOptionActions!(
+                            sourcePost,
+                            option,
+                            point,
+                          ),
                     selectedOptionIds: state.selectedPollOptionIds,
                     isSubmitting: state.isPollVoteSubmitting,
                     commandAvailable: state.pollVoteCommandAvailable,
@@ -542,7 +548,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
     Size size,
   )
   onHtmlFirstBlockImageResolved;
-  final ValueChanged<ThreadPost> onOpenPostActions;
+  final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
   final ThreadPollOptionActionCallback? onOpenPollOptionActions;
   final ValueChanged<ThreadPostCommentEntry> onOpenCommentAuthorProfile;
   final void Function(ThreadPoll poll, ThreadPollOption option)
@@ -773,7 +779,7 @@ class ThreadPostCard extends StatelessWidget {
   final ValueChanged<ThreadPost>? onLoadAllRatings;
   final ThreadDetailNativePalette palette;
   final ValueChanged<ThreadPostCommentEntry>? onOpenCommentAuthorProfile;
-  final ValueChanged<ThreadPost>? onOpenPostActions;
+  final ValueChanged<(ThreadPost, Offset)>? onOpenPostActions;
   final ThreadPollOptionActionCallback? onOpenPollOptionActions;
   final ThreadPostCardInteractionPolicy interactionPolicy;
   final ForumAvatarFallbackPolicy avatarFallbackPolicy;
@@ -933,7 +939,8 @@ class ThreadPostCard extends StatelessWidget {
               onLongPressOption:
                   interactionPolicy.allowPostActions &&
                       onOpenPollOptionActions != null
-                  ? (option) => onOpenPollOptionActions!(post, option)
+                  ? (option, point) =>
+                        onOpenPollOptionActions!(post, option, point)
                   : null,
               selectedOptionIds:
                   detailState?.selectedPollOptionIds ?? const <String>{},
@@ -983,7 +990,8 @@ class ThreadPostCard extends StatelessWidget {
     }
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: () => openActions(post),
+      onLongPressStart: (details) =>
+          openActions((post, details.globalPosition)),
       child: card,
     );
   }

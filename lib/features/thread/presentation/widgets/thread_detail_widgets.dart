@@ -77,6 +77,7 @@ part 'thread_blacklisted_post.dart';
 typedef ThreadPollOptionActionCallback = void Function(
   ThreadPost post,
   ThreadPollOption option,
+  Offset point,
 );
 
 class ThreadDetailContent extends ConsumerStatefulWidget {
@@ -179,7 +180,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
   final ValueChanged<String> onOpenPostLink;
   final void Function(ThreadPost post, ThreadImageOpenRequest request)?
   onOpenPostImages;
-  final ValueChanged<ThreadPost> onOpenPostActions;
+  final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
   final ThreadPollOptionActionCallback? onOpenPollOptionActions;
   final ForumImagePrecacheService? htmlImagePrecacheService;
   final ForumHtmlImageVisibilityObserver? imageVisibilityObserver;

@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:y300/features/library_shared/domain/models/library_filter_models.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -101,11 +102,10 @@ class UnifiedDetailTriStateLine extends StatelessWidget {
       ).libraryChapterFilterExclude(label),
     };
 
-    return ListTile(
+    return AppGroupedRow(
       key: lineKey,
-      dense: true,
       leading: Icon(icon),
-      title: Text(label),
+      title: label,
       trailing: Text(
         stateLabel,
         style: Theme.of(context).textTheme.labelMedium

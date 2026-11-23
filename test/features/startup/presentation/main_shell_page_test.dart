@@ -1,7 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart'
     hide ForumHomeRepository, ForumHomeFavoriteForum;
+import 'package:y300/app/startup/restore_active_reader.dart';
+import 'package:y300/core/network/forum_availability.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/features/reader_shared/application/active_reader_session.dart';
+import 'package:y300/features/startup/presentation/widgets/forum_availability_banner.dart';
 import 'package:y300/features/forum/data/repositories/forum_home_repository.dart';
 import 'package:y300/features/cache/domain/models/document_cache_models.dart';
 
@@ -92,6 +98,7 @@ import 'package:y300/features/profile/presentation/profile_blog_page.dart';
 
 import '../../profile/test_support/blog_directory_fixture.dart';
 
+part 'main_shell_reader_restore_cases.dart';
 part 'main_shell_page_launch_cases.dart';
 part 'main_shell_page_navigation_cases.dart';
 part 'main_shell_page_destination_cases.dart';
@@ -112,6 +119,7 @@ void main() {
     addTearDown(view.resetDevicePixelRatio);
   });
 
+  _readerRestoreCases();
   _launchCases();
   _navigationCases();
   _destinationCases();

@@ -128,6 +128,15 @@ final class DataCommandNotSent<T> extends DataCommandResult<T> {
   /// Creates a locally rejected command result.
   const DataCommandNotSent(this.failure);
 
+  /// The host blocked a new mutation before transmission.
+  const DataCommandNotSent.cacheOnly()
+    : failure = const DataCommandFailure(
+        kind: DataCommandFailureKind.network,
+        retryPolicy: DataCommandRetryPolicy.explicitOnly,
+        diagnosticMessage: 'forum_cache_only',
+        code: 'forum_cache_only',
+      );
+
   /// Safe validation/session details.
   final DataCommandFailure failure;
 }

@@ -3,6 +3,9 @@ import 'dart:io' as io;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/core/network/forum_availability.dart';
+import 'package:y300/features/reader_shared/application/active_reader_session.dart';
+import 'package:y300/features/reader_shared/presentation/active_reader_host.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_chapter_tile.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
@@ -81,97 +84,105 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
     final state = ref.watch(comicReaderControllerProvider(_readerArgs));
     final imageReferer = ref.watch(forumImageRefererProvider);
 
-    return Scaffold(
-      body: state.when(
-        loading: () => _ReaderOpeningPlaceholder(
-          background: _readerBackgroundColor(preferences),
-        ),
-        error: (error, stackTrace) => _buildReaderErrorState(error),
-        data: (viewState) {
-          if (viewState.images.isEmpty) {
-            return _buildNoImagesState(viewState);
-          }
-          final controller = _controller();
-          final commentSessionKey = ComicCommentSessionKey(
-            episodeId: viewState.episodeId,
-            sourceTid: viewState.sourceTid,
-          );
-          final commentTail = ref.watch(
-            comicCommentTailSurfaceProvider(commentSessionKey),
-          );
-          final commentSession = ref.watch(
-            comicCommentSessionControllerProvider(commentSessionKey),
-          );
-          commentTail.updateChapterImages(
-            viewState.images.map((image) => image.imageUrl),
-          );
-          commentTail.updateNavigation(
-            hasNextEpisode: viewState.hasNextEpisode,
-            onAdvanceEpisode: viewState.nextChapter == null
-                ? null
-                : () => _openAdjacentEpisode(
-                    sourceEpisodeId: viewState.episodeId,
-                    direction: ComicEpisodeDirection.next,
-                  ),
-          );
-          return AnimatedBuilder(
-            animation: commentTail,
-            builder: (context, _) {
-              final reader = ImageReaderEngine(
-                key: const Key('comic-reader-engine'),
-                listKey: const Key('comic-reader-image-list'),
-                pageKey: const Key('comic-reader-page-view'),
-                slotKeyPrefix: 'comic-reader-image-slot',
-                capability: ComicReaderCapability(
-                  viewState: viewState,
-                  preferences: preferences,
-                  imageReferer: imageReferer,
-                  controller: controller,
-                  l10n: l10n,
-                  diagnosticRecorder: widget.diagnosticRecorder,
-                  exitResult: _exitResultFor(viewState),
-                  commentTailSurface: commentTail,
-                  onLastImageVisible: () => unawaited(commentSession.load()),
-                  onToggleBookmark: () => unawaited(_toggleBookmark()),
-                  onOpenSourceThread: () => _openSourceThread(viewState),
-                  moreMenu: _buildMoreMenu(viewState),
-                  onShowChapterList: () =>
-                      unawaited(_showChapterListSheet(viewState)),
-                  onOpenAdjacentEpisode: ({required direction}) => unawaited(
-                    _openAdjacentEpisode(
+    return ActiveReaderHost(
+      target: (
+        module: ActiveReaderModule.comic,
+        workId: widget.comicId,
+        episodeId: state.value?.episodeId ?? widget.episodeId,
+      ),
+      flush: () => _controller().flushProgress(),
+      child: Scaffold(
+        body: state.when(
+          loading: () => _ReaderOpeningPlaceholder(
+            background: _readerBackgroundColor(preferences),
+          ),
+          error: (error, stackTrace) => _buildReaderErrorState(error),
+          data: (viewState) {
+            if (viewState.images.isEmpty) {
+              return _buildNoImagesState(viewState);
+            }
+            final controller = _controller();
+            final commentSessionKey = ComicCommentSessionKey(
+              episodeId: viewState.episodeId,
+              sourceTid: viewState.sourceTid,
+            );
+            final commentTail = ref.watch(
+              comicCommentTailSurfaceProvider(commentSessionKey),
+            );
+            final commentSession = ref.watch(
+              comicCommentSessionControllerProvider(commentSessionKey),
+            );
+            commentTail.updateChapterImages(
+              viewState.images.map((image) => image.imageUrl),
+            );
+            commentTail.updateNavigation(
+              hasNextEpisode: viewState.hasNextEpisode,
+              onAdvanceEpisode: viewState.nextChapter == null
+                  ? null
+                  : () => _openAdjacentEpisode(
                       sourceEpisodeId: viewState.episodeId,
-                      direction: direction,
+                      direction: ComicEpisodeDirection.next,
                     ),
-                  ),
-                  buildNextChapterTransition: (context) =>
-                      _ReaderNextChapterTransition(
-                        nextChapter: viewState.nextChapter,
-                        isSwitchingEpisode: viewState.isSwitchingEpisode,
-                        onOpenNext: () => unawaited(
-                          _openAdjacentEpisode(
-                            sourceEpisodeId: viewState.episodeId,
-                            direction: ComicEpisodeDirection.next,
+            );
+            return AnimatedBuilder(
+              animation: commentTail,
+              builder: (context, _) {
+                final reader = ImageReaderEngine(
+                  key: const Key('comic-reader-engine'),
+                  listKey: const Key('comic-reader-image-list'),
+                  pageKey: const Key('comic-reader-page-view'),
+                  slotKeyPrefix: 'comic-reader-image-slot',
+                  capability: ComicReaderCapability(
+                    viewState: viewState,
+                    preferences: preferences,
+                    imageReferer: imageReferer,
+                    controller: controller,
+                    l10n: l10n,
+                    diagnosticRecorder: widget.diagnosticRecorder,
+                    exitResult: _exitResultFor(viewState),
+                    commentTailSurface: commentTail,
+                    onLastImageVisible: () => unawaited(commentSession.load()),
+                    onToggleBookmark: () => unawaited(_toggleBookmark()),
+                    onOpenSourceThread: () => _openSourceThread(viewState),
+                    moreMenu: _buildMoreMenu(viewState),
+                    onShowChapterList: () =>
+                        unawaited(_showChapterListSheet(viewState)),
+                    onOpenAdjacentEpisode: ({required direction}) => unawaited(
+                      _openAdjacentEpisode(
+                        sourceEpisodeId: viewState.episodeId,
+                        direction: direction,
+                      ),
+                    ),
+                    buildNextChapterTransition: (context) =>
+                        _ReaderNextChapterTransition(
+                          nextChapter: viewState.nextChapter,
+                          isSwitchingEpisode: viewState.isSwitchingEpisode,
+                          onOpenNext: () => unawaited(
+                            _openAdjacentEpisode(
+                              sourceEpisodeId: viewState.episodeId,
+                              direction: ComicEpisodeDirection.next,
+                            ),
                           ),
                         ),
+                  ),
+                );
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    reader,
+                    if (viewState.isSwitchingEpisode ||
+                        viewState.isRefreshingEpisode)
+                      Positioned.fill(
+                        child: _ComicReaderSwitchOverlay(
+                          background: _readerBackgroundColor(preferences),
+                        ),
                       ),
-                ),
-              );
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  reader,
-                  if (viewState.isSwitchingEpisode ||
-                      viewState.isRefreshingEpisode)
-                    Positioned.fill(
-                      child: _ComicReaderSwitchOverlay(
-                        background: _readerBackgroundColor(preferences),
-                      ),
-                    ),
-                ],
-              );
-            },
-          );
-        },
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -180,7 +191,9 @@ class _ComicReaderPageState extends ConsumerState<ComicReaderPage> {
   /// 阅读器错误态：拉单话图片失败显示根因 + 重试；解析失败不出重试按钮。
   Widget _buildReaderErrorState(Object error) {
     final l10n = AppLocalizations.of(context);
-    final hint = ComicTextResolver.readerFailure(l10n, error);
+    final hint = ref.watch(forumAvailabilityProvider).blocked
+        ? l10n.cacheOnlyReadMiss
+        : ComicTextResolver.readerFailure(l10n, error);
     final retryable =
         error is! ComicEpisodeImagesUnavailable || error.isRetryable;
     return Center(

@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
@@ -19,15 +20,7 @@ class ComposerSettingsSheet extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + viewInsets.bottom),
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              ...children,
-            ],
-          ),
+          child: AppGroupedSection(title: title, children: children),
         ),
       ),
     );
@@ -83,12 +76,10 @@ class ComposerSettingsActionTile extends StatelessWidget {
     final color = destructive && onPressed != null
         ? Theme.of(context).colorScheme.error
         : null;
-    return ListTile(
+    return AppGroupedRow.content(
       key: tileKey,
       leading: Icon(icon, color: color),
       title: Text(title, style: color == null ? null : TextStyle(color: color)),
-      contentPadding: EdgeInsets.zero,
-      dense: true,
       enabled: onPressed != null,
       onTap: onPressed,
     );

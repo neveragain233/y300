@@ -386,7 +386,7 @@ final class _Fixture {
                     onOpenCommentAuthorProfile: (_) {},
                     onCopyActionUrl: (_, _) {},
                     onOpenPostLink: navigation.openLink,
-                    onOpenPostActions: (_) => unawaited(
+                    onOpenPostActions: (press) => unawaited(
                       ThreadPostActions(
                         context: context,
                         ref: ref,
@@ -403,7 +403,11 @@ final class _Fixture {
                             const DefaultForumHtmlRenderPreparer(
                               enablePlainTextLinks: true,
                             ),
-                      ).show(sourcePost: post, displayPost: post),
+                      ).show(
+                        sourcePost: post,
+                        displayPost: post,
+                        position: press.$2,
+                      ),
                     ),
                     onTogglePollOption: (_, _) {},
                     onSubmitPollVote: (_) {},
@@ -501,13 +505,13 @@ Future<void> _selectAll(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-String _openLabel(WidgetTester tester) => AppLocalizations.of(
-  tester.element(find.byType(SelectionArea)),
-).selectionOpenForumLink;
+String _openLabel(WidgetTester tester) =>
+    AppLocalizations.of(tester.element(find.byType(SelectionArea)))
+        .selectionOpenForumLink;
 
-String _copyLabel(WidgetTester tester) => MaterialLocalizations.of(
-  tester.element(find.byType(SelectionArea)),
-).copyButtonLabel;
+String _copyLabel(WidgetTester tester) =>
+    MaterialLocalizations.of(tester.element(find.byType(SelectionArea)))
+        .copyButtonLabel;
 
 final class _Reader implements ClipboardTextReader {
   String? text;

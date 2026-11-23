@@ -1207,7 +1207,7 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
   }
 
   /// Flushes the latest progress when the reader is closed.
-  Future<void> onExitReader() async {
+  Future<void> flushProgress() async {
     final current = state.value;
     if (current == null) {
       return;
@@ -1219,6 +1219,12 @@ class ComicReaderController extends AsyncNotifier<ComicReaderViewState> {
       scrollOffset: current.lastScrollOffset,
       source: ComicReaderProgressSource.exit,
     );
+  }
+
+  Future<void> onExitReader() async {
+    final current = state.value;
+    if (current == null) return;
+    await flushProgress();
     _logReaderEvent(
       'exit',
       pageIndex: current.currentImageIndex,

@@ -1,7 +1,7 @@
 part of 'forum_webview_page_test.dart';
 
 void _externalLinkInterceptionCases() {
-  testWidgets('ForumWebViewPage copies external links and reports success', (
+  testWidgets('ForumWebViewPage opens external links in the browser', (
     tester,
   ) async {
     final driver = _FakeForumWebViewDriver();
@@ -26,19 +26,19 @@ void _externalLinkInterceptionCases() {
     await tester.pumpAndSettle();
 
     expect(decision, ForumWebViewNavigationDecision.prevent);
+    expect(clipboard.written, isEmpty);
     expect(
-      clipboard.written.single,
+      launcher.launchedUris.single.toString(),
       'https://example.com/thread/123?ref=a%2Fb&value=two#part',
     );
-    expect(launcher.launchedUris, isEmpty);
-    expect(find.text(l10n.linkCopied), findsOneWidget);
+    expect(find.text(l10n.linkCopied), findsNothing);
   });
 
   testWidgets('ForumWebViewPage reports an external link copy failure', (
     tester,
   ) async {
     final driver = _FakeForumWebViewDriver();
-    final launcher = _FakeForumWebViewExternalLauncher();
+    final launcher = _FakeForumWebViewExternalLauncher()..succeeds = false;
     final clipboard = _FakeClipboardTextWriter(error: StateError('clipboard'));
 
     await tester.pumpWidget(
@@ -60,7 +60,7 @@ void _externalLinkInterceptionCases() {
 
     expect(decision, ForumWebViewNavigationDecision.prevent);
     expect(clipboard.written.single, 'https://example.com/thread/123');
-    expect(launcher.launchedUris, isEmpty);
+    expect(launcher.launchedUris, hasLength(1));
     expect(find.text(l10n.linkCopyFailed), findsOneWidget);
     expect(find.text(l10n.linkCopied), findsNothing);
   });
@@ -71,7 +71,7 @@ void _externalLinkInterceptionCases() {
       (tester) async {
         final driver = _FakeForumWebViewDriver();
         final clipboard = _FakeClipboardTextWriter(pending: Completer<void>());
-        final launcher = _FakeForumWebViewExternalLauncher();
+        final launcher = _FakeForumWebViewExternalLauncher()..succeeds = false;
         var accountCurrent = true;
         await tester.pumpWidget(
           _buildTestApp(
@@ -99,7 +99,7 @@ void _externalLinkInterceptionCases() {
         }
         clipboard.pending!.complete();
         await tester.pump();
-        expect(launcher.launchedUris, isEmpty);
+        expect(launcher.launchedUris, hasLength(1));
         expect(find.text(l10n.linkCopied), findsNothing);
         expect(find.text(l10n.linkCopyFailed), findsNothing);
         expect(tester.takeException(), isNull);

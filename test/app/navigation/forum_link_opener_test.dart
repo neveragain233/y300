@@ -57,6 +57,7 @@ void main() {
     active = true;
     sourceValid = true;
     opener = ForumLinkOpener(
+      openExternal: (_) async => false,
       readViewerUserId: () => '101',
       readOwner: () => owner,
       isActive: () => active,
@@ -390,7 +391,7 @@ void main() {
       await tester.pumpAndSettle();
       final l10n = AppLocalizations.of(source);
       expect(find.text(l10n.linkCopied), findsOneWidget);
-      expect(launcher.opened, isEmpty);
+      expect(launcher.opened, [Uri.parse(url)]);
       expect(platformCalls, hasLength(1));
       expect(platformCalls.single.arguments, {'text': url});
       expect(
@@ -427,7 +428,7 @@ void main() {
     opener = container.read(forumLinkOpenerProvider);
     await open(tester, 'https://example.org/read');
     expect(copied, ['https://example.org/read']);
-    expect(launcher.opened, isEmpty);
+    expect(launcher.opened, [Uri.parse('https://example.org/read')]);
     await tester.idle();
     await open(tester, 'https://bbs.yamibo.com/thread-42-2-1.html');
     expect(native.single.page, 2);
@@ -501,7 +502,7 @@ class _ExternalLauncher implements ForumWebViewExternalLauncher {
   @override
   Future<bool> launch(Uri uri) async {
     opened.add(uri);
-    return true;
+    return false;
   }
 }
 

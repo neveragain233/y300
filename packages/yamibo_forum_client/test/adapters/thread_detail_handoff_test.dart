@@ -3,6 +3,8 @@ import 'package:yamibo_forum_client/yamibo_forum_client.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_adapters.dart';
 import 'package:yamibo_forum_client/src/adapters/thread_detail_handoff_coordinator.dart';
 
+import 'package:yamibo_forum_client/src/adapters/discuz_thread_repositories.dart';
+
 import '../fixtures/thread_post_navigation_fixtures.dart';
 
 void main() {
@@ -56,6 +58,39 @@ void main() {
         page: 3,
       );
       expect(network.operations, ['thread.post.locate', 'thread.detail.html']);
+    },
+  );
+
+  test(
+    'read-only mode serves the retained chapter only until expiry',
+    () async {
+      var blocked = false;
+      var now = DateTime.now();
+      final source = ForumClientConfig(
+        siteOrigin: config.siteOrigin,
+        cacheOnly: () => blocked,
+      );
+      final network = _RecordingNetwork(config.siteOrigin);
+      final reader = ThreadDetailHtmlRepository(
+        config: source,
+        network: network,
+        requestProfiles: DefaultForumRequestProfileResolver(source),
+        snapshotStore: MemoryForumSnapshotStore(),
+        now: () => now,
+      );
+      final first = await reader.getThreadDetail(tid: '100', page: 3);
+      expect(first.dataOrNull, isNotNull);
+      blocked = true;
+      now = now.add(const Duration(hours: 1));
+      final retained = await reader.getThreadDetail(tid: '100', page: 3);
+      expect(
+        (retained as DataReadSuccess).metadata.origin,
+        DataReadOrigin.retainedSnapshot,
+      );
+      now = now.add(const Duration(days: 8));
+      final expired = await reader.getThreadDetail(tid: '100', page: 3);
+      expect((expired as DataReadFailure).code, 'forum_cache_only');
+      expect(network.operations, ['thread.detail.html']);
     },
   );
 

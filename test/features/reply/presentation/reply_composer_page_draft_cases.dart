@@ -112,7 +112,7 @@ void _draftCases() {
 
     await tester.tap(find.byKey(const Key('reply-composer-more-button')));
     await tester.pumpAndSettle();
-    final resetTile = tester.widget<ListTile>(
+    final resetTile = tester.widget<AppGroupedRow>(
       find.byKey(const Key('reply-composer-reset-draft-button')),
     );
     expect(resetTile.enabled, isTrue);
@@ -156,7 +156,7 @@ void _draftCases() {
       find.byKey(const Key('reply-composer-use-signature-switch')),
     );
     expect(signatureSwitch.value, isFalse);
-    final disabledResetTile = tester.widget<ListTile>(
+    final disabledResetTile = tester.widget<AppGroupedRow>(
       find.byKey(const Key('reply-composer-reset-draft-button')),
     );
     expect(disabledResetTile.enabled, isFalse);

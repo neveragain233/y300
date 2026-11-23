@@ -164,12 +164,16 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
     this.avoid,
     this.theme,
     this.reduceMotion = false,
+    this.contentInsets = EdgeInsets.zero,
+    this.solidSurface = false,
   }) : super(requestFocus: modal ? null : false);
 
   final WidgetBuilder builder;
 
   /// Resolves the rect of the control the popup grows out of.
   final PopupAnchorResolver anchorOf;
+  final EdgeInsets contentInsets;
+  final bool solidSurface;
   final PopupPlacement placement;
 
   /// Whether the popup opens from a sheet's [ElevatedSurfaceTheme], which
@@ -397,37 +401,40 @@ class AnchoredPopupRoute<T> extends PopupRoute<T> {
             delegate: _PopupLayoutDelegate(
               anchor: anchor,
               safeInsets: safeInsets,
+              contentInsets: contentInsets,
               placement: placement,
               avoid: avoid,
               pin: _pin,
             ),
-            child: _PopupMorph(
-              anchor: anchor,
-              animation: animation,
-              platter: _platter,
-              surface: _surface,
-              sourceColor: sourceColor,
-              sourceImage: sourceImage,
-              bareSource: bareSource,
-              blursContent: blursContent,
-              surfaceColor: SurfaceLevel.floatingOf(
-                colorScheme,
-              ).colorOf(colorScheme),
-              shadows: menuShadows(colorScheme),
-              // 压黑层只在玻璃档生效：关闭档与高对比的实色卡片已有足够对比。
-              scrim: glass ? menuScrim(colorScheme) : Colors.transparent,
-              glass: glass
-                  ? (
-                      from: LiquidGlassStyle.regular(colorScheme),
-                      to: LiquidGlassStyle.menu(colorScheme),
-                      rim: LiquidGlassRim.menu(colorScheme),
-                      coarse:
-                          LiquidGlassScope.qualityOf(context) ==
-                          LiquidGlassQuality.standard,
-                    )
-                  : null,
-              child: child,
-            ),
+            child: solidSurface
+                ? child
+                : _PopupMorph(
+                    anchor: anchor,
+                    animation: animation,
+                    platter: _platter,
+                    surface: _surface,
+                    sourceColor: sourceColor,
+                    sourceImage: sourceImage,
+                    bareSource: bareSource,
+                    blursContent: blursContent,
+                    surfaceColor: SurfaceLevel.floatingOf(
+                      colorScheme,
+                    ).colorOf(colorScheme),
+                    shadows: menuShadows(colorScheme),
+                    // 压黑层只在玻璃档生效：关闭档与高对比的实色卡片已有足够对比。
+                    scrim: glass ? menuScrim(colorScheme) : Colors.transparent,
+                    glass: glass
+                        ? (
+                            from: LiquidGlassStyle.regular(colorScheme),
+                            to: LiquidGlassStyle.menu(colorScheme),
+                            rim: LiquidGlassRim.menu(colorScheme),
+                            coarse:
+                                LiquidGlassScope.qualityOf(context) ==
+                                LiquidGlassQuality.standard,
+                          )
+                        : null,
+                    child: child,
+                  ),
           ),
           child: NotificationListener<_PopupUnfoldNotification>(
             onNotification: (_) {
@@ -1379,6 +1386,7 @@ class _PopupLayoutDelegate extends SingleChildLayoutDelegate {
   const _PopupLayoutDelegate({
     required this.anchor,
     required this.safeInsets,
+    required this.contentInsets,
     required this.placement,
     required this.pin,
     this.avoid,
@@ -1386,18 +1394,26 @@ class _PopupLayoutDelegate extends SingleChildLayoutDelegate {
 
   final Rect anchor;
   final EdgeInsets safeInsets;
+  final EdgeInsets contentInsets;
   final PopupPlacement placement;
   final Rect? avoid;
   final _PopupPin pin;
 
-  EdgeInsets get _insets => safeInsets + const EdgeInsets.all(_screenMargin);
+  EdgeInsets _insetsFor(Size viewport) {
+    final safe = safeInsets + const EdgeInsets.all(_screenMargin);
+    if (contentInsets.vertical == 0) return safe + contentInsets;
+    // 保留三行菜单的滑动空间；横屏时允许弹层覆盖部分来源页工具栏。
+    final available = math.max(0.0, viewport.height - safe.vertical - 144);
+    return safe +
+        contentInsets * math.min(1.0, available / contentInsets.vertical);
+  }
 
   @override
   Size getSize(BoxConstraints constraints) => constraints.biggest;
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
-    final insets = _insets;
+    final insets = _insetsFor(constraints.biggest);
     return BoxConstraints.loose(
       Size(
         math.max(0.0, constraints.maxWidth - insets.horizontal),
@@ -1408,7 +1424,7 @@ class _PopupLayoutDelegate extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    final insets = _insets;
+    final insets = _insetsFor(size);
     final maxX = size.width - insets.right - childSize.width;
     final maxY = size.height - insets.bottom - childSize.height;
     final pinned = pin.topRightFor(this, size);
@@ -1466,6 +1482,7 @@ class _PopupLayoutDelegate extends SingleChildLayoutDelegate {
   bool _placesLike(_PopupLayoutDelegate other) {
     return other.anchor == anchor &&
         other.safeInsets == safeInsets &&
+        other.contentInsets == contentInsets &&
         other.placement == placement &&
         other.avoid == avoid;
   }

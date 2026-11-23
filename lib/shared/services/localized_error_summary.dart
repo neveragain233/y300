@@ -20,6 +20,14 @@ abstract final class LocalizedErrorSummary {
   static final RegExp _whitespacePattern = RegExp(r'\s+');
 
   static String resolve(AppLocalizations l10n, Object? error) {
+    if (error case DataCommandFailure(code: 'forum_cache_only')) {
+      return l10n.cacheOnlyWriteBlocked;
+    }
+    if (error
+        case DataReadFailure<dynamic, dynamic>(code: 'forum_cache_only') ||
+            ApiError(code: 'forum_cache_only')) {
+      return l10n.cacheOnlyReadMiss;
+    }
     if (error case DataCommandFailure(:final kind)) {
       return switch (kind) {
         DataCommandFailureKind.network => l10n.commonNetworkError,
@@ -36,9 +44,8 @@ abstract final class LocalizedErrorSummary {
         DataCommandFailureKind.unknown => l10n.commonUnknownError,
       };
     }
-    if (error case DataCommandResult<dynamic>(
-      :final failureOrNull,
-    ) when failureOrNull != null) {
+    if (error case DataCommandResult<dynamic>(:final failureOrNull)
+        when failureOrNull != null) {
       return resolve(l10n, failureOrNull);
     }
     if (error case DataReadFailure<dynamic, dynamic>(:final kind)) {

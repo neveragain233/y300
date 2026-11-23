@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/l10n/app_localizations.dart';
-import 'package:y300/shared/widgets/forum_content_action_sheet.dart';
+import 'package:y300/shared/widgets/app_popup_menu.dart';
 
 enum ThreadPostAction {
   copyPollOption,
@@ -16,9 +16,8 @@ enum ThreadPostAction {
   blockUser,
 }
 
-class ThreadPostActionSheet extends StatelessWidget {
+class ThreadPostActionSheet {
   const ThreadPostActionSheet({
-    super.key,
     required this.post,
     required this.editUri,
     required this.capabilities,
@@ -38,82 +37,78 @@ class ThreadPostActionSheet extends StatelessWidget {
     return capabilities?.supports(capability) ?? false;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  List<AppPopupMenuItem<ThreadPostAction>> entries(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ForumContentActionSheet<ThreadPostAction>(
-      key: const Key('thread-post-action-sheet'),
-      actions: [
-        if (canBlockUser)
-          ForumContentAction(
-            key: const Key('thread-post-block-user-action'),
-            value: ThreadPostAction.blockUser,
-            icon: Icons.person_off_outlined,
-            label: l10n.blacklistBlockUser,
-          ),
-        if (canViewOnlyAuthor)
-          ForumContentAction(
-            key: const Key('thread-post-only-author-action'),
-            value: ThreadPostAction.onlyAuthor,
-            icon: Icons.person_outline,
-            label: l10n.threadDetailOnlyAuthor,
-          ),
-        if (canCopyPollOption)
-          ForumContentAction(
-            key: const Key('thread-post-copy-poll-option-action'),
-            value: ThreadPostAction.copyPollOption,
-            icon: Icons.copy_outlined,
-            label: l10n.threadPollCopyOptionText,
-          ),
-        if (editUri != null)
-          ForumContentAction(
-            key: const Key('thread-post-edit-action'),
-            value: ThreadPostAction.edit,
-            icon: Icons.edit_outlined,
-            label: l10n.threadDetailEdit,
-          ),
-        if (_supports(ThreadDetailCapability.replyAction))
-          ForumContentAction(
-            key: const Key('thread-post-reply-action'),
-            value: ThreadPostAction.reply,
-            icon: Icons.reply_outlined,
-            label: l10n.threadDetailReply,
-          ),
-        if (_supports(ThreadDetailCapability.ratingAction) &&
-            post.rateUrl?.trim().isNotEmpty == true)
-          ForumContentAction(
-            key: const Key('thread-post-rate-action'),
-            value: ThreadPostAction.rate,
-            icon: Icons.favorite_border,
-            label: l10n.threadRatingTitle,
-          ),
-        if (_supports(ThreadDetailCapability.commentAction) &&
-            post.commentUrl?.trim().isNotEmpty == true)
-          ForumContentAction(
-            key: const Key('thread-post-comment-action'),
-            value: ThreadPostAction.comment,
-            icon: Icons.chat_bubble_outline,
-            label: l10n.threadCommentTitle,
-          ),
-        ForumContentAction(
-          key: const Key('thread-post-select-copy-action'),
-          value: ThreadPostAction.selectCopy,
-          icon: Icons.text_fields,
-          label: l10n.threadDetailSelectCopy,
+    return [
+      if (canBlockUser)
+        AppPopupMenuItem(
+          key: const Key('thread-post-block-user-action'),
+          value: ThreadPostAction.blockUser,
+          icon: const Icon(Icons.person_off_outlined),
+          label: l10n.blacklistBlockUser,
         ),
-        ForumContentAction(
-          key: const Key('thread-post-copy-all-action'),
-          value: ThreadPostAction.copyAll,
-          icon: Icons.copy_all_outlined,
-          label: l10n.threadDetailCopyAll,
+      if (canViewOnlyAuthor)
+        AppPopupMenuItem(
+          key: const Key('thread-post-only-author-action'),
+          value: ThreadPostAction.onlyAuthor,
+          icon: const Icon(Icons.person_outline),
+          label: l10n.threadDetailOnlyAuthor,
         ),
-        ForumContentAction(
-          key: const Key('thread-post-copy-floor-link-action'),
-          value: ThreadPostAction.copyFloorLink,
-          icon: Icons.link_outlined,
-          label: l10n.threadDetailCopyFloorLink,
+      if (canCopyPollOption)
+        AppPopupMenuItem(
+          key: const Key('thread-post-copy-poll-option-action'),
+          value: ThreadPostAction.copyPollOption,
+          icon: const Icon(Icons.copy_outlined),
+          label: l10n.threadPollCopyOptionText,
         ),
-      ],
-    );
+      if (editUri != null)
+        AppPopupMenuItem(
+          key: const Key('thread-post-edit-action'),
+          value: ThreadPostAction.edit,
+          icon: const Icon(Icons.edit_outlined),
+          label: l10n.threadDetailEdit,
+        ),
+      if (_supports(ThreadDetailCapability.replyAction))
+        AppPopupMenuItem(
+          key: const Key('thread-post-reply-action'),
+          value: ThreadPostAction.reply,
+          icon: const Icon(Icons.reply_outlined),
+          label: l10n.threadDetailReply,
+        ),
+      if (_supports(ThreadDetailCapability.ratingAction) &&
+          post.rateUrl?.trim().isNotEmpty == true)
+        AppPopupMenuItem(
+          key: const Key('thread-post-rate-action'),
+          value: ThreadPostAction.rate,
+          icon: const Icon(Icons.favorite_border),
+          label: l10n.threadRatingTitle,
+        ),
+      if (_supports(ThreadDetailCapability.commentAction) &&
+          post.commentUrl?.trim().isNotEmpty == true)
+        AppPopupMenuItem(
+          key: const Key('thread-post-comment-action'),
+          value: ThreadPostAction.comment,
+          icon: const Icon(Icons.chat_bubble_outline),
+          label: l10n.threadCommentTitle,
+        ),
+      AppPopupMenuItem(
+        key: const Key('thread-post-select-copy-action'),
+        value: ThreadPostAction.selectCopy,
+        icon: const Icon(Icons.text_fields),
+        label: l10n.threadDetailSelectCopy,
+      ),
+      AppPopupMenuItem(
+        key: const Key('thread-post-copy-all-action'),
+        value: ThreadPostAction.copyAll,
+        icon: const Icon(Icons.copy_all_outlined),
+        label: l10n.threadDetailCopyAll,
+      ),
+      AppPopupMenuItem(
+        key: const Key('thread-post-copy-floor-link-action'),
+        value: ThreadPostAction.copyFloorLink,
+        icon: const Icon(Icons.link_outlined),
+        label: l10n.threadDetailCopyFloorLink,
+      ),
+    ];
   }
 }

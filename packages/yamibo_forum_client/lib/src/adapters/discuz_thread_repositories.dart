@@ -200,7 +200,7 @@ final class ThreadDetailHtmlRepository
       page: page,
       queryParameters: queryParameters,
     );
-    final snapshot = await _freshSnapshot(snapshotDescriptor);
+    final snapshot = await _snapshot(snapshotDescriptor);
     if (snapshot != null) {
       return _validated(
         snapshot,
@@ -223,36 +223,45 @@ final class ThreadDetailHtmlRepository
       path: '/forum.php',
       queryParameters: parameters,
     );
-    final result = await network.send(
-      ForumRequest(
-        method: ForumRequestMethod.get,
-        uri: uri,
-        context: const ForumRequestContext(
-          operation: 'thread.detail.html',
-          pageKind: 'thread.detail',
-        ),
-        headers: requestProfiles
-            .resolve(ForumRequestProfileKind.mobileHtml)
-            .headers,
-      ),
-    );
+    final result = _config.isCacheOnly
+        ? const ForumTransportError<ForumResponse<Object?>>.cacheOnly()
+        : await network.send(
+            ForumRequest(
+              method: ForumRequestMethod.get,
+              uri: uri,
+              context: const ForumRequestContext(
+                operation: 'thread.detail.html',
+                pageKind: 'thread.detail',
+              ),
+              headers: requestProfiles
+                  .resolve(ForumRequestProfileKind.mobileHtml)
+                  .headers,
+            ),
+          );
     if (result case ForumTransportError<ForumResponse<Object?>>(
       :final failure,
     )) {
-      final cached = await _cachedDocument(
-        generation: generation,
-        descriptor: documentDescriptor,
-        snapshotDescriptor: snapshotDescriptor,
-        tid: tid,
-        page: page,
-      );
+      final retained = failure.code == 'forum_cache_only'
+          ? await _snapshot(snapshotDescriptor, allowStale: true)
+          : null;
+      final cached =
+          retained ??
+          await _cachedDocument(
+            generation: generation,
+            descriptor: documentDescriptor,
+            snapshotDescriptor: snapshotDescriptor,
+            tid: tid,
+            page: page,
+          );
       if (cached != null) {
         return _validated(
           cached,
           requestedTid: tid,
           capabilities: _htmlReadCapabilities(cached),
-          metadata: const DataReadMetadata(
-            origin: DataReadOrigin.cachedDocumentFallback,
+          metadata: DataReadMetadata(
+            origin: retained == null
+                ? DataReadOrigin.cachedDocumentFallback
+                : DataReadOrigin.retainedSnapshot,
             freshness: DataReadFreshness.staleOrUnknown,
           ),
         );
@@ -324,15 +333,18 @@ final class ThreadDetailHtmlRepository
     }
   }
 
-  Future<ThreadDetailData?> _freshSnapshot(
-    ForumSnapshotDescriptor descriptor,
-  ) async {
+  Future<ThreadDetailData?> _snapshot(
+    ForumSnapshotDescriptor descriptor, {
+    bool allowStale = false,
+  }) async {
     final store = _snapshotStore;
     if (store == null) return null;
     try {
       final value = await store.get(descriptor, _snapshotCodec);
+      final now = _now();
       return value != null &&
-              value.isFresh(_now()) &&
+              !value.isExpired(now) &&
+              (allowStale || value.isFresh(now)) &&
               value.value.posts.isNotEmpty
           ? value.value
           : null;

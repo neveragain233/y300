@@ -78,8 +78,8 @@ final class ForumDisplayHtmlRepository implements ForumDisplayRepository {
       queryParameters: parameters,
       requestProfile: profile,
     );
-    if (cachePolicy == CacheLoadPolicy.cacheFirst) {
-      final snapshot = await _freshSnapshot(snapshotDescriptor);
+    if (_config.isCacheOnly || cachePolicy == CacheLoadPolicy.cacheFirst) {
+      final snapshot = await _snapshot(snapshotDescriptor);
       if (snapshot != null) {
         return _validated(
           requestedFid: query.fid,
@@ -96,34 +96,43 @@ final class ForumDisplayHtmlRepository implements ForumDisplayRepository {
       path: '/forum.php',
       queryParameters: parameters,
     );
-    final result = await network.send(
-      ForumRequest(
-        method: ForumRequestMethod.get,
-        uri: uri,
-        context: const ForumRequestContext(
-          operation: 'forum.display.html',
-          pageKind: 'forum.display',
-        ),
-        headers: requestProfiles
-            .resolve(ForumRequestProfileKind.mobileHtml)
-            .headers,
-      ),
-    );
+    final result = _config.isCacheOnly
+        ? const ForumTransportError<ForumResponse<Object?>>.cacheOnly()
+        : await network.send(
+            ForumRequest(
+              method: ForumRequestMethod.get,
+              uri: uri,
+              context: const ForumRequestContext(
+                operation: 'forum.display.html',
+                pageKind: 'forum.display',
+              ),
+              headers: requestProfiles
+                  .resolve(ForumRequestProfileKind.mobileHtml)
+                  .headers,
+            ),
+          );
     if (result case ForumTransportError<ForumResponse<Object?>>(
       :final failure,
     )) {
-      final cached = await _cachedDocument(
-        documentDescriptor: documentDescriptor,
-        snapshotDescriptor: snapshotDescriptor,
-        query: query,
-      );
+      final retained = failure.code == 'forum_cache_only'
+          ? await _snapshot(snapshotDescriptor, allowStale: true)
+          : null;
+      final cached =
+          retained ??
+          await _cachedDocument(
+            documentDescriptor: documentDescriptor,
+            snapshotDescriptor: snapshotDescriptor,
+            query: query,
+          );
       if (cached != null) {
         return _validated(
           requestedFid: query.fid,
           data: cached,
           capabilities: _htmlReadCapabilities(cached),
-          metadata: const DataReadMetadata(
-            origin: DataReadOrigin.cachedDocumentFallback,
+          metadata: DataReadMetadata(
+            origin: retained == null
+                ? DataReadOrigin.cachedDocumentFallback
+                : DataReadOrigin.retainedSnapshot,
             freshness: DataReadFreshness.staleOrUnknown,
           ),
         );
@@ -191,14 +200,20 @@ final class ForumDisplayHtmlRepository implements ForumDisplayRepository {
     }
   }
 
-  Future<ForumDisplayData?> _freshSnapshot(
-    ForumSnapshotDescriptor descriptor,
-  ) async {
+  Future<ForumDisplayData?> _snapshot(
+    ForumSnapshotDescriptor descriptor, {
+    bool allowStale = false,
+  }) async {
     final store = _snapshotStore;
     if (store == null) return null;
     try {
       final value = await store.get(descriptor, _snapshotCodec);
-      return value != null && value.isFresh(_now()) ? value.value : null;
+      final now = _now();
+      return value != null &&
+              !value.isExpired(now) &&
+              (allowStale || value.isFresh(now))
+          ? value.value
+          : null;
     } catch (_) {
       return null;
     }

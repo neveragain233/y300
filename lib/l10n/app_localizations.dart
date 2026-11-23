@@ -97,6 +97,72 @@ abstract class AppLocalizations {
     Locale('zh', 'TW'),
   ];
 
+  /// No description provided for @cacheOnlyReadMiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存中没有这项内容，请恢复连接后重试'**
+  String get cacheOnlyReadMiss;
+
+  /// No description provided for @cacheOnlyWriteBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前正在离线或缓存浏览，恢复连接后可提交'**
+  String get cacheOnlyWriteBlocked;
+
+  /// No description provided for @externalBrowserPreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'外部链接打开方式'**
+  String get externalBrowserPreference;
+
+  /// No description provided for @externalBrowserInApp.
+  ///
+  /// In zh, this message translates to:
+  /// **'浏览器自定义标签页'**
+  String get externalBrowserInApp;
+
+  /// No description provided for @externalBrowserStandalone.
+  ///
+  /// In zh, this message translates to:
+  /// **'外部浏览器'**
+  String get externalBrowserStandalone;
+
+  /// No description provided for @restoreActiveReader.
+  ///
+  /// In zh, this message translates to:
+  /// **'启动时恢复上次打开的阅读器'**
+  String get restoreActiveReader;
+
+  /// No description provided for @networkOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前无网络连接，已切换至离线浏览'**
+  String get networkOffline;
+
+  /// No description provided for @networkMaintenance.
+  ///
+  /// In zh, this message translates to:
+  /// **'站点暂不可用，正在使用本地缓存'**
+  String get networkMaintenance;
+
+  /// No description provided for @networkForceCache.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用本地缓存浏览'**
+  String get networkForceCache;
+
+  /// No description provided for @networkRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试连接'**
+  String get networkRetry;
+
+  /// No description provided for @networkLeave.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出缓存模式'**
+  String get networkLeave;
+
   /// No description provided for @comicInteractionLoadFailed.
   ///
   /// In zh, this message translates to:

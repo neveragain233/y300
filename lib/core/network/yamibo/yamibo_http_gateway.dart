@@ -7,6 +7,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client.dart'
         ForumResourceMetadataPolicy,
         ForumWafResponseDecision,
         ForumWafHttpClientAdapter;
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:y300/core/config/app_config.dart';
 import 'package:y300/core/network/api_result.dart';
 import 'package:y300/core/network/browser_user_agents.dart';
@@ -23,6 +24,7 @@ class YamiboHttpGateway {
     required Logger logger,
     WafChallengeRecoveryCoordinator? wafChallengeRecoveryCoordinator,
     Dio? dio,
+    this.availability,
     bool enableLog = true,
     String defaultUserAgent = BrowserUserAgents.mobile,
     Uri? siteUri,
@@ -49,6 +51,47 @@ class YamiboHttpGateway {
     _dio.httpClientAdapter = ForumWafHttpClientAdapter(
       delegate: _dio.httpClientAdapter,
       isManagedUri: _isSameSite,
+    );
+  }
+
+  final ForumAvailability? availability;
+  static const _blocked = ApiError(
+    type: ApiErrorType.network,
+    message: 'forum_cache_only',
+    code: 'forum_cache_only',
+  );
+
+  Future<bool> probeAvailability() async {
+    final response = await _dio.getUri<String>(
+      _siteUri.resolve('/forum.php?mobile=2'),
+      options: Options(
+        responseType: ResponseType.plain,
+        followRedirects: false,
+        validateStatus: (_) => true,
+      ),
+    );
+    final body = response.data;
+    return response.statusCode == 200 &&
+        body != null &&
+        response.headers['x-tengine-error'] == null &&
+        !ForumAvailability.maintenancePage(body) &&
+        (body.contains('forum.php') || body.contains('Discuz!'));
+  }
+
+  void _observeAvailability(int generation, Response<dynamic>? response) {
+    if (response == null ||
+        response.realUri.scheme != _siteUri.scheme ||
+        response.realUri.host != _siteUri.host ||
+        response.realUri.port != _siteUri.port) {
+      return;
+    }
+    availability?.observe(
+      generation: generation,
+      status: response.statusCode,
+      securityResponse:
+          response.statusCode == 405 ||
+          response.headers['x-tengine-error'] != null,
+      body: response.data,
     );
   }
 
@@ -173,6 +216,9 @@ class YamiboHttpGateway {
         ),
       );
     }
+    if (availability != null) await availability!.ready;
+    if (availability?.blocked == true) return const ApiFailure(_blocked);
+    final generation = availability?.generation ?? 0;
     final sameSite = _isSameSiteResource(uri);
     final effectiveReferer = _resourceReferer(referer, sameSite: sameSite);
     final headers = <String, String>{
@@ -192,6 +238,7 @@ class YamiboHttpGateway {
     }
 
     try {
+      if (availability?.blocked == true) return const ApiFailure(_blocked);
       final response = await _dio.requestUri<ResponseBody>(
         uri,
         options: Options(
@@ -203,6 +250,7 @@ class YamiboHttpGateway {
         ),
         cancelToken: cancelToken,
       );
+      _observeAvailability(generation, response);
       final body = response.data;
       if (body == null) {
         return const ApiFailure(
@@ -367,6 +415,10 @@ class YamiboHttpGateway {
         ),
       );
     } on DioException catch (error) {
+      if (error.type == DioExceptionType.connectionError) {
+        await availability?.checkInterfaces();
+      }
+      _observeAvailability(generation, error.response);
       return ApiFailure(_mapDioError(error));
     } catch (_) {
       return const ApiFailure(
@@ -620,6 +672,9 @@ class YamiboHttpGateway {
     bool allowWafReplay = true,
     int attempt = 0,
   }) async {
+    if (availability != null) await availability!.ready;
+    if (availability?.blocked == true) return const ApiFailure(_blocked);
+    final generation = availability?.generation ?? 0;
     final startedAt = DateTime.now();
     final requestId = _generateRequestId();
     final requestHeaders = <String, String>{...?headers};
@@ -637,6 +692,7 @@ class YamiboHttpGateway {
     }
 
     try {
+      if (availability?.blocked == true) return const ApiFailure(_blocked);
       final response = await _dio.requestUri<dynamic>(
         uri,
         data: dataFactory?.call() ?? data,
@@ -651,6 +707,11 @@ class YamiboHttpGateway {
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
       );
+      _observeAvailability(generation, response);
+      if (availability?.blocked == true &&
+          ForumAvailability.maintenancePage(response.data)) {
+        return const ApiFailure(_blocked);
+      }
       final body = normalizeBody(response.data);
 
       final decision = _classifySecurityResponse(
@@ -736,6 +797,10 @@ class YamiboHttpGateway {
     } on DioException catch (error) {
       final elapsedMs = _elapsedMs(startedAt);
       final response = error.response;
+      if (error.type == DioExceptionType.connectionError) {
+        await availability?.checkInterfaces();
+      }
+      _observeAvailability(generation, response);
       final decision = _classifySecurityResponse(
         uri: response?.realUri ?? error.requestOptions.uri,
         statusCode: response?.statusCode,

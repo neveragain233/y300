@@ -106,6 +106,7 @@ final class DiscuzThreadPostRatingAdapter
   Future<DataCommandResult<ThreadPostRatingReceipt>> execute(
     ThreadPostRatingSubmission submission,
   ) async {
+    if (config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final preparation = submission.preparation;
     final token = preparation.token;
     if (token is! _DiscuzRatingPreparationToken || token.owner != this) {
@@ -454,6 +455,7 @@ final class DiscuzThreadPostCommentAdapter
   Future<DataCommandResult<ThreadPostCommentReceipt>> execute(
     ThreadPostCommentSubmission submission,
   ) async {
+    if (config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final preparation = submission.preparation;
     final token = preparation.token;
     if (token is! _DiscuzCommentPreparationToken || token.owner != this) {

@@ -124,7 +124,8 @@ List<SettingsSearchEntry> buildSettingsSearchIndex(
       target: SettingsSearchTarget.settingsBrowsingPosts,
       title: l10n.settingsSectionBrowsingPosts,
       summary: l10n.settingsSearchSummaryBrowsingPosts,
-      keywords: l10n.settingsSearchKeywordsBrowsingPosts,
+      keywords:
+          '${l10n.settingsSearchKeywordsBrowsingPosts} ${l10n.externalBrowserPreference} ${l10n.restoreActiveReader} ${l10n.networkForceCache}',
     ),
     SettingsSearchEntry(
       id: 'content-filter',

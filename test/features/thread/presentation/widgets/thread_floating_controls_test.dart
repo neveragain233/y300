@@ -111,11 +111,17 @@ void main() {
               'test-more-button',
             ]) {
               final size = tester.getSize(find.byKey(Key(key)));
-              expect(size, const Size(48, 48));
+              expect(size.height, 48);
+              if (key == 'thread-detail-appbar-reply-button' && !compact) {
+                expect(size.width, greaterThanOrEqualTo(48));
+              } else {
+                expect(size.width, 48);
+              }
             }
             final actions = [
-              'test-favorite-button',
+              if (compact) 'test-favorite-button',
               'thread-detail-appbar-reply-button',
+              if (!compact) 'test-favorite-button',
               'test-jump-button',
               'test-more-button',
             ];
@@ -144,10 +150,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 非紧凑主栏以视口为中心（224 宽），导航键贴右缘 16dp 边距。
       expect(
-        tester.getTopLeft(find.byKey(const Key('test-favorite-button'))).dx,
-        closeTo((1000 - 224) / 2 + 4, .5),
+        tester
+            .getTopLeft(
+              find.byKey(const Key('thread-detail-appbar-reply-button')),
+            )
+            .dx,
+        closeTo(20, .5),
       );
       expect(
         tester.getTopRight(find.byKey(const Key('thread-next-post-button'))).dx,
@@ -437,7 +446,7 @@ void main() {
       final surfaces = tester.widgetList<AppGlassSurface>(
         find.byType(AppGlassSurface),
       );
-      expect(surfaces, hasLength(1));
+      expect(surfaces, hasLength(2));
       for (final surface in surfaces) {
         expect(surface.level, AppGlassLevel.off);
       }
@@ -449,10 +458,10 @@ void main() {
       );
       expect(find.byKey(const Key('test-jump-button')), findsOneWidget);
       expect(find.byKey(const Key('test-more-button')), findsOneWidget);
-      expect(find.byKey(const Key('thread-next-post-button')), findsNothing);
+      expect(find.byKey(const Key('thread-next-post-button')), findsOneWidget);
       expect(
         find.byKey(const Key('thread-previous-post-button')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(
         find.byKey(const Key('thread-single-navigation-button')),
@@ -479,7 +488,7 @@ void main() {
                   );
         }),
       );
-      expect(borderedMaterials, findsOneWidget);
+      expect(borderedMaterials, findsNWidgets(2));
 
       final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
       final opacity = tester.widget<AnimatedOpacity>(

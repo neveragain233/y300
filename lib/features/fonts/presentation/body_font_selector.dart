@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/features/fonts/application/font_library_providers.dart';
 import 'package:y300/features/fonts/domain/models/font_identity.dart';
 import 'package:y300/features/fonts/domain/models/font_library_failure.dart';
@@ -277,14 +278,10 @@ class BodyFontSelector extends StatelessWidget {
         child: Semantics(
           checked: confirmed,
           inMutuallyExclusiveGroup: true,
-          child: ListTile(
+          child: AppGroupedRow.content(
             key: Key('body-font-item-$id'),
             selected: selected,
-            selectedTileColor: Colors.transparent,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            minTileHeight: 52,
-            minLeadingWidth: 18,
-            horizontalTitleGap: 12,
+            minHeight: 52,
             leading: SizedBox.square(
               dimension: 18,
               child: pending

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:y300/features/profile/data/providers/daily_sign_in_providers.dart';
 import 'package:y300/features/profile/data/providers/daily_sign_in_storage_providers.dart';
 import 'package:y300/features/profile/domain/daily_sign_in_attempt_ledger.dart';
@@ -375,6 +376,7 @@ class DailySignInController extends Notifier<DailySignInViewState> {
   /// Concurrent automatic requests coalesce. The startup host owns the
   /// once-per-UID launch budget; this coordinator owns protocol safety.
   Future<void> triggerAutomatic() {
+    if (ref.read(forumAvailabilityProvider).blocked) return Future.value();
     final owner = state.owner;
     if (owner == null) return Future<void>.value();
     if (_automaticFlight case final flight?) {
@@ -690,7 +692,10 @@ class DailySignInController extends Notifier<DailySignInViewState> {
     VerifiedSessionOwner owner,
     int generation,
     int epoch,
-  ) => epoch == _automaticEpoch && _isCurrent(owner, generation);
+  ) =>
+      epoch == _automaticEpoch &&
+      _isCurrent(owner, generation) &&
+      !ref.read(forumAvailabilityProvider).blocked;
 
   bool _isCurrent(VerifiedSessionOwner owner, int generation) =>
       ref.mounted &&

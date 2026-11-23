@@ -449,16 +449,14 @@ void main() {
     'mailto:fixture@example.test',
     'https://bbs.yamibo.com:8443/article',
   ]) {
-    testWidgets('external destination is copied without launching: $link', (
-      tester,
-    ) async {
+    testWidgets('external destination opens in browser: $link', (tester) async {
       final host = _Host();
       await host.pump(tester, _Link(link));
       await _tapLink(tester);
-      expect(host.clipboard.writes, [link]);
-      expect(host.external.uris, isEmpty);
+      expect(host.clipboard.writes, isEmpty);
+      expect(host.external.uris, [Uri.parse(link)]);
       final l10n = AppLocalizations.of(tester.element(find.byType(_Link)));
-      expect(find.text(l10n.linkCopied), findsOneWidget);
+      expect(find.text(l10n.linkCopied), findsNothing);
       expect(host.webLaunches, isEmpty);
       expect(host.details.queries, isEmpty);
     });
@@ -490,6 +488,7 @@ void main() {
       tester,
     ) async {
       final host = _Host();
+      host.external.succeeds = false;
       host.clipboard.pending = Completer<void>();
       await host.pump(tester, const _Link('https://elsewhere.test/article'));
       await tester.tap(find.byKey(const Key('open-content-link')));
@@ -511,7 +510,9 @@ void main() {
       } else {
         await tester.pumpWidget(const SizedBox.shrink());
       }
-      host.clipboard.pending!.completeError(StateError('clipboard unavailable'));
+      host.clipboard.pending!.completeError(
+        StateError('clipboard unavailable'),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(SnackBar), findsNothing);
       expect(tester.takeException(), isNull);
@@ -559,8 +560,7 @@ void main() {
     tester,
   ) async {
     final host = _Host();
-    host.details.commentHtml =
-        '<p><a href="home.php?mod=space&amp;uid=202&amp;do=profile">linked author</a></p>';
+    host.details.commentHtml = '<p><a href="home.php?mod=space&amp;uid=202&amp;do=profile">linked author</a></p>';
     await host.pump(
       tester,
       const ProfileBlogDetailPage(
@@ -711,8 +711,7 @@ void main() {
       final host = _Host();
       final cache = _PendingImageCache();
       host.imageCache = cache;
-      host.details.bodyHtml =
-          '<p>article above comments</p><img src="https://bbs.yamibo.com/data/attachment/home/fixture.png">';
+      host.details.bodyHtml = '<p>article above comments</p><img src="https://bbs.yamibo.com/data/attachment/home/fixture.png">';
       await host.pump(
         tester,
         const ProfileBlogDetailPage(
@@ -749,9 +748,8 @@ void main() {
         );
         try {
           final bytes = await frame.toByteData(format: ui.ImageByteFormat.png);
-          return await File(
-            '${directory.path}/fixture.png',
-          ).writeAsBytes(bytes!.buffer.asUint8List());
+          return await File('${directory.path}/fixture.png')
+              .writeAsBytes(bytes!.buffer.asUint8List());
         } finally {
           frame.dispose();
         }
@@ -898,9 +896,8 @@ class _Host {
         child: LocalizedTestApp(
           navigatorKey: navigator,
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
             child: child!,
           ),
           home: home,
@@ -916,11 +913,12 @@ class _Host {
 }
 
 class _External implements ForumWebViewExternalLauncher {
+  bool succeeds = true;
   final uris = <Uri>[];
   @override
   Future<bool> launch(Uri uri) {
     uris.add(uri);
-    return Future.value(true);
+    return Future.value(succeeds);
   }
 }
 

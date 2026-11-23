@@ -1,6 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/app/startup/restore_active_reader.dart';
+import 'package:y300/core/network/forum_availability.dart';
+import 'package:y300/features/forum/presentation/forum_home_controller.dart';
+import 'package:y300/features/reader_shared/application/active_reader_session.dart';
+import 'package:y300/features/startup/presentation/widgets/forum_availability_banner.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,12 +67,19 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
   MainShellDestination? _currentDestination;
   final Set<MainShellDestination> _builtDestinations = <MainShellDestination>{};
   double? _chromeHeight;
+  bool _interfacesReady = false;
+  bool _restoreAttempted = false;
+  int _navigationRevision = 0;
   late final MainShellStartupCoordinator _startup;
   final _libraryReadiness = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
+    ref.read(forumAvailabilityProvider).ready.then((_) {
+      if (mounted) setState(() => _interfacesReady = true);
+    });
+    _forumBrowser.addListener(_forumDetailChanged);
     _startup = ref.read(mainShellStartupCoordinatorFactoryProvider).call();
     unawaited(
       _startup.start().then((_) {
@@ -76,8 +88,16 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     );
   }
 
+  void _forumDetailChanged() {
+    if (_currentDestination == MainShellDestination.forum &&
+        ref.read(forumAvailabilityProvider).mode == ForumAccessMode.offline) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
+    _forumBrowser.removeListener(_forumDetailChanged);
     for (final browser in _browsers.values) {
       browser.dispose();
     }
@@ -110,14 +130,49 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     final navigationState = ref
         .watch(mainNavigationSettingsControllerProvider)
         .value;
-    if (navigationState == null) {
+    if (navigationState == null || !_interfacesReady) {
       return const Scaffold(
         body: SizedBox.expand(key: Key('main-shell-navigation-loading')),
       );
     }
-    final settings = navigationState.settings;
+    if (isReady && !_restoreAttempted) {
+      _restoreAttempted = true;
+      final revision = _navigationRevision;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _restoreReader(revision),
+      );
+    }
+    final availability = ref.watch(forumAvailabilityProvider);
+    final offline = availability.mode == ForumAccessMode.offline;
+    final saved = navigationState.settings;
+    final hidden = {...saved.hiddenDestinations};
+    if (offline) hidden.add(MainShellDestination.forum);
+    if (availability.blocked &&
+        hidden.containsAll([
+          MainShellDestination.comic,
+          MainShellDestination.novel,
+        ])) {
+      hidden.remove(MainShellDestination.comic);
+    }
+    final settings = availability.blocked
+        ? saved.copyWith(
+            hiddenDestinations: hidden,
+            startupPage: MainStartupPage.bookshelf,
+          )
+        : saved;
     final grouping = MainNavigationGrouping(settings);
-    final currentDestination = _resolveCurrentDestination(settings, grouping);
+    final offlineForum =
+        offline && _currentDestination == MainShellDestination.forum;
+    final keepForum =
+        offlineForum &&
+        (_forumBrowser.hasDetail ||
+            (ref.exists(forumHomeControllerProvider) &&
+                ref.read(forumHomeControllerProvider).hasValue));
+    final currentDestination = keepForum
+        ? MainShellDestination.forum
+        : offlineForum
+        ? grouping.startupDestination
+        : _resolveCurrentDestination(settings, grouping);
     _currentDestination = currentDestination;
     final activeBrowser = _browsers[currentDestination];
     _builtDestinations.add(currentDestination);
@@ -281,7 +336,23 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                             child: MainShellBottomInset(
                               bottom: sourceOverlayInset,
                               fabBottom: fabBottomInset,
-                              child: content,
+                              child: Column(
+                                children: [
+                                  if (availability.blocked)
+                                    ForumAvailabilityBanner(
+                                      onBookshelf:
+                                          currentDestination ==
+                                              MainShellDestination.forum
+                                          ? () => _selectDestination(
+                                              grouping.destinationFor(
+                                                MainNavigationGroup.bookshelf,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  Expanded(child: content),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -295,23 +366,30 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                               child: _BottomChromeSizeReporter(
                                 onHeight: _updateChromeHeight,
                                 child: ShelfSelectionBottomBar(
-                                  fallback: MainNavigationCapsule(
-                                    items: items,
-                                    selectedIndex: selectedIndex,
-                                    glassLevel: appearance.glassLevel,
-                                    swipeEnabled:
-                                        appearance.navigationSwipeEnabled &&
-                                        !selection.isActive,
-                                    dragFromSelection: appearance
-                                        .navigationLensMotion
-                                        .dragFromSelection,
-                                    onSelected: selection.isActive
-                                        ? null
-                                        : selectGroup,
-                                    onReselected: selection.isActive
-                                        ? null
-                                        : selectGroup,
-                                  ),
+                                  fallback: selectedIndex < 0
+                                      ? MainLegacyNavigationBar(
+                                          items: items,
+                                          selectedIndex: selectedIndex,
+                                          onSelected: selectGroup,
+                                        )
+                                      : MainNavigationCapsule(
+                                          items: items,
+                                          selectedIndex: selectedIndex,
+                                          glassLevel: appearance.glassLevel,
+                                          swipeEnabled:
+                                              appearance
+                                                  .navigationSwipeEnabled &&
+                                              !selection.isActive,
+                                          dragFromSelection: appearance
+                                              .navigationLensMotion
+                                              .dragFromSelection,
+                                          onSelected: selection.isActive
+                                              ? null
+                                              : selectGroup,
+                                          onReselected: selection.isActive
+                                              ? null
+                                              : selectGroup,
+                                        ),
                                 ),
                               ),
                             ),
@@ -364,7 +442,41 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     return grouping.destinationFor(group);
   }
 
+  Future<void> _restoreReader(int revision) async {
+    bool current() =>
+        mounted &&
+        _navigationRevision == revision &&
+        ModalRoute.of(context)?.isCurrent != false &&
+        !_browsers.values.any((item) => item.hasDetail);
+    try {
+      if (!current() ||
+          !await ref.read(restoreReaderPreferenceProvider.future) ||
+          !current()) {
+        return;
+      }
+      final target = await ref.read(activeReaderSessionsProvider).consume();
+      if (target == null || !current()) return;
+      final page = await ref.read(readerRestorePageProvider)(target);
+      if (!mounted ||
+          page == null ||
+          !current() ||
+          ref.read(restoreReaderPreferenceProvider).value != true) {
+        return;
+      }
+      if (ref.read(forumAvailabilityProvider).blocked) {
+        setState(() => _currentDestination = MainShellDestination.comic);
+      }
+      await Navigator.of(
+        context,
+        rootNavigator: true,
+      ).push(MaterialPageRoute<void>(builder: (_) => page));
+    } on Object {
+      // 已消费的失效目标回到主壳。
+    }
+  }
+
   void _selectDestination(MainShellDestination destination) {
+    _navigationRevision++;
     if (destination == _currentDestination) {
       _reselectDestination(destination);
       return;

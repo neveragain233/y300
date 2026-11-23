@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:y300/core/network/forum_availability.dart';
+import 'package:y300/features/reader_shared/application/active_reader_session.dart';
+import 'package:y300/features/reader_shared/presentation/active_reader_host.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
@@ -103,18 +106,25 @@ class NovelReaderPage extends ConsumerWidget {
     );
     final preferences =
         state.value?.preferences ?? NovelReaderPreferences.defaults();
-    return ReaderContentRegion(
-      backgroundColor: const NovelReaderThemeResolver()
-          .resolve(
-            preferences: preferences,
-            theme: Theme.of(context),
-            eInkMode: EInkModeScope.of(context),
-          )
-          .background,
-      child: _NovelReaderContent(
-        novelId: novelId,
-        initialEpisodeId: initialEpisodeId,
-        openPolicy: openPolicy,
+    return ActiveReaderHost(
+      target: (
+        module: ActiveReaderModule.novel,
+        workId: novelId,
+        episodeId: state.value?.currentEpisode.episodeId ?? initialEpisodeId,
+      ),
+      child: ReaderContentRegion(
+        backgroundColor: const NovelReaderThemeResolver()
+            .resolve(
+              preferences: preferences,
+              theme: Theme.of(context),
+              eInkMode: EInkModeScope.of(context),
+            )
+            .background,
+        child: _NovelReaderContent(
+          novelId: novelId,
+          initialEpisodeId: initialEpisodeId,
+          openPolicy: openPolicy,
+        ),
       ),
     );
   }
@@ -3081,9 +3091,10 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     if (destination?.kind == YamiboForumLinkKind.external) {
       final owner = _postRouteOwner;
       final sourceRoute = ModalRoute.of(context);
+      if (await externalLauncher.launch(destination!.uri) || !mounted) return;
       await copyLinkWithFeedback(
         context,
-        url: destination!.uri.toString(),
+        url: destination.uri.toString(),
         writeText: ref.read(clipboardTextWriterProvider).writeText,
         isCurrent: () =>
             owner != null &&
@@ -3408,7 +3419,7 @@ class NovelReaderNextChapterTransition extends StatelessWidget {
   }
 }
 
-class NovelReaderErrorView extends StatelessWidget {
+class NovelReaderErrorView extends ConsumerWidget {
   const NovelReaderErrorView({
     super.key,
     required this.error,
@@ -3423,7 +3434,7 @@ class NovelReaderErrorView extends StatelessWidget {
   final VoidCallback onOpenThread;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Center(
@@ -3444,7 +3455,9 @@ class NovelReaderErrorView extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    NovelTextResolver.readerFailure(l10n, error),
+                    ref.watch(forumAvailabilityProvider).blocked
+                        ? l10n.cacheOnlyReadMiss
+                        : NovelTextResolver.readerFailure(l10n, error),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),

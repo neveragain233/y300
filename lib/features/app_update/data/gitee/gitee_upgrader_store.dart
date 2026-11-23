@@ -9,10 +9,12 @@ typedef AppUpdateFailureReporter = void Function(AppUpdateFailure failure);
 final class GiteeUpgraderStore extends UpgraderStore {
   GiteeUpgraderStore({
     required GiteeLatestReleaseRepository repository,
+    this.canCheck,
     AppUpdateFailureReporter? onFailure,
   }) : _repository = repository,
        _onFailure = onFailure;
 
+  final Future<bool> Function()? canCheck;
   final GiteeLatestReleaseRepository _repository;
   final AppUpdateFailureReporter? _onFailure;
 
@@ -24,6 +26,9 @@ final class GiteeUpgraderStore extends UpgraderStore {
     required String? language,
   }) async {
     try {
+      if (await canCheck?.call() == false) {
+        return UpgraderVersionInfo(installedVersion: installedVersion);
+      }
       final result = await _repository.getLatest();
       return switch (result) {
         GiteeReleaseLookupSuccess(:final candidate) => UpgraderVersionInfo(

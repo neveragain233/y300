@@ -103,6 +103,7 @@ final class DiscuzThreadPostEditAdapter
   Future<DataCommandResult<ThreadPostEditReceipt>> execute(
     ThreadPostEditSubmission submission,
   ) async {
+    if (config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final preparation = submission.preparation;
     final token = preparation.token;
     if (token is! _DiscuzThreadPostEditToken || token.owner != this) {

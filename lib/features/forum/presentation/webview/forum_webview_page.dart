@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:y300/core/links/external_link_opener.dart';
 import 'package:y300/app/navigation/forum_link_routes.dart';
 import 'package:y300/features/thread/domain/models/thread_post_target.dart';
 import 'package:y300/features/thread/domain/services/thread_post_navigation_session.dart';
@@ -542,7 +543,7 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
       return _navigateInWebView(url);
     }
 
-    unawaited(_copyExternalUri(uri));
+    unawaited(_openExternalUri(uri));
     return ForumWebViewNavigationDecision.prevent;
   }
 
@@ -1145,20 +1146,29 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
     return driver.buildWidget(key: const Key('forum-webview-surface'));
   }
 
-  Future<void> _copyExternalUri(Uri uri) async {
-    if (!_isCurrent) {
-      return;
-    }
+  Future<void> _openExternalUri(Uri uri) =>
+      _handleExternalUri(uri, launch: true);
+
+  Future<void> _copyExternalUri(Uri uri) =>
+      _handleExternalUri(uri, launch: false);
+
+  Future<void> _handleExternalUri(Uri uri, {required bool launch}) async {
+    if (!_isCurrent) return;
     final navigationGeneration = _navigationGeneration;
     final copyGeneration = ++_externalCopyGeneration;
+    bool current() =>
+        _canOpenNativeRoute &&
+        navigationGeneration == _navigationGeneration &&
+        copyGeneration == _externalCopyGeneration;
+    if (launch && await ref.read(externalLinkOpenerProvider).launch(uri)) {
+      return;
+    }
+    if (!mounted || !current()) return;
     await copyLinkWithFeedback(
       context,
       url: uri.toString(),
       writeText: ref.read(clipboardTextWriterProvider).writeText,
-      isCurrent: () =>
-          _canOpenNativeRoute &&
-          navigationGeneration == _navigationGeneration &&
-          copyGeneration == _externalCopyGeneration,
+      isCurrent: current,
     );
   }
 

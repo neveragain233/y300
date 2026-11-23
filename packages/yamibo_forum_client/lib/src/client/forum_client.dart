@@ -77,6 +77,16 @@ final class YamiboForumClient {
   /// Client origins and request configuration.
   final ForumClientConfig config;
 
+  CacheLoadPolicy _policy(CacheLoadPolicy requested) =>
+      config.isCacheOnly ? CacheLoadPolicy.cacheFirst : requested;
+
+  Future<DataCommandResult<T>> _command<T>(
+    Future<DataCommandResult<T>> Function() send,
+  ) {
+    if (!config.isCacheOnly) return send();
+    return Future.value(DataCommandNotSent<T>.cacheOnly());
+  }
+
   /// Shared structured-read transport.
   final ForumClientNetwork network;
 
@@ -120,16 +130,20 @@ final class YamiboForumClient {
   /// Attempts password login and verifies the resulting authenticated session.
   Future<DataCommandResult<ForumLoginReceipt>> loginWithPassword(
     ForumPasswordLoginRequest request,
-  ) =>
-      sourcePlan.passwordLogin?.execute(request) ??
-      Future.value(const DataCommandUnsupported<ForumLoginReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.passwordLogin?.execute(request) ??
+        Future.value(const DataCommandUnsupported<ForumLoginReceipt>()),
+  );
 
   /// Attempts logout without clearing Host state unless success is proved.
   Future<DataCommandResult<ForumLogoutReceipt>> logoutSession([
     ForumLogoutRequest request = const ForumLogoutRequest(),
-  ]) =>
-      sourcePlan.logout?.execute(request) ??
-      Future.value(const DataCommandUnsupported<ForumLogoutReceipt>());
+  ]) => _command(
+    () =>
+        sourcePlan.logout?.execute(request) ??
+        Future.value(const DataCommandUnsupported<ForumLogoutReceipt>()),
+  );
 
   /// Configured forum-directory source, if installed.
   ForumDirectoryRepository? get forumDirectory => sourcePlan.forumDirectory;
@@ -163,16 +177,20 @@ final class YamiboForumClient {
   /// Sets and confirms one forum's favorite state.
   Future<DataCommandResult<ForumFavoriteReceipt>> setForumFavorite(
     SetForumFavoriteRequest request,
-  ) =>
-      sourcePlan.favoriteForumCommand?.execute(request) ??
-      Future.value(const DataCommandUnsupported<ForumFavoriteReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.favoriteForumCommand?.execute(request) ??
+        Future.value(const DataCommandUnsupported<ForumFavoriteReceipt>()),
+  );
 
   /// Sets and confirms one thread's favorite state.
   Future<DataCommandResult<ThreadFavoriteReceipt>> setThreadFavorite(
     SetThreadFavoriteRequest request,
-  ) =>
-      sourcePlan.favoriteThreadCommand?.execute(request) ??
-      Future.value(const DataCommandUnsupported<ThreadFavoriteReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.favoriteThreadCommand?.execute(request) ??
+        Future.value(const DataCommandUnsupported<ThreadFavoriteReceipt>()),
+  );
 
   /// Configured current-user profile source, if installed.
   CurrentUserProfileRepository? get currentUserProfile =>
@@ -315,9 +333,12 @@ final class YamiboForumClient {
   /// Uploads one prepared image attachment.
   Future<DataCommandResult<ForumImageAttachmentUploadReceipt>>
   uploadImageAttachment(ForumImageAttachmentUploadSubmission submission) =>
-      sourcePlan.imageAttachmentUploadCommand?.execute(submission) ??
-      Future.value(
-        const DataCommandUnsupported<ForumImageAttachmentUploadReceipt>(),
+      _command(
+        () =>
+            sourcePlan.imageAttachmentUploadCommand?.execute(submission) ??
+            Future.value(
+              const DataCommandUnsupported<ForumImageAttachmentUploadReceipt>(),
+            ),
       );
 
   /// Forum unused image attachment directory.
@@ -339,17 +360,23 @@ final class YamiboForumClient {
   /// Deletes one unused image attachment.
   Future<DataCommandResult<ForumImageAttachmentDeleteReceipt>>
   deleteUnusedImageAttachment(DeleteUnusedImageAttachmentRequest request) =>
-      sourcePlan.unusedImageAttachmentDelete?.execute(request) ??
-      Future.value(
-        const DataCommandUnsupported<ForumImageAttachmentDeleteReceipt>(),
+      _command(
+        () =>
+            sourcePlan.unusedImageAttachmentDelete?.execute(request) ??
+            Future.value(
+              const DataCommandUnsupported<ForumImageAttachmentDeleteReceipt>(),
+            ),
       );
 
   /// Deletes one image attachment bound to an existing post.
   Future<DataCommandResult<ForumImageAttachmentDeleteReceipt>>
   deletePostImageAttachment(DeletePostImageAttachmentRequest request) =>
-      sourcePlan.postImageAttachmentDelete?.execute(request) ??
-      Future.value(
-        const DataCommandUnsupported<ForumImageAttachmentDeleteReceipt>(),
+      _command(
+        () =>
+            sourcePlan.postImageAttachmentDelete?.execute(request) ??
+            Future.value(
+              const DataCommandUnsupported<ForumImageAttachmentDeleteReceipt>(),
+            ),
       );
 
   /// Configured notification source, if installed.
@@ -384,9 +411,11 @@ final class YamiboForumClient {
   /// Adds one user to the current account's web blacklist.
   Future<DataCommandResult<ForumBlacklistAddReceipt>> addToBlacklist(
     ForumBlacklistAddSubmission submission,
-  ) =>
-      sourcePlan.friendBlacklistCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ForumBlacklistAddReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.friendBlacklistCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ForumBlacklistAddReceipt>()),
+  );
 
   /// Loads the current account's complete web blacklist.
   Future<DataReadResult<ForumBlacklistData, ForumBlacklistReadCapabilities>>
@@ -400,15 +429,17 @@ final class YamiboForumClient {
     ForumFriendFeedQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.friendFeed?.load(query, cachePolicy: cachePolicy) ??
+      sourcePlan.friendFeed?.load(query, cachePolicy: _policy(cachePolicy)) ??
       unsupported<ForumFriendFeedPage, ForumFriendFeedReadCapabilities>();
 
   /// Removes one friend only through the configured single-submission command.
   Future<DataCommandResult<ForumFriendRemovalReceipt>> removeFriend(
     ForumFriendRemovalSubmission submission,
-  ) =>
-      sourcePlan.friendRemovalCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ForumFriendRemovalReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.friendRemovalCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ForumFriendRemovalReceipt>()),
+  );
 
   /// Configured desktop batch preparation source, if installed.
   ForumPrivateMessageBatchPreparationRepository?
@@ -447,9 +478,11 @@ final class YamiboForumClient {
   /// Submits one previously prepared post rating.
   Future<DataCommandResult<ThreadPostRatingReceipt>> ratePost(
     ThreadPostRatingSubmission submission,
-  ) =>
-      sourcePlan.postRatingCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ThreadPostRatingReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.postRatingCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ThreadPostRatingReceipt>()),
+  );
 
   /// Loads the current comment form for [request].
   Future<
@@ -465,16 +498,20 @@ final class YamiboForumClient {
   /// Submits one previously prepared post comment.
   Future<DataCommandResult<ThreadPostCommentReceipt>> commentOnPost(
     ThreadPostCommentSubmission submission,
-  ) =>
-      sourcePlan.postCommentCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ThreadPostCommentReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.postCommentCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ThreadPostCommentReceipt>()),
+  );
 
   /// Submits one thread poll vote through the configured command source.
   Future<DataCommandResult<ThreadPollVoteReceipt>> voteInThreadPoll(
     ThreadPollVoteSubmission submission,
-  ) =>
-      sourcePlan.threadPollVoteCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ThreadPollVoteReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.threadPollVoteCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ThreadPollVoteReceipt>()),
+  );
 
   /// Loads current thread-creation metadata for [request].
   Future<DataReadResult<ThreadCreationPreparation, ThreadCreationCapabilities>>
@@ -485,9 +522,11 @@ final class YamiboForumClient {
   /// Creates one thread through a previously prepared server form.
   Future<DataCommandResult<ThreadCreationReceipt>> createThread(
     ThreadCreationSubmission submission,
-  ) =>
-      sourcePlan.threadCreationCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ThreadCreationReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.threadCreationCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ThreadCreationReceipt>()),
+  );
 
   /// Loads current reply metadata for [request].
   Future<DataReadResult<ThreadReplyPreparation, ThreadReplyCapabilities>>
@@ -498,9 +537,11 @@ final class YamiboForumClient {
   /// Submits an ordinary thread reply or a prepared post reply.
   Future<DataCommandResult<ThreadReplyReceipt>> replyToThread(
     ThreadReplySubmission submission,
-  ) =>
-      sourcePlan.threadReplyCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ThreadReplyReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.threadReplyCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ThreadReplyReceipt>()),
+  );
 
   /// Loads and validates the current edit form for [request].
   Future<DataReadResult<ThreadPostEditPreparation, ThreadPostEditCapabilities>>
@@ -511,9 +552,11 @@ final class YamiboForumClient {
   /// Submits one previously prepared ordinary post edit.
   Future<DataCommandResult<ThreadPostEditReceipt>> editThreadPost(
     ThreadPostEditSubmission submission,
-  ) =>
-      sourcePlan.threadPostEditCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ThreadPostEditReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.threadPostEditCommand?.execute(submission) ??
+        Future.value(const DataCommandUnsupported<ThreadPostEditReceipt>()),
+  );
 
   /// Loads forum home and returns a structured result.
   Future<DataReadResult<ForumHomeDocument, ForumHomeReadCapabilities>>
@@ -521,7 +564,10 @@ final class YamiboForumClient {
     ForumHomeQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.forumHome?.loadHome(query, cachePolicy: cachePolicy) ??
+      sourcePlan.forumHome?.loadHome(
+        query,
+        cachePolicy: _policy(cachePolicy),
+      ) ??
       unsupported<ForumHomeDocument, ForumHomeReadCapabilities>();
 
   /// Reads the locally cached forum-home projection without networking.
@@ -596,26 +642,35 @@ final class YamiboForumClient {
   /// An applied receipt proves an aggregate write, not delivery to every user.
   Future<DataCommandResult<ForumPrivateMessageBatchReceipt>>
   sendPrivateMessageBatch(ForumPrivateMessageBatchSubmission submission) =>
-      sourcePlan.privateMessageBatchCommand?.execute(submission) ??
-      Future.value(
-        const DataCommandUnsupported<ForumPrivateMessageBatchReceipt>(),
+      _command(
+        () =>
+            sourcePlan.privateMessageBatchCommand?.execute(submission) ??
+            Future.value(
+              const DataCommandUnsupported<ForumPrivateMessageBatchReceipt>(),
+            ),
       );
 
   /// Sends one explicit private message; uncertain outcomes are never retried.
   Future<DataCommandResult<ForumPrivateMessageReceipt>> sendPrivateMessage(
     ForumPrivateMessageSubmission submission,
-  ) =>
-      sourcePlan.privateMessageCommand?.execute(submission) ??
-      Future.value(const DataCommandUnsupported<ForumPrivateMessageReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.privateMessageCommand?.execute(submission) ??
+        Future.value(
+          const DataCommandUnsupported<ForumPrivateMessageReceipt>(),
+        ),
+  );
 
   /// Mutes future notifications of one type for the selected author scope.
   Future<DataCommandResult<ForumNotificationIgnoreReceipt>> ignoreNotifications(
     ForumNotificationIgnoreSubmission submission,
-  ) =>
-      sourcePlan.notificationIgnoreCommand?.execute(submission) ??
-      Future.value(
-        const DataCommandUnsupported<ForumNotificationIgnoreReceipt>(),
-      );
+  ) => _command(
+    () =>
+        sourcePlan.notificationIgnoreCommand?.execute(submission) ??
+        Future.value(
+          const DataCommandUnsupported<ForumNotificationIgnoreReceipt>(),
+        ),
+  );
 
   /// Loads sticker catalog and returns a structured result.
   Future<
@@ -664,7 +719,10 @@ final class YamiboForumClient {
     ForumDirectoryQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.forumDirectory?.load(query, cachePolicy: cachePolicy) ??
+      sourcePlan.forumDirectory?.load(
+        query,
+        cachePolicy: _policy(cachePolicy),
+      ) ??
       unsupported<ForumDirectoryData, ForumDirectoryReadCapabilities>();
 
   /// Loads forum tag directory and returns a structured result.
@@ -675,7 +733,10 @@ final class YamiboForumClient {
     ForumTagDirectoryQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.forumTagDirectory?.load(query, cachePolicy: cachePolicy) ??
+      sourcePlan.forumTagDirectory?.load(
+        query,
+        cachePolicy: _policy(cachePolicy),
+      ) ??
       unsupported<ForumTagDirectoryData, ForumTagDirectoryReadCapabilities>();
 
   /// Favorite forum directory data.
@@ -691,7 +752,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.favoriteForumDirectory?.load(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
       ) ??
       unsupported<
         FavoriteForumDirectoryData,
@@ -711,7 +772,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.favoriteThreadDirectory?.load(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
       ) ??
       unsupported<
         FavoriteThreadDirectoryData,
@@ -726,7 +787,10 @@ final class YamiboForumClient {
     CurrentUserProfileQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.currentUserProfile?.load(query, cachePolicy: cachePolicy) ??
+      sourcePlan.currentUserProfile?.load(
+        query,
+        cachePolicy: _policy(cachePolicy),
+      ) ??
       unsupported<CurrentUserProfileData, CurrentUserProfileReadCapabilities>();
 
   /// Loads the verified account's presentation summary.
@@ -748,7 +812,10 @@ final class YamiboForumClient {
     CurrentAccountSummaryQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.currentAccountSummary?.load(query, cachePolicy: cachePolicy) ??
+      sourcePlan.currentAccountSummary?.load(
+        query,
+        cachePolicy: _policy(cachePolicy),
+      ) ??
       unsupported<CurrentUserProfileData, CurrentUserProfileReadCapabilities>();
 
   /// Loads a fresh sign-in page without any document-cache fallback.
@@ -779,9 +846,11 @@ final class YamiboForumClient {
   /// Attempts one ordinary sign-in using a fresh page-local action.
   Future<DataCommandResult<ForumDailySignInReceipt>> signInToday(
     ForumDailySignInRequest request,
-  ) =>
-      sourcePlan.dailySignInCommand?.execute(request) ??
-      Future.value(const DataCommandUnsupported<ForumDailySignInReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.dailySignInCommand?.execute(request) ??
+        Future.value(const DataCommandUnsupported<ForumDailySignInReceipt>()),
+  );
 
   /// Loads forum user profile and returns a structured result.
   Future<DataReadResult<ForumUserProfileData, ForumUserProfileReadCapabilities>>
@@ -792,7 +861,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.forumUserProfile?.load(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
         cancellation: cancellation,
       ) ??
       unsupported<ForumUserProfileData, ForumUserProfileReadCapabilities>();
@@ -806,9 +875,11 @@ final class YamiboForumClient {
   /// Sends one freshly prepared friendship form.
   Future<DataCommandResult<ForumFriendReceipt>> submitFriendOperation(
     ForumFriendSubmission submission,
-  ) =>
-      sourcePlan.friendOperations?.submit(submission) ??
-      Future.value(const DataCommandUnsupported<ForumFriendReceipt>());
+  ) => _command(
+    () =>
+        sourcePlan.friendOperations?.submit(submission) ??
+        Future.value(const DataCommandUnsupported<ForumFriendReceipt>()),
+  );
 
   /// Loads a target user's topics or replies for the verified viewer.
   Future<
@@ -821,7 +892,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.userThreadDirectory?.load(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
         cancellation: cancellation,
       ) ??
       unsupported<
@@ -840,7 +911,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.userBlogDirectory?.load(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
         cancellation: cancellation,
       ) ??
       unsupported<UserBlogDirectoryData, UserBlogDirectoryReadCapabilities>();
@@ -854,7 +925,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.userBlogDetail?.load(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
         cancellation: cancellation,
       ) ??
       unsupported<UserBlogDetailData, UserBlogDetailReadCapabilities>();
@@ -865,7 +936,7 @@ final class YamiboForumClient {
     ForumSearchQuery query, {
     CacheLoadPolicy cachePolicy = CacheLoadPolicy.cacheFirst,
   }) =>
-      sourcePlan.forumSearch?.load(query, cachePolicy: cachePolicy) ??
+      sourcePlan.forumSearch?.load(query, cachePolicy: _policy(cachePolicy)) ??
       unsupported<ForumSearchData, ForumSearchReadCapabilities>();
 
   /// Loads next forum search page and returns a structured result.
@@ -878,7 +949,7 @@ final class YamiboForumClient {
       sourcePlan.forumSearch?.loadNextPage(
         query,
         page,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
       ) ??
       unsupported<ForumSearchData, ForumSearchReadCapabilities>();
 
@@ -898,7 +969,7 @@ final class YamiboForumClient {
   }) =>
       sourcePlan.forumDisplay?.getForumDisplayByQuery(
         query,
-        cachePolicy: cachePolicy,
+        cachePolicy: _policy(cachePolicy),
       ) ??
       unsupported<ForumDisplayData, ForumDisplayReadCapabilities>();
 

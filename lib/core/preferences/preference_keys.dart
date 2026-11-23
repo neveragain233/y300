@@ -6,6 +6,15 @@ import 'package:y300/core/preferences/preference_key_names.dart';
 /// Existing scalar names remain unchanged for compatibility. New multi-field
 /// snapshots use a domain-scoped, versioned name.
 abstract final class PreferenceKeys {
+  static const externalBrowser = PreferenceKey<bool>(
+    PreferenceKeyNames.externalBrowser,
+  );
+  static const restoreReader = PreferenceKey<bool>(
+    PreferenceKeyNames.restoreReader,
+  );
+  static const activeReader = PreferenceKey<String>(
+    PreferenceKeyNames.activeReader,
+  );
   static const appThemeColorSource = PreferenceKey<String>(
     PreferenceKeyNames.appThemeColorSource,
   );

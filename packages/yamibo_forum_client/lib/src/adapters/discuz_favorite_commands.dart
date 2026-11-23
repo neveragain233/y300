@@ -30,6 +30,7 @@ final class DiscuzFavoriteForumCommandAdapter implements FavoriteForumCommand {
   Future<DataCommandResult<ForumFavoriteReceipt>> execute(
     SetForumFavoriteRequest request,
   ) async {
+    if (_api.config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final fid = request.fid.trim();
     if (!_isPositiveIdentity(fid)) {
       return _notSent<ForumFavoriteReceipt>('favorite_forum_fid_invalid');
@@ -231,6 +232,7 @@ final class DiscuzFavoriteThreadCommandAdapter
   Future<DataCommandResult<ThreadFavoriteReceipt>> execute(
     SetThreadFavoriteRequest request,
   ) async {
+    if (_api.config.isCacheOnly) return const DataCommandNotSent.cacheOnly();
     final tid = request.tid.trim();
     if (!_isPositiveIdentity(tid)) {
       return _notSent<ThreadFavoriteReceipt>('favorite_thread_tid_invalid');

@@ -22,6 +22,7 @@ final class ForumClientConfig {
   const ForumClientConfig({
     required this.siteOrigin,
     this.apiOrigin,
+    this.cacheOnly,
     this.userAgent = 'YamiboForumClient/1.0',
     this.desktopUserAgent,
     this.apiUserAgent,
@@ -36,6 +37,7 @@ final class ForumClientConfig {
   /// and protected resources use [desktopUserAgent]. Supplying [apiUserAgent]
   /// or [resourceUserAgent] overrides only that request profile.
   factory ForumClientConfig.yamibo({
+    bool Function()? cacheOnly,
     String mobileUserAgent = ForumBrowserUserAgents.mobileChromium,
     String desktopUserAgent = ForumBrowserUserAgents.desktopChromium,
     String? apiUserAgent,
@@ -44,6 +46,7 @@ final class ForumClientConfig {
     Duration receiveTimeout = const Duration(seconds: 20),
   }) => ForumClientConfig(
     siteOrigin: Uri.parse('https://bbs.yamibo.com'),
+    cacheOnly: cacheOnly,
     apiOrigin: Uri.parse('https://bbs.yamibo.com/api/mobile/index.php'),
     userAgent: mobileUserAgent,
     desktopUserAgent: desktopUserAgent,
@@ -52,6 +55,12 @@ final class ForumClientConfig {
     connectTimeout: connectTimeout,
     receiveTimeout: receiveTimeout,
   );
+
+  /// Current read-only policy supplied by the host.
+  final bool Function()? cacheOnly;
+
+  /// Whether new writes should be declined and retained reads preferred.
+  bool get isCacheOnly => cacheOnly?.call() ?? false;
 
   /// Canonical browser origin for same-site checks and HTML requests.
   final Uri siteOrigin;

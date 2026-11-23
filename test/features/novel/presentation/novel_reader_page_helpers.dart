@@ -342,12 +342,13 @@ class _RecordingNovelChapterUpdateService implements NovelChapterUpdateService {
 
 class _FakeForumWebViewExternalLauncher
     implements ForumWebViewExternalLauncher {
+  bool succeeds = true;
   final opened = <Uri>[];
 
   @override
   Future<bool> launch(Uri uri) async {
     opened.add(uri);
-    return true;
+    return succeeds;
   }
 }
 

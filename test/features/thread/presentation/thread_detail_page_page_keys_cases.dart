@@ -1,6 +1,61 @@
 part of 'thread_detail_page_test.dart';
 
 void _pageKeysCases() {
+  testWidgets(
+    'eInk corner paging clears both floor buttons on narrow screens',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = _FakeThreadRepository(
+        (tid, page, query) async => ApiSuccess(
+          _threadDetailData(
+            tid: tid,
+            posts: [
+              _post(
+                pid: 'floor',
+                author: 'alice',
+                authorId: '1',
+                number: 1,
+                isFirst: true,
+                message: List.filled(24, '<p>长帖分页正文</p>').join(),
+              ),
+            ],
+          ),
+        ),
+      );
+      const root = Key('eink-thread-page');
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          home: const EInkModeScope(
+            enabled: true,
+            child: ThreadDetailPage(key: root, tid: '100', subject: '测试主题'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      Finder within(String id) =>
+          find.descendant(of: find.byKey(root), matching: find.byKey(Key(id)));
+      final bottom = tester.getBottomRight(within('eink-corner-page-down')).dy;
+      expect(
+        bottom + 8,
+        lessThanOrEqualTo(
+          tester.getTopLeft(within('thread-next-post-button')).dy,
+        ),
+      );
+      expect(
+        bottom + 8,
+        lessThanOrEqualTo(
+          tester.getTopLeft(within('thread-detail-appbar-reply-button')).dy,
+        ),
+      );
+    },
+  );
+
   testWidgets('the last page down key returns to the first page topic body', (
     tester,
   ) async {

@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/switch.dart' as prism;
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';

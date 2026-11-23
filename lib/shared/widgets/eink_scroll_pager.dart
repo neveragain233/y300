@@ -181,7 +181,14 @@ class _EInkScrollPagerState extends ConsumerState<EInkScrollPager> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        widget.child,
+        NotificationListener<ScrollMetricsNotification>(
+          onNotification: (metrics) {
+            // 异步正文替换占位页后，即使还没滚动，翻页角标也要取得新的边界。
+            if (metrics.depth == 0) handler.refreshBounds();
+            return false;
+          },
+          child: widget.child,
+        ),
         if (widget.cornerButtons)
           PositionedDirectional(
             end: 0,

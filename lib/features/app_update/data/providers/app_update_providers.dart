@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/features/app_update/data/gitee/dio_gitee_checksum_repository.dart';
@@ -133,7 +134,12 @@ final appUpdateLauncherProvider = Provider<AppUpdateLauncher>((ref) {
 final appUpdatePromptCoordinatorProvider = Provider<AppUpdatePromptCoordinator>(
   (ref) {
     final logger = ref.watch(loggerProvider);
+    final availability = ref.watch(forumAvailabilityProvider.notifier);
     final coordinator = AppUpdatePromptCoordinator(
+      canCheck: () async {
+        await availability.ready;
+        return !availability.blocked;
+      },
       repository: ref.watch(giteeLatestReleaseRepositoryProvider),
       launcher: ref.watch(appUpdateLauncherProvider),
       downloadService: ref.watch(appUpdateDownloadServiceProvider),

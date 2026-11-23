@@ -267,7 +267,16 @@ final class ComicDownloadQueueService implements ComicDownloadQueue {
     }
   }
 
+  bool _paused = false;
+
+  void setPaused(bool paused) {
+    if (_paused == paused) return;
+    _paused = paused;
+    if (!paused && _started) _schedulePump();
+  }
+
   void _schedulePump() {
+    if (_paused) return;
     if (_disposed) {
       return;
     }
@@ -294,7 +303,7 @@ final class ComicDownloadQueueService implements ComicDownloadQueue {
     }
     _processing = true;
     try {
-      while (!_disposed) {
+      while (!_disposed && !_paused) {
         final entry = await _queueRepository.claimNext(now: _nowProvider());
         if (entry == null) {
           return;

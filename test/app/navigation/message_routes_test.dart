@@ -406,7 +406,7 @@ void main() {
   );
 
   testWidgets(
-    'other site pages use shared webview and HTTP external links are copied',
+    'other site pages use shared webview and external links open in the browser',
     (tester) async {
       await pumpHost(tester);
       await open(tester, 'home.php?mod=space&do=blog&uid=20');
@@ -427,20 +427,21 @@ void main() {
       await tester.pumpAndSettle();
       await open(tester, external);
       await tester.pump();
-      expect(clipboard.writes, [external]);
-      expect(find.text(AppLocalizations.of(source).linkCopied), findsOneWidget);
+      expect(clipboard.writes, isEmpty);
+      expect(find.text(AppLocalizations.of(source).linkCopied), findsNothing);
       await open(tester, 'javascript:alert(1)');
       await open(tester, 'file:///tmp/secret');
-      expect(clipboard.writes, [external]);
-      expect(launcher.opened, isEmpty);
+      expect(clipboard.writes, isEmpty);
+      expect(launcher.opened, hasLength(1));
       expect(observer.pushed, isEmpty);
     },
   );
 
-  testWidgets('copy failures stay in the message page without launching', (
+  testWidgets('reports failed copy fallback in the message page', (
     tester,
   ) async {
     await pumpHost(tester);
+    launcher.succeeds = false;
     clipboard.pending = Completer<void>();
     await open(tester, 'https://example.org/read');
     expect(clipboard.writes, ['https://example.org/read']);
@@ -451,19 +452,19 @@ void main() {
       find.text(AppLocalizations.of(source).linkCopyFailed),
       findsOneWidget,
     );
-    expect(launcher.opened, isEmpty);
+    expect(launcher.opened, hasLength(1));
     expect(observer.pushed, isEmpty);
   });
 
-  testWidgets('external copying does not read verified authentication', (
+  testWidgets('external launch does not read verified authentication', (
     tester,
   ) async {
     await pumpHost(tester);
     await open(tester, 'https://example.org/read');
     await tester.pumpAndSettle();
-    expect(clipboard.writes, ['https://example.org/read']);
+    expect(clipboard.writes, isEmpty);
     expect(verifiedOwnerReads, 0);
-    expect(launcher.opened, isEmpty);
+    expect(launcher.opened, hasLength(1));
   });
 
   testWidgets('late copied feedback is discarded after same UID relogin', (
@@ -479,6 +480,7 @@ void main() {
     );
     sessions.saveExtracted(snapshot);
     await pumpHost(tester);
+    launcher.succeeds = false;
     clipboard.pending = Completer<void>();
     await open(tester, 'https://example.org/read');
     sessions.clear();
@@ -487,7 +489,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SnackBar), findsNothing);
     expect(verifiedOwnerReads, 0);
-    expect(launcher.opened, isEmpty);
+    expect(launcher.opened, hasLength(1));
   });
 }
 
@@ -524,11 +526,12 @@ class _Locator implements ThreadPostLocator {
 }
 
 class _ExternalLauncher implements ForumWebViewExternalLauncher {
+  bool succeeds = true;
   final opened = <Uri>[];
   @override
   Future<bool> launch(Uri uri) async {
     opened.add(uri);
-    return true;
+    return succeeds;
   }
 }
 

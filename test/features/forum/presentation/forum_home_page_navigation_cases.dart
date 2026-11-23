@@ -39,9 +39,7 @@ void _navigationCases() {
     expect(observer.pushCount, pushCountBeforeTap + 1);
   });
 
-  testWidgets('copies an external carousel URL and reports success', (
-    tester,
-  ) async {
+  testWidgets('launches the external carousel URL', (tester) async {
     final launcher = _FakeForumWebViewExternalLauncher();
     final clipboard = _FakeClipboardTextWriter();
     const targetUrl = 'https://www.yamibo.com/notice?ref=a%2Fb&value=two#part';
@@ -75,13 +73,13 @@ void _navigationCases() {
     await tester.tap(find.byKey(const Key('forum-home-carousel-item-0')));
     await tester.pump();
 
-    expect(clipboard.written, [targetUrl]);
-    expect(launcher.launchedUris, isEmpty);
-    expect(find.text(l10n.linkCopied), findsOneWidget);
+    expect(clipboard.written, isEmpty);
+    expect(launcher.launchedUris, [Uri.parse(targetUrl)]);
+    expect(find.text(l10n.linkCopied), findsNothing);
   });
 
   testWidgets('reports an external carousel link copy failure', (tester) async {
-    final launcher = _FakeForumWebViewExternalLauncher();
+    final launcher = _FakeForumWebViewExternalLauncher()..succeeds = false;
     final clipboard = _FakeClipboardTextWriter(error: StateError('clipboard'));
     final repository = _FakeForumHomeRepository(
       () async => forumHomeReadSuccess(
@@ -114,7 +112,7 @@ void _navigationCases() {
     await tester.pump();
 
     expect(clipboard.written, ['https://www.yamibo.com/']);
-    expect(launcher.launchedUris, isEmpty);
+    expect(launcher.launchedUris, hasLength(1));
     expect(find.text(l10n.linkCopyFailed), findsOneWidget);
     expect(find.text(l10n.linkCopied), findsNothing);
   });
@@ -271,7 +269,7 @@ void _navigationCases() {
     tester,
   ) async {
     final pending = Completer<void>();
-    final launcher = _FakeForumWebViewExternalLauncher();
+    final launcher = _FakeForumWebViewExternalLauncher()..succeeds = false;
     final clipboard = _FakeClipboardTextWriter(pending: pending);
     final repository = _FakeForumHomeRepository(
       () async => forumHomeReadSuccess(
@@ -312,7 +310,7 @@ void _navigationCases() {
     pending.complete();
     await tester.pumpAndSettle();
 
-    expect(launcher.launchedUris, isEmpty);
+    expect(launcher.launchedUris, hasLength(1));
     expect(find.text(l10n.linkCopied), findsNothing);
     expect(find.text(l10n.linkCopyFailed), findsNothing);
     expect(tester.takeException(), isNull);

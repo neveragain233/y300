@@ -29,6 +29,10 @@ abstract final class ComposerTextResolver {
     AppLocalizations l10n,
     ComposerSubmissionFailure failure,
   ) {
+    if (failure.code == ComposerSubmissionFailureCode.network &&
+        failure.detail == 'forum_cache_only') {
+      return l10n.cacheOnlyWriteBlocked;
+    }
     final kind = failure.kind.name;
     return switch (failure.code) {
       ComposerSubmissionFailureCode.authenticationRequired =>

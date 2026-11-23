@@ -1,3 +1,5 @@
+import 'package:y300/core/network/forum_availability.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -146,6 +148,41 @@ void main() {
     );
   });
 
+  testWidgets(
+    'reader restore and external browser choices are persisted from settings',
+    (tester) async {
+      await _pumpSettings(tester);
+      final page = find.byKey(const Key('settings-page'));
+      final l10n = AppLocalizations.of(tester.element(page));
+      Finder row(String key) =>
+          find.descendant(of: page, matching: find.byKey(Key(key)));
+      final restore = row('settings-restore-active-reader');
+      await _scrollTo(tester, restore);
+      expect(tester.widget<AppSwitchRow>(restore).value, isFalse);
+      await tester.tap(restore);
+      await tester.pump();
+      final browser = row('settings-external-browser');
+      await _scrollTo(tester, browser);
+      await tester.tap(browser);
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SimpleDialog),
+          matching: find.text(l10n.externalBrowserStandalone),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(PreferenceKeys.restoreReader.name), isTrue);
+      expect(prefs.getBool(PreferenceKeys.externalBrowser.name), isTrue);
+      expect(
+        tester.widget<AppGroupedRow>(browser).subtitle,
+        l10n.externalBrowserStandalone,
+      );
+    },
+  );
+
   testWidgets('debug group disappears when debug tools provide no rows', (
     tester,
   ) async {
@@ -172,6 +209,9 @@ Future<void> _pumpSettings(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
+      overrides: [
+        forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
+      ],
       child: LocalizedTestApp(home: SettingsPage(debugTools: debugTools)),
     ),
   );

@@ -46,12 +46,15 @@ void main() {
             final copy = find.byKey(
               const Key('thread-post-copy-poll-option-action'),
             );
-            final firstTile = find
-                .descendant(of: sheet, matching: find.byType(ListTile))
-                .first;
             expect(
-              tester.widget<ListTile>(firstTile).key,
-              tester.widget<ListTile>(copy).key,
+              tester.getCenter(copy).dy,
+              lessThan(
+                tester
+                    .getCenter(
+                      find.byKey(const Key('thread-post-copy-all-action')),
+                    )
+                    .dy,
+              ),
             );
             expect(
               find.text(harness.strings.threadPollCopyOptionText),
@@ -256,7 +259,7 @@ class _Harness {
                           palette: ThreadDetailNativePalette.resolve(
                             Theme.of(context),
                           ),
-                          onLongPressOption: (option) => open(option),
+                          onLongPressOption: (option, _) => open(option),
                           onToggleOption: (option) => update(() {
                             harness.toggles++;
                             harness.selected.add(option.id);

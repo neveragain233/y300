@@ -21,12 +21,18 @@ final class AppUpdatePromptCoordinator {
     required AppUpdateLauncher launcher,
     AppUpdateDownloadService? downloadService,
     AppUpdateFailureReporter? onStoreFailure,
+    Future<bool> Function()? canCheck,
     Upgrader? upgrader,
   }) : _launcher = launcher,
        _downloadService = downloadService,
        _repository = repository,
        upgrader =
-           upgrader ?? _createUpgrader(repository, onFailure: onStoreFailure);
+           upgrader ??
+           _createUpgrader(
+             repository,
+             onFailure: onStoreFailure,
+             canCheck: canCheck,
+           );
 
   static const Duration alertAgainAfter = Duration(days: 3);
 
@@ -288,9 +294,11 @@ final class AppUpdatePromptCoordinator {
 
   static Upgrader _createUpgrader(
     GiteeLatestReleaseRepository repository, {
+    Future<bool> Function()? canCheck,
     AppUpdateFailureReporter? onFailure,
   }) {
     final store = GiteeUpgraderStore(
+      canCheck: canCheck,
       repository: repository,
       onFailure: onFailure,
     );

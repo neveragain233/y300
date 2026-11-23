@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/more/presentation/data_storage_controller.dart';
@@ -85,9 +86,8 @@ class DataStoragePage extends ConsumerWidget {
                         .read(dataStorageControllerProvider.notifier)
                         .exportCacheDiagnostics(),
                   ),
-                  ListTile(
+                  AppGroupedRow.content(
                     key: const Key('data-storage-cache-usage'),
-                    contentPadding: EdgeInsets.zero,
                     title: Text(
                       l10n.moreStorageClearCache,
                       style: const TextStyle(

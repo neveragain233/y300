@@ -9,6 +9,9 @@ enum DataReadOrigin {
   /// Fresh snapshot.
   freshSnapshot,
 
+  /// Retained, unexpired snapshot served during cache-only browsing.
+  retainedSnapshot,
+
   /// Cached document fallback.
   cachedDocumentFallback,
 

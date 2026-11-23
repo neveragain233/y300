@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_selection_action_adapter.dart';
@@ -161,43 +162,45 @@ class _ShelfSelectionBottomBarState
       context: context,
       builder: (sheetContext) {
         return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              ListTile(
-                title: Text(l10n.librarySelectionSelectCategory),
-                enabled: false,
-              ),
-              for (final category in available)
-                ListTile(
-                  key: ValueKey<String>(
-                    'selection-target-category-${category.categoryId}',
+          child: SingleChildScrollView(
+            child: AppGroupedSection(
+              children: [
+                AppGroupedRow(
+                  title: l10n.librarySelectionSelectCategory,
+                  enabled: false,
+                ),
+                for (final category in available)
+                  AppGroupedRow(
+                    key: ValueKey<String>(
+                      'selection-target-category-${category.categoryId}',
+                    ),
+                    title: LibraryShelfTextResolver.categoryName(
+                      l10n,
+                      category,
+                    ),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop(category.categoryId);
+                    },
                   ),
-                  title: Text(
-                    LibraryShelfTextResolver.categoryName(l10n, category),
-                  ),
+                AppGroupedRow(
+                  key: const ValueKey<String>('selection-target-category-home'),
+                  leading: const Icon(Icons.playlist_remove),
+                  title: l10n.libraryShelfRemoveFromCategory,
                   onTap: () {
-                    Navigator.of(sheetContext).pop(category.categoryId);
+                    Navigator.of(sheetContext).pop(LibraryCategoryTargets.home);
                   },
                 ),
-              ListTile(
-                key: const ValueKey<String>('selection-target-category-home'),
-                leading: const Icon(Icons.playlist_remove),
-                title: Text(l10n.libraryShelfRemoveFromCategory),
-                onTap: () {
-                  Navigator.of(sheetContext).pop(LibraryCategoryTargets.home);
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: Text(l10n.librarySelectionCreateCategory),
-                onTap: () {
-                  Navigator.of(sheetContext)
-                      .pop(_createCategorySelectionSentinel);
-                },
-              ),
-            ],
+                const Divider(height: 1),
+                AppGroupedRow(
+                  leading: const Icon(Icons.add),
+                  title: l10n.librarySelectionCreateCategory,
+                  onTap: () {
+                    Navigator.of(sheetContext)
+                        .pop(_createCategorySelectionSentinel);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },

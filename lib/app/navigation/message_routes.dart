@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/core/links/external_link_opener.dart';
 import 'package:y300/app/navigation/friend_routes.dart';
 import 'package:y300/app/navigation/forum_link_routes.dart';
 import 'package:y300/core/clipboard/clipboard_providers.dart';
@@ -228,6 +229,10 @@ final messageLinkOpenerProvider = Provider<MessageLinkOpener>((ref) {
           }
         case YamiboForumLinkKind.external:
           final owner = identity;
+          if (await ref.read(externalLinkOpenerProvider).launch(uri) ||
+              !context.mounted) {
+            return;
+          }
           await copyLinkWithFeedback(
             context,
             url: uri.toString(),

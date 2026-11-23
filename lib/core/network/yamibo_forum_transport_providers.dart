@@ -1,3 +1,4 @@
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client.dart';
@@ -40,6 +41,7 @@ final yamiboSessionStoreProvider = Provider<YamiboSessionStore>((ref) {
 
 final yamiboHttpGatewayProvider = Provider<YamiboHttpGateway>((ref) {
   return YamiboHttpGateway(
+    availability: ref.watch(forumAvailabilityProvider.notifier),
     cookieStore: ref.watch(cookieStoreProvider),
     logger: ref.watch(loggerProvider),
     wafChallengeRecoveryCoordinator: ref.watch(
@@ -84,7 +86,9 @@ final forumImageRefererForSourceProvider = Provider.family<String, String?>((
 });
 
 final yamiboForumClientConfigProvider = Provider<ForumClientConfig>((ref) {
+  final availability = ref.watch(forumAvailabilityProvider.notifier);
   return ForumClientConfig(
+    cacheOnly: () => availability.blocked,
     siteOrigin: Uri.parse(AppConfig.siteBaseUrl),
     apiOrigin: Uri.parse(AppConfig.apiBaseUrl),
     userAgent: BrowserUserAgents.mobile,

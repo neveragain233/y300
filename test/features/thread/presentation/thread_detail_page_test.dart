@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';

@@ -1,3 +1,4 @@
+import 'package:y300/core/network/forum_availability.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/persistence/app_database.dart';
@@ -35,6 +36,11 @@ final comicDownloadQueueServiceProvider = Provider<ComicDownloadQueueService>((
     shelfRefreshBus: ref.watch(libraryShelfRefreshBusProvider),
     storageRootAccessGate: ref.watch(storageRootAccessGateProvider),
     snapshotNotifier: ref.watch(_comicDownloadQueueSnapshotNotifierProvider),
+  );
+  ref.listen(
+    forumAvailabilityProvider.select((state) => state.blocked),
+    (_, blocked) => service.setPaused(blocked),
+    fireImmediately: true,
   );
   ref.onDispose(service.dispose);
   return service;

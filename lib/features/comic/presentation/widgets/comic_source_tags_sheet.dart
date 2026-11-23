@@ -1,3 +1,4 @@
+import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:y300/features/comic/domain/services/comic_source_tag_reader.dart';
 import 'package:y300/features/tags/presentation/yamibo_tag_thread_page.dart';
@@ -61,10 +62,10 @@ Future<void> showComicSourceTagsSheet(
                       itemCount: tags.length,
                       itemBuilder: (context, index) {
                         final tag = tags[index];
-                        return ListTile(
+                        return AppGroupedRow(
                           key: Key('comic-source-tag-${tag.tagId}'),
                           leading: const Icon(Icons.sell_outlined),
-                          title: Text(tag.label),
+                          title: tag.label,
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             navigator.pop(sheetContext);

@@ -39,6 +39,23 @@ void main() {
       );
     });
 
+    test('cache-only daily sign-in is not sent', () async {
+      final network = _CountingNetwork();
+      final client = YamiboForumClientBuilder(
+        config: ForumClientConfig.yamibo(cacheOnly: () => true),
+        network: network,
+      ).buildStandardClient();
+      final result = await client.signInToday(
+        const ForumDailySignInRequest(userId: '7'),
+      );
+      expect(result, isA<DataCommandNotSent<ForumDailySignInReceipt>>());
+      final direct = await client.dailySignInCommand!.execute(
+        const ForumDailySignInRequest(userId: '7'),
+      );
+      expect(direct.failureOrNull?.code, 'forum_cache_only');
+      expect(network.requestCount, 0);
+    });
+
     test('ephemeral Dio composition needs no Host persistence', () {
       final client = YamiboForumClientBuilder.ephemeralDio()
           .buildStandardClient();
