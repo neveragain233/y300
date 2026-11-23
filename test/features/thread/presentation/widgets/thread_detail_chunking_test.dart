@@ -173,9 +173,9 @@ void main() {
 
   for (final (reply, canRebase) in [
     ('<P>first line<BR />second line &lt;3</P>', true),
-    ('<p class="quote">formatted reply</p>', false),
+    ('<p class="quote">formatted reply</p>', true),
     ('<details><summary>spoiler</summary>hidden text</details>', false),
-    ('<img alt="image">', false),
+    ('<img alt="image">', true),
   ]) {
     testWidgets('return to a chunked post with reply $reply', (tester) async {
       final host = _Host([

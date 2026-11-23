@@ -6,7 +6,11 @@ import 'package:y300/core/media/device_memory_profile.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
-    show RenderAbstractViewport, RenderSliverPadding, SliverGeometry;
+    show
+        RenderAbstractViewport,
+        RenderSliverPadding,
+        ScrollCacheExtent,
+        SliverGeometry;
 import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
@@ -212,6 +216,20 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   @override
   bool get _canChunkBodies =>
       widget.enableBodyChunking && widget.bodyReadingCoordinator == null;
+  ScrollCacheExtent get _layoutCacheExtent {
+    // 未分块长帖在视口外最多预留一屏排版缓存，避免端点跳转时在屏幕外排版整章长文。
+    final hasLargeWholeBody =
+        _canChunkBodies &&
+        _postProjections.any(
+          (post) =>
+              _preparedBodies[post.sourcePost.pid] == null &&
+              post.displayPost.message.length > 8192,
+        );
+    return hasLargeWholeBody
+        ? const ScrollCacheExtent.viewport(1)
+        : _imagePreloadPolicy.layoutCacheExtent;
+  }
+
   int _bodyGeneration = 0;
   @override
   Object? _renderLayoutIdentity;
@@ -469,27 +487,26 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       _bodyHandoffs.retainPids(activePids);
       _preparedBodies.retainWhere((pid, _) => activePids.contains(pid));
       _chunkPreparation.retainCurrent();
-      if (_preparedBodies.bodies.isNotEmpty) {
-        final fontBinding = ref.watch(forumHtmlReaderFontBindingProvider);
-        final layoutIdentity = (
-          fontBinding.preferences.renderOptions,
-          fontBinding.isReady,
-          fontBinding.cacheKey,
-          Theme.of(context),
-          MediaQuery.sizeOf(context),
-          MediaQuery.textScalerOf(context),
-          Directionality.of(context),
+      final fontBinding = ref.watch(forumHtmlReaderFontBindingProvider);
+      final layoutIdentity = (
+        fontBinding.preferences.renderOptions,
+        fontBinding.isReady,
+        fontBinding.cacheKey,
+        Theme.of(context),
+        MediaQuery.sizeOf(context),
+        MediaQuery.textScalerOf(context),
+        Directionality.of(context),
+      );
+      if (_preparedBodies.bodies.isNotEmpty &&
+          _renderLayoutIdentity != null &&
+          _renderLayoutIdentity != layoutIdentity) {
+        final snapshot = _projectionAnchorCoordinator.capture(
+          _sourcePidsFor(widget),
         );
-        if (_renderLayoutIdentity != null &&
-            _renderLayoutIdentity != layoutIdentity) {
-          final snapshot = _projectionAnchorCoordinator.capture(
-            _sourcePidsFor(widget),
-          );
-          _pendingChunkAnchor = snapshot;
-          _projectionAnchorCoordinator.restoreAfterFrame(snapshot);
-        }
-        _renderLayoutIdentity = layoutIdentity;
+        _pendingChunkAnchor = snapshot;
+        _projectionAnchorCoordinator.restoreAfterFrame(snapshot);
       }
+      _renderLayoutIdentity = layoutIdentity;
     }
     // Validate a queued rebase against this build's actual layout inputs first.
     _prepareEndpointBuild();
@@ -605,7 +622,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             key: const Key('thread-detail-list'),
             controller: widget.scrollController,
             physics: ForumPullToRefresh.scrollPhysics,
-            scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
+            scrollCacheExtent: _layoutCacheExtent,
             semanticChildCount: entries.length,
             slivers: [
               SliverPadding(
@@ -653,7 +670,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             ForumContentSpacing.pageHorizontal,
             ForumContentSpacing.listBottom + widget.bottomInset,
           ),
-          scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
+          scrollCacheExtent: _layoutCacheExtent,
           itemCount: entries.length,
           findChildIndexCallback: (key) => _entryIndexForKey(entries, key),
           itemBuilder: (context, index) {
@@ -990,7 +1007,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                         : height <= 0
                         ? 0
                         : (topOffset / height).clamp(0.0, 1.0),
-                    scrollCacheExtent: _imagePreloadPolicy.layoutCacheExtent,
+                    scrollCacheExtent: _layoutCacheExtent,
                     semanticChildCount: entries.length,
                     slivers: [
                       if (targetEntryIndex > 0)

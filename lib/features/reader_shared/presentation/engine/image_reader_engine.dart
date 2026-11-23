@@ -1214,23 +1214,38 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     ReaderTailSurface tail,
     String key,
   ) async {
-    final plan = await _capability.buildAdjacentPreloadPlan();
-    if (!mounted || !_isCurrentTail(tail)) {
-      return;
+    try {
+      final plan = await _capability.buildAdjacentPreloadPlan();
+      if (!mounted || !_isCurrentTail(tail)) {
+        return;
+      }
+      final ownerId = _lastOwnerId;
+      if (ownerId == null || !_reportedAdjacentPreloadKeys.contains(key)) {
+        return;
+      }
+      if (plan == null || plan.images.isEmpty) {
+        return;
+      }
+      _sessionPreloadCoordinator.submitAdjacentWindow(
+        context: context,
+        plan: plan,
+        precacheService: ref.read(forumImagePrecacheServiceProvider),
+        expectedDisplaySize: _expectedPreloadDisplaySize(),
+      );
+    } catch (error) {
+      // 邻章预加载属于可选增强：异常不能逃逸并打断当前章节或评论页，只记录异常类型。
+      if (!_isCurrentTail(tail) ||
+          !_reportedAdjacentPreloadKeys.contains(key)) {
+        return;
+      }
+      _recordReaderDiagnostic(
+        type: ContinuousImageDiagnosticEventType.prefetchCompleted,
+        status: 'adjacentPlanFailed',
+        result: error.runtimeType.toString(),
+        preloadKind: 'adjacent',
+        applied: false,
+      );
     }
-    final ownerId = _lastOwnerId;
-    if (ownerId == null || !_reportedAdjacentPreloadKeys.contains(key)) {
-      return;
-    }
-    if (plan == null || plan.images.isEmpty) {
-      return;
-    }
-    _sessionPreloadCoordinator.submitAdjacentWindow(
-      context: context,
-      plan: plan,
-      precacheService: ref.read(forumImagePrecacheServiceProvider),
-      expectedDisplaySize: _expectedPreloadDisplaySize(),
-    );
   }
 
   void _invokeTailCallback(
