@@ -154,6 +154,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   Size? _lastReaderLayoutSize;
 
   final Set<int> _reportedVisibleImageIndexes = <int>{};
+  final Set<int> _chapterBoundaryPointers = <int>{};
+  ({ScrollController controller, double distance})? _previousBoundaryPull;
 
   final ReaderImageSessionCoordinator _readerSession =
       ReaderImageSessionCoordinator();
@@ -220,7 +222,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       ..addListener(_onOverlayVisibilityChanged);
     _gestureCoordinator = ReaderGestureCoordinator(
       doubleTapTimeout: ReaderPagedTurnMotion.tapConfirmationDelay,
-    );
+    )..addPointerListener(_onChapterBoundaryPointer);
     _zoomGate = ValueNotifier<bool>(false);
     _activePagedIndex = ValueNotifier<int>(0);
     _imageSessionStore = ReaderImageSessionStore();
@@ -359,6 +361,15 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (!mounted) {
       return;
     }
+    final preferences = _lastKnownReaderPreferences;
+    if (preferences != null &&
+        _readerMode(preferences) == ContinuousImageReaderMode.vertical) {
+      if (direction == HardwarePageKeyDirection.previous &&
+          !_canScrollVertically(-1)) {
+        _requestPreviousChapter();
+      }
+      return;
+    }
     _turnPage(
       forward: direction == HardwarePageKeyDirection.next,
       total: _lastKnownImageTotal,
@@ -440,7 +451,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _syncScrollControllerIfNeeded();
     _syncPageControllerIfNeeded(
       mode,
-      positionState.committedLogicalIndex,
+      positionState.needsInitialRestore && _startsOnPagedTail(content)
+          ? content.length
+          : positionState.committedLogicalIndex,
       content.ownerId,
     );
     _restorePositionIfNeeded(mode, preferences.readerMode, content);
@@ -450,6 +463,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _lastKnownImageTotal = total;
     _syncHardwareKeysArmed();
     final engineContext = _engineContext(preferences, total);
+    final chapterNav = _capability.chapterNav(engineContext);
     final tail = _tailSurface;
     final actionSurface = tail is ReaderTailActionSurface
         ? tail as ReaderTailActionSurface
@@ -485,7 +499,11 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
               controller: _overlayController,
               gestureCoordinator: _gestureCoordinator,
               topBar: _buildTopBar(engineContext),
-              bottomBar: _buildBottomBar(engineContext, preferences),
+              bottomBar: _buildBottomBar(
+                engineContext,
+                preferences,
+                chapterNav,
+              ),
               persistentFooter: _buildPersistentFooter(
                 engineContext,
                 preferences,
@@ -515,6 +533,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
                 mode: mode,
                 preferences: preferences,
                 engineContext: engineContext,
+                hasPreviousChapter: chapterNav?.hasPrevious ?? false,
               ),
             ),
             if (actionSurface != null)
@@ -533,8 +552,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   Widget _buildVertical(
     ReaderContent content,
     ReaderPreferences preferences,
-    ReaderEngineContext engineContext,
-  ) {
+    ReaderEngineContext engineContext, {
+    required bool hasPreviousChapter,
+  }) {
     _restoreVerticalViewportIfChanged(content);
     final session = _readerSession.current!;
     final scrollController = _scrollController;
@@ -574,15 +594,24 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       }
     });
     final reader = NotificationListener<ScrollNotification>(
-      onNotification: (notification) =>
-          _isCurrentVerticalSessionToken(session, scrollController)
-          ? _onVerticalScrollNotification(notification)
-          : false,
+      onNotification: (notification) {
+        if (_isCurrentVerticalSessionToken(session, scrollController)) {
+          _onVerticalScrollNotification(notification);
+          if (hasPreviousChapter &&
+              notification.metrics.axis == Axis.vertical) {
+            _trackPreviousBoundaryPull(notification, scrollController);
+          }
+        }
+        return false;
+      },
       child: ContinuousImageReaderView(
         key: ValueKey(_verticalViewportRevision),
         items: items,
         mode: ContinuousImageReaderMode.vertical,
         scrollController: scrollController,
+        verticalPhysics: hasPreviousChapter
+            ? const AlwaysScrollableScrollPhysics()
+            : null,
         scrollCacheExtent: ScrollCacheExtent.pixels(
           MediaQuery.sizeOf(context).height *
               widget.flowPolicy.viewportCacheExtentFactor,
@@ -615,7 +644,11 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     );
   }
 
-  Widget _buildPaged(ReaderContent content, ReaderPreferences preferences) {
+  Widget _buildPaged(
+    ReaderContent content,
+    ReaderPreferences preferences, {
+    required bool hasPreviousChapter,
+  }) {
     _deactivateVerticalSession();
     final items = content.items;
     final tail = _tailSurface;
@@ -628,53 +661,69 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         _precachePagedWindow(_lastKnownIndex);
       }
     });
+    final reader = ContinuousImageReaderView(
+      key: ValueKey<String>('reader-paged-owner-${content.ownerId}'),
+      items: items,
+      mode: ContinuousImageReaderMode.horizontal,
+      pageController: pageController,
+      horizontalPhysics:
+          EInkModeScope.of(context) ||
+              _pagedHorizontalOverflowActive(preferences)
+          ? const NeverScrollableScrollPhysics()
+          : const PageScrollPhysics(),
+      reverse: preferences.readerMode == ReaderModePreference.rtl,
+      onPageChanged: pageController == null
+          ? null
+          : (pageIndex) {
+              if (_isCurrentImageSession(session)) {
+                unawaited(
+                  _onPageChanged(
+                    pageIndex,
+                    ownerId: content.ownerId,
+                    pageController: pageController,
+                  ),
+                );
+              }
+            },
+      horizontalPageKey: widget.pageKey,
+      horizontalPagePadding: () {
+        final spacing = preferences.pageSpacing.clamp(0.0, 48.0).toDouble();
+        return EdgeInsets.fromLTRB(
+          spacing,
+          spacing,
+          spacing,
+          spacing + _statusBarBottomClearance(preferences),
+        );
+      }(),
+      horizontalTrailingBuilder: tail == null
+          ? null
+          : (context) => _buildPagedTail(context, tail),
+      horizontalAdvanceBuilder: tail == null || !tail.hasAdvance
+          ? null
+          : (context) => _buildPagedAdvance(context, tail),
+      layoutResolver: _layoutResolver,
+      onExtentResolved: (extent) => _recordExtent(extent, session: session),
+      itemBuilder: (context, item, index, {required paged}) {
+        return _buildImage(item, index, preferences, paged: true);
+      },
+    );
     return ReaderPagedSwipeGate(
       blockedListenable: _zoomGate,
-      child: ContinuousImageReaderView(
-        key: ValueKey<String>('reader-paged-owner-${content.ownerId}'),
-        items: items,
-        mode: ContinuousImageReaderMode.horizontal,
-        pageController: pageController,
-        horizontalPhysics:
-            EInkModeScope.of(context) ||
-                _pagedHorizontalOverflowActive(preferences)
-            ? const NeverScrollableScrollPhysics()
-            : const PageScrollPhysics(),
-        reverse: preferences.readerMode == ReaderModePreference.rtl,
-        onPageChanged: pageController == null
-            ? null
-            : (pageIndex) {
-                if (_isCurrentImageSession(session)) {
-                  unawaited(
-                    _onPageChanged(
-                      pageIndex,
-                      ownerId: content.ownerId,
-                      pageController: pageController,
-                    ),
-                  );
-                }
-              },
-        horizontalPageKey: widget.pageKey,
-        horizontalPagePadding: () {
-          final spacing = preferences.pageSpacing.clamp(0.0, 48.0).toDouble();
-          return EdgeInsets.fromLTRB(
-            spacing,
-            spacing,
-            spacing,
-            spacing + _statusBarBottomClearance(preferences),
-          );
-        }(),
-        horizontalTrailingBuilder: tail == null
-            ? null
-            : (context) => _buildPagedTail(context, tail),
-        horizontalAdvanceBuilder: tail == null || !tail.hasAdvance
-            ? null
-            : (context) => _buildPagedAdvance(context, tail),
-        layoutResolver: _layoutResolver,
-        onExtentResolved: (extent) => _recordExtent(extent, session: session),
-        itemBuilder: (context, item, index, {required paged}) {
-          return _buildImage(item, index, preferences, paged: true);
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (hasPreviousChapter &&
+              notification.depth == 0 &&
+              notification.metrics.axis == Axis.horizontal &&
+              pageController != null &&
+              identical(pageController, _pageController) &&
+              _diagnosticMode == preferences.readerMode &&
+              session != null &&
+              _readerSession.isCurrent(session)) {
+            _trackPreviousBoundaryPull(notification, pageController);
+          }
+          return false;
         },
+        child: reader,
       ),
     );
   }
@@ -1294,7 +1343,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     await WidgetsBinding.instance.endOfFrame;
   }
 
-  bool _onVerticalScrollNotification(ScrollNotification notification) {
+  void _onVerticalScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification &&
         notification.dragDetails != null) {
       _viewportRestoreGeneration++;
@@ -1303,7 +1352,107 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         ReaderVerticalSeekCancelReason.userScroll,
       );
     }
-    return false;
+  }
+
+  bool get _canTurnAtChapterBoundary =>
+      !_exitFlushed &&
+      !_zoomGate.value &&
+      !_isSliderCommitInFlight &&
+      _positionState?.needsInitialRestore == false;
+
+  void _onChapterBoundaryPointer(PointerEvent event) {
+    if (event is PointerDownEvent) {
+      _chapterBoundaryPointers.add(event.pointer);
+      if (_chapterBoundaryPointers.length > 1) {
+        _previousBoundaryPull = null;
+      }
+      return;
+    }
+    if (event is PointerUpEvent || event is PointerCancelEvent) {
+      _chapterBoundaryPointers.remove(event.pointer);
+      if (_chapterBoundaryPointers.isEmpty) {
+        _finishPreviousBoundaryPull();
+      }
+    }
+  }
+
+  void _trackPreviousBoundaryPull(
+    ScrollNotification notification,
+    ScrollController controller,
+  ) {
+    if (!_canTurnAtChapterBoundary || _chapterBoundaryPointers.length > 1) {
+      _previousBoundaryPull = null;
+      return;
+    }
+    final metrics = notification.metrics;
+    final distanceBeforeStart = metrics.minScrollExtent - metrics.pixels;
+    final double? distance;
+    if (notification is ScrollStartNotification) {
+      distance = notification.dragDetails != null && distanceBeforeStart >= 0
+          ? distanceBeforeStart
+          : null;
+    } else if (notification is OverscrollNotification &&
+        notification.dragDetails != null &&
+        notification.overscroll < 0) {
+      final pull = _previousBoundaryPull;
+      final base = pull != null && identical(pull.controller, controller)
+          ? pull.distance
+          : 0.0;
+      distance = base - notification.overscroll;
+    } else if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null) {
+      distance = distanceBeforeStart >= 0 ? distanceBeforeStart : null;
+    } else {
+      return;
+    }
+    _previousBoundaryPull = distance == null
+        ? null
+        : (controller: controller, distance: distance);
+  }
+
+  void _finishPreviousBoundaryPull() {
+    final pull = _previousBoundaryPull;
+    _previousBoundaryPull = null;
+    if (pull == null ||
+        pull.distance < ReaderPagedImageFitSurface.edgeTurnThreshold) {
+      return;
+    }
+    _schedulePreviousChapterFromBoundary(pull.controller);
+  }
+
+  void _schedulePreviousChapterFromBoundary(ScrollController controller) {
+    final session = _readerSession.current;
+    final mode = _diagnosticMode;
+    scheduleMicrotask(() {
+      if (!_isCurrentImageSession(session) ||
+          _diagnosticMode != mode ||
+          !identical(
+            controller,
+            mode == ReaderModePreference.vertical
+                ? _scrollController
+                : _pageController,
+          ) ||
+          !controller.hasClients) {
+        return;
+      }
+      final position = controller.position;
+      if (position.pixels <= position.minScrollExtent + 0.5) {
+        _requestPreviousChapter();
+      }
+    });
+  }
+
+  void _requestPreviousChapter() {
+    if (!_canTurnAtChapterBoundary) return;
+    final preferences =
+        ref.read(readerPreferencesControllerProvider).value ??
+        ReaderPreferences.defaults();
+    final nav = _capability.chapterNav(
+      _engineContext(preferences, _capability.content.length),
+    );
+    if (nav == null || !nav.hasPrevious) return;
+    _hideReaderMenuForContentMotion();
+    nav.onPrevious();
   }
 
   /// 运行时墨水屏模式下，横向翻页把 `fitWidth` 收成 `contain`，4:3 屏不再
@@ -1441,7 +1590,13 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         _reportedAdvanceSurfaceKeys.clear();
         _reportedAdjacentPreloadKeys.clear();
         _pagedHorizontalOverflowByIndex.clear();
-        _pagedPosition = ReaderSequencePosition.image(initialIndex);
+        _chapterBoundaryPointers.clear();
+        _previousBoundaryPull = null;
+        _pagedPosition = _openingPagedPosition(
+          content,
+          readerMode,
+          initialIndex,
+        );
         _setZoomGate(false, paged: false);
         _activePagedIndex.value = initialIndex;
         _lastKnownIndex = initialIndex;
@@ -1486,7 +1641,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _reportedAdjacentPreloadKeys.clear();
     _pagedHorizontalOverflowByIndex.clear();
     _resolvedDimensionsByItemId.clear();
-    _pagedPosition = ReaderSequencePosition.image(initialIndex);
+    _chapterBoundaryPointers.clear();
+    _previousBoundaryPull = null;
+    _pagedPosition = _openingPagedPosition(content, readerMode, initialIndex);
     _setZoomGate(false, paged: false);
     _activePagedIndex.value = initialIndex;
     _lastKnownIndex = initialIndex;
@@ -1523,20 +1680,19 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
   void _syncPageControllerIfNeeded(
     ContinuousImageReaderMode mode,
-    int initialIndex,
+    int initialPage,
     String ownerId,
   ) {
     if (mode == ContinuousImageReaderMode.vertical) {
       return;
     }
-    final expectedInitialPage = initialIndex.clamp(0, 1 << 20).toInt();
     final controller = _pageController;
     if (controller == null || _pageControllerOwnerId != ownerId) {
       // The page controller belongs to one reader owner. Persisting its
       // scroll offset would restore a previous chapter's tail/sentinel page
       // and clamp it to the new chapter's last image.
       _pageController = PageController(
-        initialPage: expectedInitialPage,
+        initialPage: initialPage,
         keepPage: false,
       );
       _pageControllerOwnerId = ownerId;
@@ -1702,20 +1858,22 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       return;
     }
     final generation = request.generation;
-    final targetPage = positionState.initialLogicalIndex;
+    final targetIndex = positionState.initialLogicalIndex;
+    final opensOnTail = _startsOnPagedTail(content);
+    final targetPage = opensOnTail ? content.length : targetIndex;
     _recordReaderDiagnostic(
       type: ContinuousImageDiagnosticEventType.initialRestoreStarted,
-      index: targetPage,
+      index: targetIndex,
       mode: readerMode,
       generation: generation,
-      targetIndex: targetPage,
+      targetIndex: targetIndex,
       status: 'started',
       result: 'pending',
     );
     final pageController = _pageController;
     if (pageController == null || !pageController.hasClients) {
       _recordInitialRestoreCompleted(
-        index: targetPage,
+        index: targetIndex,
         mode: readerMode,
         generation: generation,
         status: 'pending',
@@ -1726,7 +1884,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     }
     if (pageController.position.isScrollingNotifier.value) {
       _recordInitialRestoreCompleted(
-        index: targetPage,
+        index: targetIndex,
         mode: readerMode,
         generation: generation,
         status: 'pending',
@@ -1742,14 +1900,26 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       result = 'jumped';
     }
     positionState.consumeInitialRestore();
-    _commitLogicalIndex(targetPage);
-    _reportActualImageVisible(
-      index: targetPage,
-      ownerId: content.ownerId,
-      sessionGeneration: _readerSessionGeneration,
-    );
+    _commitLogicalIndex(targetIndex);
+    if (opensOnTail) {
+      // PageView does not call onPageChanged for its own initial page.
+      // Enter the tail through the normal lifecycle without reporting an image.
+      unawaited(
+        _onPageChanged(
+          targetPage,
+          ownerId: content.ownerId,
+          pageController: pageController,
+        ),
+      );
+    } else {
+      _reportActualImageVisible(
+        index: targetIndex,
+        ownerId: content.ownerId,
+        sessionGeneration: _readerSessionGeneration,
+      );
+    }
     _recordInitialRestoreCompleted(
-      index: targetPage,
+      index: targetIndex,
       mode: readerMode,
       generation: generation,
       status: 'consumed',
@@ -2051,7 +2221,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (positionState != null &&
         positionState.needsInitialRestore &&
         positionState.ownerId == content.ownerId &&
-        pageIndex != content.initialIndex) {
+        pageIndex !=
+            (_startsOnPagedTail(content)
+                ? content.length
+                : positionState.initialLogicalIndex)) {
       return;
     }
     final wasOnImage = _pagedPosition.isImage;
@@ -2148,14 +2321,18 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     if (pageController == null || !pageController.hasClients) {
       return;
     }
+    final page = pageController.page;
     final current =
-        pageController.page?.round() ??
-        _pagedPageForPosition(_pagedPosition, total);
+        page?.round() ?? _pagedPageForPosition(_pagedPosition, total);
     final delta = forward ? 1 : -1;
     final target = (current + delta)
         .clamp(0, _pagedPageCount(total) - 1)
         .toInt();
     if (target == current) {
+      // 触摸点按与实体键共享同一入口：在首图继续向前翻时直接退回上一话末尾。
+      if (!forward && current == 0 && (page == null || page <= 0.01)) {
+        _requestPreviousChapter();
+      }
       return;
     }
     if (target < total) {
@@ -2195,6 +2372,20 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       return imageCount;
     }
     return imageCount + 1 + (tail.hasAdvance ? 1 : 0);
+  }
+
+  bool _startsOnPagedTail(ReaderContent content) =>
+      content.initialPagedTail && _tailSurface != null;
+
+  ReaderSequencePosition _openingPagedPosition(
+    ReaderContent content,
+    ReaderModePreference mode,
+    int initialIndex,
+  ) {
+    if (mode != ReaderModePreference.vertical && _startsOnPagedTail(content)) {
+      return ReaderSequencePosition.tail(_tailSurface!.id);
+    }
+    return ReaderSequencePosition.image(initialIndex);
   }
 
   int _pagedPageForPosition(ReaderSequencePosition position, int imageCount) {
@@ -3067,10 +3258,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   ReaderBottomBarConfig _buildBottomBar(
     ReaderEngineContext context,
     ReaderPreferences preferences,
+    ReaderChapterNavSpec? nav,
   ) {
     final total = context.totalCount;
     final currentIndex = _effectivePreviewIndex ?? _lastKnownIndex;
-    final nav = _capability.chapterNav(context);
     return ReaderBottomBarConfig(
       thumbnailStrip: _buildThumbnailStrip(preferences: preferences),
       progress: ReaderProgressConfig.discrete(
@@ -3274,6 +3465,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     required ContinuousImageReaderMode mode,
     required ReaderPreferences preferences,
     required ReaderEngineContext engineContext,
+    required bool hasPreviousChapter,
   }) {
     final background = _backgroundColor(preferences);
     final chromePalette = const ReaderChromePaletteResolver().resolve(
@@ -3297,8 +3489,17 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
           child: ColoredBox(
             color: background,
             child: mode == ContinuousImageReaderMode.vertical
-                ? _buildVertical(content, preferences, engineContext)
-                : _buildPaged(content, preferences),
+                ? _buildVertical(
+                    content,
+                    preferences,
+                    engineContext,
+                    hasPreviousChapter: hasPreviousChapter,
+                  )
+                : _buildPaged(
+                    content,
+                    preferences,
+                    hasPreviousChapter: hasPreviousChapter,
+                  ),
           ),
         ),
       ],
@@ -3348,6 +3549,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   }
 
   void _setZoomGate(bool isZoomed, {required bool paged}) {
+    if (isZoomed) _previousBoundaryPull = null;
     if (paged && isZoomed) {
       _holdPagedScrollForZoom();
     } else {

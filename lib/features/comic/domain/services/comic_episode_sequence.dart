@@ -7,6 +7,7 @@ enum ComicEpisodeOpenPolicy {
   resumeIfUnread,
   startAtBeginning,
   restoreSavedPosition,
+  startAtEnd,
 }
 
 /// Owns the canonical order used by comic navigation and lookahead.

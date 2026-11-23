@@ -84,7 +84,7 @@ void _savedProgressChapterSwitchCases() {
           );
 
           if (entry == 'menu') {
-            // Previous chapter uses the same explicit-navigation policy.
+            // Returning to the previous chapter opens its final image.
             readerScroll(tester).jumpTo(1000);
             await pumpSwitchUi(tester);
             await openReaderMenu(tester);
@@ -92,7 +92,15 @@ void _savedProgressChapterSwitchCases() {
               find.byKey(const Key('shared-reader-prev-button')),
             );
             await pumpSwitchUi(tester);
-            expect(readerScroll(tester).offset, 0);
+            expect(readerScroll(tester).offset, greaterThan(0));
+            expect(
+              tester
+                  .getTopLeft(
+                    find.byKey(const Key('comic-reader-image-slot-1')),
+                  )
+                  .dy,
+              closeTo(0, 1),
+            );
             expect(
               tester
                   .widget<ContinuousImageReaderView>(
@@ -173,6 +181,176 @@ void _commentTailNextChapterCases() {
       );
     }
   }
+
+  testWidgets(
+    'eink pageUp at first image opens previous chapter comments in paged mode',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({'reader_pref_mode': 'ltr'});
+      final repository = _ReaderFakeRepository(includeNextEpisode: true);
+      for (final tid in ['101', '102']) {
+        repository._episodeImages['yamibo:100:$tid'] = List.generate(
+          2,
+          (index) => ComicEpisodeImageItem(
+            episodeId: 'yamibo:100:$tid',
+            imageUrl: 'https://img.test/$tid-$index.jpg',
+            imageIndex: index,
+            cacheStatus: 'none',
+            width: 600,
+            height: 2400,
+          ),
+        );
+      }
+      await prepareLargeViewport(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._interactionOverrides(),
+            comicRepositoryProvider.overrideWithValue(repository),
+            comicReadingStateWriterProvider.overrideWithValue(
+              _NoopReadingStateWriter(),
+            ),
+            comicReaderServiceProvider.overrideWith(
+              (ref) async => _ReaderFakeService(),
+            ),
+            comicDownloadServiceProvider.overrideWithValue(
+              _NoopComicDownloadService(),
+            ),
+            imageCacheServiceProvider.overrideWithValue(
+              _FakeImageCacheService(),
+            ),
+            forumImagePrecacheServiceProvider.overrideWithValue(
+              _RecordingForumImagePrecacheService(),
+            ),
+          ],
+          child: const EInkModeScope(
+            enabled: true,
+            child: LocalizedTestApp(
+              home: ComicReaderPage(
+                comicId: 'yamibo:100',
+                episodeId: 'yamibo:100:102',
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpSwitchUi(tester);
+
+      tester
+          .stateList<State>(
+            find.descendant(
+              of: find.byType(ImageReaderEngine),
+              matching: find.bySubtype<StatefulWidget>(),
+            ),
+          )
+          .whereType<EInkPageHandler>()
+          .single
+          .pageUp();
+      await pumpSwitchUi(tester);
+
+      expect(
+        tester
+            .widget<ContinuousImageReaderView>(
+              find.byType(ContinuousImageReaderView),
+            )
+            .items
+            .first
+            .ownerId,
+        'yamibo:100:101',
+      );
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller?.page,
+        2,
+      );
+      expect(find.byKey(const Key('comic-comment-action-bar')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'eink pageUp at top opens previous chapter last image in vertical mode',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({'reader_pref_mode': 'vertical'});
+      final repository = _ReaderFakeRepository(includeNextEpisode: true);
+      for (final tid in ['101', '102']) {
+        repository._episodeImages['yamibo:100:$tid'] = List.generate(
+          2,
+          (index) => ComicEpisodeImageItem(
+            episodeId: 'yamibo:100:$tid',
+            imageUrl: 'https://img.test/$tid-$index.jpg',
+            imageIndex: index,
+            cacheStatus: 'none',
+            width: 600,
+            height: 2400,
+          ),
+        );
+      }
+      await prepareLargeViewport(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._interactionOverrides(),
+            comicRepositoryProvider.overrideWithValue(repository),
+            comicReadingStateWriterProvider.overrideWithValue(
+              _NoopReadingStateWriter(),
+            ),
+            comicReaderServiceProvider.overrideWith(
+              (ref) async => _ReaderFakeService(),
+            ),
+            comicDownloadServiceProvider.overrideWithValue(
+              _NoopComicDownloadService(),
+            ),
+            imageCacheServiceProvider.overrideWithValue(
+              _FakeImageCacheService(),
+            ),
+            forumImagePrecacheServiceProvider.overrideWithValue(
+              _RecordingForumImagePrecacheService(),
+            ),
+          ],
+          child: const EInkModeScope(
+            enabled: true,
+            child: LocalizedTestApp(
+              home: ComicReaderPage(
+                comicId: 'yamibo:100',
+                episodeId: 'yamibo:100:102',
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpSwitchUi(tester);
+
+      tester
+          .stateList<State>(
+            find.descendant(
+              of: find.byType(ImageReaderEngine),
+              matching: find.bySubtype<StatefulWidget>(),
+            ),
+          )
+          .whereType<EInkPageHandler>()
+          .single
+          .pageUp();
+      await pumpSwitchUi(tester);
+
+      expect(
+        tester
+            .widget<ContinuousImageReaderView>(
+              find.byType(ContinuousImageReaderView),
+            )
+            .items
+            .first
+            .ownerId,
+        'yamibo:100:101',
+      );
+      expect(readerScroll(tester).offset, greaterThan(0));
+      expect(
+        tester
+            .getTopLeft(find.byKey(const Key('comic-reader-image-slot-1')))
+            .dy,
+        closeTo(0, 1),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 void _nextChapterTransitionCases() {

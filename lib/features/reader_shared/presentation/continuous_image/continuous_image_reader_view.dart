@@ -27,6 +27,7 @@ class ContinuousImageReaderView extends StatelessWidget {
     this.scrollCacheExtent,
     this.reverse = false,
     this.onPageChanged,
+    this.verticalPhysics,
     this.horizontalPhysics,
     this.verticalTrailingBuilder,
     this.verticalTrailingItemCount = 0,
@@ -51,6 +52,7 @@ class ContinuousImageReaderView extends StatelessWidget {
   final ScrollCacheExtent? scrollCacheExtent;
   final bool reverse;
   final ValueChanged<int>? onPageChanged;
+  final ScrollPhysics? verticalPhysics;
   final ScrollPhysics? horizontalPhysics;
   final WidgetBuilder? verticalTrailingBuilder;
   final int verticalTrailingItemCount;
@@ -84,6 +86,7 @@ class ContinuousImageReaderView extends StatelessWidget {
     return ListView.builder(
       key: verticalListKey,
       controller: scrollController,
+      physics: verticalPhysics,
       scrollCacheExtent: scrollCacheExtent,
       padding: verticalPadding,
       itemCount: items.length + trailingCount,

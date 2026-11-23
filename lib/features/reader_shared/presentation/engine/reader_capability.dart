@@ -20,6 +20,7 @@ class ReaderContent {
     required this.ownerId,
     required this.items,
     this.initialIndex = 0,
+    this.initialPagedTail = false,
     this.sessionRevision = 0,
   });
 
@@ -27,6 +28,10 @@ class ReaderContent {
   final String ownerId;
   final List<ContinuousImageItem> items;
   final int initialIndex;
+
+  /// 翻页模式且存在尾页时直接落到尾页（评论页）；逻辑图片索引仍由 [initialIndex] 给出。
+  final bool initialPagedTail;
+
   final int sessionRevision;
 
   bool get isEmpty => items.isEmpty;
