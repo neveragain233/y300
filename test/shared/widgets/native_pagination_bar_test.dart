@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
 
@@ -77,6 +78,18 @@ void main() {
       greaterThan(tester.getTopLeft(find.byKey(_previousKey)).dy),
     );
   });
+
+  testWidgets('replaces loading spinner with text in E-ink mode', (
+    tester,
+  ) async {
+    await _pumpPagination(tester, isLoading: true, eInk: true);
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(NativePaginationBar)),
+    );
+    expect(find.text(l10n.threadDetailPageLoading), findsOneWidget);
+  });
 }
 
 TextButton _button(WidgetTester tester, Key key) => tester.widget<TextButton>(
@@ -88,6 +101,7 @@ Future<void> _pumpPagination(
   bool canLoadPrevious = true,
   bool hasMore = true,
   bool isLoading = false,
+  bool eInk = false,
   VoidCallback? onLoadPrevious,
   VoidCallback? onLoadNext,
   ValueChanged<int>? onSelectPage,
@@ -95,40 +109,42 @@ Future<void> _pumpPagination(
   double textScale = 1,
 }) => tester.pumpWidget(
   LocalizedTestApp(
-    home: Scaffold(
-      body: Builder(
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: Center(
-              child: SizedBox(
-                width: width,
-                child: NativePaginationBar(
-                  currentPage: 2,
-                  lastPage: 4,
-                  hasMore: hasMore,
-                  canLoadPrevious: canLoadPrevious,
-                  isLoading: isLoading,
-                  onLoadPrevious: onLoadPrevious ?? () {},
-                  onLoadNext: onLoadNext ?? () {},
-                  onSelectPage: onSelectPage ?? (_) {},
-                  previousLabel: l10n.commonPreviousPage,
-                  currentLabel: l10n.commonPage(2),
-                  nextLabel: hasMore
-                      ? l10n.commonNextPage
-                      : l10n.forumDisplayNoMore,
-                  previousButtonKey: _previousKey,
-                  currentPageButtonKey: _currentKey,
-                  nextButtonKey: _nextKey,
-                  menuKeyPrefix: 'test-pagination',
+    home: EInkModeScope(
+      enabled: eInk,
+      child: Scaffold(
+        body: Builder(
+          builder: (context) {
+            final l10n = AppLocalizations.of(context);
+            return MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(textScale)),
+              child: Center(
+                child: SizedBox(
+                  width: width,
+                  child: NativePaginationBar(
+                    currentPage: 2,
+                    lastPage: 4,
+                    hasMore: hasMore,
+                    canLoadPrevious: canLoadPrevious,
+                    isLoading: isLoading,
+                    onLoadPrevious: onLoadPrevious ?? () {},
+                    onLoadNext: onLoadNext ?? () {},
+                    onSelectPage: onSelectPage ?? (_) {},
+                    previousLabel: l10n.commonPreviousPage,
+                    currentLabel: l10n.commonPage(2),
+                    nextLabel: hasMore
+                        ? l10n.commonNextPage
+                        : l10n.forumDisplayNoMore,
+                    previousButtonKey: _previousKey,
+                    currentPageButtonKey: _currentKey,
+                    nextButtonKey: _nextKey,
+                    menuKeyPrefix: 'test-pagination',
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     ),
   ),

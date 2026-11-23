@@ -6,12 +6,16 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/theme/app_system_ui.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
+import 'package:y300/shared/widgets/app_glass_fab.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
+import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
 
@@ -382,10 +386,12 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     final detailPalette = const UnifiedDetailPaletteResolver().resolve(
       Theme.of(context),
     );
+    final eInk = EInkModeScope.of(context);
     final headerHasCover = header == null
         ? opening && _page.initialHasCover
         : hasUnifiedDetailCover(header);
-    final expandedAppBarForeground = headerHasCover
+    final showCoverBackground = headerHasCover && !eInk;
+    final expandedAppBarForeground = showCoverBackground
         ? detailPalette.onHeader
         : detailPalette.collapsedAppBarForeground;
 
@@ -394,6 +400,8 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       workId: _page.workId,
       keyPrefix: 'unified-detail-chapter',
       controlsInList: true,
+      pinControls: true,
+      pinnedTopOffset: topInset + kToolbarHeight,
       currentId: state.chapters
           .where((chapter) => chapter.progressInfo?.isCurrent == true)
           .firstOrNull
@@ -558,7 +566,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
               return AppBar(
                 leading: adaptiveDetailBackButton(context),
                 systemOverlayStyle: AppSystemUi.onSurfaces(
-                  top: headerHasCover && progress < 0.5
+                  top: showCoverBackground && progress < 0.5
                       ? Colors.black
                       : detailPalette.pageBackground,
                   bottom: detailPalette.pageBackground,
@@ -699,43 +707,73 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
             },
           ),
         ),
-        body: RefreshIndicator(
-          // 从屏幕顶部出现刷新指示器。
-          edgeOffset: 0,
-          displacement: 28,
-          elevation: 0,
-          onRefresh: _refreshAndShowFeedback,
-          // 角标避让底部“继续阅读”按钮。
-          child: EInkScrollPager(
-            controller: _scrollController,
-            edgeTapAllowed: true,
-            cornerPadding: const EdgeInsets.only(right: 12, bottom: 88),
-            child: chapterList,
-          ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: header == null
-              ? null
-              : () async {
-                  final target = await _page.adapter.getReaderRouteTarget(
-                    workId: _page.workId,
-                    preferContinue: true,
-                  );
-                  if (!context.mounted || target == null) {
-                    return;
-                  }
-                  final handler = _page.onContinue ?? _page.onOpenReader;
-                  await handler(context, target);
-                  if (!context.mounted) {
-                    return;
-                  }
-                  await _controller.reload();
-                  if (mounted) {
-                    setState(() {});
-                  }
-                },
-          icon: const Icon(Icons.play_arrow),
-          label: Text(l10n.libraryDetailContinue),
+        body: Builder(
+          builder: (context) {
+            final mediaPadding = MediaQuery.paddingOf(context);
+            final fabBottomInset = mainShellFabBottomInset(context);
+            final fabBottom = 16 + fabBottomInset;
+            final showFab = MediaQuery.viewInsetsOf(context).bottom == 0;
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: RefreshIndicator(
+                    // 从屏幕顶部出现刷新指示器。
+                    edgeOffset: 0,
+                    displacement: 28,
+                    elevation: 0,
+                    onRefresh: _refreshAndShowFeedback,
+                    // 角标避让底部“继续阅读”按钮。
+                    child: EInkScrollPager(
+                      controller: _scrollController,
+                      edgeTapAllowed: true,
+                      cornerPadding: EdgeInsets.only(
+                        right: 12,
+                        bottom:
+                            88 +
+                            math.max(0.0, fabBottomInset - mediaPadding.bottom),
+                      ),
+                      child: chapterList,
+                    ),
+                  ),
+                ),
+                if (showFab)
+                  Positioned(
+                    right: 16 + mediaPadding.right,
+                    bottom: fabBottom,
+                    child: TransientFeedbackObstacle(
+                      bottom: 72 + fabBottomInset,
+                      child: AppGlassFloatingActionButton(
+                        buttonKey: const Key('unified-detail-continue-fab'),
+                        onPressed: header == null
+                            ? null
+                            : () async {
+                                final target = await _page.adapter
+                                    .getReaderRouteTarget(
+                                      workId: _page.workId,
+                                      preferContinue: true,
+                                    );
+                                if (!context.mounted || target == null) {
+                                  return;
+                                }
+                                final handler =
+                                    _page.onContinue ?? _page.onOpenReader;
+                                await handler(context, target);
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                await _controller.reload();
+                                if (mounted) {
+                                  setState(() {});
+                                }
+                              },
+                        icon: Icons.play_arrow,
+                        label: l10n.libraryDetailContinue,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

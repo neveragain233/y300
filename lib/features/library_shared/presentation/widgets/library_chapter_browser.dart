@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/controllers/chapter_search_controller.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader_panel_theme.dart';
@@ -39,6 +41,8 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
     this.normalizeTexts,
     this.topObstruction = 0,
     this.controlsInList = false,
+    this.pinControls = false,
+    this.pinnedTopOffset = 0,
   });
 
   final String workId;
@@ -62,6 +66,8 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
   final ChapterSearchTextNormalizer? normalizeTexts;
   final double topObstruction;
   final bool controlsInList;
+  final bool pinControls;
+  final double pinnedTopOffset;
 
   static double controlsHeight(BuildContext context) =>
       math.max(48, MediaQuery.textScalerOf(context).scale(16) * 1.5 + 20) + 56;
@@ -254,98 +260,137 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
     final l10n = AppLocalizations.of(context);
     final results = _search.results;
     final prefix = widget.keyPrefix;
+    Widget buildControlsBody(
+      BuildContext context, {
+      required bool compact,
+      required bool overlapsContent,
+    }) {
+      final theme = Theme.of(context);
+      final scheme = theme.colorScheme;
+      final eInk = EInkModeScope.of(context);
+      final isPinned = widget.controlsInList && widget.pinControls;
+      final backdrop = isPinned
+          ? theme.scaffoldBackgroundColor
+          : scheme.surface;
+      final dividerColor = eInk
+          ? scheme.outlineVariant
+          : scheme.outlineVariant.withValues(alpha: 0.5);
+      return Material(
+        color: backdrop,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: isPinned && overlapsContent
+                ? Border(bottom: BorderSide(color: dividerColor))
+                : null,
+            boxShadow: isPinned && overlapsContent && !eInk
+                ? [
+                    BoxShadow(
+                      color: scheme.shadow.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: SizedBox(
+                  height: LibraryChapterBrowser.controlsHeight(context) - 56,
+                  child: AppTextInput(
+                    key: widget.searchFieldKey ?? Key('$prefix-search-field'),
+                    controller: _text,
+                    focusNode: _focus,
+                    variant: AppTextInputVariant.pill,
+                    textInputAction: TextInputAction.search,
+                    hintText: l10n.libraryChapterSearchHint,
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _text.text.isNotEmpty
+                        ? IconButton(
+                            key: Key('$prefix-search-clear'),
+                            tooltip: l10n.commonClear,
+                            onPressed: _clear,
+                            icon: const Icon(Icons.close, size: 20),
+                          )
+                        : _recentButton(l10n),
+                    onChanged: _changeQuery,
+                    onSubmitted: (_) => _recordSearch(),
+                  ),
+                ),
+              ),
+              if (!compact)
+                SizedBox(
+                  height: 48,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          l10n.libraryChapterSearchCount(results.length),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        key: Key('$prefix-first'),
+                        tooltip: l10n.libraryChapterLocateFirst,
+                        onPressed: results.isEmpty
+                            ? null
+                            : () {
+                                _focus.unfocus();
+                                _jumpAfterLayout(() => _listStart);
+                              },
+                        icon: const Icon(Icons.first_page),
+                      ),
+                      IconButton(
+                        key: Key('$prefix-current'),
+                        tooltip: l10n.libraryChapterLocateCurrent,
+                        onPressed:
+                            widget.entries.any(
+                              (entry) => entry.id == widget.currentId,
+                            )
+                            ? () => _locate(widget.currentId)
+                            : null,
+                        icon: const Icon(Icons.my_location),
+                      ),
+                      IconButton(
+                        key: Key('$prefix-last'),
+                        tooltip: l10n.libraryChapterLocateLast,
+                        onPressed: results.isEmpty
+                            ? null
+                            : () {
+                                _focus.unfocus();
+                                _jumpAfterLayout(
+                                  () =>
+                                      _listStart +
+                                      (results.length - 1) * widget.itemExtent,
+                                );
+                              },
+                        icon: const Icon(Icons.last_page),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
     PreferredSizeWidget buildControls({bool compact = false}) => PreferredSize(
       preferredSize: Size.fromHeight(
         LibraryChapterBrowser.controlsHeight(context) - (compact ? 48 : 0),
       ),
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: SizedBox(
-                height: LibraryChapterBrowser.controlsHeight(context) - 56,
-                child: AppTextInput(
-                  key: widget.searchFieldKey ?? Key('$prefix-search-field'),
-                  controller: _text,
-                  focusNode: _focus,
-                  textInputAction: TextInputAction.search,
-                  hintText: l10n.libraryChapterSearchHint,
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: _text.text.isNotEmpty
-                      ? IconButton(
-                          key: Key('$prefix-search-clear'),
-                          tooltip: l10n.commonClear,
-                          onPressed: _clear,
-                          icon: const Icon(Icons.close, size: 20),
-                        )
-                      : _recentButton(l10n),
-                  onChanged: _changeQuery,
-                  onSubmitted: (_) => _recordSearch(),
-                ),
-              ),
-            ),
-            if (!compact)
-              SizedBox(
-                height: 48,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        l10n.libraryChapterSearchCount(results.length),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      key: Key('$prefix-first'),
-                      tooltip: l10n.libraryChapterLocateFirst,
-                      onPressed: results.isEmpty
-                          ? null
-                          : () {
-                              _focus.unfocus();
-                              _jumpAfterLayout(() => _listStart);
-                            },
-                      icon: const Icon(Icons.first_page),
-                    ),
-                    IconButton(
-                      key: Key('$prefix-current'),
-                      tooltip: l10n.libraryChapterLocateCurrent,
-                      onPressed:
-                          widget.entries.any(
-                            (entry) => entry.id == widget.currentId,
-                          )
-                          ? () => _locate(widget.currentId)
-                          : null,
-                      icon: const Icon(Icons.my_location),
-                    ),
-                    IconButton(
-                      key: Key('$prefix-last'),
-                      tooltip: l10n.libraryChapterLocateLast,
-                      onPressed: results.isEmpty
-                          ? null
-                          : () {
-                              _focus.unfocus();
-                              _jumpAfterLayout(
-                                () =>
-                                    _listStart +
-                                    (results.length - 1) * widget.itemExtent,
-                              );
-                            },
-                      icon: const Icon(Icons.last_page),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ),
-              ),
-          ],
-        ),
+      child: buildControlsBody(
+        context,
+        compact: compact,
+        overlapsContent: false,
       ),
     );
     final controls = buildControls();
@@ -358,8 +403,25 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
           parent: ClampingScrollPhysics(),
         ),
         slivers: [
+          if (widget.controlsInList &&
+              widget.pinControls &&
+              widget.pinnedTopOffset > 0)
+            _TopBarOverlapSliver(height: widget.pinnedTopOffset),
           ...widget.leadingSlivers,
-          if (widget.controlsInList) SliverToBoxAdapter(child: controls),
+          if (widget.controlsInList && widget.pinControls)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _ChapterControlsHeaderDelegate(
+                height: controls.preferredSize.height,
+                builder: (context, overlapsContent) => buildControlsBody(
+                  context,
+                  compact: false,
+                  overlapsContent: overlapsContent,
+                ),
+              ),
+            )
+          else if (widget.controlsInList)
+            SliverToBoxAdapter(child: controls),
           SliverLayoutBuilder(
             builder: (context, constraints) {
               _listStart = constraints.precedingScrollExtent;
@@ -406,4 +468,89 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
       },
     );
   }
+}
+
+class _ChapterControlsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _ChapterControlsHeaderDelegate({
+    required this.height,
+    required this.builder,
+  });
+
+  final double height;
+  final Widget Function(BuildContext context, bool overlapsContent) builder;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox(
+      height: height,
+      child: builder(context, overlapsContent || shrinkOffset > 0),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _ChapterControlsHeaderDelegate oldDelegate) =>
+      true;
+}
+
+/// 在 extendBodyBehindAppBar 页面里把后续 pinned sliver 推到顶栏之下，
+/// 同时不占用额外滚动高度，避免顶部出现空白。
+class _TopBarOverlapSliver extends LeafRenderObjectWidget {
+  const _TopBarOverlapSliver({required this.height});
+
+  final double height;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderTopBarOverlapSliver(height);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderTopBarOverlapSliver renderObject,
+  ) {
+    renderObject.height = height;
+  }
+}
+
+class _RenderTopBarOverlapSliver extends RenderSliver {
+  _RenderTopBarOverlapSliver(this._height);
+
+  double _height;
+  set height(double value) {
+    if (_height == value) return;
+    _height = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final extent = math.min(_height, constraints.remainingPaintExtent);
+    geometry = SliverGeometry(
+      scrollExtent: 0,
+      layoutExtent: 0,
+      paintExtent: extent,
+      maxPaintExtent: _height,
+      hitTestExtent: 0,
+    );
+  }
+
+  @override
+  bool hitTest(
+    SliverHitTestResult result, {
+    required double mainAxisPosition,
+    required double crossAxisPosition,
+  }) => false;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {}
 }

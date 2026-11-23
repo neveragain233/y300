@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:y300/app/theme/app_theme_semantics.dart';
+import 'package:y300/core/motion/app_motion.dart';
+import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/native_page_dropdown_button.dart';
 
 /// Shared page navigation for native lists and detail surfaces.
@@ -77,17 +79,40 @@ class NativePaginationBar extends StatelessWidget {
               onSelected: onSelectPage,
             ),
             if (isLoading && loadingNextChild == null)
-              const SizedBox(
-                width: 72,
-                height: 34,
-                child: Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              )
+              AppMotion.reduceMotion(context)
+                  ? SizedBox(
+                      height: 34,
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              AppLocalizations.of(context)
+                                  .threadDetailPageLoading,
+                              key: const Key('native-pagination-loading-text'),
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox(
+                      width: 72,
+                      height: 34,
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    )
             else
               NativePaginationButton(
                 key: nextButtonKey,

@@ -30,6 +30,23 @@ class ThreadLoadMoreSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (isLoadingMore) {
+      if (AppMotion.reduceMotion(context)) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                l10n.threadDetailPageLoading,
+                key: const Key('thread-detail-pagination-loading-text'),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(child: CircularProgressIndicator()),

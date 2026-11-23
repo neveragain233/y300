@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:y300/app/content_rendering/native_forum_html_render_theme_factory.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/media/device_memory_profile.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'

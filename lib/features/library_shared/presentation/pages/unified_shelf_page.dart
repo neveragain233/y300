@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
-import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_category_name_dialog.dart';
-import 'package:y300/shared/widgets/app_glass_surface.dart';
+import 'package:y300/shared/widgets/app_glass_fab.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -628,68 +627,21 @@ class _UnifiedShelfPageState extends ConsumerState<UnifiedShelfPage> {
 
   Widget _buildRecentReadingButton() {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final eInk = EInkModeScope.of(context);
     final enabled =
         _recentReadingTarget != null &&
         !_recentReadingBusy &&
         _recentReadingVisible;
-    final glassActive =
-        AppGlassSurface.levelOf(context).enabled &&
-        !eInk &&
-        !MediaQuery.highContrastOf(context);
-    final foreground = enabled
-        ? scheme.onSurface
-        : scheme.onSurface.withValues(alpha: 0.38);
     final tooltip = enabled
         ? l10n.libraryShelfContinueReading
         : l10n.libraryShelfNoRecentReading;
     return TransientFeedbackObstacle(
       bottom: 72,
-      child: glassActive
-          ? FloatingActionButton(
-              key: const Key('unified-shelf-recent-reading'),
-              onPressed: enabled ? _openRecentReading : null,
-              tooltip: tooltip,
-              backgroundColor: Colors.transparent,
-              foregroundColor: foreground,
-              elevation: 0,
-              highlightElevation: 0,
-              focusElevation: 0,
-              hoverElevation: 0,
-              disabledElevation: 0,
-              shape: const CircleBorder(),
-              child: AppGlassSurface(
-                borderRadius: 28,
-                child: SizedBox.square(
-                  dimension: 56,
-                  child: Icon(Icons.play_arrow, color: foreground),
-                ),
-              ),
-            )
-          : FloatingActionButton(
-              key: const Key('unified-shelf-recent-reading'),
-              onPressed: enabled ? _openRecentReading : null,
-              tooltip: tooltip,
-              backgroundColor: eInk
-                  ? scheme.surface
-                  : scheme.surfaceContainerHigh,
-              foregroundColor: foreground,
-              elevation: eInk ? 0 : null,
-              highlightElevation: eInk ? 0 : null,
-              focusElevation: eInk ? 0 : null,
-              hoverElevation: eInk ? 0 : null,
-              disabledElevation: eInk ? 0 : null,
-              shape: eInk
-                  ? CircleBorder(
-                      side: BorderSide(
-                        color: AppTheme.eInkBorderColor(scheme.brightness),
-                      ),
-                    )
-                  : const CircleBorder(),
-              child: const Icon(Icons.play_arrow),
-            ),
+      child: AppGlassFloatingActionButton(
+        buttonKey: const Key('unified-shelf-recent-reading'),
+        onPressed: enabled ? _openRecentReading : null,
+        tooltip: tooltip,
+        icon: Icons.play_arrow,
+      ),
     );
   }
 

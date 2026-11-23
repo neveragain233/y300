@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/media/cover_focal_point.dart';
 import 'package:y300/features/cache/presentation/widgets/library_cached_image.dart';
 import 'package:y300/features/library_shared/domain/models/library_models.dart';
@@ -62,6 +63,7 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasCover = hasUnifiedDetailCover(header);
+    final showCoverBackground = hasCover && !EInkModeScope.of(context);
     final title = LibraryShelfTextResolver.workTitle(
       AppLocalizations.of(context),
       moduleKey,
@@ -69,7 +71,7 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
       header.workId,
     );
     final asset = header.coverAsset;
-    final coverProvider = !hasCover || asset == null
+    final coverProvider = !showCoverBackground || asset == null
         ? null
         : LibraryCoverProviderResolver.resolve(
             asset: asset,
@@ -95,6 +97,7 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
               imageReferer: imageReferer,
               coverProvider: coverProvider,
               hasCover: hasCover,
+              showCoverBackground: showCoverBackground,
             ),
             _HeaderActionsRow(
               header: header,
@@ -105,7 +108,7 @@ class UnifiedDetailHeaderSection extends ConsumerWidget {
             ),
           ],
         ),
-        if (hasCover)
+        if (showCoverBackground)
           Positioned(
             left: 0,
             right: 0,
@@ -142,12 +145,14 @@ class UnifiedDetailOpeningHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showCoverBackground = hasCover && !EInkModeScope.of(context);
     return hasCover
         ? _HeroInfoSection(
             title: title,
             moduleKey: moduleKey,
             topInset: topInset,
             palette: palette,
+            showCoverBackground: showCoverBackground,
           )
         : _PlainHeroInfoSection(
             title: title,
@@ -169,6 +174,7 @@ class _HeroInfoSection extends StatelessWidget {
     this.imageReferer,
     this.coverProvider,
     this.hasCover = true,
+    this.showCoverBackground = true,
   });
 
   // Hero 区高度（含状态栏与 AppBar 覆盖区）
@@ -188,12 +194,14 @@ class _HeroInfoSection extends StatelessWidget {
   final String? imageReferer;
   final LibraryCoverImageProvider? coverProvider;
   final bool hasCover;
+  final bool showCoverBackground;
 
   @override
   Widget build(BuildContext context) {
     final header = this.header;
     final author = _nonEmpty(header?.author);
     final group = _nonEmpty(header?.translationGroup);
+    final renderCoverBackground = hasCover && showCoverBackground;
 
     return SizedBox(
       key: const Key('unified-detail-cover-header'),
@@ -201,7 +209,7 @@ class _HeroInfoSection extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (hasCover)
+          if (renderCoverBackground)
             _DetailHeaderBackground(
               coverImageUrl: header?.coverImageUrl,
               customCoverImageUrl: header?.customCoverImageUrl,
@@ -275,7 +283,7 @@ class _HeroInfoSection extends StatelessWidget {
                       translationGroup: group,
                       publisherName: _nonEmpty(header?.publisherName),
                       publisherId: _nonEmpty(header?.publisherId),
-                      foregroundColor: hasCover
+                      foregroundColor: renderCoverBackground
                           ? palette.heroInfoForeground
                           : Theme.of(context).colorScheme.onSurface,
                     ),
@@ -284,7 +292,7 @@ class _HeroInfoSection extends StatelessWidget {
               ],
             ),
           ),
-          if (hasCover)
+          if (renderCoverBackground)
             // 最终的边界覆盖由父级 seam bridge 完成；这里仅保证 hero
             // 底部最后一行像素已经落到页面背景色。
             Align(

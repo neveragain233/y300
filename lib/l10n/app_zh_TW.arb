@@ -1362,6 +1362,7 @@
   "threadControlsInvalidPage": "請輸入有效頁碼",
   "threadDetailTitle": "帖子詳情",
   "threadDetailLoading": "正在讀取帖子",
+  "threadDetailPageLoading": "載入中…",
   "threadDetailRefresh": "重新整理帖子詳情",
   "threadDetailOnlyAuthor": "只看該作者",
   "threadDetailAllPosts": "顯示全部樓層",

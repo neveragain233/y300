@@ -1,5 +1,7 @@
 import 'package:y300/features/comic/presentation/widgets/comic_comment_scroll_support.dart';
+
 import 'dart:async';
+
 import 'package:y300/features/comic/presentation/comic_comment_presentation_store.dart';
 
 import 'package:flutter/material.dart';
@@ -356,7 +358,10 @@ class ComicCommentTailSurface extends ChangeNotifier
       sourceTid: _session.key.sourceTid.trim(),
       imageReferer: _imageReferer,
       brightness: Theme.of(context).brightness,
-      palette: palette.card.toARGB32(),
+      background: palette.background.toARGB32(),
+      card: palette.card.toARGB32(),
+      bodyText: palette.bodyText.toARGB32(),
+      accent: palette.accent.toARGB32(),
     );
     if (_renderContextIdentity != identity || _renderContext == null) {
       // Capture this generation's store. Old image callbacks must not resolve

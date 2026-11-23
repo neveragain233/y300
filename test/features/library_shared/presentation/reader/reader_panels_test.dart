@@ -8,6 +8,7 @@ import 'package:y300/app/theme/app_theme_family.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
+import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/shared/widgets/app_glass_surface.dart';
 
 import '../../../../test_support/localized_test_app.dart';
@@ -387,4 +388,49 @@ void main() {
       );
     },
   );
+
+  test('applyToReaderContentTheme drives ThreadDetailNativePalette across cross-brightness canvases', () {
+    final lightApp = AppTheme.build(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.light,
+    );
+    final darkApp = AppTheme.build(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.dark,
+    );
+    final eInkLight = AppTheme.build(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.light,
+      eInkMode: true,
+    );
+
+    final blackOnLight = ReaderPanelPalette.fromCanvas(
+      canvasBackground: Colors.black,
+      baseTheme: lightApp,
+    ).applyToReaderContentTheme(lightApp);
+    final blackNative = ThreadDetailNativePalette.resolve(blackOnLight);
+    expect(blackOnLight.brightness, Brightness.dark);
+    expect(blackNative.background, Colors.black);
+    expect(blackNative.card.computeLuminance(), lessThan(0.1));
+    expect(blackNative.bodyText.computeLuminance(), greaterThan(0.7));
+
+    final whiteOnDark = ReaderPanelPalette.fromCanvas(
+      canvasBackground: Colors.white,
+      baseTheme: darkApp,
+    ).applyToReaderContentTheme(darkApp);
+    final whiteNative = ThreadDetailNativePalette.resolve(whiteOnDark);
+    expect(whiteOnDark.brightness, Brightness.light);
+    expect(whiteNative.background, Colors.white);
+    expect(whiteNative.card.computeLuminance(), greaterThan(0.8));
+    expect(whiteNative.bodyText.computeLuminance(), lessThan(0.2));
+
+    final eInkBlack = ReaderPanelPalette.fromCanvas(
+      canvasBackground: Colors.black,
+      baseTheme: eInkLight,
+    ).applyToReaderContentTheme(eInkLight);
+    final eInkNative = ThreadDetailNativePalette.resolve(eInkBlack);
+    expect(eInkNative.background, Colors.black);
+    expect(eInkNative.bodyText, Colors.white);
+    expect(eInkNative.accent, Colors.white);
+  });
 }

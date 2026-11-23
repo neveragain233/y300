@@ -448,4 +448,130 @@ void _headerMetadataCases() {
     expect(find.text('移除标签'), findsNothing);
     expect(find.text('配置目录'), findsNothing);
   });
+
+  testWidgets(
+    'detail continue FAB keeps label, aligns with shell fabBottom, and respects E-ink elastic boundary',
+    (tester) async {
+      final l10n = AppLocalizationsZh();
+      var eInk = false;
+      late StateSetter setMode;
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            setMode = setState;
+            return _scopedApp(
+              home: EInkModeScope(
+                enabled: eInk,
+                child: MainShellBottomInset(
+                  bottom: 0,
+                  fabBottom: 88,
+                  child: UnifiedDetailPage(
+                    adapter: _FakeDetailAdapter(module: LibraryModuleKey.comic),
+                    workId: 'work-1',
+                    onOpenReader: (context, target) async {},
+                    onOpenThread: (context, target) async {},
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final fabFinder = find.byKey(const Key('unified-detail-continue-fab'));
+      expect(fabFinder, findsOneWidget);
+      expect(
+        find.descendant(
+          of: fabFinder,
+          matching: find.text(l10n.libraryDetailContinue),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(of: fabFinder, matching: find.byType(ElasticPress)),
+        findsOneWidget,
+      );
+      final screenHeight = tester.getSize(find.byType(Scaffold)).height;
+      final fabRect = tester.getRect(fabFinder);
+      expect(screenHeight - fabRect.bottom, closeTo(104, 1));
+
+      setMode(() => eInk = true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.ancestor(of: fabFinder, matching: find.byType(ElasticPress)),
+        findsNothing,
+      );
+      final eInkFab = tester.widget<FloatingActionButton>(fabFinder);
+      expect(
+        eInkFab.shape,
+        StadiumBorder(
+          side: BorderSide(
+            color: AppTheme.eInkBorderColor(Brightness.light),
+            width: 1,
+          ),
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'detail catalog search pins under AppBar on scroll and keeps visible E-ink pill border',
+    (tester) async {
+      var eInk = false;
+      late StateSetter setMode;
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            setMode = setState;
+            return _scopedApp(
+              home: EInkModeScope(
+                enabled: eInk,
+                child: UnifiedDetailPage(
+                  adapter: _FakeDetailAdapter(
+                    module: LibraryModuleKey.comic,
+                    includeSecondChapter: true,
+                  ),
+                  workId: 'work-1',
+                  onOpenReader: (context, target) async {},
+                  onOpenThread: (context, target) async {},
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      final searchField = find.byKey(
+        const Key('unified-detail-chapter-search-field'),
+      );
+      expect(searchField, findsOneWidget);
+      final appBarBottom = tester.getBottomLeft(find.byType(AppBar)).dy;
+      final searchTop = tester.getTopLeft(searchField).dy;
+      expect(searchTop, greaterThanOrEqualTo(appBarBottom));
+      expect(searchTop, lessThan(appBarBottom + 24));
+
+      setMode(() => eInk = true);
+      await tester.pumpAndSettle();
+
+      final pillMaterial = tester.widget<Material>(
+        find.descendant(of: searchField, matching: find.byType(Material)).first,
+      );
+      expect(
+        pillMaterial.shape,
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: AppTheme.eInkBorderColor(Brightness.light),
+            width: 1,
+          ),
+        ),
+      );
+    },
+  );
 }

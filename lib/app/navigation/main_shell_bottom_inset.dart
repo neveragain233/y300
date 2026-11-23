@@ -10,10 +10,12 @@ class MainShellBottomInset extends InheritedWidget {
   const MainShellBottomInset({
     super.key,
     required this.bottom,
+    this.fabBottom,
     required super.child,
   });
 
   final double bottom;
+  final double? fabBottom;
 
   static double of(BuildContext context) =>
       context
@@ -21,9 +23,15 @@ class MainShellBottomInset extends InheritedWidget {
           ?.bottom ??
       0;
 
+  static double fabBottomOf(BuildContext context) {
+    final widget = context
+        .dependOnInheritedWidgetOfExactType<MainShellBottomInset>();
+    return widget?.fabBottom ?? widget?.bottom ?? 0;
+  }
+
   @override
   bool updateShouldNotify(MainShellBottomInset oldWidget) =>
-      oldWidget.bottom != bottom;
+      oldWidget.bottom != bottom || oldWidget.fabBottom != fabBottom;
 }
 
 /// 滚动内容尾部应为覆盖层预留的空间。
@@ -34,5 +42,13 @@ double mainShellBottomScrollInset(BuildContext context) {
   return math.max(
     MediaQuery.paddingOf(context).bottom,
     MainShellBottomInset.of(context),
+  );
+}
+
+/// 悬浮操作按钮距屏幕底部的基准偏移，使详情页按钮与书架保持同一高度。
+double mainShellFabBottomInset(BuildContext context) {
+  return math.max(
+    MediaQuery.paddingOf(context).bottom,
+    MainShellBottomInset.fabBottomOf(context),
   );
 }

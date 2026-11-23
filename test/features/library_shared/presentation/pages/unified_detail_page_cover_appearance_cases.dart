@@ -555,4 +555,47 @@ void _coverAppearanceCases() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'UnifiedDetailPage suppresses cover background in E-ink mode while keeping cover thumbnail',
+    (tester) async {
+      final adapter = _CoverEditableDetailAdapter(hasSourceCover: true);
+      await tester.pumpWidget(
+        _scopedApp(
+          home: EInkModeScope(
+            enabled: true,
+            child: UnifiedDetailPage(
+              adapter: adapter,
+              workId: 'work-1',
+              onOpenReader: (context, target) async {},
+              onOpenThread: (context, target) async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('unified-detail-header-gradient')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('unified-detail-header-seam-bridge')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('unified-detail-plain-header')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('unified-detail-typographic-cover')),
+        findsNothing,
+      );
+      expect(find.byType(ShelfCoverImage), findsOneWidget);
+      expect(
+        tester.widget<AppBar>(find.byType(AppBar)).foregroundColor,
+        Colors.black,
+      );
+    },
+  );
 }

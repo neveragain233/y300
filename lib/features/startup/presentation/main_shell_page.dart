@@ -251,6 +251,11 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                 final sourceOverlayInset = keepSourceImmersiveInset
                     ? chromeHeight
                     : 0.0;
+                final fabBottomInset = useRail
+                    ? 0.0
+                    : (isImmersive
+                          ? chromeHeight
+                          : media.padding.bottom + 72.0);
                 final feedbackBottomOverlap = showImmersiveChrome
                     ? chromeHeight
                     : 0.0;
@@ -275,6 +280,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                             ),
                             child: MainShellBottomInset(
                               bottom: sourceOverlayInset,
+                              fabBottom: fabBottomInset,
                               child: content,
                             ),
                           ),

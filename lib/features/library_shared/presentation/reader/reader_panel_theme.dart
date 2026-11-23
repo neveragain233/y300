@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/theme/app_brand_colors.dart';
 import 'package:y300/app/theme/app_component_theme_builder.dart';
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/app/theme/app_theme_semantics.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 
 /// 跟随阅读画布派生出的面板调色板。
@@ -44,10 +47,21 @@ final class ReaderPanelPalette {
   }) {
     final brightness = ThemeData.estimateBrightnessForColor(canvasBackground);
     final isDark = brightness == Brightness.dark;
+    final eInkFlat = baseTheme.colorScheme.shadow == Colors.transparent;
     final Color panelSurface;
     final Color cardSurface;
     final Color controlSurface;
-    if (isDark) {
+    if (eInkFlat) {
+      if (isDark) {
+        panelSurface = const Color(0xFF141414);
+        cardSurface = const Color(0xFF1E1E1E);
+        controlSurface = const Color(0xFF282828);
+      } else {
+        panelSurface = const Color(0xFFF5F5F5);
+        cardSurface = const Color(0xFFFFFFFF);
+        controlSurface = const Color(0xFFE8E8E8);
+      }
+    } else if (isDark) {
       panelSurface = Color.lerp(canvasBackground, Colors.white, 0.09)!;
       cardSurface = Color.lerp(canvasBackground, Colors.white, 0.15)!;
       controlSurface = Color.lerp(canvasBackground, Colors.white, 0.22)!;
@@ -72,18 +86,26 @@ final class ReaderPanelPalette {
 
     final resolvedForeground =
         foreground ??
-        (isDark ? const Color(0xFFF2F2F5) : const Color(0xFF1F1F1F));
+        (eInkFlat
+            ? (isDark ? Colors.white : Colors.black)
+            : (isDark ? const Color(0xFFF2F2F5) : const Color(0xFF1F1F1F)));
     final resolvedMuted =
         mutedForeground ??
-        (isDark ? const Color(0xFFA8A8B2) : const Color(0xFF575757));
-    final resolvedAccent = _resolveAccent(
-      accent ?? baseTheme.colorScheme.primary,
-      brightness: brightness,
-    );
-    final resolvedOnAccent =
-        ThemeData.estimateBrightnessForColor(resolvedAccent) == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF1A1A1A);
+        (eInkFlat
+            ? (isDark ? const Color(0xFFD0D0D0) : const Color(0xFF2E2E2E))
+            : (isDark ? const Color(0xFFA8A8B2) : const Color(0xFF575757)));
+    final resolvedAccent = eInkFlat
+        ? resolvedForeground
+        : _resolveAccent(
+            accent ?? baseTheme.colorScheme.primary,
+            brightness: brightness,
+          );
+    final resolvedOnAccent = eInkFlat
+        ? (isDark ? Colors.black : Colors.white)
+        : (ThemeData.estimateBrightnessForColor(resolvedAccent) ==
+                  Brightness.dark
+              ? Colors.white
+              : const Color(0xFF1A1A1A));
     final edgeBase = isDark ? Colors.white : const Color(0xFF1F1F1F);
 
     return ReaderPanelPalette(
@@ -96,8 +118,12 @@ final class ReaderPanelPalette {
       mutedForeground: resolvedMuted,
       accent: resolvedAccent,
       onAccent: resolvedOnAccent,
-      border: edgeBase.withValues(alpha: 0.14),
-      divider: edgeBase.withValues(alpha: 0.12),
+      border: eInkFlat
+          ? AppTheme.eInkBorderColor(brightness)
+          : edgeBase.withValues(alpha: 0.14),
+      divider: eInkFlat
+          ? (isDark ? const Color(0xFF6A6A6A) : const Color(0xFF9A9A9A))
+          : edgeBase.withValues(alpha: 0.12),
     );
   }
 
@@ -180,6 +206,23 @@ final class ReaderPanelPalette {
       bodyColor: foreground,
       displayColor: foreground,
     );
+    final baseExt = baseTheme.extension<Y300ThemeExtension>();
+    final rebuiltExt = _buildThemeExtension(
+      baseExt,
+      scheme: scheme,
+      background: panelSurface,
+      card: cardSurface,
+      elevatedCard: controlSurface,
+    );
+    final extensions =
+        List<ThemeExtension<dynamic>>.of(
+          baseTheme.extensions.values.where(
+            (ext) => ext is! Y300BrandColors && ext is! Y300ThemeExtension,
+          ),
+        )..addAll([
+          Y300BrandColors(accent: accent, onAccent: onAccent),
+          rebuiltExt,
+        ]);
     return baseTheme.copyWith(
       brightness: brightness,
       colorScheme: scheme,
@@ -196,6 +239,7 @@ final class ReaderPanelPalette {
         selectionColor: accent.withValues(alpha: 0.30),
         selectionHandleColor: accent,
       ),
+      extensions: extensions,
       listTileTheme: AppComponentThemeBuilder.listTileTheme(scheme),
       iconButtonTheme: AppComponentThemeBuilder.iconButtonTheme(scheme),
       dividerTheme: AppComponentThemeBuilder.dividerTheme(scheme),
@@ -214,6 +258,105 @@ final class ReaderPanelPalette {
       ),
       sliderTheme: AppComponentThemeBuilder.sliderTheme(scheme),
       snackBarTheme: AppComponentThemeBuilder.snackBarTheme(scheme),
+    );
+  }
+
+  /// 为嵌入阅读器画布的尾部内容（如漫画评论区）派生与画布一致的主题。
+  ThemeData applyToReaderContentTheme(ThemeData baseTheme) {
+    final panelTheme = applyToTheme(baseTheme);
+    final isDark = brightness == Brightness.dark;
+    final eInkFlat = baseTheme.colorScheme.shadow == Colors.transparent;
+    final contentCard = eInkFlat && !isDark ? Colors.white : panelSurface;
+    final contentScheme = panelTheme.colorScheme.copyWith(
+      surface: canvasBackground,
+      surfaceContainer: contentCard,
+    );
+    final baseExt = panelTheme.extension<Y300ThemeExtension>();
+    final contentExt = _buildThemeExtension(
+      baseExt,
+      scheme: contentScheme,
+      background: canvasBackground,
+      card: contentCard,
+      elevatedCard: cardSurface,
+    );
+    final extensions = List<ThemeExtension<dynamic>>.of(
+      panelTheme.extensions.values.where((ext) => ext is! Y300ThemeExtension),
+    )..add(contentExt);
+    return panelTheme.copyWith(
+      colorScheme: contentScheme,
+      scaffoldBackgroundColor: canvasBackground,
+      canvasColor: canvasBackground,
+      cardColor: contentCard,
+      extensions: extensions,
+    );
+  }
+
+  Y300ThemeExtension _buildThemeExtension(
+    Y300ThemeExtension? baseExt, {
+    required ColorScheme scheme,
+    required Color background,
+    required Color card,
+    required Color elevatedCard,
+  }) {
+    final isDark = brightness == Brightness.dark;
+    final native = _buildNativeContentColors(
+      scheme: scheme,
+      background: background,
+      card: card,
+      elevatedCard: elevatedCard,
+    );
+    if (baseExt != null) {
+      return baseExt.copyWith(usesDynamicColor: false, nativeContent: native);
+    }
+    return Y300ThemeExtension(
+      usesDynamicColor: false,
+      shelfCategoryBarBackground: card,
+      shelfCategorySelectedBackground: accent,
+      shelfCategorySelectedForeground: onAccent,
+      shelfCategoryDivider: divider,
+      readerChromeBackground: panelSurface,
+      readerChromeForeground: foreground,
+      readerProgressTrackBackground: controlSurface,
+      readerOverlayScrim: Colors.black.withValues(alpha: isDark ? 0.44 : 0.18),
+      contentHighlightBackground: accent.withValues(alpha: 0.24),
+      coverPlaceholderBackground: controlSurface,
+      nativeContent: native,
+    );
+  }
+
+  Y300NativeContentColors _buildNativeContentColors({
+    required ColorScheme scheme,
+    required Color background,
+    required Color card,
+    required Color elevatedCard,
+  }) {
+    final isDark = brightness == Brightness.dark;
+    return Y300NativeContentColors(
+      background: background,
+      card: card,
+      elevatedCard: elevatedCard,
+      metricBackground: controlSurface,
+      panelBackground: controlSurface.withValues(alpha: isDark ? 0.35 : 0.45),
+      accent: accent,
+      onAccent: onAccent,
+      title: foreground,
+      itemTitle: foreground,
+      author: accent,
+      body: foreground,
+      supportingText: mutedForeground,
+      muted: mutedForeground,
+      soft: mutedForeground.withValues(alpha: isDark ? 0.80 : 0.84),
+      neutralText: mutedForeground.withValues(alpha: isDark ? 0.80 : 0.84),
+      tertiaryText: mutedForeground.withValues(alpha: isDark ? 0.74 : 0.78),
+      disabled: mutedForeground.withValues(alpha: isDark ? 0.44 : 0.52),
+      stateLayer: accent.withValues(alpha: isDark ? 0.10 : 0.07),
+      subtleStateLayer: accent.withValues(alpha: isDark ? 0.10 : 0.06),
+      avatarBackground: scheme.secondaryContainer,
+      avatarForeground: scheme.onSecondaryContainer,
+      selectionBackground: scheme.secondaryContainer,
+      selectionForeground: scheme.onSecondaryContainer,
+      notificationBadgeBackground: scheme.secondaryContainer,
+      translucentSurface: card.withValues(alpha: 0.72),
     );
   }
 

@@ -6066,6 +6066,12 @@ abstract class AppLocalizations {
   /// **'正在读取帖子'**
   String get threadDetailLoading;
 
+  /// No description provided for @threadDetailPageLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中…'**
+  String get threadDetailPageLoading;
+
   /// No description provided for @threadDetailRefresh.
   ///
   /// In zh, this message translates to:

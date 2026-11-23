@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../test_support/localized_test_app.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/navigation_dock.dart' show ElasticPress;
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/features/library_shared/domain/contracts/detail_module_adapter.dart';
@@ -13,6 +16,7 @@ import 'package:y300/features/library_shared/domain/models/library_sort_models.d
 import 'package:y300/features/library_shared/domain/services/library_shelf_refresh_bus.dart';
 import 'package:y300/features/library_shared/presentation/pages/unified_detail_page.dart';
 import 'package:y300/shared/widgets/app_popup_menu.dart';
+import 'package:y300/shared/widgets/shelf/shelf_cover_image.dart';
 import 'package:y300/shared/widgets/shelf/typographic_library_cover.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/widgets/cover_focal_point_picker.dart';

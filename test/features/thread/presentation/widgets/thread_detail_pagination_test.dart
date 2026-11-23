@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_widgets.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/native_pagination_bar.dart';
@@ -56,6 +57,18 @@ void main() {
     expect(find.byKey(_previousKey), findsOneWidget);
     expect(find.byKey(_nextKey), findsOneWidget);
   });
+
+  testWidgets('replaces loading spinner with text in E-ink mode', (
+    tester,
+  ) async {
+    await _pump(tester, isLoadingMore: true, eInk: true);
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(ThreadLoadMoreSection)),
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text(l10n.threadDetailPageLoading), findsOneWidget);
+  });
 }
 
 NativePaginationButton _button(WidgetTester tester, Key key) =>
@@ -65,23 +78,28 @@ Future<void> _pump(
   WidgetTester tester, {
   bool canLoadPrevious = true,
   bool hasMore = true,
+  bool isLoadingMore = false,
+  bool eInk = false,
   VoidCallback? onLoadPreviousPage,
   VoidCallback? onLoadNextPage,
   String? failure,
 }) => tester.pumpWidget(
   LocalizedTestApp(
-    home: Scaffold(
-      body: Center(
-        child: ThreadLoadMoreSection(
-          hasMore: hasMore,
-          isLoadingMore: false,
-          currentPage: 2,
-          lastPage: 4,
-          canLoadPrevious: canLoadPrevious,
-          onLoadPreviousPage: onLoadPreviousPage ?? () {},
-          onLoadNextPage: onLoadNextPage ?? () {},
-          onLoadPageNumber: (_) {},
-          failure: failure,
+    home: EInkModeScope(
+      enabled: eInk,
+      child: Scaffold(
+        body: Center(
+          child: ThreadLoadMoreSection(
+            hasMore: hasMore,
+            isLoadingMore: isLoadingMore,
+            currentPage: 2,
+            lastPage: 4,
+            canLoadPrevious: canLoadPrevious,
+            onLoadPreviousPage: onLoadPreviousPage ?? () {},
+            onLoadNextPage: onLoadNextPage ?? () {},
+            onLoadPageNumber: (_) {},
+            failure: failure,
+          ),
         ),
       ),
     ),

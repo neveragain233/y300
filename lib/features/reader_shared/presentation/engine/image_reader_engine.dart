@@ -44,6 +44,7 @@ import 'package:y300/features/reader_shared/presentation/services/reader_image_s
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
 import 'package:y300/features/reader_shared/presentation/widgets/reader_thumbnail_strip.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_prism_theme.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 /// 通用图片阅读壳：垂直/横向模式、缩放、overlay 工具栏、进度滑块、页码浮层、
@@ -533,15 +534,22 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
                 mode: mode,
                 preferences: preferences,
                 engineContext: engineContext,
+                background: background,
                 hasPreviousChapter: chapterNav?.hasPrevious ?? false,
               ),
             ),
             if (actionSurface != null)
-              ReaderTailActionOverlay(
-                key: ValueKey(_tailActionController.identity),
-                controller: _tailActionController,
-                surface: actionSurface,
-                menuVisible: _overlayController.isMenuVisible,
+              _wrapTailWithReaderTheme(
+                context,
+                background: background,
+                preferences: preferences,
+                mode: mode,
+                child: ReaderTailActionOverlay(
+                  key: ValueKey(_tailActionController.identity),
+                  controller: _tailActionController,
+                  surface: actionSurface,
+                  menuVisible: _overlayController.isMenuVisible,
+                ),
               ),
           ],
         ),
@@ -549,10 +557,40 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     );
   }
 
+  Widget _wrapTailWithReaderTheme(
+    BuildContext context, {
+    required Color background,
+    required ReaderPreferences preferences,
+    required ContinuousImageReaderMode mode,
+    required Widget child,
+  }) {
+    final effective = effectiveReaderBackgroundPreference(
+      preferences.background,
+      eInkMode: EInkModeScope.of(context),
+    );
+    final hasPagedCanvasOverride =
+        mode == ContinuousImageReaderMode.horizontal &&
+        _capability.pagedCanvasColor != null;
+    if (effective == ReaderBackgroundPreference.followTheme &&
+        !hasPagedCanvasOverride) {
+      return child;
+    }
+    final baseTheme = Theme.of(context);
+    final palette = ReaderPanelPalette.fromCanvas(
+      canvasBackground: background,
+      baseTheme: baseTheme,
+    );
+    return Theme(
+      data: palette.applyToReaderContentTheme(baseTheme),
+      child: AppPrismTheme(child: child),
+    );
+  }
+
   Widget _buildVertical(
     ReaderContent content,
     ReaderPreferences preferences,
     ReaderEngineContext engineContext, {
+    required Color background,
     required bool hasPreviousChapter,
   }) {
     _restoreVerticalViewportIfChanged(content);
@@ -575,7 +613,11 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     _scheduleVerticalPageSpacingCompensation(pageSpacing: pageSpacing);
     _latestItems = items;
     _syncVerticalItemAnchors(items);
-    final verticalTrailing = _buildVerticalTrailingSpec(engineContext);
+    final verticalTrailing = _buildVerticalTrailingSpec(
+      engineContext,
+      preferences: preferences,
+      background: background,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isCurrentVerticalSessionToken(session, scrollController)) {
         _verticalCompensation.syncPosition();
@@ -647,6 +689,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   Widget _buildPaged(
     ReaderContent content,
     ReaderPreferences preferences, {
+    required Color background,
     required bool hasPreviousChapter,
   }) {
     _deactivateVerticalSession();
@@ -697,7 +740,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       }(),
       horizontalTrailingBuilder: tail == null
           ? null
-          : (context) => _buildPagedTail(context, tail),
+          : (context) => _buildPagedTail(
+              context,
+              tail,
+              preferences: preferences,
+              background: background,
+            ),
       horizontalAdvanceBuilder: tail == null || !tail.hasAdvance
           ? null
           : (context) => _buildPagedAdvance(context, tail),
@@ -1089,8 +1137,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   }
 
   _ReaderVerticalTrailingSpec _buildVerticalTrailingSpec(
-    ReaderEngineContext engineContext,
-  ) {
+    ReaderEngineContext engineContext, {
+    required ReaderPreferences preferences,
+    required Color background,
+  }) {
     final tail = _tailSurface;
     final legacyTrailing = _capability.verticalTrailingBuilder(engineContext);
     final tailCount = tail?.verticalItemCount ?? 0;
@@ -1103,7 +1153,13 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
           tailCount + (hasActionBar ? 1 : 0) + (legacyTrailing == null ? 0 : 1),
       indexedBuilder: (context, index) {
         if (index < tailCount) {
-          return _buildVerticalTailItem(context, tail!, index);
+          return _buildVerticalTailItem(
+            context,
+            tail!,
+            index,
+            preferences: preferences,
+            background: background,
+          );
         }
         if (legacyTrailing != null && index == tailCount) {
           final trailing = legacyTrailing(context);
@@ -1126,17 +1182,28 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     );
   }
 
-  Widget _buildPagedTail(BuildContext context, ReaderTailSurface tail) {
+  Widget _buildPagedTail(
+    BuildContext context,
+    ReaderTailSurface tail, {
+    required ReaderPreferences preferences,
+    required Color background,
+  }) {
     _scheduleAdjacentPreloadIfReady(tail);
-    return KeyedSubtree(
-      key: Key('reader-tail-${tail.id}'),
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: tail is ReaderTailActionSurface
-              ? _tailActionController.barHeight
-              : 0,
+    return _wrapTailWithReaderTheme(
+      context,
+      background: background,
+      preferences: preferences,
+      mode: ContinuousImageReaderMode.horizontal,
+      child: KeyedSubtree(
+        key: Key('reader-tail-${tail.id}'),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: tail is ReaderTailActionSurface
+                ? _tailActionController.barHeight
+                : 0,
+          ),
+          child: tail.buildPaged(context, _tailActions(tail)),
         ),
-        child: tail.buildPaged(context, _tailActions(tail)),
       ),
     );
   }
@@ -1151,15 +1218,23 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   Widget _buildVerticalTailItem(
     BuildContext context,
     ReaderTailSurface tail,
-    int index,
-  ) {
+    int index, {
+    required ReaderPreferences preferences,
+    required Color background,
+  }) {
     if (index == 0) {
       _scheduleTailVisible(tail);
     }
     _scheduleAdjacentPreloadIfReady(tail);
-    final child = KeyedSubtree(
-      key: Key('reader-tail-vertical-${tail.id}-$index'),
-      child: tail.buildVerticalItem(context, _tailActions(tail), index),
+    final child = _wrapTailWithReaderTheme(
+      context,
+      background: background,
+      preferences: preferences,
+      mode: ContinuousImageReaderMode.vertical,
+      child: KeyedSubtree(
+        key: Key('reader-tail-vertical-${tail.id}-$index'),
+        child: tail.buildVerticalItem(context, _tailActions(tail), index),
+      ),
     );
     if (tail is! ReaderTailActionSurface) return child;
     return ReaderTailVisibilityItem(
@@ -3480,9 +3555,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     required ContinuousImageReaderMode mode,
     required ReaderPreferences preferences,
     required ReaderEngineContext engineContext,
+    required Color background,
     required bool hasPreviousChapter,
   }) {
-    final background = _backgroundColor(preferences);
     final chromePalette = const ReaderChromePaletteResolver().resolve(
       Theme.of(context),
     );
@@ -3508,11 +3583,13 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
                     content,
                     preferences,
                     engineContext,
+                    background: background,
                     hasPreviousChapter: hasPreviousChapter,
                   )
                 : _buildPaged(
                     content,
                     preferences,
+                    background: background,
                     hasPreviousChapter: hasPreviousChapter,
                   ),
           ),

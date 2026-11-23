@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -80,6 +82,7 @@ class ComicCommentFeedbackSurface extends StatelessWidget {
         showMessage: false,
       ),
     };
+    final eInk = EInkModeScope.of(context);
     final surface = Container(
       margin: EdgeInsets.fromLTRB(12, compact ? 4 : 12, 12, compact ? 8 : 12),
       constraints: BoxConstraints(minHeight: compact ? 72 : 132),
@@ -90,7 +93,14 @@ class ComicCommentFeedbackSurface extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.card,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: ForumNativeSurfaceShadows.card(palette.stateLayer),
+        border: eInk
+            ? Border.all(
+                color: AppTheme.eInkBorderColor(Theme.of(context).brightness),
+              )
+            : null,
+        boxShadow: eInk
+            ? null
+            : ForumNativeSurfaceShadows.card(palette.stateLayer),
       ),
       child: Center(child: content),
     );
@@ -136,9 +146,8 @@ class _LoadingContent extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           message,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: foreground),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: foreground),
         ),
       ],
     );
@@ -168,9 +177,8 @@ class _MessageContent extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: foreground),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: foreground),
         ),
       ],
     );
@@ -218,9 +226,8 @@ class _ActionContent extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: foreground),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: foreground),
           ),
         ),
         if (onAction != null) ...[

@@ -197,7 +197,10 @@ void _mixedRecentCases() {
     final adapter = _FakeMixedCategoryShelfAdapter();
     await tester.pumpWidget(
       LocalizedTestApp(
-        home: UnifiedShelfPage(adapter: adapter, onOpenWork: (_, _, _) async {}),
+        home: UnifiedShelfPage(
+          adapter: adapter,
+          onOpenWork: (_, _, _) async {},
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -300,10 +303,18 @@ void _mixedRecentCases() {
       final fab = tester.widget<FloatingActionButton>(buttonFinder);
       expect(fab.tooltip, l10n.libraryShelfContinueReading);
       expect(fab.onPressed, isNotNull);
+      expect(
+        find.ancestor(of: buttonFinder, matching: find.byType(ElasticPress)),
+        findsOneWidget,
+      );
 
       setMode(() => eInk = true);
       await tester.pumpAndSettle();
 
+      expect(
+        find.ancestor(of: buttonFinder, matching: find.byType(ElasticPress)),
+        findsNothing,
+      );
       final eInkFab = tester.widget<FloatingActionButton>(buttonFinder);
       expect(
         eInkFab.shape,

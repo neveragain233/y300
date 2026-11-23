@@ -427,7 +427,11 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
                   canSplit: _canSplit,
                   expanded: _expanded,
                   child: inDetail
-                      ? MainShellBottomInset(bottom: 0, child: child)
+                      ? MainShellBottomInset(
+                          bottom: 0,
+                          fabBottom: MainShellBottomInset.fabBottomOf(context),
+                          child: child,
+                        )
                       : child,
                 ),
               ),

@@ -206,7 +206,10 @@ class _ComicCommentCardState extends ConsumerState<ComicCommentCard> {
       sourceTid: widget.sourceTid.trim(),
       imageReferer: widget.imageReferer,
       brightness: Theme.of(context).brightness,
-      palette: palette.card.toARGB32(),
+      background: palette.background.toARGB32(),
+      card: palette.card.toARGB32(),
+      bodyText: palette.bodyText.toARGB32(),
+      accent: palette.accent.toARGB32(),
     );
     if (_ownedRenderContextIdentity != identity ||
         _ownedRenderContext == null) {

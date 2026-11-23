@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:prism_ui/input.dart' as prism_input;
+import 'package:prism_ui/liquid_glass.dart';
+import 'package:prism_ui/shape.dart' as prism_shape;
 import 'package:prism_ui/text_field.dart' as prism;
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
 import 'package:y300/core/motion/app_motion.dart';
+import 'package:y300/shared/widgets/app_glass_surface.dart';
 import 'package:y300/shared/widgets/app_prism_theme.dart';
 
-/// 输入框表面：分组表单默认填充，标题行保留下划线，源码编辑器保留无边框。
-enum AppTextInputVariant { filled, underline, plain }
+/// 输入框表面：分组表单默认填充，标题行保留下划线，源码编辑器保留无边框，
+/// 搜索栏支持胶囊玻璃/墨水屏描边表面。
+enum AppTextInputVariant { filled, underline, plain, pill }
 
 /// 应用文本输入的唯一适配入口。
 ///
@@ -109,6 +115,8 @@ class AppTextInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final eInk = EInkModeScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final field = prism.TextField(
       controller: controller,
       focusNode: focusNode,
@@ -133,19 +141,25 @@ class AppTextInput extends StatelessWidget {
       style: style,
       cursorColor: cursorColor,
       contextMenuBuilder: contextMenuBuilder,
-      textAlignVertical: variant == AppTextInputVariant.underline
+      textAlignVertical:
+          variant == AppTextInputVariant.underline ||
+              variant == AppTextInputVariant.pill
           ? TextAlignVertical.center
           : null,
-      decoration: _decoration(),
+      decoration: _decoration(eInk: eInk, scheme: scheme),
     );
     final input = switch (variant) {
       AppTextInputVariant.filled => prism_input.FilledInputTheme(
         borderRadius: const BorderRadius.all(Radius.circular(16)),
-        fillColor: fillColor,
+        fillColor: fillColor ?? (eInk ? scheme.surface : null),
         child: field,
       ),
       AppTextInputVariant.underline => _UnderlineInputFrame(child: field),
       AppTextInputVariant.plain => field,
+      AppTextInputVariant.pill => _PillInputFrame(
+        fillColor: fillColor,
+        child: field,
+      ),
     };
     final label = this.label;
     final helper = errorText == null && helperText != null
@@ -175,12 +189,77 @@ class AppTextInput extends StatelessWidget {
     );
   }
 
-  prism.InputDecoration _decoration() {
+  prism.InputDecoration _decoration({
+    required bool eInk,
+    required ColorScheme scheme,
+  }) {
     final collapsed = variant == AppTextInputVariant.plain;
-    final border = collapsed || variant == AppTextInputVariant.underline
-        ? const prism.NoInputBorder()
-        : null;
-    final decoration = prism.InputDecoration(
+    final borderless =
+        collapsed ||
+        variant == AppTextInputVariant.underline ||
+        variant == AppTextInputVariant.pill;
+    if (borderless) {
+      return prism.InputDecoration(
+        hintText: hintText,
+        hintStyle: hintStyle,
+        errorText: errorText,
+        errorMaxLines: errorMaxLines,
+        prefixIcon: prefixIcon,
+        suffixIcon: suffixIcon,
+        suffixText: suffixText,
+        filled: false,
+        isCollapsed: collapsed,
+        isDense: variant == AppTextInputVariant.underline,
+        contentPadding:
+            contentPadding ??
+            (variant == AppTextInputVariant.pill
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+                : null),
+        border: const prism.NoInputBorder(),
+        enabledBorder: const prism.NoInputBorder(),
+        disabledBorder: const prism.NoInputBorder(),
+        focusedBorder: const prism.NoInputBorder(),
+        errorBorder: const prism.NoInputBorder(),
+        focusedErrorBorder: const prism.NoInputBorder(),
+      );
+    }
+    if (eInk) {
+      final baseShape = prism_shape.AppShape.input.copyWith(
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      );
+      final eInkBorder = AppTheme.eInkBorderColor(scheme.brightness);
+      return prism.InputDecoration(
+        hintText: hintText,
+        hintStyle: hintStyle,
+        errorText: errorText,
+        errorMaxLines: errorMaxLines,
+        prefixIcon: prefixIcon,
+        suffixIcon: suffixIcon,
+        suffixText: suffixText,
+        filled: true,
+        fillColor: fillColor ?? scheme.surface,
+        contentPadding: contentPadding,
+        border: baseShape.copyWith(
+          borderSide: BorderSide(color: eInkBorder, width: 1),
+        ),
+        enabledBorder: baseShape.copyWith(
+          borderSide: BorderSide(color: eInkBorder, width: 1),
+        ),
+        disabledBorder: baseShape.copyWith(
+          borderSide: BorderSide(color: scheme.outlineVariant, width: 1),
+        ),
+        focusedBorder: baseShape.copyWith(
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+        errorBorder: baseShape.copyWith(
+          borderSide: BorderSide(color: scheme.error, width: 1),
+        ),
+        focusedErrorBorder: baseShape.copyWith(
+          borderSide: BorderSide(color: scheme.error, width: 2),
+        ),
+      );
+    }
+    return prism.InputDecoration(
       hintText: hintText,
       hintStyle: hintStyle,
       errorText: errorText,
@@ -188,19 +267,10 @@ class AppTextInput extends StatelessWidget {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       suffixText: suffixText,
-      filled: variant == AppTextInputVariant.filled,
+      filled: true,
       fillColor: fillColor,
-      isCollapsed: collapsed,
-      isDense: !collapsed && variant == AppTextInputVariant.underline,
       contentPadding: contentPadding,
-      border: border,
-      enabledBorder: border,
-      disabledBorder: border,
-      focusedBorder: border,
-      errorBorder: border,
-      focusedErrorBorder: border,
     );
-    return decoration;
   }
 
   TextStyle? _captionStyle(BuildContext context) {
@@ -257,6 +327,71 @@ class _UnderlineInputFrameState extends State<_UnderlineInputFrame> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 胶囊搜索表面：标准/增强玻璃档位使用 LiquidGlass pill，墨水屏或关闭档位
+/// 退回带描边的实色圆角表面，保证高对比与可见性。
+class _PillInputFrame extends StatefulWidget {
+  const _PillInputFrame({this.fillColor, required this.child});
+
+  final Color? fillColor;
+  final Widget child;
+
+  @override
+  State<_PillInputFrame> createState() => _PillInputFrameState();
+}
+
+class _PillInputFrameState extends State<_PillInputFrame> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final eInk = EInkModeScope.of(context);
+    final useGlass =
+        !eInk &&
+        !MediaQuery.highContrastOf(context) &&
+        AppGlassSurface.levelOf(context).enabled;
+    final shape = BorderRadius.circular(24);
+    final Widget surface;
+    if (useGlass) {
+      surface = LiquidGlass(
+        style: LiquidGlassStyle.pill(prismColorSchemeOf(scheme)),
+        borderRadius: shape,
+        shadows: AppGlassSurface.shadowsOf(scheme, eInk: false),
+        child: Material(type: MaterialType.transparency, child: widget.child),
+      );
+    } else {
+      surface = Material(
+        color:
+            widget.fillColor ??
+            (eInk ? scheme.surface : scheme.surfaceContainerHighest),
+        shape: RoundedRectangleBorder(
+          borderRadius: shape,
+          side: BorderSide(
+            color: _focused
+                ? scheme.primary
+                : (eInk
+                      ? AppTheme.eInkBorderColor(scheme.brightness)
+                      : scheme.outlineVariant.withValues(alpha: 0.45)),
+            width: _focused ? 1.5 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: widget.child,
+      );
+    }
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) {
+        if (focused != _focused) {
+          setState(() => _focused = focused);
+        }
+      },
+      child: surface,
     );
   }
 }
