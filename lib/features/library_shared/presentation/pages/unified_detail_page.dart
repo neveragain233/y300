@@ -10,6 +10,7 @@ import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
 import 'package:y300/app/theme/app_layout_tokens.dart';
 import 'package:y300/app/theme/app_system_ui.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_glass_fab.dart';
@@ -153,6 +154,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
   late final ScrollController _scrollController;
 
   bool _introExpanded = false;
+  bool _searchFocused = false;
   bool _showCollapsedTitle = false;
   int _lastHandledRefreshSignalSequence = 0;
   bool get _isResettingWorkReading => _controller.isResettingWorkReading;
@@ -387,6 +389,8 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       Theme.of(context),
     );
     final eInk = EInkModeScope.of(context);
+    final useFloatingSearch = !eInk;
+    final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
     final headerHasCover = header == null
         ? opening && _page.initialHasCover
         : hasUnifiedDetailCover(header);
@@ -400,18 +404,26 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       workId: _page.workId,
       keyPrefix: 'unified-detail-chapter',
       controlsInList: true,
-      pinControls: true,
-      pinnedTopOffset: topInset + kToolbarHeight,
+      pinControls: !useFloatingSearch,
+      pinnedTopOffset: useFloatingSearch ? 0 : topInset + kToolbarHeight,
+      floatingSearchBar: useFloatingSearch,
+      onSearchFocusChanged: (focused) {
+        if (!mounted || _searchFocused == focused) {
+          return;
+        }
+        setState(() => _searchFocused = focused);
+      },
       currentId: state.chapters
           .where((chapter) => chapter.progressInfo?.isCurrent == true)
           .firstOrNull
           ?.episodeId,
       locateCurrentOnOpen: false,
       scrollController: _scrollController,
-      topObstruction:
-          topInset +
-          kToolbarHeight +
-          LibraryChapterBrowser.controlsHeight(context),
+      topObstruction: useFloatingSearch
+          ? topInset + kToolbarHeight
+          : topInset +
+                kToolbarHeight +
+                LibraryChapterBrowser.controlsHeight(context),
       itemExtent: math.max(
         80,
         24 +
@@ -521,7 +533,9 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       ],
       trailingSlivers: opening
           ? const <Widget>[]
-          : const <Widget>[SliverToBoxAdapter(child: SizedBox(height: 320))],
+          : <Widget>[
+              SliverToBoxAdapter(child: SizedBox(height: 320 + keyboardBottom)),
+            ],
       rowBuilder: (context, chapter, confirmSearch) => UnifiedDetailChapterTile(
         tileKey: ValueKey<String>(
           'unified-detail-chapter-${chapter.episodeId}',
@@ -550,6 +564,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       ),
       layoutBuilder: (context, searchControls, chapterList) => Scaffold(
         extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: false,
         backgroundColor: detailPalette.pageBackground,
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
@@ -712,7 +727,37 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
             final mediaPadding = MediaQuery.paddingOf(context);
             final fabBottomInset = mainShellFabBottomInset(context);
             final fabBottom = 16 + fabBottomInset;
-            final showFab = MediaQuery.viewInsetsOf(context).bottom == 0;
+            final bodyKeyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
+            final keyboardVisible = bodyKeyboardBottom > 0;
+            final showFab =
+                !keyboardVisible && !(useFloatingSearch && _searchFocused);
+            final dockBottom = math.max(fabBottom, bodyKeyboardBottom + 12);
+            final reduceMotion = AppMotion.reduceMotion(context);
+            Widget buildContinueFab() => AppGlassFloatingActionButton(
+              buttonKey: const Key('unified-detail-continue-fab'),
+              onPressed: header == null
+                  ? null
+                  : () async {
+                      final target = await _page.adapter.getReaderRouteTarget(
+                        workId: _page.workId,
+                        preferContinue: true,
+                      );
+                      if (!context.mounted || target == null) {
+                        return;
+                      }
+                      final handler = _page.onContinue ?? _page.onOpenReader;
+                      await handler(context, target);
+                      if (!context.mounted) {
+                        return;
+                      }
+                      await _controller.reload();
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    },
+              icon: Icons.play_arrow,
+              label: l10n.libraryDetailContinue,
+            );
             return Stack(
               children: [
                 Positioned.fill(
@@ -736,39 +781,44 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                     ),
                   ),
                 ),
-                if (showFab)
+                if (useFloatingSearch)
+                  Positioned(
+                    key: const Key('unified-detail-floating-search-dock'),
+                    left: 16 + mediaPadding.left,
+                    right: 16 + mediaPadding.right,
+                    bottom: dockBottom,
+                    child: TransientFeedbackObstacle(
+                      bottom: dockBottom + 56,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(child: searchControls),
+                          AnimatedSize(
+                            duration: reduceMotion
+                                ? Duration.zero
+                                : const Duration(milliseconds: 200),
+                            curve: Curves.easeOutCubic,
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: showFab
+                                ? Padding(
+                                    padding: const EdgeInsetsDirectional.only(
+                                      start: 12,
+                                    ),
+                                    child: buildContinueFab(),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (showFab)
                   Positioned(
                     right: 16 + mediaPadding.right,
                     bottom: fabBottom,
                     child: TransientFeedbackObstacle(
                       bottom: 72 + fabBottomInset,
-                      child: AppGlassFloatingActionButton(
-                        buttonKey: const Key('unified-detail-continue-fab'),
-                        onPressed: header == null
-                            ? null
-                            : () async {
-                                final target = await _page.adapter
-                                    .getReaderRouteTarget(
-                                      workId: _page.workId,
-                                      preferContinue: true,
-                                    );
-                                if (!context.mounted || target == null) {
-                                  return;
-                                }
-                                final handler =
-                                    _page.onContinue ?? _page.onOpenReader;
-                                await handler(context, target);
-                                if (!context.mounted) {
-                                  return;
-                                }
-                                await _controller.reload();
-                                if (mounted) {
-                                  setState(() {});
-                                }
-                              },
-                        icon: Icons.play_arrow,
-                        label: l10n.libraryDetailContinue,
-                      ),
+                      child: buildContinueFab(),
                     ),
                   ),
               ],

@@ -18,10 +18,9 @@ void _chapterGesturesCases() {
     );
 
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
+    await _scrollChapterIntoView(
+      tester,
       find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),
-      300,
-      scrollable: find.byType(Scrollable).first,
     );
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -120));
     await tester.pumpAndSettle();
@@ -101,10 +100,9 @@ void _chapterGesturesCases() {
     );
 
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
+    await _scrollChapterIntoView(
+      tester,
       find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),
-      300,
-      scrollable: find.byType(Scrollable).first,
     );
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -120));
     await tester.pumpAndSettle();
@@ -141,10 +139,9 @@ void _chapterGesturesCases() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
+    await _scrollChapterIntoView(
+      tester,
       find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),
-      300,
-      scrollable: find.byType(Scrollable).first,
     );
 
     await tester.drag(
@@ -175,11 +172,7 @@ void _chapterGesturesCases() {
     final chapter = find.byKey(
       const ValueKey<String>('unified-detail-chapter-e1'),
     );
-    await tester.scrollUntilVisible(
-      chapter,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _scrollChapterIntoView(tester, chapter);
 
     final gesture = await tester.startGesture(tester.getCenter(chapter));
     await gesture.moveBy(const Offset(30, 0));
@@ -223,11 +216,7 @@ void _chapterGesturesCases() {
     final chapter = find.byKey(
       const ValueKey<String>('unified-detail-chapter-e1'),
     );
-    await tester.scrollUntilVisible(
-      chapter,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _scrollChapterIntoView(tester, chapter);
 
     await tester.drag(chapter, const Offset(500, 0));
     await tester.pumpAndSettle();
@@ -251,10 +240,9 @@ void _chapterGesturesCases() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
+    await _scrollChapterIntoView(
+      tester,
       find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),
-      300,
-      scrollable: find.byType(Scrollable).first,
     );
 
     await tester.drag(
@@ -402,11 +390,7 @@ void _chapterGesturesCases() {
     final chapter = find.byKey(
       const ValueKey<String>('unified-detail-chapter-e3'),
     );
-    await tester.scrollUntilVisible(
-      chapter,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _scrollChapterIntoView(tester, chapter);
 
     await tester.drag(chapter, const Offset(500, 0));
     await tester.pumpAndSettle();
@@ -436,11 +420,7 @@ void _chapterGesturesCases() {
     final chapter = find.byKey(
       const ValueKey<String>('unified-detail-chapter-e1'),
     );
-    await tester.scrollUntilVisible(
-      chapter,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _scrollChapterIntoView(tester, chapter);
 
     await tester.drag(chapter, const Offset(500, 0));
     await tester.pumpAndSettle();
@@ -471,11 +451,7 @@ void _chapterGesturesCases() {
     final chapter = find.byKey(
       const ValueKey<String>('unified-detail-chapter-e1'),
     );
-    await tester.scrollUntilVisible(
-      chapter,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _scrollChapterIntoView(tester, chapter);
 
     await tester.longPress(chapter);
     await tester.pumpAndSettle();
@@ -619,4 +595,16 @@ void _chapterGesturesCases() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     },
   );
+}
+
+Future<void> _scrollChapterIntoView(WidgetTester tester, Finder chapter) async {
+  await tester.scrollUntilVisible(
+    chapter,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  for (var i = 0; i < 4 && tester.getRect(chapter).bottom > 480; i++) {
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -160));
+    await tester.pumpAndSettle();
+  }
 }

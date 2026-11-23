@@ -62,6 +62,7 @@ class AppTextInput extends StatelessWidget {
     this.maxLength,
     this.contentPadding,
     this.variant = AppTextInputVariant.filled,
+    this.pillBorderRadius = 24,
     this.contextMenuBuilder,
   });
 
@@ -111,6 +112,7 @@ class AppTextInput extends StatelessWidget {
   final int? maxLength;
   final EdgeInsetsGeometry? contentPadding;
   final AppTextInputVariant variant;
+  final double pillBorderRadius;
   final EditableTextContextMenuBuilder? contextMenuBuilder;
 
   @override
@@ -158,6 +160,7 @@ class AppTextInput extends StatelessWidget {
       AppTextInputVariant.plain => field,
       AppTextInputVariant.pill => _PillInputFrame(
         fillColor: fillColor,
+        borderRadius: pillBorderRadius,
         child: field,
       ),
     };
@@ -334,9 +337,14 @@ class _UnderlineInputFrameState extends State<_UnderlineInputFrame> {
 /// 胶囊搜索表面：标准/增强玻璃档位使用 LiquidGlass pill，墨水屏或关闭档位
 /// 退回带描边的实色圆角表面，保证高对比与可见性。
 class _PillInputFrame extends StatefulWidget {
-  const _PillInputFrame({this.fillColor, required this.child});
+  const _PillInputFrame({
+    this.fillColor,
+    this.borderRadius = 24,
+    required this.child,
+  });
 
   final Color? fillColor;
+  final double borderRadius;
   final Widget child;
 
   @override
@@ -355,7 +363,7 @@ class _PillInputFrameState extends State<_PillInputFrame> {
         !MediaQuery.highContrastOf(context) &&
         AppGlassSurface.levelOf(context).enabled;
     final isDark = scheme.brightness == Brightness.dark;
-    final shape = BorderRadius.circular(24);
+    final shape = BorderRadius.circular(widget.borderRadius);
     final Widget surface;
     if (useGlass) {
       final glassStyle = isDark && widget.fillColor == null
@@ -370,16 +378,17 @@ class _PillInputFrameState extends State<_PillInputFrame> {
         shadows: AppGlassSurface.shadowsOf(scheme, eInk: false),
         child: Material(type: MaterialType.transparency, child: widget.child),
       );
-      surface = _focused
-          ? DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: BoxDecoration(
+      // 保持 DecoratedBox 常驻树中，避免首次聚焦时包裹节点切换导致输入子树重建断连。
+      surface = DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: _focused
+            ? BoxDecoration(
                 borderRadius: shape,
                 border: Border.all(color: scheme.primary, width: 1.5),
-              ),
-              child: glass,
-            )
-          : glass;
+              )
+            : const BoxDecoration(),
+        child: glass,
+      );
     } else {
       final fallbackFill = eInk
           ? scheme.surface

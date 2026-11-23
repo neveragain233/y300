@@ -357,4 +357,46 @@ void main() {
     );
     expect(einkMaterial.color, lightTheme.colorScheme.surface);
   });
+
+  testWidgets(
+    'tapping pill search input once focuses immediately under glass',
+    (tester) async {
+      for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        await tester.pumpWidget(
+          AppGlassEnvironment(
+            glassLevel: AppGlassLevel.standard,
+            child: LocalizedTestApp(
+              theme: theme,
+              home: Scaffold(
+                body: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    height: 56,
+                    child: AppTextInput(
+                      key: const Key('single-tap-pill'),
+                      focusNode: focusNode,
+                      variant: AppTextInputVariant.pill,
+                      pillBorderRadius: 28,
+                      hintText: '搜索',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('single-tap-pill')));
+        await tester.pump();
+
+        expect(focusNode.hasFocus, isTrue);
+        final editable = tester.state<EditableTextState>(
+          find.byType(EditableText),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+      }
+    },
+  );
 }

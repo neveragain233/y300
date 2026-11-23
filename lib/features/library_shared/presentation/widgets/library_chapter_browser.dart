@@ -43,6 +43,8 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
     this.controlsInList = false,
     this.pinControls = false,
     this.pinnedTopOffset = 0,
+    this.floatingSearchBar = false,
+    this.onSearchFocusChanged,
   });
 
   final String workId;
@@ -68,9 +70,14 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
   final bool controlsInList;
   final bool pinControls;
   final double pinnedTopOffset;
+  final bool floatingSearchBar;
+  final ValueChanged<bool>? onSearchFocusChanged;
 
   static double controlsHeight(BuildContext context) =>
       math.max(48, MediaQuery.textScalerOf(context).scale(16) * 1.5 + 20) + 56;
+
+  static double floatingSearchHeight(BuildContext context) =>
+      math.max(56, MediaQuery.textScalerOf(context).scale(16) * 1.5 + 24);
 
   @override
   State<LibraryChapterBrowser<T>> createState() =>
@@ -85,6 +92,7 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
   double _listStart = 0;
   double _browseOffset = 0;
   int _navigationRevision = 0;
+  bool _lastReportedFocused = false;
 
   ScrollController get _scroll =>
       widget.scrollController ?? _ownedScrollController;
@@ -93,10 +101,18 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
   void initState() {
     super.initState();
     _ownedScrollController = ScrollController();
+    _focus.addListener(_handleFocusChanged);
     _search = ChapterSearchController<T>(normalizeTexts: widget.normalizeTexts)
       ..updateEntries(widget.entries)
       ..addListener(_refresh);
     if (widget.locateCurrentOnOpen) _locate(widget.currentId);
+  }
+
+  void _handleFocusChanged() {
+    final focused = _focus.hasFocus;
+    if (focused == _lastReportedFocused) return;
+    _lastReportedFocused = focused;
+    widget.onSearchFocusChanged?.call(focused);
   }
 
   @override
@@ -123,7 +139,9 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
       ..dispose();
     _ownedScrollController.dispose();
     _text.dispose();
-    _focus.dispose();
+    _focus
+      ..removeListener(_handleFocusChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -260,6 +278,103 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
     final l10n = AppLocalizations.of(context);
     final results = _search.results;
     final prefix = widget.keyPrefix;
+    Widget buildSearchField(
+      BuildContext context, {
+      required double height,
+      required double borderRadius,
+    }) {
+      final theme = Theme.of(context);
+      final scheme = theme.colorScheme;
+      return SizedBox(
+        height: height,
+        child: IconTheme.merge(
+          data: IconThemeData(color: scheme.onSurfaceVariant),
+          child: AppTextInput(
+            key: widget.searchFieldKey ?? Key('$prefix-search-field'),
+            controller: _text,
+            focusNode: _focus,
+            variant: AppTextInputVariant.pill,
+            pillBorderRadius: borderRadius,
+            textInputAction: TextInputAction.search,
+            hintText: l10n.libraryChapterSearchHint,
+            hintStyle: theme.textTheme.bodyLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: _text.text.isNotEmpty
+                ? IconButton(
+                    key: Key('$prefix-search-clear'),
+                    tooltip: l10n.commonClear,
+                    onPressed: _clear,
+                    icon: const Icon(Icons.close, size: 20),
+                  )
+                : _recentButton(l10n),
+            onChanged: _changeQuery,
+            onSubmitted: (_) => _recordSearch(),
+          ),
+        ),
+      );
+    }
+
+    Widget buildStatusLocateRow(BuildContext context) {
+      final theme = Theme.of(context);
+      final scheme = theme.colorScheme;
+      return SizedBox(
+        height: 48,
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                l10n.libraryChapterSearchCount(results.length),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            IconButton(
+              key: Key('$prefix-first'),
+              tooltip: l10n.libraryChapterLocateFirst,
+              onPressed: results.isEmpty
+                  ? null
+                  : () {
+                      _focus.unfocus();
+                      _jumpAfterLayout(() => _listStart);
+                    },
+              icon: const Icon(Icons.first_page),
+            ),
+            IconButton(
+              key: Key('$prefix-current'),
+              tooltip: l10n.libraryChapterLocateCurrent,
+              onPressed:
+                  widget.entries.any((entry) => entry.id == widget.currentId)
+                  ? () => _locate(widget.currentId)
+                  : null,
+              icon: const Icon(Icons.my_location),
+            ),
+            IconButton(
+              key: Key('$prefix-last'),
+              tooltip: l10n.libraryChapterLocateLast,
+              onPressed: results.isEmpty
+                  ? null
+                  : () {
+                      _focus.unfocus();
+                      _jumpAfterLayout(
+                        () =>
+                            _listStart +
+                            (results.length - 1) * widget.itemExtent,
+                      );
+                    },
+              icon: const Icon(Icons.last_page),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+      );
+    }
+
     Widget buildControlsBody(
       BuildContext context, {
       required bool compact,
@@ -300,124 +415,64 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                child: SizedBox(
+                child: buildSearchField(
+                  context,
                   height: LibraryChapterBrowser.controlsHeight(context) - 56,
-                  child: IconTheme.merge(
-                    data: IconThemeData(color: scheme.onSurfaceVariant),
-                    child: AppTextInput(
-                      key: widget.searchFieldKey ?? Key('$prefix-search-field'),
-                      controller: _text,
-                      focusNode: _focus,
-                      variant: AppTextInputVariant.pill,
-                      textInputAction: TextInputAction.search,
-                      hintText: l10n.libraryChapterSearchHint,
-                      hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      suffixIcon: _text.text.isNotEmpty
-                          ? IconButton(
-                              key: Key('$prefix-search-clear'),
-                              tooltip: l10n.commonClear,
-                              onPressed: _clear,
-                              icon: const Icon(Icons.close, size: 20),
-                            )
-                          : _recentButton(l10n),
-                      onChanged: _changeQuery,
-                      onSubmitted: (_) => _recordSearch(),
-                    ),
-                  ),
+                  borderRadius: 24,
                 ),
               ),
-              if (!compact)
-                SizedBox(
-                  height: 48,
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          l10n.libraryChapterSearchCount(results.length),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        key: Key('$prefix-first'),
-                        tooltip: l10n.libraryChapterLocateFirst,
-                        onPressed: results.isEmpty
-                            ? null
-                            : () {
-                                _focus.unfocus();
-                                _jumpAfterLayout(() => _listStart);
-                              },
-                        icon: const Icon(Icons.first_page),
-                      ),
-                      IconButton(
-                        key: Key('$prefix-current'),
-                        tooltip: l10n.libraryChapterLocateCurrent,
-                        onPressed:
-                            widget.entries.any(
-                              (entry) => entry.id == widget.currentId,
-                            )
-                            ? () => _locate(widget.currentId)
-                            : null,
-                        icon: const Icon(Icons.my_location),
-                      ),
-                      IconButton(
-                        key: Key('$prefix-last'),
-                        tooltip: l10n.libraryChapterLocateLast,
-                        onPressed: results.isEmpty
-                            ? null
-                            : () {
-                                _focus.unfocus();
-                                _jumpAfterLayout(
-                                  () =>
-                                      _listStart +
-                                      (results.length - 1) * widget.itemExtent,
-                                );
-                              },
-                        icon: const Icon(Icons.last_page),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                  ),
-                ),
+              if (!compact) buildStatusLocateRow(context),
             ],
           ),
         ),
       );
     }
 
-    PreferredSizeWidget buildControls({bool compact = false}) => PreferredSize(
-      preferredSize: Size.fromHeight(
-        LibraryChapterBrowser.controlsHeight(context) - (compact ? 48 : 0),
-      ),
-      child: buildControlsBody(
-        context,
-        compact: compact,
-        overlapsContent: false,
-      ),
-    );
+    PreferredSizeWidget buildControls({bool compact = false}) =>
+        widget.floatingSearchBar
+        ? PreferredSize(
+            preferredSize: Size.fromHeight(
+              LibraryChapterBrowser.floatingSearchHeight(context),
+            ),
+            child: buildSearchField(
+              context,
+              height: LibraryChapterBrowser.floatingSearchHeight(context),
+              borderRadius: 28,
+            ),
+          )
+        : PreferredSize(
+            preferredSize: Size.fromHeight(
+              LibraryChapterBrowser.controlsHeight(context) -
+                  (compact ? 48 : 0),
+            ),
+            child: buildControlsBody(
+              context,
+              compact: compact,
+              overlapsContent: false,
+            ),
+          );
     final controls = buildControls();
     Widget buildList() => Scrollbar(
       controller: _scroll,
       interactive: true,
       child: CustomScrollView(
         controller: _scroll,
+        keyboardDismissBehavior: widget.floatingSearchBar
+            ? ScrollViewKeyboardDismissBehavior.onDrag
+            : ScrollViewKeyboardDismissBehavior.manual,
         physics: const AlwaysScrollableScrollPhysics(
           parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          if (widget.controlsInList &&
+          if (!widget.floatingSearchBar &&
+              widget.controlsInList &&
               widget.pinControls &&
               widget.pinnedTopOffset > 0)
             _TopBarOverlapSliver(height: widget.pinnedTopOffset),
           ...widget.leadingSlivers,
-          if (widget.controlsInList && widget.pinControls)
+          if (widget.floatingSearchBar && widget.controlsInList)
+            SliverToBoxAdapter(child: buildStatusLocateRow(context))
+          else if (widget.controlsInList && widget.pinControls)
             SliverPersistentHeader(
               pinned: true,
               delegate: _ChapterControlsHeaderDelegate(

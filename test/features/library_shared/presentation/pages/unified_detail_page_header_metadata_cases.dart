@@ -517,25 +517,31 @@ void _headerMetadataCases() {
   );
 
   testWidgets(
-    'detail catalog search pins under AppBar on scroll and keeps visible E-ink pill border',
+    'detail catalog search floats at bottom in full mode and pins under AppBar in E-ink',
     (tester) async {
       var eInk = false;
+      var keyboardBottom = 0.0;
       late StateSetter setMode;
       await tester.pumpWidget(
         StatefulBuilder(
           builder: (context, setState) {
             setMode = setState;
             return _scopedApp(
-              home: EInkModeScope(
-                enabled: eInk,
-                child: UnifiedDetailPage(
-                  adapter: _FakeDetailAdapter(
-                    module: LibraryModuleKey.comic,
-                    includeSecondChapter: true,
+              home: MediaQuery(
+                data: MediaQueryData(
+                  viewInsets: EdgeInsets.only(bottom: keyboardBottom),
+                ),
+                child: EInkModeScope(
+                  enabled: eInk,
+                  child: UnifiedDetailPage(
+                    adapter: _FakeDetailAdapter(
+                      module: LibraryModuleKey.comic,
+                      includeSecondChapter: true,
+                    ),
+                    workId: 'work-1',
+                    onOpenReader: (context, target) async {},
+                    onOpenThread: (context, target) async {},
                   ),
-                  workId: 'work-1',
-                  onOpenReader: (context, target) async {},
-                  onOpenThread: (context, target) async {},
                 ),
               ),
             );
@@ -544,20 +550,61 @@ void _headerMetadataCases() {
       );
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
-      await tester.pumpAndSettle();
-
+      final dockFinder = find.byKey(
+        const Key('unified-detail-floating-search-dock'),
+      );
       final searchField = find.byKey(
         const Key('unified-detail-chapter-search-field'),
       );
+      final fabFinder = find.byKey(const Key('unified-detail-continue-fab'));
+
+      // Full mode: 底部悬浮搜索胶囊与“继续”FAB 并排显示，滚动后仍停在底部。
+      expect(dockFinder, findsOneWidget);
       expect(searchField, findsOneWidget);
+      expect(fabFinder, findsOneWidget);
+      final initialSearchRect = tester.getRect(searchField);
+      final initialFabRect = tester.getRect(fabFinder);
+      expect(initialSearchRect.right, lessThanOrEqualTo(initialFabRect.left));
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(searchField).bottom,
+        closeTo(initialSearchRect.bottom, 1),
+      );
+
+      // 单次点击搜索框即获得焦点并隐藏 FAB、展开至全宽。
+      await tester.tap(searchField);
+      await tester.pumpAndSettle();
+      expect(fabFinder, findsNothing);
+      final dockRect = tester.getRect(dockFinder);
+      final focusedSearchRect = tester.getRect(searchField);
+      expect(focusedSearchRect.width, closeTo(dockRect.width, 1));
+
+      // 键盘弹出时悬浮搜索框跟随上移，FAB 保持隐藏。
+      setMode(() => keyboardBottom = 300);
+      await tester.pumpAndSettle();
+      final screenHeight = tester.getSize(find.byType(Scaffold)).height;
+      expect(fabFinder, findsNothing);
+      expect(
+        screenHeight - tester.getRect(dockFinder).bottom,
+        greaterThanOrEqualTo(312),
+      );
+
+      // 切回 E-ink 模式：无底部悬浮栏，搜索框吸顶于 AppBar 下且保留实线边框，键盘弹出仍隐藏 FAB。
+      setMode(() {
+        eInk = true;
+        keyboardBottom = 0;
+      });
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      expect(dockFinder, findsNothing);
       final appBarBottom = tester.getBottomLeft(find.byType(AppBar)).dy;
       final searchTop = tester.getTopLeft(searchField).dy;
       expect(searchTop, greaterThanOrEqualTo(appBarBottom));
       expect(searchTop, lessThan(appBarBottom + 24));
-
-      setMode(() => eInk = true);
-      await tester.pumpAndSettle();
 
       final pillMaterial = tester.widget<Material>(
         find.descendant(of: searchField, matching: find.byType(Material)).first,
@@ -572,6 +619,11 @@ void _headerMetadataCases() {
           ),
         ),
       );
+
+      expect(fabFinder, findsOneWidget);
+      setMode(() => keyboardBottom = 300);
+      await tester.pumpAndSettle();
+      expect(fabFinder, findsNothing);
     },
   );
 }
