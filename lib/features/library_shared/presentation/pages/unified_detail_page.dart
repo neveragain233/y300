@@ -151,9 +151,13 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
 
   late final UnifiedDetailController _controller;
   late final ScrollController _scrollController;
+  final LibraryChapterBrowserController _chapterBrowserController =
+      LibraryChapterBrowserController();
 
   bool _introExpanded = false;
+  bool _searchExpanded = false;
   bool _searchFocused = false;
+  bool _hasSearchQuery = false;
   bool _showCollapsedTitle = false;
   int _lastHandledRefreshSignalSequence = 0;
   bool get _isResettingWorkReading => _controller.isResettingWorkReading;
@@ -365,6 +369,34 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     });
   }
 
+  void _expandFloatingSearch() {
+    if (!mounted) {
+      return;
+    }
+    if (!_searchExpanded) {
+      setState(() => _searchExpanded = true);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _searchExpanded) {
+        _chapterBrowserController.focusSearch();
+      }
+    });
+  }
+
+  void _collapseFloatingSearch() {
+    _chapterBrowserController.clearSearch(unfocus: true);
+    if (!mounted) {
+      return;
+    }
+    if (_searchExpanded || _searchFocused || _hasSearchQuery) {
+      setState(() {
+        _searchExpanded = false;
+        _searchFocused = false;
+        _hasSearchQuery = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -389,6 +421,9 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     );
     final eInk = EInkModeScope.of(context);
     final useFloatingSearch = !eInk;
+    final isSearchExpanded =
+        useFloatingSearch &&
+        (_searchExpanded || _searchFocused || _hasSearchQuery);
     final keyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
     final headerHasCover = header == null
         ? opening && _page.initialHasCover
@@ -406,12 +441,40 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       pinControls: !useFloatingSearch,
       pinnedTopOffset: useFloatingSearch ? 0 : topInset + kToolbarHeight,
       floatingSearchBar: useFloatingSearch,
+      browserController: _chapterBrowserController,
       onSearchFocusChanged: (focused) {
-        if (!mounted || _searchFocused == focused) {
+        if (!mounted) {
           return;
         }
-        setState(() => _searchFocused = focused);
+        final nextExpanded = focused || _hasSearchQuery
+            ? _searchExpanded
+            : false;
+        if (_searchFocused == focused && _searchExpanded == nextExpanded) {
+          return;
+        }
+        setState(() {
+          _searchFocused = focused;
+          _searchExpanded = nextExpanded;
+        });
       },
+      onSearchQueryChanged: (hasQuery) {
+        if (!mounted) {
+          return;
+        }
+        final nextExpanded = hasQuery || _searchFocused
+            ? _searchExpanded
+            : false;
+        if (_hasSearchQuery == hasQuery && _searchExpanded == nextExpanded) {
+          return;
+        }
+        setState(() {
+          _hasSearchQuery = hasQuery;
+          _searchExpanded = nextExpanded;
+        });
+      },
+      onCollapseFloatingSearch: useFloatingSearch
+          ? _collapseFloatingSearch
+          : null,
       currentId: state.chapters
           .where((chapter) => chapter.progressInfo?.isCurrent == true)
           .firstOrNull
@@ -561,253 +624,322 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
             ? () => _toggleChapterDownload(chapter)
             : null,
       ),
-      layoutBuilder: (context, searchControls, chapterList) => Scaffold(
-        extendBodyBehindAppBar: true,
-        resizeToAvoidBottomInset: false,
-        backgroundColor: detailPalette.pageBackground,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: _showCollapsedTitle ? 1 : 0),
-            duration: AppLayoutTokens.motionDuration(context),
-            curve: Curves.easeInOutCubic,
-            builder: (context, progress, _) {
-              final appBarForeground = Color.lerp(
-                expandedAppBarForeground,
-                detailPalette.collapsedAppBarForeground,
-                progress,
-              )!;
-              return AppBar(
-                leading: adaptiveDetailBackButton(context),
-                systemOverlayStyle: AppSystemUi.onSurfaces(
-                  top: showCoverBackground && progress < 0.5
-                      ? Colors.black
-                      : detailPalette.pageBackground,
-                  bottom: detailPalette.pageBackground,
-                ),
-                backgroundColor: detailPalette.collapsedAppBarBackground
-                    .withValues(alpha: progress),
-                forceMaterialTransparency: false,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                shadowColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                foregroundColor: appBarForeground,
-                iconTheme: IconThemeData(color: appBarForeground),
-                titleTextStyle: Theme.of(context).textTheme.titleLarge
-                    ?.copyWith(
-                      color: appBarForeground,
-                      fontWeight: FontWeight.normal,
-                    ),
-                // Fade this single text directly, without an opacity layer.
-                title: ExcludeSemantics(
-                  excluding: progress == 0,
-                  child: Text(
-                    title,
-                    key: const Key('unified-detail-collapsed-title'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: appBarForeground.withValues(
-                        alpha: appBarForeground.a * progress,
-                      ),
-                    ),
+      layoutBuilder: (context, searchControls, chapterList) => PopScope(
+        canPop: !isSearchExpanded,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && isSearchExpanded) {
+            _collapseFloatingSearch();
+          }
+        },
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          resizeToAvoidBottomInset: false,
+          backgroundColor: detailPalette.pageBackground,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(kToolbarHeight),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: _showCollapsedTitle ? 1 : 0),
+              duration: AppLayoutTokens.motionDuration(context),
+              curve: Curves.easeInOutCubic,
+              builder: (context, progress, _) {
+                final appBarForeground = Color.lerp(
+                  expandedAppBarForeground,
+                  detailPalette.collapsedAppBarForeground,
+                  progress,
+                )!;
+                return AppBar(
+                  leading: adaptiveDetailBackButton(context),
+                  systemOverlayStyle: AppSystemUi.onSurfaces(
+                    top: showCoverBackground && progress < 0.5
+                        ? Colors.black
+                        : detailPalette.pageBackground,
+                    bottom: detailPalette.pageBackground,
                   ),
-                ),
-                actions: [
-                  AppToolbarActions(
-                    children: [
-                      const AdaptiveDetailExpandAction(),
-                      if (_supportsChapterDownloads &&
-                          _showsBulkDownloadActions)
-                        AppPopupMenuButton<String>(
-                          key: const Key('unified-detail-appbar-download'),
-                          tooltip: l10n.libraryDetailDownload,
-                          icon: const Icon(Icons.file_download),
-                          onSelected: _handleDownloadMenuAction,
-                          itemBuilder: _downloadMenuItems,
+                  backgroundColor: detailPalette.collapsedAppBarBackground
+                      .withValues(alpha: progress),
+                  forceMaterialTransparency: false,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  shadowColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  foregroundColor: appBarForeground,
+                  iconTheme: IconThemeData(color: appBarForeground),
+                  titleTextStyle: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(
+                        color: appBarForeground,
+                        fontWeight: FontWeight.normal,
+                      ),
+                  // Fade this single text directly, without an opacity layer.
+                  title: ExcludeSemantics(
+                    excluding: progress == 0,
+                    child: Text(
+                      title,
+                      key: const Key('unified-detail-collapsed-title'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: appBarForeground.withValues(
+                          alpha: appBarForeground.a * progress,
                         ),
-                      IconButton(
-                        key: const Key('unified-detail-appbar-filter'),
-                        tooltip: l10n.libraryDetailFilterAndSort,
-                        icon: const Icon(Icons.filter_list),
-                        onPressed: header == null
-                            ? null
-                            : _showChapterFilterSheet,
                       ),
-                      AppPopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert),
-                        itemBuilder: (context) => [
-                          AppPopupMenuItem<String>(
-                            value: 'refresh',
-                            label: l10n.libraryDetailRefresh,
-                            icon: const Icon(Icons.refresh),
-                          ),
-                          AppPopupMenuItem<String>(
-                            value: 'change-category',
-                            label: l10n.libraryDetailChangeCategory,
-                            icon: const Icon(Icons.category_outlined),
-                          ),
-                          AppPopupMenuItem<String>(
-                            key: const Key('unified-detail-edit-metadata'),
-                            value: 'edit-metadata',
-                            label: l10n.libraryDetailEditMetadata,
-                            icon: const Icon(Icons.edit_outlined),
-                          ),
-                          if (_page.adapter is DetailCatalogEditor)
-                            AppPopupMenuItem<String>(
-                              key: const Key(
-                                'unified-detail-configure-catalog',
-                              ),
-                              value: 'configure-catalog',
-                              label: l10n.libraryDetailConfigureCatalog,
-                              icon: const Icon(Icons.list_alt),
-                            ),
-                          if (_sourceTagsAdapter != null)
-                            AppPopupMenuItem<String>(
-                              key: const Key('unified-detail-source-tags'),
-                              value: 'source-tags',
-                              label: l10n.libraryDetailSourceTags,
-                              icon: const Icon(Icons.local_offer_outlined),
-                            ),
-                          if (_supportsCoverEditing)
-                            AppPopupMenuItem<String>(
-                              key: const Key('unified-detail-set-cover'),
-                              value: 'set-custom-cover',
-                              label: l10n.libraryDetailSetCustomCover,
-                              icon: const Icon(Icons.image_outlined),
-                            ),
-                          if (_supportsCoverCandidates)
-                            AppPopupMenuItem<String>(
-                              key: const Key(
-                                'unified-detail-set-cover-from-post',
-                              ),
-                              value: 'set-cover-from-post',
-                              label: l10n.libraryDetailSetCoverFromPost,
-                              icon: const Icon(Icons.photo_library_outlined),
-                            ),
-                          if (_supportsCoverEditing && _canRemoveCover)
-                            AppPopupMenuItem<String>(
-                              key: const Key('unified-detail-remove-cover'),
-                              value: 'remove-custom-cover',
-                              label: l10n.libraryDetailRemoveCustomCover,
-                              icon: const Icon(Icons.hide_image_outlined),
-                              danger: true,
-                            ),
-                        ],
-                        onSelected: (value) async {
-                          await _handleMoreAction(value);
-                        },
-                      ),
-                    ],
+                    ),
                   ),
+                  actions: [
+                    AppToolbarActions(
+                      children: [
+                        const AdaptiveDetailExpandAction(),
+                        if (_supportsChapterDownloads &&
+                            _showsBulkDownloadActions)
+                          AppPopupMenuButton<String>(
+                            key: const Key('unified-detail-appbar-download'),
+                            tooltip: l10n.libraryDetailDownload,
+                            icon: const Icon(Icons.file_download),
+                            onSelected: _handleDownloadMenuAction,
+                            itemBuilder: _downloadMenuItems,
+                          ),
+                        IconButton(
+                          key: const Key('unified-detail-appbar-filter'),
+                          tooltip: l10n.libraryDetailFilterAndSort,
+                          icon: const Icon(Icons.filter_list),
+                          onPressed: header == null
+                              ? null
+                              : _showChapterFilterSheet,
+                        ),
+                        AppPopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          itemBuilder: (context) => [
+                            AppPopupMenuItem<String>(
+                              value: 'refresh',
+                              label: l10n.libraryDetailRefresh,
+                              icon: const Icon(Icons.refresh),
+                            ),
+                            AppPopupMenuItem<String>(
+                              value: 'change-category',
+                              label: l10n.libraryDetailChangeCategory,
+                              icon: const Icon(Icons.category_outlined),
+                            ),
+                            AppPopupMenuItem<String>(
+                              key: const Key('unified-detail-edit-metadata'),
+                              value: 'edit-metadata',
+                              label: l10n.libraryDetailEditMetadata,
+                              icon: const Icon(Icons.edit_outlined),
+                            ),
+                            if (_page.adapter is DetailCatalogEditor)
+                              AppPopupMenuItem<String>(
+                                key: const Key(
+                                  'unified-detail-configure-catalog',
+                                ),
+                                value: 'configure-catalog',
+                                label: l10n.libraryDetailConfigureCatalog,
+                                icon: const Icon(Icons.list_alt),
+                              ),
+                            if (_sourceTagsAdapter != null)
+                              AppPopupMenuItem<String>(
+                                key: const Key('unified-detail-source-tags'),
+                                value: 'source-tags',
+                                label: l10n.libraryDetailSourceTags,
+                                icon: const Icon(Icons.local_offer_outlined),
+                              ),
+                            if (_supportsCoverEditing)
+                              AppPopupMenuItem<String>(
+                                key: const Key('unified-detail-set-cover'),
+                                value: 'set-custom-cover',
+                                label: l10n.libraryDetailSetCustomCover,
+                                icon: const Icon(Icons.image_outlined),
+                              ),
+                            if (_supportsCoverCandidates)
+                              AppPopupMenuItem<String>(
+                                key: const Key(
+                                  'unified-detail-set-cover-from-post',
+                                ),
+                                value: 'set-cover-from-post',
+                                label: l10n.libraryDetailSetCoverFromPost,
+                                icon: const Icon(Icons.photo_library_outlined),
+                              ),
+                            if (_supportsCoverEditing && _canRemoveCover)
+                              AppPopupMenuItem<String>(
+                                key: const Key('unified-detail-remove-cover'),
+                                value: 'remove-custom-cover',
+                                label: l10n.libraryDetailRemoveCustomCover,
+                                icon: const Icon(Icons.hide_image_outlined),
+                                danger: true,
+                              ),
+                          ],
+                          onSelected: (value) async {
+                            await _handleMoreAction(value);
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          body: Builder(
+            builder: (context) {
+              final mediaPadding = MediaQuery.paddingOf(context);
+              final fabBottomInset = mainShellFabBottomInset(context);
+              final fabBottom = 16 + fabBottomInset;
+              final bodyKeyboardBottom = MediaQuery.viewInsetsOf(context)
+                  .bottom;
+              final keyboardVisible = bodyKeyboardBottom > 0;
+              final showContinueFab = !keyboardVisible && !isSearchExpanded;
+              final dockBottom = math.max(fabBottom, bodyKeyboardBottom + 12);
+              final reduceMotion = AppMotion.reduceMotion(context);
+              final searchHeight = LibraryChapterBrowser.floatingSearchHeight(
+                context,
+              );
+              Widget buildContinueFab() => AppGlassFloatingActionButton(
+                buttonKey: const Key('unified-detail-continue-fab'),
+                heroTag: 'unified-detail-continue-fab',
+                onPressed: header == null
+                    ? null
+                    : () async {
+                        final target = await _page.adapter.getReaderRouteTarget(
+                          workId: _page.workId,
+                          preferContinue: true,
+                        );
+                        if (!context.mounted || target == null) {
+                          return;
+                        }
+                        final handler = _page.onContinue ?? _page.onOpenReader;
+                        await handler(context, target);
+                        if (!context.mounted) {
+                          return;
+                        }
+                        await _controller.reload();
+                        if (mounted) {
+                          setState(() {});
+                        }
+                      },
+                icon: Icons.play_arrow,
+                label: l10n.libraryDetailContinue,
+              );
+              Widget buildSearchFab() => AppGlassFloatingActionButton(
+                buttonKey: const Key('unified-detail-search-fab'),
+                heroTag: 'unified-detail-search-fab',
+                tooltip: l10n.libraryChapterSearchHint,
+                onPressed: header == null ? null : _expandFloatingSearch,
+                icon: Icons.search,
+              );
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: RefreshIndicator(
+                      // 从屏幕顶部出现刷新指示器。
+                      edgeOffset: 0,
+                      displacement: 28,
+                      elevation: 0,
+                      onRefresh: _refreshAndShowFeedback,
+                      // 角标避让底部“继续阅读”按钮。
+                      child: EInkScrollPager(
+                        controller: _scrollController,
+                        edgeTapAllowed: true,
+                        cornerPadding: EdgeInsets.only(
+                          right: 12,
+                          bottom:
+                              88 +
+                              math.max(
+                                0.0,
+                                fabBottomInset - mediaPadding.bottom,
+                              ),
+                        ),
+                        child: chapterList,
+                      ),
+                    ),
+                  ),
+                  if (useFloatingSearch)
+                    Positioned(
+                      key: const Key('unified-detail-floating-search-dock'),
+                      left: 16 + mediaPadding.left,
+                      right: 16 + mediaPadding.right,
+                      bottom: dockBottom,
+                      child: TransientFeedbackObstacle(
+                        bottom: showContinueFab
+                            ? dockBottom + searchHeight + 12 + 56 + 8
+                            : dockBottom + searchHeight + 8,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            AnimatedSize(
+                              duration: reduceMotion
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              alignment: AlignmentDirectional.bottomEnd,
+                              child: showContinueFab
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
+                                      child: buildContinueFab(),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                return TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(
+                                    end: isSearchExpanded ? 1.0 : 0.0,
+                                  ),
+                                  duration: reduceMotion
+                                      ? Duration.zero
+                                      : const Duration(milliseconds: 220),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, progress, _) {
+                                    if (!isSearchExpanded && progress == 0.0) {
+                                      return buildSearchFab();
+                                    }
+                                    final width =
+                                        searchHeight +
+                                        (constraints.maxWidth - searchHeight) *
+                                            progress;
+                                    return SizedBox(
+                                      width: width,
+                                      height: searchHeight,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          searchHeight / 2,
+                                        ),
+                                        child: OverflowBox(
+                                          minWidth: constraints.maxWidth,
+                                          maxWidth: constraints.maxWidth,
+                                          alignment:
+                                              AlignmentDirectional.centerEnd,
+                                          child: IgnorePointer(
+                                            ignoring: !isSearchExpanded,
+                                            child: SizedBox(
+                                              width: constraints.maxWidth,
+                                              height: searchHeight,
+                                              child: searchControls,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (showContinueFab)
+                    Positioned(
+                      right: 16 + mediaPadding.right,
+                      bottom: fabBottom,
+                      child: TransientFeedbackObstacle(
+                        bottom: 72 + fabBottomInset,
+                        child: buildContinueFab(),
+                      ),
+                    ),
                 ],
               );
             },
           ),
-        ),
-        body: Builder(
-          builder: (context) {
-            final mediaPadding = MediaQuery.paddingOf(context);
-            final fabBottomInset = mainShellFabBottomInset(context);
-            final fabBottom = 16 + fabBottomInset;
-            final bodyKeyboardBottom = MediaQuery.viewInsetsOf(context).bottom;
-            final keyboardVisible = bodyKeyboardBottom > 0;
-            final showFab =
-                !keyboardVisible && !(useFloatingSearch && _searchFocused);
-            final dockBottom = math.max(fabBottom, bodyKeyboardBottom + 12);
-            final reduceMotion = AppMotion.reduceMotion(context);
-            Widget buildContinueFab() => AppGlassFloatingActionButton(
-              buttonKey: const Key('unified-detail-continue-fab'),
-              onPressed: header == null
-                  ? null
-                  : () async {
-                      final target = await _page.adapter.getReaderRouteTarget(
-                        workId: _page.workId,
-                        preferContinue: true,
-                      );
-                      if (!context.mounted || target == null) {
-                        return;
-                      }
-                      final handler = _page.onContinue ?? _page.onOpenReader;
-                      await handler(context, target);
-                      if (!context.mounted) {
-                        return;
-                      }
-                      await _controller.reload();
-                      if (mounted) {
-                        setState(() {});
-                      }
-                    },
-              icon: Icons.play_arrow,
-              label: l10n.libraryDetailContinue,
-            );
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: RefreshIndicator(
-                    // 从屏幕顶部出现刷新指示器。
-                    edgeOffset: 0,
-                    displacement: 28,
-                    elevation: 0,
-                    onRefresh: _refreshAndShowFeedback,
-                    // 角标避让底部“继续阅读”按钮。
-                    child: EInkScrollPager(
-                      controller: _scrollController,
-                      edgeTapAllowed: true,
-                      cornerPadding: EdgeInsets.only(
-                        right: 12,
-                        bottom:
-                            88 +
-                            math.max(0.0, fabBottomInset - mediaPadding.bottom),
-                      ),
-                      child: chapterList,
-                    ),
-                  ),
-                ),
-                if (useFloatingSearch)
-                  Positioned(
-                    key: const Key('unified-detail-floating-search-dock'),
-                    left: 16 + mediaPadding.left,
-                    right: 16 + mediaPadding.right,
-                    bottom: dockBottom,
-                    child: TransientFeedbackObstacle(
-                      bottom: dockBottom + 56,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(child: searchControls),
-                          AnimatedSize(
-                            duration: reduceMotion
-                                ? Duration.zero
-                                : const Duration(milliseconds: 200),
-                            curve: Curves.easeOutCubic,
-                            alignment: AlignmentDirectional.centerEnd,
-                            child: showFab
-                                ? Padding(
-                                    padding: const EdgeInsetsDirectional.only(
-                                      start: 12,
-                                    ),
-                                    child: buildContinueFab(),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else if (showFab)
-                  Positioned(
-                    right: 16 + mediaPadding.right,
-                    bottom: fabBottom,
-                    child: TransientFeedbackObstacle(
-                      bottom: 72 + fabBottomInset,
-                      child: buildContinueFab(),
-                    ),
-                  ),
-              ],
-            );
-          },
         ),
       ),
     );

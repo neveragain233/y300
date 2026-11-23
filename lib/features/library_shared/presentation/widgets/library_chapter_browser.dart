@@ -21,6 +21,17 @@ typedef ChapterBrowserRowBuilder<T> = Widget Function(
   VoidCallback confirmSearch,
 );
 
+/// 供宿主按需触发目录搜索聚焦或清空。
+class LibraryChapterBrowserController {
+  VoidCallback? _focusSearch;
+  void Function({bool unfocus})? _clearSearch;
+
+  void focusSearch() => _focusSearch?.call();
+
+  void clearSearch({bool unfocus = true}) =>
+      _clearSearch?.call(unfocus: unfocus);
+}
+
 /// 共享目录检索、浏览位置与定位；业务打开、进度和菜单仍由宿主持有。
 class LibraryChapterBrowser<T> extends StatefulWidget {
   const LibraryChapterBrowser({
@@ -44,7 +55,10 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
     this.pinControls = false,
     this.pinnedTopOffset = 0,
     this.floatingSearchBar = false,
+    this.browserController,
     this.onSearchFocusChanged,
+    this.onSearchQueryChanged,
+    this.onCollapseFloatingSearch,
   });
 
   final String workId;
@@ -71,7 +85,10 @@ class LibraryChapterBrowser<T> extends StatefulWidget {
   final bool pinControls;
   final double pinnedTopOffset;
   final bool floatingSearchBar;
+  final LibraryChapterBrowserController? browserController;
   final ValueChanged<bool>? onSearchFocusChanged;
+  final ValueChanged<bool>? onSearchQueryChanged;
+  final VoidCallback? onCollapseFloatingSearch;
 
   static double controlsHeight(BuildContext context) =>
       math.max(48, MediaQuery.textScalerOf(context).scale(16) * 1.5 + 20) + 56;
@@ -93,15 +110,39 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
   double _browseOffset = 0;
   int _navigationRevision = 0;
   bool _lastReportedFocused = false;
+  bool _lastReportedHasQuery = false;
 
   ScrollController get _scroll =>
       widget.scrollController ?? _ownedScrollController;
+
+  void _attachController(LibraryChapterBrowserController? controller) {
+    if (controller == null) return;
+    controller._focusSearch = () {
+      if (mounted) {
+        _focus.requestFocus();
+      }
+    };
+    controller._clearSearch = ({bool unfocus = true}) {
+      if (!mounted) return;
+      if (unfocus) {
+        _focus.unfocus();
+      }
+      _clear();
+    };
+  }
+
+  void _detachController(LibraryChapterBrowserController? controller) {
+    if (controller == null) return;
+    controller._focusSearch = null;
+    controller._clearSearch = null;
+  }
 
   @override
   void initState() {
     super.initState();
     _ownedScrollController = ScrollController();
     _focus.addListener(_handleFocusChanged);
+    _attachController(widget.browserController);
     _search = ChapterSearchController<T>(normalizeTexts: widget.normalizeTexts)
       ..updateEntries(widget.entries)
       ..addListener(_refresh);
@@ -115,14 +156,26 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
     widget.onSearchFocusChanged?.call(focused);
   }
 
+  void _notifyQueryState() {
+    final hasQuery = _text.text.trim().isNotEmpty;
+    if (hasQuery == _lastReportedHasQuery) return;
+    _lastReportedHasQuery = hasQuery;
+    widget.onSearchQueryChanged?.call(hasQuery);
+  }
+
   @override
   void didUpdateWidget(covariant LibraryChapterBrowser<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.browserController, widget.browserController)) {
+      _detachController(oldWidget.browserController);
+      _attachController(widget.browserController);
+    }
     if (oldWidget.workId != widget.workId) {
       _navigationRevision++;
       _text.clear();
       _browseOffset = 0;
       _search.setQuery('');
+      _notifyQueryState();
     }
     _search.updateEntries(widget.entries);
   }
@@ -134,6 +187,7 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
   @override
   void dispose() {
     _navigationRevision++;
+    _detachController(widget.browserController);
     _search
       ..removeListener(_refresh)
       ..dispose();
@@ -153,6 +207,7 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
     }
     final wasSearching = _search.query.isNotEmpty;
     _search.setQuery(value);
+    _notifyQueryState();
     if (value.trim().isEmpty) {
       if (wasSearching) {
         _jumpAfterLayout(() => _browseOffset, alignUnderHeader: false);
@@ -165,6 +220,12 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
   void _clear() {
     _text.clear();
     _changeQuery('');
+  }
+
+  void _clearAndCollapse() {
+    _focus.unfocus();
+    _clear();
+    widget.onCollapseFloatingSearch?.call();
   }
 
   void _locate(String? id) {
@@ -300,7 +361,16 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
             hintStyle: theme.textTheme.bodyLarge?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
-            prefixIcon: const Icon(Icons.search, size: 20),
+            prefixIcon:
+                widget.floatingSearchBar &&
+                    widget.onCollapseFloatingSearch != null
+                ? IconButton(
+                    key: Key('$prefix-search-collapse'),
+                    tooltip: l10n.commonClose,
+                    onPressed: _clearAndCollapse,
+                    icon: const Icon(Icons.arrow_back, size: 20),
+                  )
+                : const Icon(Icons.search, size: 20),
             suffixIcon: _text.text.isNotEmpty
                 ? IconButton(
                     key: Key('$prefix-search-clear'),

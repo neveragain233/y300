@@ -50,6 +50,7 @@ void _headerMetadataCases() {
         );
         await tester.pumpAndSettle();
         final reads = adapter.loadChaptersCallCount;
+        final searchFab = find.byKey(const Key('unified-detail-search-fab'));
         final input = find.byKey(
           const Key('unified-detail-chapter-search-field'),
         );
@@ -61,6 +62,12 @@ void _headerMetadataCases() {
               ?.statusBarIconBrightness,
           Brightness.dark,
         );
+        expect(searchFab, findsOneWidget);
+        expect(input, findsNothing);
+
+        await tester.tap(searchFab);
+        await tester.pumpAndSettle();
+        expect(input, findsOneWidget);
         expect(
           tester.getTopLeft(input).dy,
           greaterThanOrEqualTo(
@@ -494,7 +501,13 @@ void _headerMetadataCases() {
       );
       final screenHeight = tester.getSize(find.byType(Scaffold)).height;
       final fabRect = tester.getRect(fabFinder);
-      expect(screenHeight - fabRect.bottom, closeTo(104, 1));
+      final searchFabFinder = find.byKey(
+        const Key('unified-detail-search-fab'),
+      );
+      expect(searchFabFinder, findsOneWidget);
+      final searchFabRect = tester.getRect(searchFabFinder);
+      expect(screenHeight - searchFabRect.bottom, closeTo(104, 1));
+      expect(searchFabRect.top - fabRect.bottom, closeTo(12, 1));
 
       setMode(() => eInk = true);
       await tester.pumpAndSettle();
@@ -522,6 +535,10 @@ void _headerMetadataCases() {
       var eInk = false;
       var keyboardBottom = 0.0;
       late StateSetter setMode;
+      final adapter = _FakeDetailAdapter(
+        module: LibraryModuleKey.comic,
+        includeSecondChapter: true,
+      );
       await tester.pumpWidget(
         StatefulBuilder(
           builder: (context, setState) {
@@ -534,10 +551,7 @@ void _headerMetadataCases() {
                 child: EInkModeScope(
                   enabled: eInk,
                   child: UnifiedDetailPage(
-                    adapter: _FakeDetailAdapter(
-                      module: LibraryModuleKey.comic,
-                      includeSecondChapter: true,
-                    ),
+                    adapter: adapter,
                     workId: 'work-1',
                     onOpenReader: (context, target) async {},
                     onOpenThread: (context, target) async {},
@@ -553,35 +567,49 @@ void _headerMetadataCases() {
       final dockFinder = find.byKey(
         const Key('unified-detail-floating-search-dock'),
       );
+      final searchFabFinder = find.byKey(
+        const Key('unified-detail-search-fab'),
+      );
       final searchField = find.byKey(
         const Key('unified-detail-chapter-search-field'),
       );
       final fabFinder = find.byKey(const Key('unified-detail-continue-fab'));
 
-      // Full mode: 底部悬浮搜索胶囊与“继续”FAB 并排显示，滚动后仍停在底部。
+      // Full mode 默认收起态：右下角纵向叠放“继续”与圆形搜索按钮，滚动后仍停在底部。
       expect(dockFinder, findsOneWidget);
-      expect(searchField, findsOneWidget);
       expect(fabFinder, findsOneWidget);
-      final initialSearchRect = tester.getRect(searchField);
-      final initialFabRect = tester.getRect(fabFinder);
-      expect(initialSearchRect.right, lessThanOrEqualTo(initialFabRect.left));
+      expect(searchFabFinder, findsOneWidget);
+      expect(searchField, findsNothing);
+      final initialContinueRect = tester.getRect(fabFinder);
+      final initialSearchFabRect = tester.getRect(searchFabFinder);
+      expect(
+        initialSearchFabRect.top,
+        greaterThanOrEqualTo(initialContinueRect.bottom + 11),
+      );
+      expect(initialSearchFabRect.right, closeTo(initialContinueRect.right, 1));
 
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
       await tester.pumpAndSettle();
       expect(
-        tester.getRect(searchField).bottom,
-        closeTo(initialSearchRect.bottom, 1),
+        tester.getRect(searchFabFinder).bottom,
+        closeTo(initialSearchFabRect.bottom, 1),
       );
 
-      // 单次点击搜索框即获得焦点并隐藏 FAB、展开至全宽。
-      await tester.tap(searchField);
+      // 单次点击圆形搜索按钮即展开为全宽悬浮搜索框、隐藏“继续”按钮并自动聚焦。
+      await tester.tap(searchFabFinder);
       await tester.pumpAndSettle();
       expect(fabFinder, findsNothing);
+      expect(searchFabFinder, findsNothing);
+      expect(searchField, findsOneWidget);
       final dockRect = tester.getRect(dockFinder);
       final focusedSearchRect = tester.getRect(searchField);
       expect(focusedSearchRect.width, closeTo(dockRect.width, 1));
+      final editable = tester.widget<EditableText>(
+        find.descendant(of: searchField, matching: find.byType(EditableText)),
+      );
+      expect(editable.focusNode.hasFocus, isTrue);
 
-      // 键盘弹出时悬浮搜索框跟随上移，FAB 保持隐藏。
+      // 键盘弹出时悬浮搜索框跟随上移，“继续”保持隐藏。
       setMode(() => keyboardBottom = 300);
       await tester.pumpAndSettle();
       final screenHeight = tester.getSize(find.byType(Scaffold)).height;
@@ -591,7 +619,37 @@ void _headerMetadataCases() {
         greaterThanOrEqualTo(312),
       );
 
-      // 切回 E-ink 模式：无底部悬浮栏，搜索框吸顶于 AppBar 下且保留实线边框，键盘弹出仍隐藏 FAB。
+      // 输入关键词后收起键盘并失焦：搜索框保持展开，“继续”保持隐藏直到清空。
+      await tester.enterText(searchField, '2');
+      await tester.pumpAndSettle();
+      setMode(() => keyboardBottom = 0);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(searchField, findsOneWidget);
+      expect(fabFinder, findsNothing);
+
+      // 在失焦状态下点击右侧清除按钮：清空关键词并收起回圆形按钮，恢复“继续”。
+      await tester.tap(
+        find.byKey(const Key('unified-detail-chapter-search-clear')),
+      );
+      await tester.pumpAndSettle();
+      expect(searchField, findsNothing);
+      expect(searchFabFinder, findsOneWidget);
+      expect(fabFinder, findsOneWidget);
+
+      // 再次点击圆形搜索按钮展开后，点击左侧收起按钮也应清空并恢复双按钮。
+      await tester.tap(searchFabFinder);
+      await tester.pumpAndSettle();
+      expect(searchField, findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('unified-detail-chapter-search-collapse')),
+      );
+      await tester.pumpAndSettle();
+      expect(searchField, findsNothing);
+      expect(searchFabFinder, findsOneWidget);
+      expect(fabFinder, findsOneWidget);
+
+      // 切回 E-ink 模式：无底部悬浮栏与圆形搜索按钮，搜索框吸顶于 AppBar 下且保留实线边框，键盘弹出仍隐藏 FAB。
       setMode(() {
         eInk = true;
         keyboardBottom = 0;
@@ -601,6 +659,7 @@ void _headerMetadataCases() {
       await tester.pumpAndSettle();
 
       expect(dockFinder, findsNothing);
+      expect(searchFabFinder, findsNothing);
       final appBarBottom = tester.getBottomLeft(find.byType(AppBar)).dy;
       final searchTop = tester.getTopLeft(searchField).dy;
       expect(searchTop, greaterThanOrEqualTo(appBarBottom));
