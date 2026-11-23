@@ -284,9 +284,22 @@ void main() {
       await tester.pump();
     }
 
-    // 浅色开启玻璃：使用 surfaceContainerLowest 着色而非中性灰 0x93F4F4F4
+    // 浅色开启玻璃：使用 surfaceContainerLowest 着色而非中性灰 0x93F4F4F4，
+    // 且吸顶控制区背景色直接画在带 boxShadow 的同一层 BoxDecoration 上。
     final lightTheme = AppTheme.light();
     await pumpTheme(theme: lightTheme);
+    final headerDecorated = tester.widget<DecoratedBox>(
+      find
+          .descendant(
+            of: find.byType(LibraryChapterBrowser<String>),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+    );
+    expect(
+      (headerDecorated.decoration as BoxDecoration).color,
+      lightTheme.scaffoldBackgroundColor,
+    );
     final lightGlass = tester.widget<LiquidGlass>(
       find.descendant(
         of: find.byType(AppTextInput),

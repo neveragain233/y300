@@ -275,23 +275,26 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
       final dividerColor = eInk
           ? scheme.outlineVariant
           : scheme.outlineVariant.withValues(alpha: 0.5);
-      return Material(
-        color: backdrop,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: isPinned && overlapsContent
-                ? Border(bottom: BorderSide(color: dividerColor))
-                : null,
-            boxShadow: isPinned && overlapsContent && !eInk
-                ? [
-                    BoxShadow(
-                      color: scheme.shadow.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          // 将背景色与阴影放在同一层不透明 BoxDecoration 上，防止透明
+          // DecoratedBox 的 boxShadow 透进内部把整个浅色吸顶区域染灰。
+          color: backdrop,
+          border: isPinned && overlapsContent
+              ? Border(bottom: BorderSide(color: dividerColor))
+              : null,
+          boxShadow: isPinned && overlapsContent && !eInk
+              ? [
+                  BoxShadow(
+                    color: scheme.shadow.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
