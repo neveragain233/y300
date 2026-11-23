@@ -267,6 +267,33 @@ void main() {
     expect(native.selectionForeground, AppThemeTokens.appBarBackground);
   });
 
+  test(
+    'preset theme container pairs avoid seed pink leakage and keep contrast',
+    () {
+      for (final family in AppThemeFamily.values) {
+        for (final brightness in Brightness.values) {
+          final theme = AppTheme.build(family: family, brightness: brightness);
+          final scheme = theme.colorScheme;
+          expect(
+            _contrastRatio(scheme.onPrimaryContainer, scheme.primaryContainer),
+            greaterThanOrEqualTo(4.5),
+          );
+          expect(
+            _contrastRatio(
+              scheme.onTertiaryContainer,
+              scheme.tertiaryContainer,
+            ),
+            greaterThanOrEqualTo(4.5),
+          );
+        }
+      }
+      final warmLight = AppTheme.light().colorScheme;
+      expect(warmLight.surfaceContainerHigh, const Color(0xFFF6E9D2));
+      expect(warmLight.primaryContainer, const Color(0xFFF7DFB8));
+      expect(warmLight.tertiaryContainer, const Color(0xFFE9DFC9));
+    },
+  );
+
   test('moon white palettes expose the documented light and dark colors', () {
     final light = AppThemePalette.resolve(
       AppThemeFamily.moonWhite,
@@ -667,15 +694,23 @@ void _expectColorSchemeMatchesPalette(
   expect(scheme.brightness, palette.brightness);
   expect(scheme.primary, palette.primary);
   expect(scheme.onPrimary, palette.onPrimary);
+  expect(scheme.primaryContainer, palette.primaryContainer);
+  expect(scheme.onPrimaryContainer, palette.onPrimaryContainer);
   expect(scheme.surface, palette.surface);
   expect(scheme.onSurface, palette.onSurface);
+  expect(scheme.surfaceBright, palette.surfaceBright);
+  expect(scheme.surfaceDim, palette.surfaceDim);
   expect(scheme.surfaceContainerLowest, palette.surfaceContainerLowest);
+  expect(scheme.surfaceContainerLow, palette.surfaceContainerLow);
   expect(scheme.surfaceContainer, palette.surfaceContainer);
+  expect(scheme.surfaceContainerHigh, palette.surfaceContainerHigh);
   expect(scheme.surfaceContainerHighest, palette.surfaceContainerHighest);
   expect(scheme.onSurfaceVariant, palette.onSurfaceVariant);
   expect(scheme.outlineVariant, palette.outlineVariant);
   expect(scheme.secondaryContainer, palette.secondaryContainer);
   expect(scheme.onSecondaryContainer, palette.onSecondaryContainer);
+  expect(scheme.tertiaryContainer, palette.tertiaryContainer);
+  expect(scheme.onTertiaryContainer, palette.onTertiaryContainer);
 }
 
 void _expectComponentThemesMatchScheme(ThemeData theme) {

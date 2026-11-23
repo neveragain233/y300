@@ -73,15 +73,23 @@ final class AppTheme {
               _buildColorScheme(palette).copyWith(
                 primary: palette.primary,
                 onPrimary: palette.onPrimary,
+                primaryContainer: palette.primaryContainer,
+                onPrimaryContainer: palette.onPrimaryContainer,
                 surface: palette.surface,
                 onSurface: palette.onSurface,
+                surfaceBright: palette.surfaceBright,
+                surfaceDim: palette.surfaceDim,
                 surfaceContainerLowest: palette.surfaceContainerLowest,
+                surfaceContainerLow: palette.surfaceContainerLow,
                 surfaceContainer: palette.surfaceContainer,
+                surfaceContainerHigh: palette.surfaceContainerHigh,
                 surfaceContainerHighest: palette.surfaceContainerHighest,
                 onSurfaceVariant: palette.onSurfaceVariant,
                 outlineVariant: palette.outlineVariant,
                 secondaryContainer: palette.secondaryContainer,
                 onSecondaryContainer: palette.onSecondaryContainer,
+                tertiaryContainer: palette.tertiaryContainer,
+                onTertiaryContainer: palette.onTertiaryContainer,
               ));
     final theme = ThemeData(
       useMaterial3: true,

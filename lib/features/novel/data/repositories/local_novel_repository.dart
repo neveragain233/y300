@@ -26,6 +26,7 @@ class LocalNovelRepository
         NovelReadingStateRepository,
         NovelWorkReadingResetRepository,
         NovelRecentReadingQuery,
+        NovelRecentReadingTouchRepository,
         NovelShelfSnapshotRepository,
         NovelCoverCacheWriter,
         NovelCustomMetadataWriter,
@@ -622,6 +623,19 @@ class LocalNovelRepository
   @override
   Future<NovelRecentReading?> getMostRecentReading() =>
       _readingState.getMostRecentReading();
+
+  @override
+  Future<bool> touchRecentReading({
+    required String novelId,
+    required String episodeId,
+    DateTime? readAt,
+    bool Function()? canCommit,
+  }) => _readingState.touchRecentReading(
+    novelId: novelId,
+    episodeId: episodeId,
+    readAt: readAt,
+    canCommit: canCommit,
+  );
 
   @override
   Future<NovelReadingProgress?> getReadingProgress({

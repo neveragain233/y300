@@ -180,49 +180,44 @@ void _launchCases() {
     },
   );
 
-  testWidgets(
-    'reselecting and revisiting forum preserves the actual source route',
-    (tester) async {
-      final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
-        ComicSearchRefreshQueueSnapshot.empty,
-      );
-      final selection = ShelfSelectionHostController();
-      addTearDown(queue.dispose);
-      addTearDown(selection.dispose);
-      await _pumpSelectionShell(
-        tester,
-        queueSnapshot: queue,
-        selectionHost: selection,
-        webViewDriver: _FakeForumWebViewDriver(),
-      );
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(MainShellPage)),
-      );
-      final homeContext = tester.element(
-        find.byKey(const Key('forum-home-list')),
-      );
-      unawaited(
-        Navigator.of(homeContext).push(
-          MaterialPageRoute<void>(
-            builder: (_) =>
-                const Scaffold(body: Center(child: Text('fake-section'))),
-          ),
+  testWidgets('revisiting forum preserves the actual source route', (
+    tester,
+  ) async {
+    final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+      ComicSearchRefreshQueueSnapshot.empty,
+    );
+    final selection = ShelfSelectionHostController();
+    addTearDown(queue.dispose);
+    addTearDown(selection.dispose);
+    await _pumpSelectionShell(
+      tester,
+      queueSnapshot: queue,
+      selectionHost: selection,
+      webViewDriver: _FakeForumWebViewDriver(),
+    );
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MainShellPage)),
+    );
+    final homeContext = tester.element(
+      find.byKey(const Key('forum-home-list')),
+    );
+    unawaited(
+      Navigator.of(homeContext).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              const Scaffold(body: Center(child: Text('fake-section'))),
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('fake-section'), findsOneWidget);
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('fake-section'), findsOneWidget);
 
-      await _tapNavigationGroup(tester, l10n.appNavigationForum);
-      await tester.pumpAndSettle();
-
-      expect(find.text('fake-section'), findsOneWidget);
-      await _tapNavigationGroup(tester, l10n.appNavigationMy);
-      await _tapNavigationGroup(tester, l10n.appNavigationForum);
-      expect(find.text('fake-section'), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await _tapNavigationGroup(tester, l10n.appNavigationMy);
+    await _tapNavigationGroup(tester, l10n.appNavigationForum);
+    expect(find.text('fake-section'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

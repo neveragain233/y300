@@ -12,7 +12,8 @@ class SqfliteNovelReadingStateRepository
     implements
         NovelReadingStateRepository,
         NovelWorkReadingResetRepository,
-        NovelRecentReadingQuery {
+        NovelRecentReadingQuery,
+        NovelRecentReadingTouchRepository {
   SqfliteNovelReadingStateRepository(this._dbFuture);
   final Future<Database> _dbFuture;
 
@@ -73,15 +74,38 @@ class SqfliteNovelReadingStateRepository
   @override
   Future<NovelRecentReading?> getMostRecentReading() async {
     final rows = await (await _dbFuture).rawQuery('''
-      SELECT p.novel_id, p.episode_id, p.updated_at
-      FROM ${AppDatabase.novelReadingProgressTable} p
-      INNER JOIN ${AppDatabase.worksTable} w
-        ON w.work_id = p.novel_id AND w.content_type = 'novel'
-      INNER JOIN ${AppDatabase.workEpisodesTable} e
-        ON e.episode_id = p.episode_id
-       AND e.work_id = p.novel_id
-       AND e.content_type = 'novel'
-      ORDER BY p.updated_at DESC, p.rowid DESC
+      SELECT novel_id, episode_id, read_at
+      FROM (
+        SELECT s.work_id AS novel_id,
+               s.last_read_episode_id AS episode_id,
+               s.last_read_at AS read_at,
+               1 AS source_rank,
+               s.rowid AS row_order
+        FROM ${AppDatabase.libraryWorkStateTable} s
+        INNER JOIN ${AppDatabase.worksTable} w
+          ON w.work_id = s.work_id AND w.content_type = 'novel'
+        INNER JOIN ${AppDatabase.workEpisodesTable} e
+          ON e.episode_id = s.last_read_episode_id
+         AND e.work_id = s.work_id
+         AND e.content_type = 'novel'
+        WHERE s.content_type = 'novel'
+          AND s.last_read_episode_id IS NOT NULL
+          AND s.last_read_at IS NOT NULL
+        UNION ALL
+        SELECT p.novel_id AS novel_id,
+               p.episode_id AS episode_id,
+               p.updated_at AS read_at,
+               0 AS source_rank,
+               p.rowid AS row_order
+        FROM ${AppDatabase.novelReadingProgressTable} p
+        INNER JOIN ${AppDatabase.worksTable} w
+          ON w.work_id = p.novel_id AND w.content_type = 'novel'
+        INNER JOIN ${AppDatabase.workEpisodesTable} e
+          ON e.episode_id = p.episode_id
+         AND e.work_id = p.novel_id
+         AND e.content_type = 'novel'
+      )
+      ORDER BY read_at DESC, source_rank DESC, row_order DESC
       LIMIT 1
       ''');
     if (rows.isEmpty) {
@@ -91,8 +115,21 @@ class SqfliteNovelReadingStateRepository
     return NovelRecentReading(
       novelId: row['novel_id'] as String,
       episodeId: row['episode_id'] as String,
-      readAt:
-          _date(row['updated_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+      readAt: _date(row['read_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+
+  @override
+  Future<bool> touchRecentReading({
+    required String novelId,
+    required String episodeId,
+    DateTime? readAt,
+    bool Function()? canCommit,
+  }) {
+    final timestamp = (readAt ?? DateTime.now()).millisecondsSinceEpoch;
+    return _mutate(
+      canCommit,
+      (txn) => _writeRecent(txn, novelId, episodeId, timestamp),
     );
   }
 

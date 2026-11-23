@@ -80,6 +80,16 @@ abstract interface class NovelRecentReadingQuery {
   Future<NovelRecentReading?> getMostRecentReading();
 }
 
+/// 仅更新作品级最近阅读记录（不改动章内位置锚点或已读状态）。
+abstract interface class NovelRecentReadingTouchRepository {
+  Future<bool> touchRecentReading({
+    required String novelId,
+    required String episodeId,
+    DateTime? readAt,
+    bool Function()? canCommit,
+  });
+}
+
 /// Optional whole-work mutation. Clears public positions, the recent chapter
 /// and current completion evidence atomically while preserving bookmarks.
 abstract interface class NovelWorkReadingResetRepository {

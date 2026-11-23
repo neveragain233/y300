@@ -308,6 +308,9 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                                     onSelected: selection.isActive
                                         ? null
                                         : selectGroup,
+                                    onReselected: selection.isActive
+                                        ? null
+                                        : selectGroup,
                                   ),
                                 ),
                               ),
@@ -363,6 +366,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
 
   void _selectDestination(MainShellDestination destination) {
     if (destination == _currentDestination) {
+      _reselectDestination(destination);
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -370,6 +374,11 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
       _currentDestination = destination;
       _builtDestinations.add(destination);
     });
+  }
+
+  void _reselectDestination(MainShellDestination destination) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    unawaited(_browsers[destination]?.resetToRoot());
   }
 
   MainShellDestination _resolveCurrentDestination(

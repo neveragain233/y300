@@ -302,6 +302,7 @@ class MainNavigationCapsule extends StatefulWidget {
     required this.items,
     required this.selectedIndex,
     this.onSelected,
+    this.onReselected,
     this.swipeEnabled = false,
     this.dragFromSelection = true,
     this.glassLevel = AppGlassLevel.off,
@@ -310,6 +311,7 @@ class MainNavigationCapsule extends StatefulWidget {
   final List<MainNavigationItem> items;
   final int selectedIndex;
   final ValueChanged<int>? onSelected;
+  final ValueChanged<int>? onReselected;
 
   /// 拖动期间只移动候选，页面切换和语义选中态在松手后才提交。
   final bool swipeEnabled;
@@ -422,6 +424,9 @@ class _MainNavigationCapsuleState extends State<MainNavigationCapsule> {
                             selectedIndex: widget.selectedIndex,
                             onSelected: (index) =>
                                 widget.onSelected?.call(index),
+                            onReselected: widget.onReselected == null
+                                ? null
+                                : (index) => widget.onReselected?.call(index),
                             commitOnDrag: widget.swipeEnabled,
                             projectVelocity: false,
                             dragFromSelection: widget.dragFromSelection,

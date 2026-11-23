@@ -1434,6 +1434,51 @@ class NovelReaderController extends AsyncNotifier<NovelReaderViewState> {
         readOnlyCompatibilityRestore: true,
       );
     }
+    // 只要真正进入章节就刷新作品级最近阅读时间戳，不等待翻页也不改动章内锚点。
+    unawaited(
+      _touchRecentReading(
+        episodeId,
+        sessionToken: _activeSessionToken,
+        barrierRevision: _readingBarrierRevision,
+      ),
+    );
+  }
+
+  Future<void> _touchRecentReading(
+    String episodeId, {
+    required int sessionToken,
+    required int barrierRevision,
+  }) async {
+    final Object? stateRepository = ref.read(
+      novelReadingStateRepositoryProvider,
+    );
+    final Object repository =
+        stateRepository is NovelRecentReadingTouchRepository
+        ? stateRepository
+        : ref.read(novelRepositoryProvider);
+    if (repository is! NovelRecentReadingTouchRepository) return;
+    final barrier = ref.read(novelReadingMutationBarrierProvider);
+    final bus = ref.read(libraryShelfRefreshBusProvider);
+    bool canCommit() =>
+        ref.mounted &&
+        sessionToken == _activeSessionToken &&
+        barrier.isCurrent(_args.novelId, episodeId, barrierRevision);
+    try {
+      final applied = await repository.touchRecentReading(
+        novelId: _args.novelId,
+        episodeId: episodeId,
+        canCommit: canCommit,
+      );
+      if (!applied || !ref.mounted || sessionToken != _activeSessionToken) {
+        return;
+      }
+      bus.notify(
+        modules: {LibraryModuleKey.novel},
+        reason: 'novel_recent_reading',
+        source: LibraryMutationSource.novelRefresh,
+        workId: _args.novelId,
+      );
+    } catch (_) {}
   }
 
   void updateReadingVisibility({

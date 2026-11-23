@@ -610,4 +610,53 @@ void _navigationCases() {
       expect(find.byType(MainNavigationCapsule), findsOneWidget);
     },
   );
+
+  for (final style in AppNavigationBarStyle.values) {
+    testWidgets(
+      'tapping active forum destination resets nested stack to root (${style.name})',
+      (tester) async {
+        final queue = ValueNotifier<ComicSearchRefreshQueueSnapshot>(
+          ComicSearchRefreshQueueSnapshot.empty,
+        );
+        final selection = ShelfSelectionHostController();
+        addTearDown(queue.dispose);
+        addTearDown(selection.dispose);
+        await _pumpSelectionShell(
+          tester,
+          queueSnapshot: queue,
+          selectionHost: selection,
+          webViewDriver: _FakeForumWebViewDriver(),
+        );
+        final shellElement = tester.element(find.byType(MainShellPage));
+        await ProviderScope.containerOf(shellElement)
+            .read(appAppearanceControllerProvider.notifier)
+            .setNavigationBarStyle(style);
+        await tester.pumpAndSettle();
+
+        // 在论坛来源栈中压入子页面（底栏仍保持可见）。
+        final forumHome = find.byKey(const Key('forum-home-list'));
+        unawaited(
+          Navigator.of(tester.element(forumHome)).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(
+                key: Key('forum-subpage-body'),
+                body: SizedBox.expand(),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('forum-subpage-body')), findsOneWidget);
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(MainShellPage)),
+        );
+        await _tapNavigationGroup(tester, l10n.appNavigationForum);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('forum-subpage-body')), findsNothing);
+        expect(find.byKey(const Key('forum-home-list')), findsOneWidget);
+      },
+    );
+  }
 }

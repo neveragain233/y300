@@ -941,6 +941,7 @@ class FloatingNavigationBar extends StatefulWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onSelected,
+    this.onReselected,
     this.commitOnDrag = true,
     this.projectVelocity = true,
     this.dragFromSelection = false,
@@ -950,6 +951,7 @@ class FloatingNavigationBar extends StatefulWidget {
   final List<NavigationDockDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final ValueChanged<int>? onReselected;
 
   /// Whether letting go after a drag selects the destination under the lens.
   /// With a tap the pressed destination still selects.
@@ -1415,6 +1417,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
       return;
     }
     final commits = commit && (!_dragging || widget.commitOnDrag);
+    final wasDragging = _dragging;
     _pressedIndex = null;
     _dragging = false;
     final target = commits ? index : _selectedIndex;
@@ -1427,8 +1430,12 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
       _lens.springTo(target.toDouble(), _travelSpring);
       _dropLift();
     }
-    if (commits && index != widget.selectedIndex) {
-      widget.onSelected(index);
+    if (commits) {
+      if (index != widget.selectedIndex) {
+        widget.onSelected(index);
+      } else if (!wasDragging) {
+        widget.onReselected?.call(index);
+      }
     }
   }
 
@@ -1526,7 +1533,15 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
                                 labelHeight: lineHeight,
                                 labelOverflows:
                                     labels[index].width * labelScale > room,
-                                onActivate: () => widget.onSelected(index),
+                                onActivate: () {
+                                  if (index == widget.selectedIndex) {
+                                    (widget.onReselected ?? widget.onSelected)(
+                                      index,
+                                    );
+                                  } else {
+                                    widget.onSelected(index);
+                                  }
+                                },
                               ),
                             ),
                         ],

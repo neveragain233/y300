@@ -36,55 +36,48 @@ void main() {
   });
   tearDown(() async => fixture.dispose());
 
-  test(
-    'bootstrap restores the selected chapter instead of only the most recent chapter',
-    () async {
-      await fixture.repository.commitProgress(progress: _position(_a, .2));
-      await fixture.repository.commitProgress(progress: _position(_b, .4));
-      final reader = await fixture.open(_a);
-      var state = fixture.state(_a);
-      expect(state.readingProgress!.episodeId, _b);
-      expect(state.readingState!.progressByEpisode, hasLength(2));
-      expect(state.progressSnapshot.episodeId, _a);
-      expect(state.progressSnapshot.progressPercent, .2);
-      expect(state.currentOffset, 200);
-      expect(await reader.openEpisodeFromCatalog(_b), true);
-      state = fixture.state(_a);
-      expect(state.currentEpisode.episodeId, _b);
-      expect(state.progressSnapshot.progressPercent, .4);
-      expect(state.currentOffset, 400);
-      expect(
-        (await fixture.repository.loadWorkState(
-          novelId: _novel,
-        )).progressByEpisode,
-        hasLength(2),
-      );
-    },
-  );
+  test('bootstrap restores the selected chapter instead of only the most recent chapter', () async {
+    await fixture.repository.commitProgress(progress: _position(_a, .2));
+    await fixture.repository.commitProgress(progress: _position(_b, .4));
+    final reader = await fixture.open(_a);
+    var state = fixture.state(_a);
+    expect(state.readingProgress!.episodeId, _b);
+    expect(state.readingState!.progressByEpisode, hasLength(2));
+    expect(state.progressSnapshot.episodeId, _a);
+    expect(state.progressSnapshot.progressPercent, .2);
+    expect(state.currentOffset, 200);
+    expect(await reader.openEpisodeFromCatalog(_b), true);
+    state = fixture.state(_a);
+    expect(state.currentEpisode.episodeId, _b);
+    expect(state.progressSnapshot.progressPercent, .4);
+    expect(state.currentOffset, 400);
+    expect(
+      (await fixture.repository.loadWorkState(novelId: _novel))
+          .progressByEpisode,
+      hasLength(2),
+    );
+  });
 
-  test(
-    'completed catalog chapter opens at the beginning and leaves its recorded position intact',
-    () async {
-      await fixture.repository.commitProgress(
-        progress: _position(_a, .7),
-        markCompleted: true,
-      );
-      final reader = await fixture.open(_b);
-      expect(await reader.openEpisodeFromCatalog(_a), true);
-      final state = fixture.state(_b);
-      expect(state.currentEpisode.episodeId, _a);
-      expect(state.currentOffset, 0);
-      expect(state.progressSnapshot.progressPercent, 0);
-      expect(
-        (await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _a,
-        ))!.progressPercent,
-        .7,
-      );
-      expect(state.readingState!.episodeStates[_a]!.isRead, true);
-    },
-  );
+  test('completed catalog chapter opens at the beginning and leaves its recorded position intact', () async {
+    await fixture.repository.commitProgress(
+      progress: _position(_a, .7),
+      markCompleted: true,
+    );
+    final reader = await fixture.open(_b);
+    expect(await reader.openEpisodeFromCatalog(_a), true);
+    final state = fixture.state(_b);
+    expect(state.currentEpisode.episodeId, _a);
+    expect(state.currentOffset, 0);
+    expect(state.progressSnapshot.progressPercent, 0);
+    expect(
+      (await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _a,
+      ))!.progressPercent,
+      .7,
+    );
+    expect(state.readingState!.episodeStates[_a]!.isRead, true);
+  });
 
   test(
     'transition flushes the old chapter before retiring its debounce lease',
@@ -119,164 +112,157 @@ void main() {
     },
   );
 
-  test(
-    'manual unread rejects an in-flight old callback and accepts only a new real navigation',
-    () async {
-      await fixture.repository.commitProgress(progress: _position(_a, .4));
-      final reader = await fixture.open(_a);
-      await reader.onScrollOffsetChanged(430, bodySnapshot: _snapshot(_a, .43));
-      final entered = Completer<void>();
-      final release = Completer<void>();
-      fixture.repository.beforeCommit = () async {
-        entered.complete();
-        await release.future;
-      };
-      final oldFlush = reader.saveCurrentProgressNow(_snapshot(_a, .43));
-      await entered.future;
-      await reader.setChapterRead(_a, false);
-      release.complete();
-      await oldFlush;
-      fixture.repository.beforeCommit = null;
-      expect(
-        await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _a,
-        ),
-        isNull,
-      );
-      await reader.saveCurrentProgressNow(fixture.state(_a).progressSnapshot);
-      expect(
-        await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _a,
-        ),
-        isNull,
-      );
-      await reader.onScrollOffsetChanged(500, bodySnapshot: _snapshot(_a, .5));
-      await reader.saveCurrentProgressNow(fixture.state(_a).progressSnapshot);
-      expect(
-        (await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _a,
-        ))!.progressPercent,
-        .5,
-      );
-    },
-  );
+  test('manual unread rejects an in-flight old callback and accepts only a new real navigation', () async {
+    await fixture.repository.commitProgress(progress: _position(_a, .4));
+    final reader = await fixture.open(_a);
+    await reader.onScrollOffsetChanged(430, bodySnapshot: _snapshot(_a, .43));
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    fixture.repository.beforeCommit = () async {
+      entered.complete();
+      await release.future;
+    };
+    final oldFlush = reader.saveCurrentProgressNow(_snapshot(_a, .43));
+    await entered.future;
+    await reader.setChapterRead(_a, false);
+    release.complete();
+    await oldFlush;
+    fixture.repository.beforeCommit = null;
+    expect(
+      await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _a,
+      ),
+      isNull,
+    );
+    await reader.saveCurrentProgressNow(fixture.state(_a).progressSnapshot);
+    expect(
+      await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _a,
+      ),
+      isNull,
+    );
+    await reader.onScrollOffsetChanged(500, bodySnapshot: _snapshot(_a, .5));
+    await reader.saveCurrentProgressNow(fixture.state(_a).progressSnapshot);
+    expect(
+      (await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _a,
+      ))!.progressPercent,
+      .5,
+    );
+  });
 
-  test(
-    'disposing a covered controller cannot cancel the shared committer of the current reader',
-    () async {
-      final covered = await fixture.open(_a);
-      covered.updateReadingVisibility(frontmost: false, resumed: true);
-      final current = await fixture.open(_b);
-      await current.onVerticalContentReady(_b, bodySnapshot: _snapshot(_b, 0));
-      await current.onScrollOffsetChanged(600, bodySnapshot: _snapshot(_b, .6));
-      final entered = Completer<void>();
-      final release = Completer<void>();
-      fixture.repository.beforeCommit = () async {
-        entered.complete();
-        await release.future;
-      };
-      final flush = current.saveCurrentProgressNow(
-        fixture.state(_b).progressSnapshot,
-      );
-      await entered.future;
-      fixture.closeReader(_a);
-      await fixture.container.pump();
-      release.complete();
-      await flush;
-      fixture.repository.beforeCommit = null;
-      expect(
-        (await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _b,
-        ))!.progressPercent,
-        .6,
-      );
-    },
-  );
+  test('disposing a covered controller cannot cancel the shared committer of the current reader', () async {
+    final covered = await fixture.open(_a);
+    covered.updateReadingVisibility(frontmost: false, resumed: true);
+    final current = await fixture.open(_b);
+    await current.onVerticalContentReady(_b, bodySnapshot: _snapshot(_b, 0));
+    await current.onScrollOffsetChanged(600, bodySnapshot: _snapshot(_b, .6));
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    fixture.repository.beforeCommit = () async {
+      entered.complete();
+      await release.future;
+    };
+    final flush = current.saveCurrentProgressNow(
+      fixture.state(_b).progressSnapshot,
+    );
+    await entered.future;
+    fixture.closeReader(_a);
+    await fixture.container.pump();
+    release.complete();
+    await flush;
+    fixture.repository.beforeCommit = null;
+    expect(
+      (await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _b,
+      ))!.progressPercent,
+      .6,
+    );
+  });
 
-  test(
-    'passive paging restore and exit retain unsupported anchor and percentage basis',
-    () async {
-      fixture.preferences.value = fixture.preferences.value.copyWith(
+  test('passive paging restore and exit retain unsupported anchor and percentage basis', () async {
+    fixture.preferences.value = fixture.preferences.value.copyWith(
+      flowMode: NovelReaderFlowMode.pagedLtr,
+    );
+    await fixture.repository.commitProgress(
+      progress: NovelReadingProgress(
+        novelId: _novel,
+        episodeId: _a,
+        scrollOffset: 37,
+        updatedAt: DateTime(2026),
         flowMode: NovelReaderFlowMode.pagedLtr,
-      );
-      await fixture.repository.commitProgress(
-        progress: NovelReadingProgress(
-          novelId: _novel,
-          episodeId: _a,
-          scrollOffset: 37,
-          updatedAt: DateTime(2026),
-          flowMode: NovelReaderFlowMode.pagedLtr,
-          pageIndex: 7,
-          pageCount: 12,
-          anchorNodeId: 'future-node',
-          anchorTextOffset: 1 << 35,
-          anchorFormatVersion: 77,
-          anchorTextIdentity: ' opaque identity ',
-          paginationKey: 'future-layout',
-          progressPercent: .625,
-          isProgressPercentValid: true,
-          percentBasis: 'futureBasisV77',
-        ),
-      );
-      final before = (await fixture.db.query(
-        AppDatabase.novelReadingProgressTable,
-      )).single;
-      final reader = await fixture.open(_a);
-      expect(fixture.state(_a).progressSnapshot.percentBasis, 'futureBasisV77');
-      reader.onPagedPositionChanged(
-        const NovelReaderPaginationPosition(
-          episodeId: _a,
-          paginationKey: 'new-layout',
-          pageIndex: 2,
-          pageCount: 4,
-          anchor: NovelReaderTextAnchor(episodeId: _a),
-          isReadOnlyCompatibilityRestore: true,
-        ),
-      );
-      await reader.saveCurrentProgressNow(fixture.state(_a).progressSnapshot);
-      expect(
-        (await fixture.db.query(AppDatabase.novelReadingProgressTable)).single,
-        before,
-      );
-      fixture.closeReader(_a);
-      await fixture.container.pump();
-      expect(
-        (await fixture.db.query(AppDatabase.novelReadingProgressTable)).single,
-        before,
-      );
-    },
-  );
+        pageIndex: 7,
+        pageCount: 12,
+        anchorNodeId: 'future-node',
+        anchorTextOffset: 1 << 35,
+        anchorFormatVersion: 77,
+        anchorTextIdentity: ' opaque identity ',
+        paginationKey: 'future-layout',
+        progressPercent: .625,
+        isProgressPercentValid: true,
+        percentBasis: 'futureBasisV77',
+      ),
+    );
+    final before = (await fixture.db.query(
+      AppDatabase.novelReadingProgressTable,
+    )).single;
+    final reader = await fixture.open(_a);
+    expect(fixture.state(_a).progressSnapshot.percentBasis, 'futureBasisV77');
+    await fixture.container.pump();
+    final recentOnOpen = await fixture.repository.getMostRecentReading();
+    expect(recentOnOpen?.novelId, _novel);
+    expect(recentOnOpen?.episodeId, _a);
+    expect(recentOnOpen!.readAt.isAfter(DateTime(2026, 1, 2)), isTrue);
+    reader.onPagedPositionChanged(
+      const NovelReaderPaginationPosition(
+        episodeId: _a,
+        paginationKey: 'new-layout',
+        pageIndex: 2,
+        pageCount: 4,
+        anchor: NovelReaderTextAnchor(episodeId: _a),
+        isReadOnlyCompatibilityRestore: true,
+      ),
+    );
+    await reader.saveCurrentProgressNow(fixture.state(_a).progressSnapshot);
+    expect(
+      (await fixture.db.query(AppDatabase.novelReadingProgressTable)).single,
+      before,
+    );
+    fixture.closeReader(_a);
+    await fixture.container.pump();
+    expect(
+      (await fixture.db.query(AppDatabase.novelReadingProgressTable)).single,
+      before,
+    );
+  });
 
-  test(
-    'disposing a controller cancels its delayed manual mutation without clearing progress',
-    () async {
-      await fixture.repository.commitProgress(progress: _position(_a, .4));
-      final reader = await fixture.open(_a);
-      final entered = Completer<void>();
-      final release = Completer<void>();
-      fixture.repository.beforeReadStateMutation = () async {
-        entered.complete();
-        await release.future;
-      };
-      final mutation = reader.setChapterRead(_a, false);
-      await entered.future;
-      fixture.closeReader(_a);
-      await fixture.container.pump();
-      release.complete();
-      await mutation;
-      expect(
-        (await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _a,
-        ))!.progressPercent,
-        .4,
-      );
-    },
-  );
+  test('disposing a controller cancels its delayed manual mutation without clearing progress', () async {
+    await fixture.repository.commitProgress(progress: _position(_a, .4));
+    final reader = await fixture.open(_a);
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    fixture.repository.beforeReadStateMutation = () async {
+      entered.complete();
+      await release.future;
+    };
+    final mutation = reader.setChapterRead(_a, false);
+    await entered.future;
+    fixture.closeReader(_a);
+    await fixture.container.pump();
+    release.complete();
+    await mutation;
+    expect(
+      (await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _a,
+      ))!.progressPercent,
+      .4,
+    );
+  });
 
   test(
     'late manual reset cannot delete a new same-chapter reading session',
@@ -340,56 +326,53 @@ void main() {
     },
   );
 
-  test(
-    'layout changes preserve queued user position without advancing or completing the chapter',
-    () async {
-      await fixture.dispose();
-      fixture = await _Fixture.create(
-        debounceDuration: const Duration(milliseconds: 40),
+  test('layout changes preserve queued user position without advancing or completing the chapter', () async {
+    await fixture.dispose();
+    fixture = await _Fixture.create(
+      debounceDuration: const Duration(milliseconds: 40),
+    );
+    await fixture.repository.commitProgress(progress: _position(_a, .4));
+    final reader = await fixture.open(_a);
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    final committed = Completer<bool>();
+    fixture.repository.beforeCommit = () async {
+      entered.complete();
+      await release.future;
+    };
+    fixture.repository.afterCommit = committed.complete;
+    await reader.onScrollOffsetChanged(420, bodySnapshot: _snapshot(_a, .42));
+    for (final geometry in ['geometry-a', 'geometry-b']) {
+      reader.observeReadingSurface(
+        bodyReady: true,
+        restoreSettled: true,
+        finalBoundaryKnown: false,
+        atBodyEnd: false,
+        wholeBodyVisible: false,
+        idle: true,
+        geometryIdentity: geometry,
+        bodySnapshot: _snapshot(_a, geometry == 'geometry-a' ? .6 : .8),
       );
-      await fixture.repository.commitProgress(progress: _position(_a, .4));
-      final reader = await fixture.open(_a);
-      final entered = Completer<void>();
-      final release = Completer<void>();
-      final committed = Completer<bool>();
-      fixture.repository.beforeCommit = () async {
-        entered.complete();
-        await release.future;
-      };
-      fixture.repository.afterCommit = committed.complete;
-      await reader.onScrollOffsetChanged(420, bodySnapshot: _snapshot(_a, .42));
-      for (final geometry in ['geometry-a', 'geometry-b']) {
-        reader.observeReadingSurface(
-          bodyReady: true,
-          restoreSettled: true,
-          finalBoundaryKnown: false,
-          atBodyEnd: false,
-          wholeBodyVisible: false,
-          idle: true,
-          geometryIdentity: geometry,
-          bodySnapshot: _snapshot(_a, geometry == 'geometry-a' ? .6 : .8),
-        );
-      }
-      // Wait for the original debounce, rather than flushing and issuing a new
-      // lease that could conceal accidental retirement of the queued position.
-      await entered.future.timeout(const Duration(seconds: 2));
-      expect(fixture.state(_a).progressSnapshot.progressPercent, .42);
-      expect(
-        (await fixture.repository.getChapterProgress(
-          novelId: _novel,
-          episodeId: _a,
-        ))!.progressPercent,
-        .4,
-      );
-      release.complete();
-      expect(await committed.future.timeout(const Duration(seconds: 2)), true);
-      final state = await fixture.repository.loadWorkState(novelId: _novel);
-      expect(state.progressByEpisode[_a]!.progressPercent, .42);
-      expect(state.episodeStates[_a]?.isRead == true, false);
-      fixture.repository.beforeCommit = null;
-      fixture.repository.afterCommit = null;
-    },
-  );
+    }
+    // Wait for the original debounce, rather than flushing and issuing a new
+    // lease that could conceal accidental retirement of the queued position.
+    await entered.future.timeout(const Duration(seconds: 2));
+    expect(fixture.state(_a).progressSnapshot.progressPercent, .42);
+    expect(
+      (await fixture.repository.getChapterProgress(
+        novelId: _novel,
+        episodeId: _a,
+      ))!.progressPercent,
+      .4,
+    );
+    release.complete();
+    expect(await committed.future.timeout(const Duration(seconds: 2)), true);
+    final state = await fixture.repository.loadWorkState(novelId: _novel);
+    expect(state.progressByEpisode[_a]!.progressPercent, .42);
+    expect(state.episodeStates[_a]?.isRead == true, false);
+    fixture.repository.beforeCommit = null;
+    fixture.repository.afterCommit = null;
+  });
 
   test(
     'source return adopts the same chapter position and remains read-only',
@@ -420,9 +403,8 @@ void main() {
         .7,
       );
       expect(
-        (await fixture.repository.loadWorkState(
-          novelId: _novel,
-        )).recentEpisodeId,
+        (await fixture.repository.loadWorkState(novelId: _novel))
+            .recentEpisodeId,
         _b,
       );
       await reader.onScrollOffsetChanged(750, bodySnapshot: _snapshot(_a, .75));

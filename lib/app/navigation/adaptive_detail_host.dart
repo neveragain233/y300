@@ -251,6 +251,11 @@ class _AdaptiveDetailHostState extends ConsumerState<AdaptiveDetailHost> {
   }
 
   Future<void> _resetToRoot() async {
+    final detailCanPop = _detailKey.currentState?.canPop() ?? false;
+    final sourceCanPop = _sourceKey.currentState?.canPop() ?? false;
+    if (!detailCanPop && !sourceCanPop && !_expanded) {
+      return;
+    }
     _detailKey.currentState?.popUntil((route) => route.isFirst);
     _sourceKey.currentState?.popUntil((route) => route.isFirst);
     if (_expanded) {

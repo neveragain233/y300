@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:y300/core/persistence/app_database.dart';
 import 'package:y300/features/comic/data/local/comic_reading_progress_store.dart';
+import 'package:y300/features/library_shared/domain/models/library_models.dart';
+import 'package:y300/features/library_shared/domain/services/recent_reading.dart';
 import 'package:y300/features/novel/data/repositories/sqflite_novel_reading_state_repository.dart';
 
 void main() {
@@ -135,4 +137,117 @@ void main() {
     expect(outcome?.novelId, 'novel:1');
     expect(outcome?.episodeId, 'novel:1:e1');
   });
+
+  test('touchRecentReading updates recent novel without mutating progress rows and beats older comic', () async {
+    await db.insert(AppDatabase.comicsTable, <String, Object?>{
+      'comic_id': 'comic:1',
+      'source_tid': '10',
+      'source_fid': '30',
+      'title': 'comic',
+      'created_at': 1,
+      'updated_at': 1,
+    });
+    await db.insert(AppDatabase.episodesTable, <String, Object?>{
+      'episode_id': 'comic:1:e1',
+      'comic_id': 'comic:1',
+      'episode_title': 'c1',
+      'source_tid': '10',
+      'source_url': 'thread-10-1-1.html',
+      'order_index': 0,
+    });
+    await db.insert(AppDatabase.readingProgressTable, <String, Object?>{
+      'comic_id': 'comic:1',
+      'episode_id': 'comic:1:e1',
+      'image_index': 0,
+      'scroll_offset': 0.0,
+      'updated_at': DateTime(2026, 6, 2).millisecondsSinceEpoch,
+    });
+    await db.insert(AppDatabase.worksTable, <String, Object?>{
+      'work_id': 'novel:1',
+      'content_type': 'novel',
+      'source_tid': '20',
+      'source_fid': '49',
+      'title': 'novel',
+      'updated_at': 1,
+    });
+    await db.insert(AppDatabase.workEpisodesTable, <String, Object?>{
+      'episode_id': 'novel:1:e1',
+      'work_id': 'novel:1',
+      'content_type': 'novel',
+      'source_tid': '20',
+      'order_index': 0,
+    });
+    // 小说已有更早的旧进度行，但进入阅读器后未翻页。
+    await db.insert(AppDatabase.novelReadingProgressTable, <String, Object?>{
+      'novel_id': 'novel:1',
+      'episode_id': 'novel:1:e1',
+      'scroll_offset': 120.0,
+      'flow_mode': 'vertical',
+      'page_index': 0,
+      'progress_percent': 0.4,
+      'anchor_format_version': 1,
+      'anchor_text_identity': 'kept',
+      'updated_at': DateTime(2026, 6, 1).millisecondsSinceEpoch,
+    });
+    final beforeProgress = (await db.query(
+      AppDatabase.novelReadingProgressTable,
+    )).single;
+
+    final touched = await novelProgress.touchRecentReading(
+      novelId: 'novel:1',
+      episodeId: 'novel:1:e1',
+      readAt: DateTime(2026, 6, 3),
+    );
+    expect(touched, isTrue);
+    // 章内进度与锚点行逐字节保留。
+    expect(
+      (await db.query(AppDatabase.novelReadingProgressTable)).single,
+      beforeProgress,
+    );
+
+    final resolver = RecentReadingResolver(
+      sources: <RecentReadingSource>[
+        _ComicQuerySource(comicProgress),
+        _NovelQuerySource(novelProgress),
+      ],
+    );
+    final target = await resolver.resolve();
+    expect(target?.moduleKey, LibraryModuleKey.novel);
+    expect(target?.workId, 'novel:1');
+    expect(target?.episodeId, 'novel:1:e1');
+  });
+}
+
+class _ComicQuerySource implements RecentReadingSource {
+  _ComicQuerySource(this.store);
+  final ComicReadingProgressStore store;
+
+  @override
+  Future<RecentReadingTarget?> loadMostRecentReading() async {
+    final progress = await store.getMostRecentReadingProgress();
+    if (progress == null) return null;
+    return RecentReadingTarget(
+      moduleKey: LibraryModuleKey.comic,
+      workId: progress.comicId,
+      episodeId: progress.episodeId,
+      readAt: progress.updatedAt,
+    );
+  }
+}
+
+class _NovelQuerySource implements RecentReadingSource {
+  _NovelQuerySource(this.repository);
+  final SqfliteNovelReadingStateRepository repository;
+
+  @override
+  Future<RecentReadingTarget?> loadMostRecentReading() async {
+    final progress = await repository.getMostRecentReading();
+    if (progress == null) return null;
+    return RecentReadingTarget(
+      moduleKey: LibraryModuleKey.novel,
+      workId: progress.novelId,
+      episodeId: progress.episodeId,
+      readAt: progress.readAt,
+    );
+  }
 }

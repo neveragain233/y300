@@ -366,6 +366,38 @@ void main() {
     expect(haptics, isEmpty);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('capsule fires onReselected on tap but not on drag-back', (
+    tester,
+  ) async {
+    final commits = <int>[];
+    final reselects = <int>[];
+    await _pumpCapsule(
+      tester,
+      selectedIndex: 0,
+      swipeEnabled: true,
+      onSelected: commits.add,
+      onReselected: reselects.add,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('target0')));
+    await tester.pumpAndSettle();
+    expect(commits, isEmpty);
+    expect(reselects, <int>[0]);
+
+    // 拖出后再拖回原项松手，不触发重选回根页。
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('target0'))),
+    );
+    await gesture.moveBy(const Offset(100, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-100, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(commits, isEmpty);
+    expect(reselects, <int>[0]);
+  });
 }
 
 List<MainNavigationItem> _items() => [
@@ -388,6 +420,7 @@ Future<void> _pumpCapsule(
   bool highContrast = false,
   bool disableAnimations = true,
   ValueChanged<int>? onSelected,
+  ValueChanged<int>? onReselected,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(400, 800);
@@ -401,6 +434,7 @@ Future<void> _pumpCapsule(
         dragFromSelection: dragFromSelection,
         glassLevel: glassLevel,
         onSelected: onSelected,
+        onReselected: onReselected,
       );
   await tester.pumpWidget(
     LocalizedTestApp(
