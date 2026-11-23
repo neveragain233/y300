@@ -5,6 +5,8 @@
 /// 改调用方的前提下演进实现细节。
 library;
 
+import 'package:y300/features/library_shared/presentation/reader/reader_page_turn_models.dart';
+
 /// 阅读模式。
 ///
 /// - `vertical`：垂直连续滚动（条漫）。
@@ -23,6 +25,8 @@ class ReaderPreferences {
     required this.background,
     required this.pageSpacing,
     required this.showPageIndicator,
+    this.pageEffect = ReaderPageEffect.slide,
+    this.pageSpeed = ReaderPageSpeed.standard,
   });
 
   /// 无持久化数据时的默认值。
@@ -33,6 +37,8 @@ class ReaderPreferences {
       background: ReaderBackgroundPreference.followTheme,
       pageSpacing: 0,
       showPageIndicator: true,
+      pageEffect: ReaderPageEffect.slide,
+      pageSpeed: ReaderPageSpeed.standard,
     );
   }
 
@@ -43,6 +49,8 @@ class ReaderPreferences {
   /// 页间距。控制器层在持久化前已 clamp，渲染层可直接使用。
   final double pageSpacing;
   final bool showPageIndicator;
+  final ReaderPageEffect pageEffect;
+  final ReaderPageSpeed pageSpeed;
 
   ReaderPreferences copyWith({
     ReaderModePreference? readerMode,
@@ -50,6 +58,8 @@ class ReaderPreferences {
     ReaderBackgroundPreference? background,
     double? pageSpacing,
     bool? showPageIndicator,
+    ReaderPageEffect? pageEffect,
+    ReaderPageSpeed? pageSpeed,
   }) {
     return ReaderPreferences(
       readerMode: readerMode ?? this.readerMode,
@@ -57,6 +67,8 @@ class ReaderPreferences {
       background: background ?? this.background,
       pageSpacing: pageSpacing ?? this.pageSpacing,
       showPageIndicator: showPageIndicator ?? this.showPageIndicator,
+      pageEffect: pageEffect ?? this.pageEffect,
+      pageSpeed: pageSpeed ?? this.pageSpeed,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader_page_turn_models.dart';
 import 'package:y300/features/reader_shared/data/reader_preferences/reader_preferences_snapshot_codec.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 
@@ -117,6 +118,16 @@ class ReaderPreferencesController extends AsyncNotifier<ReaderPreferences> {
   Future<void> setShowPageIndicator(bool value) async {
     final current = state.value ?? ReaderPreferences.defaults();
     await _persist(current.copyWith(showPageIndicator: value));
+  }
+
+  Future<void> setPageEffect(ReaderPageEffect value) async {
+    final current = state.value ?? ReaderPreferences.defaults();
+    await _persist(current.copyWith(pageEffect: value));
+  }
+
+  Future<void> setPageSpeed(ReaderPageSpeed value) async {
+    final current = state.value ?? ReaderPreferences.defaults();
+    await _persist(current.copyWith(pageSpeed: value));
   }
 
   Future<void> _persist(ReaderPreferences next) async {

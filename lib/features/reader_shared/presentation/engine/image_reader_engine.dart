@@ -123,6 +123,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   late ScrollController _scrollController;
   int _scrollControllerSessionGeneration = -1;
   PageController? _pageController;
+  ReaderPaperClock? _paperClock;
   String? _pageControllerOwnerId;
   late final ReaderOverlayController _overlayController;
   late final ReaderGestureCoordinator _gestureCoordinator;
@@ -213,6 +214,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   bool _displaySettingsOpen = false;
 
   ReaderCapability get _capability => widget.capability;
+
+  bool get _supportsPagedPageTurnEffects =>
+      _capability.supportsPagedPageTurnEffects;
 
   ReaderTailSurface? get _tailSurface => _capability.tailSurface;
 
@@ -395,6 +399,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       ..removeListener(_tailActionController.schedule)
       ..dispose();
     _releasePagedZoomScrollHold();
+    _paperClock?.dispose();
+    _paperClock = null;
     _pageController?.dispose();
     _overlayController
       ..removeListener(_onOverlayVisibilityChanged)
@@ -724,16 +730,43 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         _precachePagedWindow(_lastKnownIndex);
       }
     });
+    final reduceMotion = AppMotion.reduceMotion(context);
+    final enablePageTurnEffects = _supportsPagedPageTurnEffects;
+    final effectivePageEffect = !enablePageTurnEffects || reduceMotion
+        ? ReaderPageEffect.slide
+        : preferences.pageEffect;
+    final pagedScrollLocked =
+        EInkModeScope.of(context) ||
+        _pagedHorizontalOverflowActive(preferences);
     final reader = ContinuousImageReaderView(
       key: ValueKey<String>('reader-paged-owner-${content.ownerId}'),
       items: items,
       mode: ContinuousImageReaderMode.horizontal,
       pageController: pageController,
-      horizontalPhysics:
-          EInkModeScope.of(context) ||
-              _pagedHorizontalOverflowActive(preferences)
+      horizontalPhysics: pagedScrollLocked
           ? const NeverScrollableScrollPhysics()
+          : enablePageTurnEffects
+          ? ReaderPageScrollPhysics(
+              durationScale: () => AppMotion.reduceMotion(context)
+                  ? 0.01
+                  : ReaderPageMotion.snapDurationScale(
+                      preferences.pageEffect,
+                      preferences.pageSpeed,
+                    ),
+            )
           : const PageScrollPhysics(),
+      horizontalPageSnapping: !enablePageTurnEffects,
+      horizontalPageWrapper: !enablePageTurnEffects || pageController == null
+          ? null
+          : (context, index, page) => ReaderSheetPageTransition(
+              controller: pageController,
+              index: index,
+              effect: effectivePageEffect,
+              reverse: preferences.readerMode == ReaderModePreference.rtl,
+              surfaceColor: background,
+              paperClock: _paperClock,
+              child: page,
+            ),
       reverse: preferences.readerMode == ReaderModePreference.rtl,
       onPageChanged: pageController == null
           ? null
@@ -791,7 +824,28 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
           }
           return false;
         },
-        child: reader,
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: effectivePageEffect == ReaderPageEffect.paper
+              ? (event) {
+                  final height = MediaQuery.sizeOf(context).height;
+                  if (height > 0) {
+                    _paperClock?.touchY = (event.localPosition.dy / height)
+                        .clamp(0.0, 1.0);
+                  }
+                }
+              : null,
+          onPointerMove: effectivePageEffect == ReaderPageEffect.paper
+              ? (event) {
+                  final height = MediaQuery.sizeOf(context).height;
+                  if (height > 0) {
+                    _paperClock?.touchY = (event.localPosition.dy / height)
+                        .clamp(0.0, 1.0);
+                  }
+                }
+              : null,
+          child: reader,
+        ),
       ),
     );
   }
@@ -1806,6 +1860,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         keepPage: false,
       );
       _pageControllerOwnerId = ownerId;
+      _paperClock?.dispose();
+      _paperClock = _supportsPagedPageTurnEffects
+          ? ReaderPaperClock(_pageController!)
+          : null;
       if (controller != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           controller.dispose();
@@ -2468,11 +2526,26 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       pageController.jumpToPage(target);
       return;
     }
+    if (!_supportsPagedPageTurnEffects) {
+      unawaited(
+        pageController.animateToPage(
+          target,
+          duration: ReaderPagedTurnMotion.animationDuration,
+          curve: ReaderPagedTurnMotion.animationCurve,
+        ),
+      );
+      return;
+    }
+    final preferences =
+        _lastKnownReaderPreferences ?? ReaderPreferences.defaults();
     unawaited(
       pageController.animateToPage(
         target,
-        duration: ReaderPagedTurnMotion.animationDuration,
-        curve: ReaderPagedTurnMotion.animationCurve,
+        duration: ReaderPageMotion.duration(
+          preferences.pageEffect,
+          preferences.pageSpeed,
+        ),
+        curve: ReaderPageMotion.curve(preferences.pageEffect),
       ),
     );
   }
@@ -3118,6 +3191,12 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
               unawaited(controller.setPageSpacing(value)),
           onShowPageIndicatorChanged: (value) =>
               unawaited(controller.setShowPageIndicator(value)),
+          onPageEffectChanged: _supportsPagedPageTurnEffects
+              ? (value) => unawaited(controller.setPageEffect(value))
+              : null,
+          onPageSpeedChanged: _supportsPagedPageTurnEffects
+              ? (value) => unawaited(controller.setPageSpeed(value))
+              : null,
           hardwarePageKeysEnabled: _hardwarePageKeysEnabled,
           onHardwarePageKeysChanged: (value) => unawaited(
             ref
@@ -3216,6 +3295,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       _setZoomGate(false, paged: false);
       _activePagedIndex.value = targetIndex;
       if (nextMode == ReaderModePreference.vertical) {
+        _paperClock?.dispose();
+        _paperClock = null;
         _pageController?.dispose();
         _pageController = null;
         _pageControllerOwnerId = null;

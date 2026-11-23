@@ -29,6 +29,8 @@ class ContinuousImageReaderView extends StatelessWidget {
     this.onPageChanged,
     this.verticalPhysics,
     this.horizontalPhysics,
+    this.horizontalPageSnapping = true,
+    this.horizontalPageWrapper,
     this.verticalTrailingBuilder,
     this.verticalTrailingItemCount = 0,
     this.verticalTrailingItemBuilder,
@@ -54,6 +56,9 @@ class ContinuousImageReaderView extends StatelessWidget {
   final ValueChanged<int>? onPageChanged;
   final ScrollPhysics? verticalPhysics;
   final ScrollPhysics? horizontalPhysics;
+  final bool horizontalPageSnapping;
+  final Widget Function(BuildContext context, int index, Widget child)?
+  horizontalPageWrapper;
   final WidgetBuilder? verticalTrailingBuilder;
   final int verticalTrailingItemCount;
   final IndexedWidgetBuilder? verticalTrailingItemBuilder;
@@ -126,24 +131,27 @@ class ContinuousImageReaderView extends StatelessWidget {
       key: horizontalPageKey,
       controller: pageController,
       physics: horizontalPhysics,
+      pageSnapping: horizontalPageSnapping,
       reverse: reverse,
       allowImplicitScrolling: true,
       onPageChanged: onPageChanged,
       itemCount: items.length + (hasTail ? 1 : 0) + (hasAdvance ? 1 : 0),
       itemBuilder: (context, index) {
+        final Widget page;
         if (hasTail && index == tailIndex) {
-          return horizontalTrailingBuilder!(context);
+          page = horizontalTrailingBuilder!(context);
+        } else if (hasAdvance && index == advanceIndex) {
+          page = horizontalAdvanceBuilder!(context);
+        } else {
+          final item = items[index];
+          page = Padding(
+            padding: horizontalPagePadding,
+            child: SizedBox.expand(
+              child: itemBuilder(context, item, index, paged: true),
+            ),
+          );
         }
-        if (hasAdvance && index == advanceIndex) {
-          return horizontalAdvanceBuilder!(context);
-        }
-        final item = items[index];
-        return Padding(
-          padding: horizontalPagePadding,
-          child: SizedBox.expand(
-            child: itemBuilder(context, item, index, paged: true),
-          ),
-        );
+        return horizontalPageWrapper?.call(context, index, page) ?? page;
       },
     );
   }

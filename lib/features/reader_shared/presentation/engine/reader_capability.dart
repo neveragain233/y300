@@ -187,6 +187,9 @@ abstract class ReaderCapability {
   /// 工具栏展开时是否显示章内缩略图条。
   bool get showsThumbnailStrip => false;
 
+  /// 横向翻页是否支持自定义翻页动画与速度设置；帖子与日志看图页固定使用原生平移。
+  bool get supportsPagedPageTurnEffects => false;
+
   /// 构建章内缩略图条。
   ///
   /// 引擎只提供内容、当前/候选索引和提交回调；图像必须由能力复用

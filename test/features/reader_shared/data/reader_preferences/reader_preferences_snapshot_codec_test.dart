@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/reader_shared/data/reader_preferences/reader_preferences_snapshot_codec.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 
@@ -14,6 +15,8 @@ void main() {
       background: ReaderBackgroundPreference.gray,
       pageSpacing: 7.5,
       showPageIndicator: false,
+      pageEffect: ReaderPageEffect.paper,
+      pageSpeed: ReaderPageSpeed.brisk,
     );
 
     final encoded = codec.encode(source);
@@ -26,11 +29,31 @@ void main() {
     expect(json['background'], 'gray');
     expect(json['pageSpacing'], 7.5);
     expect(json['showPageIndicator'], isFalse);
+    expect(json['pageEffect'], 'paper');
+    expect(json['pageSpeed'], 'brisk');
     expect(decoded.readerMode, source.readerMode);
     expect(decoded.pageFit, source.pageFit);
     expect(decoded.background, source.background);
     expect(decoded.pageSpacing, source.pageSpacing);
     expect(decoded.showPageIndicator, source.showPageIndicator);
+    expect(decoded.pageEffect, source.pageEffect);
+    expect(decoded.pageSpeed, source.pageSpeed);
+  });
+
+  test('v1 snapshot without pageEffect or pageSpeed defaults to slide and standard', () {
+    final decoded = codec.decode(
+      jsonEncode(<String, Object>{
+        'schemaVersion': 1,
+        'readerMode': 'ltr',
+        'pageFit': 'fitWidth',
+        'background': 'white',
+        'pageSpacing': 0,
+        'showPageIndicator': true,
+      }),
+    );
+
+    expect(decoded.pageEffect, ReaderPageEffect.slide);
+    expect(decoded.pageSpeed, ReaderPageSpeed.standard);
   });
 
   test('removed original fit migrates to contain in v1 snapshots', () {

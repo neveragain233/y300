@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:y300/features/library_shared/presentation/reader/reader_page_turn_models.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 
 final class ReaderPreferencesSnapshotCodec {
@@ -14,6 +15,8 @@ final class ReaderPreferencesSnapshotCodec {
       background: preferences.background.name,
       pageSpacing: preferences.pageSpacing,
       showPageIndicator: preferences.showPageIndicator,
+      pageEffect: preferences.pageEffect.name,
+      pageSpeed: preferences.pageSpeed.name,
     );
     return jsonEncode(<String, Object>{
       'schemaVersion': schemaVersion,
@@ -22,6 +25,8 @@ final class ReaderPreferencesSnapshotCodec {
       'background': normalized.background.name,
       'pageSpacing': normalized.pageSpacing,
       'showPageIndicator': normalized.showPageIndicator,
+      'pageEffect': normalized.pageEffect.name,
+      'pageSpeed': normalized.pageSpeed.name,
     });
   }
 
@@ -41,6 +46,8 @@ final class ReaderPreferencesSnapshotCodec {
         background: decoded['background'],
         pageSpacing: decoded['pageSpacing'],
         showPageIndicator: decoded['showPageIndicator'],
+        pageEffect: decoded['pageEffect'],
+        pageSpeed: decoded['pageSpeed'],
       );
     } on FormatException {
       return ReaderPreferences.defaults();
@@ -53,6 +60,8 @@ final class ReaderPreferencesSnapshotCodec {
     Object? background,
     Object? pageSpacing,
     Object? showPageIndicator,
+    Object? pageEffect,
+    Object? pageSpeed,
   }) {
     final defaults = ReaderPreferences.defaults();
     final spacing = pageSpacing is num && pageSpacing.isFinite
@@ -74,6 +83,16 @@ final class ReaderPreferencesSnapshotCodec {
       showPageIndicator: showPageIndicator is bool
           ? showPageIndicator
           : defaults.showPageIndicator,
+      pageEffect: _enumByName(
+        pageEffect,
+        ReaderPageEffect.values,
+        defaults.pageEffect,
+      ),
+      pageSpeed: _enumByName(
+        pageSpeed,
+        ReaderPageSpeed.values,
+        defaults.pageSpeed,
+      ),
     );
   }
 

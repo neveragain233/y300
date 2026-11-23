@@ -6,6 +6,7 @@ import 'package:y300/features/reader_shared/presentation/engine/reader_backgroun
 import 'package:y300/features/reader_shared/presentation/reader_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
+import 'package:y300/shared/widgets/app_select_menu.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 /// 阅读器显示设置抽屉（排版 / 主题 / 阅读三段）。
@@ -22,6 +23,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
     required this.onPageSpacingChanged,
     this.onPageSpacingPreview,
     required this.onShowPageIndicatorChanged,
+    this.onPageEffectChanged,
+    this.onPageSpeedChanged,
     this.backgroundNote,
     this.pagedCanvasColor,
     this.hardwarePageKeysEnabled = false,
@@ -38,6 +41,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
   final ValueChanged<double> onPageSpacingChanged;
   final ValueChanged<double>? onPageSpacingPreview;
   final ValueChanged<bool> onShowPageIndicatorChanged;
+  final ValueChanged<ReaderPageEffect>? onPageEffectChanged;
+  final ValueChanged<ReaderPageSpeed>? onPageSpeedChanged;
 
   /// 横向模式下背景选项的补充说明；null 不占位。
   final String? backgroundNote;
@@ -65,6 +70,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
       onPageSpacingChanged: onPageSpacingChanged,
       onPageSpacingPreview: onPageSpacingPreview,
       onShowPageIndicatorChanged: onShowPageIndicatorChanged,
+      onPageEffectChanged: onPageEffectChanged,
+      onPageSpeedChanged: onPageSpeedChanged,
       backgroundNote: backgroundNote,
       pagedCanvasColor: pagedCanvasColor,
       hardwarePageKeysEnabled: hardwarePageKeysEnabled,
@@ -170,6 +177,8 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
     required this.onPageSpacingChanged,
     required this.onPageSpacingPreview,
     required this.onShowPageIndicatorChanged,
+    required this.onPageEffectChanged,
+    required this.onPageSpeedChanged,
     required this.backgroundNote,
     required this.pagedCanvasColor,
     required this.hardwarePageKeysEnabled,
@@ -186,6 +195,8 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
   final ValueChanged<double> onPageSpacingChanged;
   final ValueChanged<double>? onPageSpacingPreview;
   final ValueChanged<bool> onShowPageIndicatorChanged;
+  final ValueChanged<ReaderPageEffect>? onPageEffectChanged;
+  final ValueChanged<ReaderPageSpeed>? onPageSpeedChanged;
   final String? backgroundNote;
   final Color? pagedCanvasColor;
   final bool hardwarePageKeysEnabled;
@@ -351,6 +362,38 @@ class _ReaderDisplaySettingsContentState
             widget.onModeChanged(value);
           },
         ),
+        if (_current.readerMode != ReaderModePreference.vertical &&
+            !eInk &&
+            widget.onPageEffectChanged != null &&
+            widget.onPageSpeedChanged != null)
+          _ImagePagedEffectSpeedRow(
+            effectLabel: l10n.novelPageEffect,
+            effect: _current.pageEffect,
+            effectOptions: [
+              for (final effect in ReaderPageEffect.values)
+                AppSelectOption(
+                  value: effect,
+                  label: ReaderTextResolver.pageEffect(l10n, effect),
+                ),
+            ],
+            onEffectChanged: (value) {
+              setState(() => _current = _current.copyWith(pageEffect: value));
+              widget.onPageEffectChanged?.call(value);
+            },
+            speedLabel: l10n.novelPageSpeed,
+            speed: _current.pageSpeed,
+            speedOptions: [
+              for (final speed in ReaderPageSpeed.values)
+                AppSelectOption(
+                  value: speed,
+                  label: ReaderTextResolver.pageSpeed(l10n, speed),
+                ),
+            ],
+            onSpeedChanged: (value) {
+              setState(() => _current = _current.copyWith(pageSpeed: value));
+              widget.onPageSpeedChanged?.call(value);
+            },
+          ),
         AppSwitchRow(
           key: const Key('comic-reader-page-indicator-switch'),
           title: l10n.readerPageIndicator,
@@ -387,6 +430,87 @@ class _ReaderDisplaySettingsContentState
                 },
         ),
       ],
+    );
+  }
+}
+
+class _ImagePagedEffectSpeedRow extends StatelessWidget {
+  const _ImagePagedEffectSpeedRow({
+    required this.effectLabel,
+    required this.effect,
+    required this.effectOptions,
+    required this.onEffectChanged,
+    required this.speedLabel,
+    required this.speed,
+    required this.speedOptions,
+    required this.onSpeedChanged,
+  });
+
+  final String effectLabel;
+  final ReaderPageEffect effect;
+  final List<AppSelectOption<ReaderPageEffect>> effectOptions;
+  final ValueChanged<ReaderPageEffect> onEffectChanged;
+  final String speedLabel;
+  final ReaderPageSpeed speed;
+  final List<AppSelectOption<ReaderPageSpeed>> speedOptions;
+  final ValueChanged<ReaderPageSpeed> onSpeedChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Text(effectLabel, style: labelStyle),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: AppSelectMenu<ReaderPageEffect>(
+                        key: const Key('comic-reader-page-effect-select'),
+                        value: effect,
+                        options: effectOptions,
+                        onSelected: onEffectChanged,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Row(
+                children: [
+                  Text(speedLabel, style: labelStyle),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: AppSelectMenu<ReaderPageSpeed>(
+                        key: const Key('comic-reader-page-speed-select'),
+                        value: speed,
+                        options: speedOptions,
+                        onSelected: onSpeedChanged,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

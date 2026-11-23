@@ -62,6 +62,9 @@ class ComicReaderCapability extends ReaderCapability {
   bool get showsThumbnailStrip => true;
 
   @override
+  bool get supportsPagedPageTurnEffects => true;
+
+  @override
   ReaderImagePreparationSink get imagePreparationSink =>
       _ComicReaderImagePreparationSink(controller);
 

@@ -133,6 +133,7 @@
         "test/features/profile/presentation/profile_visual_theme_test.dart",
         "test/features/reader_shared/presentation/continuous_image/continuous_image_extent_observer_test.dart",
         "test/features/reader_shared/presentation/continuous_image/continuous_image_reader_view_test.dart",
+        "test/features/reader_shared/presentation/engine/image_reader_engine_page_turn_test.dart",
         "test/features/reader_shared/presentation/engine/image_reader_engine_position_test.dart",
         "test/features/reader_shared/presentation/engine/image_reader_engine_restore_mode_lifecycle_test.dart",
         "test/features/reader_shared/presentation/engine/image_reader_engine_seek_lifecycle_test.dart",

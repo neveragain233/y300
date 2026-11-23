@@ -255,6 +255,110 @@ void main() {
     expect(find.text('黑'), findsOneWidget);
     expect(find.text('灰'), findsNothing);
   });
+
+  testWidgets(
+    'shows page effect and speed only in non-eInk horizontal modes with callbacks',
+    (tester) async {
+      ReaderPageEffect? selectedEffect;
+      ReaderPageSpeed? selectedSpeed;
+
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          home: Scaffold(
+            body: ReaderDisplaySettingsSheet(
+              preferences: ReaderPreferences.defaults().copyWith(
+                readerMode: ReaderModePreference.ltr,
+              ),
+              onModeChanged: _noopMode,
+              onPageFitChanged: _noopFit,
+              onBackgroundChanged: _noopBg,
+              onPageSpacingChanged: _noopSpacing,
+              onShowPageIndicatorChanged: _noopBool,
+              onPageEffectChanged: (value) => selectedEffect = value,
+              onPageSpeedChanged: (value) => selectedSpeed = value,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text('阅读'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('comic-reader-page-effect-select')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('comic-reader-page-speed-select')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('comic-reader-page-effect-select')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('段落接续'), findsNothing);
+      await tester.tap(find.text('纸页翻动').last);
+      await tester.pumpAndSettle();
+      expect(selectedEffect, ReaderPageEffect.paper);
+
+      await tester.tap(find.byKey(const Key('comic-reader-page-speed-select')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('利落').last);
+      await tester.pumpAndSettle();
+      expect(selectedSpeed, ReaderPageSpeed.brisk);
+
+      // 切换为垂直模式后隐藏翻页动画与速度。
+      await tester.tap(find.text('垂直'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('comic-reader-page-effect-select')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('comic-reader-page-speed-select')),
+        findsNothing,
+      );
+
+      // 不传入回调（帖子/日志看图页）或 E-ink 模式下不显示。
+      await tester.pumpWidget(
+        LocalizedTestApp(
+          home: Scaffold(
+            body: ReaderDisplaySettingsSheet(
+              preferences: ReaderPreferences.defaults().copyWith(
+                readerMode: ReaderModePreference.ltr,
+              ),
+              onModeChanged: _noopMode,
+              onPageFitChanged: _noopFit,
+              onBackgroundChanged: _noopBg,
+              onPageSpacingChanged: _noopSpacing,
+              onShowPageIndicatorChanged: _noopBool,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('reader-display-panel-tabs')),
+          matching: find.text('阅读'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('comic-reader-page-effect-select')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('comic-reader-page-speed-select')),
+        findsNothing,
+      );
+    },
+  );
 }
 
 void _noopMode(ReaderModePreference _) {}

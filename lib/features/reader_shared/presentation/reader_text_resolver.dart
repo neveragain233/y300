@@ -1,3 +1,4 @@
+import 'package:y300/features/library_shared/presentation/reader/reader_page_turn_models.dart';
 import 'package:y300/features/reader_shared/domain/export/reader_image_export.dart';
 import 'package:y300/features/reader_shared/domain/reader_preferences/reader_preferences.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -36,6 +37,23 @@ abstract final class ReaderTextResolver {
       ReaderBackgroundPreference.black => l10n.readerBackgroundBlack,
       ReaderBackgroundPreference.white => l10n.readerBackgroundWhite,
       ReaderBackgroundPreference.gray => l10n.readerBackgroundGray,
+    };
+  }
+
+  static String pageEffect(AppLocalizations l10n, ReaderPageEffect value) {
+    return switch (value) {
+      ReaderPageEffect.slide => l10n.novelPageEffectSlide,
+      ReaderPageEffect.paper => l10n.novelPageEffectPaper,
+      ReaderPageEffect.fade => l10n.novelPageEffectFade,
+      ReaderPageEffect.cover => l10n.novelPageEffectCover,
+    };
+  }
+
+  static String pageSpeed(AppLocalizations l10n, ReaderPageSpeed value) {
+    return switch (value) {
+      ReaderPageSpeed.relaxed => l10n.novelPageSpeedRelaxed,
+      ReaderPageSpeed.standard => l10n.novelPageSpeedStandard,
+      ReaderPageSpeed.brisk => l10n.novelPageSpeedBrisk,
     };
   }
 
