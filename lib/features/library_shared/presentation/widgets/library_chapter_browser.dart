@@ -299,24 +299,30 @@ class _LibraryChapterBrowserState<T> extends State<LibraryChapterBrowser<T>> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                 child: SizedBox(
                   height: LibraryChapterBrowser.controlsHeight(context) - 56,
-                  child: AppTextInput(
-                    key: widget.searchFieldKey ?? Key('$prefix-search-field'),
-                    controller: _text,
-                    focusNode: _focus,
-                    variant: AppTextInputVariant.pill,
-                    textInputAction: TextInputAction.search,
-                    hintText: l10n.libraryChapterSearchHint,
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _text.text.isNotEmpty
-                        ? IconButton(
-                            key: Key('$prefix-search-clear'),
-                            tooltip: l10n.commonClear,
-                            onPressed: _clear,
-                            icon: const Icon(Icons.close, size: 20),
-                          )
-                        : _recentButton(l10n),
-                    onChanged: _changeQuery,
-                    onSubmitted: (_) => _recordSearch(),
+                  child: IconTheme.merge(
+                    data: IconThemeData(color: scheme.onSurfaceVariant),
+                    child: AppTextInput(
+                      key: widget.searchFieldKey ?? Key('$prefix-search-field'),
+                      controller: _text,
+                      focusNode: _focus,
+                      variant: AppTextInputVariant.pill,
+                      textInputAction: TextInputAction.search,
+                      hintText: l10n.libraryChapterSearchHint,
+                      hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _text.text.isNotEmpty
+                          ? IconButton(
+                              key: Key('$prefix-search-clear'),
+                              tooltip: l10n.commonClear,
+                              onPressed: _clear,
+                              icon: const Icon(Icons.close, size: 20),
+                            )
+                          : _recentButton(l10n),
+                      onChanged: _changeQuery,
+                      onSubmitted: (_) => _recordSearch(),
+                    ),
                   ),
                 ),
               ),

@@ -354,20 +354,40 @@ class _PillInputFrameState extends State<_PillInputFrame> {
         !eInk &&
         !MediaQuery.highContrastOf(context) &&
         AppGlassSurface.levelOf(context).enabled;
+    final isDark = scheme.brightness == Brightness.dark;
     final shape = BorderRadius.circular(24);
     final Widget surface;
     if (useGlass) {
-      surface = LiquidGlass(
-        style: LiquidGlassStyle.pill(prismColorSchemeOf(scheme)),
+      final glassStyle = isDark && widget.fillColor == null
+          ? LiquidGlassStyle.pill(prismColorSchemeOf(scheme))
+          : LiquidGlassStyle.tinted(
+              prismColorSchemeOf(scheme),
+              widget.fillColor ?? scheme.surfaceContainerLowest,
+            );
+      final glass = LiquidGlass(
+        style: glassStyle,
         borderRadius: shape,
         shadows: AppGlassSurface.shadowsOf(scheme, eInk: false),
         child: Material(type: MaterialType.transparency, child: widget.child),
       );
+      surface = _focused
+          ? DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                borderRadius: shape,
+                border: Border.all(color: scheme.primary, width: 1.5),
+              ),
+              child: glass,
+            )
+          : glass;
     } else {
+      final fallbackFill = eInk
+          ? scheme.surface
+          : (isDark
+                ? scheme.surfaceContainerHighest
+                : scheme.surfaceContainerLowest);
       surface = Material(
-        color:
-            widget.fillColor ??
-            (eInk ? scheme.surface : scheme.surfaceContainerHighest),
+        color: widget.fillColor ?? fallbackFill,
         shape: RoundedRectangleBorder(
           borderRadius: shape,
           side: BorderSide(

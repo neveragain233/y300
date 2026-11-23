@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/liquid_glass.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
+import 'package:y300/app/theme/app_theme.dart';
+import 'package:y300/app/theme/app_theme_family.dart';
+import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/shared/widgets/app_glass_environment.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
@@ -241,5 +247,101 @@ void main() {
       tester.getBottomLeft(find.byType(AppTextInput)).dy,
       lessThan(tester.getCenter(find.byKey(const Key('chapter-1499'))).dy),
     );
+  });
+
+  testWidgets('search pill tints to theme surface in light/warm/dark/eink', (
+    tester,
+  ) async {
+    Future<void> pumpTheme({
+      required ThemeData theme,
+      AppGlassLevel glassLevel = AppGlassLevel.standard,
+      bool eInk = false,
+    }) async {
+      await tester.pumpWidget(
+        AppGlassEnvironment(
+          glassLevel: glassLevel,
+          child: LocalizedTestApp(
+            theme: theme,
+            builder: eInk
+                ? (_, child) => EInkModeScope(enabled: true, child: child!)
+                : null,
+            home: Scaffold(
+              body: LibraryChapterBrowser<String>(
+                workId: 'work-1',
+                keyPrefix: 'theme-check',
+                controlsInList: true,
+                pinControls: true,
+                entries: const [
+                  ChapterSearchEntry(id: '1', title: '第1话', value: '1'),
+                ],
+                itemExtent: 48,
+                rowBuilder: (_, item, _) => Text(item, key: Key('item-$item')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    // 浅色开启玻璃：使用 surfaceContainerLowest 着色而非中性灰 0x93F4F4F4
+    final lightTheme = AppTheme.light();
+    await pumpTheme(theme: lightTheme);
+    final lightGlass = tester.widget<LiquidGlass>(
+      find.descendant(
+        of: find.byType(AppTextInput),
+        matching: find.byType(LiquidGlass),
+      ),
+    );
+    expect(
+      lightGlass.style.tint,
+      lightTheme.colorScheme.surfaceContainerLowest.withValues(alpha: 0.82),
+    );
+
+    // 暖纸主题关闭玻璃：回退到暖纸高光表面 surfaceContainerLowest
+    final warmTheme = AppTheme.build(
+      family: AppThemeFamily.warmPaper,
+      brightness: Brightness.light,
+    );
+    await pumpTheme(theme: warmTheme, glassLevel: AppGlassLevel.off);
+    final warmMaterial = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byType(AppTextInput),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(warmMaterial.color, warmTheme.colorScheme.surfaceContainerLowest);
+
+    // 深色模式开启玻璃：保留暗色 pill 玻璃风格
+    final darkTheme = AppTheme.dark();
+    await pumpTheme(theme: darkTheme);
+    expect(
+      find.descendant(
+        of: find.byType(AppTextInput),
+        matching: find.byType(LiquidGlass),
+      ),
+      findsOneWidget,
+    );
+
+    // 墨水屏模式：跳过玻璃并保留高对比实色表面与边框
+    await pumpTheme(theme: lightTheme, eInk: true);
+    expect(
+      find.descendant(
+        of: find.byType(AppTextInput),
+        matching: find.byType(LiquidGlass),
+      ),
+      findsNothing,
+    );
+    final einkMaterial = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byType(AppTextInput),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(einkMaterial.color, lightTheme.colorScheme.surface);
   });
 }
