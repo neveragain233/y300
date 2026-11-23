@@ -46,6 +46,9 @@ class _ReaderTapZonesState extends State<ReaderTapZones> {
   @override
   void didUpdateWidget(ReaderTapZones oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled) {
+      _gestureCoordinator.cancelPendingTap();
+    }
     if (oldWidget.gestureCoordinator == widget.gestureCoordinator) {
       return;
     }
@@ -130,7 +133,7 @@ class _ReaderTapZonesState extends State<ReaderTapZones> {
       singleTapAction: action == null
           ? null
           : () {
-              if (mounted) {
+              if (mounted && _singleTapEnabled) {
                 action();
               }
             },

@@ -26,6 +26,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
     this.pagedCanvasColor,
     this.hardwarePageKeysEnabled = false,
     this.onHardwarePageKeysChanged,
+    this.fullscreenEnabled = true,
+    this.onFullscreenChanged,
     this.initialTab = ReaderDisplayTab.typography,
   });
 
@@ -47,6 +49,10 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
   final bool hardwarePageKeysEnabled;
   final ValueChanged<bool>? onHardwarePageKeysChanged;
 
+  /// 沉浸全屏阅读开关；持久化由上层阅读器负责。
+  final bool fullscreenEnabled;
+  final ValueChanged<bool>? onFullscreenChanged;
+
   final ReaderDisplayTab initialTab;
 
   @override
@@ -63,6 +69,8 @@ class ReaderDisplaySettingsSheet extends StatelessWidget {
       pagedCanvasColor: pagedCanvasColor,
       hardwarePageKeysEnabled: hardwarePageKeysEnabled,
       onHardwarePageKeysChanged: onHardwarePageKeysChanged,
+      fullscreenEnabled: fullscreenEnabled,
+      onFullscreenChanged: onFullscreenChanged,
       initialTab: initialTab,
     );
   }
@@ -166,6 +174,8 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
     required this.pagedCanvasColor,
     required this.hardwarePageKeysEnabled,
     required this.onHardwarePageKeysChanged,
+    required this.fullscreenEnabled,
+    required this.onFullscreenChanged,
     required this.initialTab,
   });
 
@@ -180,6 +190,8 @@ class _ReaderDisplaySettingsContent extends StatefulWidget {
   final Color? pagedCanvasColor;
   final bool hardwarePageKeysEnabled;
   final ValueChanged<bool>? onHardwarePageKeysChanged;
+  final bool fullscreenEnabled;
+  final ValueChanged<bool>? onFullscreenChanged;
   final ReaderDisplayTab initialTab;
 
   @override
@@ -191,12 +203,14 @@ class _ReaderDisplaySettingsContentState
     extends State<_ReaderDisplaySettingsContent> {
   late ReaderPreferences _current;
   late bool _hardwarePageKeysEnabled;
+  late bool _fullscreenEnabled;
 
   @override
   void initState() {
     super.initState();
     _current = widget.preferences;
     _hardwarePageKeysEnabled = widget.hardwarePageKeysEnabled;
+    _fullscreenEnabled = widget.fullscreenEnabled;
   }
 
   @override
@@ -207,6 +221,9 @@ class _ReaderDisplaySettingsContentState
     }
     if (oldWidget.hardwarePageKeysEnabled != widget.hardwarePageKeysEnabled) {
       _hardwarePageKeysEnabled = widget.hardwarePageKeysEnabled;
+    }
+    if (oldWidget.fullscreenEnabled != widget.fullscreenEnabled) {
+      _fullscreenEnabled = widget.fullscreenEnabled;
     }
   }
 
@@ -344,6 +361,18 @@ class _ReaderDisplaySettingsContentState
             );
             widget.onShowPageIndicatorChanged(value);
           },
+        ),
+        AppSwitchRow(
+          key: const Key('comic-reader-fullscreen-switch'),
+          title: l10n.readerImmersiveFullscreen,
+          subtitle: l10n.readerImmersiveFullscreenSubtitle,
+          value: _fullscreenEnabled,
+          onChanged: widget.onFullscreenChanged == null
+              ? null
+              : (value) {
+                  setState(() => _fullscreenEnabled = value);
+                  widget.onFullscreenChanged!(value);
+                },
         ),
         AppSwitchRow(
           key: const Key('comic-reader-hardware-page-keys-switch'),

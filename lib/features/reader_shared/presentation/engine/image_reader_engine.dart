@@ -39,6 +39,7 @@ import 'package:y300/features/reader_shared/presentation/engine/reader_vertical_
 import 'package:y300/features/reader_shared/presentation/engine/reader_zoomable_image.dart';
 import 'package:y300/features/reader_shared/presentation/reader_preferences/reader_preferences_provider.dart';
 import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/reader_fullscreen_provider.dart';
 import 'package:y300/features/reader_shared/presentation/reader_text_resolver.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_preload_coordinator.dart';
 import 'package:y300/features/reader_shared/presentation/services/reader_image_session_store.dart';
@@ -209,6 +210,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   bool _hardwareKeysRouteVisible = true;
   ReaderPreferences? _lastKnownReaderPreferences;
   int _lastKnownImageTotal = 0;
+  bool _displaySettingsOpen = false;
 
   ReaderCapability get _capability => widget.capability;
 
@@ -409,6 +411,10 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   }
 
   void _onTailActionChanged() {
+    if (_tailActionController.visible) {
+      _gestureCoordinator.cancelPendingTap();
+      _overlayController.hideMenu();
+    }
     if (mounted) setState(() {});
   }
   // ENGINE_BODY_PLACEHOLDER
@@ -417,6 +423,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
   Widget build(BuildContext context) {
     final preferencesState = ref.watch(readerPreferencesControllerProvider);
     final preferences = preferencesState.value ?? ReaderPreferences.defaults();
+    final fullscreenEnabled =
+        ref.watch(readerFullscreenEnabledProvider).value ?? true;
     final mode = _readerMode(preferences);
     final content = _capability.content;
     final background = _backgroundColor(preferences);
@@ -431,17 +439,21 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
 
     if (content.isEmpty) {
       _verticalCompensation.deactivate();
-      return Scaffold(
-        backgroundColor: background,
-        body: Center(
-          child: Text(
-            AppLocalizations.of(context).readerNoImages,
-            style: TextStyle(
-              color:
-                  ThemeData.estimateBrightnessForColor(background) ==
-                      Brightness.dark
-                  ? Colors.white70
-                  : null,
+      return ReaderImmersiveScope(
+        enabled: fullscreenEnabled,
+        holdWhenRouteCovered: _displaySettingsOpen,
+        child: Scaffold(
+          backgroundColor: background,
+          body: Center(
+            child: Text(
+              AppLocalizations.of(context).readerNoImages,
+              style: TextStyle(
+                color:
+                    ThemeData.estimateBrightnessForColor(background) ==
+                        Brightness.dark
+                    ? Colors.white70
+                    : null,
+              ),
             ),
           ),
         ),
@@ -485,73 +497,81 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final overlaySurface = _overlayController.isMenuVisible
         ? chromePalette.chromeBackground
         : background;
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      // 工具栏展开时顶/底栏的 chrome 色才是系统栏背后的实际颜色。
-      value: AppSystemUi.onSurfaces(
-        top: overlaySurface,
-        bottom: overlaySurface,
-      ),
-      child: Scaffold(
-        key: ValueKey<int>(_readerSessionGeneration),
-        backgroundColor: background,
-        body: Stack(
-          children: [
-            ReaderOverlayScaffold(
-              controller: _overlayController,
-              gestureCoordinator: _gestureCoordinator,
-              topBar: _buildTopBar(engineContext),
-              bottomBar: _buildBottomBar(
-                engineContext,
-                preferences,
-                chapterNav,
-              ),
-              persistentFooter: _buildPersistentFooter(
-                engineContext,
-                preferences,
-                background,
-              ),
-              onLeftTap: mode == ContinuousImageReaderMode.vertical
-                  ? null
-                  : () => _turnPageByTap(
-                      mode: preferences.readerMode,
-                      total: total,
-                      isLeftTap: true,
-                    ),
-              onRightTap: mode == ContinuousImageReaderMode.vertical
-                  ? null
-                  : () => _turnPageByTap(
-                      mode: preferences.readerMode,
-                      total: total,
-                      isLeftTap: false,
-                    ),
-              bottomSafeFraction: mode == ContinuousImageReaderMode.vertical
-                  ? 0.2
-                  : 0,
-              tapZonesBlockedListenable: _zoomGate,
-              child: _buildContentLayer(
-                context: context,
-                content: content,
-                mode: mode,
-                preferences: preferences,
-                engineContext: engineContext,
-                background: background,
-                hasPreviousChapter: chapterNav?.hasPrevious ?? false,
-              ),
-            ),
-            if (actionSurface != null)
-              _wrapTailWithReaderTheme(
-                context,
-                background: background,
-                preferences: preferences,
-                mode: mode,
-                child: ReaderTailActionOverlay(
-                  key: ValueKey(_tailActionController.identity),
-                  controller: _tailActionController,
-                  surface: actionSurface,
-                  menuVisible: _overlayController.isMenuVisible,
+    final tailActive = mode == ContinuousImageReaderMode.vertical
+        ? _tailActionController.visible
+        : !_pagedPosition.isImage;
+    return ReaderImmersiveScope(
+      enabled: fullscreenEnabled,
+      holdWhenRouteCovered: _displaySettingsOpen,
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        // 工具栏展开时顶/底栏的 chrome 色才是系统栏背后的实际颜色。
+        value: AppSystemUi.onSurfaces(
+          top: overlaySurface,
+          bottom: overlaySurface,
+        ),
+        child: Scaffold(
+          key: ValueKey<int>(_readerSessionGeneration),
+          backgroundColor: background,
+          body: Stack(
+            children: [
+              ReaderOverlayScaffold(
+                controller: _overlayController,
+                gestureCoordinator: _gestureCoordinator,
+                tapZonesEnabled: !tailActive,
+                topBar: _buildTopBar(engineContext),
+                bottomBar: _buildBottomBar(
+                  engineContext,
+                  preferences,
+                  chapterNav,
+                ),
+                persistentFooter: _buildPersistentFooter(
+                  engineContext,
+                  preferences,
+                  background,
+                ),
+                onLeftTap: mode == ContinuousImageReaderMode.vertical
+                    ? null
+                    : () => _turnPageByTap(
+                        mode: preferences.readerMode,
+                        total: total,
+                        isLeftTap: true,
+                      ),
+                onRightTap: mode == ContinuousImageReaderMode.vertical
+                    ? null
+                    : () => _turnPageByTap(
+                        mode: preferences.readerMode,
+                        total: total,
+                        isLeftTap: false,
+                      ),
+                bottomSafeFraction: mode == ContinuousImageReaderMode.vertical
+                    ? 0.2
+                    : 0,
+                tapZonesBlockedListenable: _zoomGate,
+                child: _buildContentLayer(
+                  context: context,
+                  content: content,
+                  mode: mode,
+                  preferences: preferences,
+                  engineContext: engineContext,
+                  background: background,
+                  hasPreviousChapter: chapterNav?.hasPrevious ?? false,
                 ),
               ),
-          ],
+              if (actionSurface != null)
+                _wrapTailWithReaderTheme(
+                  context,
+                  background: background,
+                  preferences: preferences,
+                  mode: mode,
+                  builder: (themedContext) => ReaderTailActionOverlay(
+                    key: ValueKey(_tailActionController.identity),
+                    controller: _tailActionController,
+                    surface: actionSurface,
+                    menuVisible: _overlayController.isMenuVisible,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -562,7 +582,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     required Color background,
     required ReaderPreferences preferences,
     required ContinuousImageReaderMode mode,
-    required Widget child,
+    required WidgetBuilder builder,
   }) {
     final effective = effectiveReaderBackgroundPreference(
       preferences.background,
@@ -573,7 +593,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
         _capability.pagedCanvasColor != null;
     if (effective == ReaderBackgroundPreference.followTheme &&
         !hasPagedCanvasOverride) {
-      return child;
+      return builder(context);
     }
     final baseTheme = Theme.of(context);
     final palette = ReaderPanelPalette.fromCanvas(
@@ -582,7 +602,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     );
     return Theme(
       data: palette.applyToReaderContentTheme(baseTheme),
-      child: AppPrismTheme(child: child),
+      child: AppPrismTheme(child: Builder(builder: builder)),
     );
   }
 
@@ -1194,7 +1214,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       background: background,
       preferences: preferences,
       mode: ContinuousImageReaderMode.horizontal,
-      child: KeyedSubtree(
+      builder: (themedContext) => KeyedSubtree(
         key: Key('reader-tail-${tail.id}'),
         child: Padding(
           padding: EdgeInsets.only(
@@ -1202,7 +1222,7 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
                 ? _tailActionController.barHeight
                 : 0,
           ),
-          child: tail.buildPaged(context, _tailActions(tail)),
+          child: tail.buildPaged(themedContext, _tailActions(tail)),
         ),
       ),
     );
@@ -1231,9 +1251,9 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       background: background,
       preferences: preferences,
       mode: ContinuousImageReaderMode.vertical,
-      child: KeyedSubtree(
+      builder: (themedContext) => KeyedSubtree(
         key: Key('reader-tail-vertical-${tail.id}-$index'),
-        child: tail.buildVerticalItem(context, _tailActions(tail), index),
+        child: tail.buildVerticalItem(themedContext, _tailActions(tail), index),
       ),
     );
     if (tail is! ReaderTailActionSurface) return child;
@@ -2320,7 +2340,8 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
     final wasOnImage = _pagedPosition.isImage;
     final position = _pagedPositionForPage(pageIndex, content.length);
     if (!position.isImage) {
-      _hideReaderMenuForContentMotion();
+      _gestureCoordinator.cancelPendingTap();
+      _overlayController.hideMenu();
       _pagedPosition = position;
       if (position.isTail) {
         final tail = _tailSurface;
@@ -3074,29 +3095,48 @@ class _ImageReaderEngineState extends ConsumerState<_ImageReaderEngineContent>
       canvasBackground: canvasBackground,
       baseTheme: baseTheme,
     );
-    await showAdaptivePanel<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: panelPalette.panelSurface,
-      builder: (context) => ReaderDisplaySettingsSheet(
-        preferences: preferences,
-        backgroundNote: _capability.pagedBackgroundSettingsNote,
-        pagedCanvasColor: _capability.pagedCanvasColor,
-        onModeChanged: (mode) => unawaited(_onReaderModeChanged(mode)),
-        onPageFitChanged: (value) => unawaited(controller.setPageFit(value)),
-        onBackgroundChanged: (value) =>
-            unawaited(controller.setBackground(value)),
-        onPageSpacingPreview: controller.previewPageSpacing,
-        onPageSpacingChanged: (value) =>
-            unawaited(controller.setPageSpacing(value)),
-        onShowPageIndicatorChanged: (value) =>
-            unawaited(controller.setShowPageIndicator(value)),
-        hardwarePageKeysEnabled: _hardwarePageKeysEnabled,
-        onHardwarePageKeysChanged: (value) => unawaited(
-          ref.read(hardwarePageKeysEnabledProvider.notifier).setEnabled(value),
+    final fullscreenEnabled =
+        ref.read(readerFullscreenEnabledProvider).value ?? true;
+    if (mounted) {
+      setState(() => _displaySettingsOpen = true);
+    }
+    try {
+      await showAdaptivePanel<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: panelPalette.panelSurface,
+        builder: (context) => ReaderDisplaySettingsSheet(
+          preferences: preferences,
+          backgroundNote: _capability.pagedBackgroundSettingsNote,
+          pagedCanvasColor: _capability.pagedCanvasColor,
+          onModeChanged: (mode) => unawaited(_onReaderModeChanged(mode)),
+          onPageFitChanged: (value) => unawaited(controller.setPageFit(value)),
+          onBackgroundChanged: (value) =>
+              unawaited(controller.setBackground(value)),
+          onPageSpacingPreview: controller.previewPageSpacing,
+          onPageSpacingChanged: (value) =>
+              unawaited(controller.setPageSpacing(value)),
+          onShowPageIndicatorChanged: (value) =>
+              unawaited(controller.setShowPageIndicator(value)),
+          hardwarePageKeysEnabled: _hardwarePageKeysEnabled,
+          onHardwarePageKeysChanged: (value) => unawaited(
+            ref
+                .read(hardwarePageKeysEnabledProvider.notifier)
+                .setEnabled(value),
+          ),
+          fullscreenEnabled: fullscreenEnabled,
+          onFullscreenChanged: (value) => unawaited(
+            ref
+                .read(readerFullscreenEnabledProvider.notifier)
+                .setEnabled(value),
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _displaySettingsOpen = false);
+      }
+    }
   }
 
   Future<void> _showModeSheet() async {

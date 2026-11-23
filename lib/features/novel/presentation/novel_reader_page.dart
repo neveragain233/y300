@@ -33,6 +33,7 @@ import 'package:y300/features/novel/application/novel_reader_display_preferences
 import 'package:y300/features/novel/application/novel_reader_vertical_session_coordinator.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_vertical_tap_turn_coordinator.dart';
 import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/reader_fullscreen_provider.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_document.dart';
 import 'package:y300/features/novel/domain/models/novel_episode_open_policy.dart';
 import 'package:y300/features/novel/domain/models/novel_source_reading_context.dart';
@@ -148,9 +149,9 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   late final ReaderGestureCoordinator _readerGestureCoordinator;
   late final NovelReaderPagedNavigationController _pagedNavigationController;
   late final NovelReaderVerticalTapTurnCoordinator _verticalTapTurn;
-  late final ReaderSystemUiController _systemUiController;
   late final EInkPagingRouter _hardwarePageKeysRouter;
   ProviderSubscription<AsyncValue<bool>>? _hardwarePageKeysSetting;
+  bool _displaySettingsOpen = false;
   final NovelReaderThemeResolver _themeResolver =
       const NovelReaderThemeResolver();
   final NovelReaderTypographyResolver _typographyResolver =
@@ -230,7 +231,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     _verticalTapTurn = NovelReaderVerticalTapTurnCoordinator(
       scrollController: _scrollController,
     );
-    _systemUiController = ref.read(readerSystemUiControllerProvider);
     _hardwarePageKeysRouter = ref.read(eInkPagingRouterProvider);
     _hardwarePageKeysRouter.register(this, this);
     _hardwarePageKeysSetting = ref.listenManual<AsyncValue<bool>>(
@@ -323,7 +323,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     super.didChangeDependencies();
     _syncReadingVisibility();
     _syncHardwarePageKeysVisibility();
-    _syncSystemUi();
   }
 
   /// 路由不在最上层或 tab 被 TickerMode 停用时，实体键让给前景页面。
@@ -333,20 +332,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
         (ModalRoute.of(context)?.isCurrent ?? true) &&
         TickerMode.valuesOf(context).enabled;
     _hardwarePageKeysRouter.setVisible(this, visible);
-  }
-
-  void _syncSystemUi() {
-    if (!mounted) return;
-    final immersive = _resumed && (ModalRoute.of(context)?.isCurrent ?? true);
-    unawaited(
-      (immersive
-              ? _systemUiController.enterImmersive()
-              : _systemUiController.restore())
-          .catchError((Object _) {
-            // System-bar visibility is best-effort and must never break the
-            // reader route or leak an unhandled platform error.
-          }),
-    );
   }
 
   void _syncReadingVisibility() {
@@ -366,7 +351,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   void dispose() {
     _hardwarePageKeysSetting?.close();
     _hardwarePageKeysRouter.unregister(this);
-    unawaited(_systemUiController.restore().catchError((Object _) {}));
     _verticalPageMetrics.dispose();
     _paginationSessionCache.dispose();
     _verticalDockVisible.dispose();
@@ -401,7 +385,6 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     } else {
       _syncReadingVisibility();
     }
-    _syncSystemUi();
   }
 
   @override
@@ -449,238 +432,251 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
     }
     final imageReferer = ref.watch(forumImageRefererProvider);
     final externalLauncher = ref.watch(forumWebViewExternalLauncherProvider);
+    final fullscreenEnabled =
+        ref.watch(readerFullscreenEnabledProvider).value ?? true;
 
-    return PopScope<void>(
-      canPop: _allowPopAfterProgressFlush,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          return;
-        }
-        unawaited(_flushProgressAndPop());
-      },
-      child: Scaffold(
-        floatingActionButton: state.asData?.value == null
-            ? null
-            : _buildChapterInteractionsDock(state.asData!.value),
-        floatingActionButtonLocation: ReaderCornerDockLocation(
-          ref
-                  .watch(novelChapterInteractionsDockControllerProvider)
-                  .value
-                  ?.side ??
-              ReaderCornerDockSide.right,
-        ),
-        floatingActionButtonAnimator: FloatingActionButtonAnimator.noAnimation,
-        body: state.when(
-          skipLoadingOnRefresh: false,
-          skipLoadingOnReload: false,
-          loading: () {
-            _verticalSession.retire();
-            _readyReaderSurfaceIdentity = null;
-            final backgroundColor = Theme.of(context).colorScheme.surface;
-            return NovelReaderDelayedLoadingBoundary(
-              identity: 'initial-reader-load',
-              isLoading: true,
-              backgroundColor: backgroundColor,
-              child: ColoredBox(color: backgroundColor),
-            );
-          },
-          error: (error, _) {
-            _verticalSession.retire();
-            return NovelReaderErrorView(
-              error: error,
-              onRetry: () =>
-                  ref.invalidate(novelReaderControllerProvider(_args)),
-              onUpdateWork: () => _updateWorkFromErrorView(),
-              onOpenThread: () => _openFallbackSourceThread(),
-            );
-          },
-          data: (viewState) {
-            _scheduleFontReferenceRepair(viewState, controller);
-            final readerSurfaceIdentity = _readerSurfaceIdentity(viewState);
-            if (viewState.preferences.flowMode ==
-                    NovelReaderFlowMode.vertical ||
-                _conversionPosition?.chapter.episodeId !=
-                    viewState.currentEpisode.episodeId ||
-                _conversionPosition?.rawHtml !=
-                    viewState.currentContent.rawHtml) {
-              _conversionPosition = null;
-            }
-            if (_postRouteOwner != readerSurfaceIdentity) {
-              _postRouteOwner = readerSurfaceIdentity;
-              _postRouteSession.invalidate();
-              _chapterInteractionsPendingOwner = null;
-              _chapterInteractionsPendingTarget = null;
-            } else if (_chapterInteractionsPendingOwner ==
-                    readerSurfaceIdentity &&
-                _chapterInteractionsPendingTarget !=
-                    _chapterInteractionsTarget(viewState)) {
-              _postRouteSession.invalidate();
-              _chapterInteractionsPendingOwner = null;
-              _chapterInteractionsPendingTarget = null;
-            }
-            final paginationGeometryOwner = readerSurfaceIdentity;
-            if (_progressControlOwner != paginationGeometryOwner) {
-              _readerGestureCoordinator.cancelPendingTap();
-              _progressControlOwner = paginationGeometryOwner;
-              _pagedPosition = null;
-              _bodyGeometry = null;
-              _bodyGeometryOwner = null;
-              _imagesReady = true;
-              _readingScrolling = false;
-              _userScrollActive = false;
-              _pendingPageSeekRequest = null;
-              _progressSliderPreview = null;
-              _isProgressSeekInFlight = false;
-              _clearVerticalPageMetrics();
-              // The owner flips exactly when a switched-to chapter arrives, so
-              // an entry request for *this* episode is the one that just landed
-              // and must survive. Anything else means the reader went somewhere
-              // that request no longer describes (catalog jump, mode switch).
-              if (_pendingChapterEntryRequest?.episodeId !=
-                  viewState.currentEpisode.episodeId) {
-                _pendingChapterEntryRequest = null;
-              }
-            }
-            if (_verticalSession.session?.surfaceIdentity !=
-                readerSurfaceIdentity) {
-              _scrollController.cancelRestore();
-              _verticalSeekRequest = null;
-              _isProgrammaticScrollChange = false;
-              _verticalTapTurn.retire();
-              final session = _verticalSession.bind(
-                surfaceIdentity: readerSurfaceIdentity,
-                episodeId: viewState.currentEpisode.episodeId,
-                isTransitioning: viewState.transition != null,
+    return ReaderImmersiveScope(
+      enabled: fullscreenEnabled,
+      holdWhenRouteCovered: _displaySettingsOpen,
+      child: PopScope<void>(
+        canPop: _allowPopAfterProgressFlush,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) {
+            return;
+          }
+          unawaited(_flushProgressAndPop());
+        },
+        child: Scaffold(
+          floatingActionButton: state.asData?.value == null
+              ? null
+              : _buildChapterInteractionsDock(state.asData!.value),
+          floatingActionButtonLocation: ReaderCornerDockLocation(
+            ref
+                    .watch(novelChapterInteractionsDockControllerProvider)
+                    .value
+                    ?.side ??
+                ReaderCornerDockSide.right,
+          ),
+          floatingActionButtonAnimator:
+              FloatingActionButtonAnimator.noAnimation,
+          body: state.when(
+            skipLoadingOnRefresh: false,
+            skipLoadingOnReload: false,
+            loading: () {
+              _verticalSession.retire();
+              _readyReaderSurfaceIdentity = null;
+              final backgroundColor = Theme.of(context).colorScheme.surface;
+              return NovelReaderDelayedLoadingBoundary(
+                identity: 'initial-reader-load',
+                isLoading: true,
+                backgroundColor: backgroundColor,
+                child: ColoredBox(color: backgroundColor),
               );
+            },
+            error: (error, _) {
+              _verticalSession.retire();
+              return NovelReaderErrorView(
+                error: error,
+                onRetry: () =>
+                    ref.invalidate(novelReaderControllerProvider(_args)),
+                onUpdateWork: () => _updateWorkFromErrorView(),
+                onOpenThread: () => _openFallbackSourceThread(),
+              );
+            },
+            data: (viewState) {
+              _scheduleFontReferenceRepair(viewState, controller);
+              final readerSurfaceIdentity = _readerSurfaceIdentity(viewState);
               if (viewState.preferences.flowMode ==
-                      NovelReaderFlowMode.vertical &&
-                  _verticalSession.contentReady) {
-                _scheduleVerticalRestoreAttempt(
-                  session: session,
-                  trigger: 'content_resume',
-                );
-              } else if (_verticalSession.terminalReady) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_isCurrentVerticalSession(session)) {
-                    _markReaderSurfaceReady(session.surfaceIdentity);
-                  }
-                });
+                      NovelReaderFlowMode.vertical ||
+                  _conversionPosition?.chapter.episodeId !=
+                      viewState.currentEpisode.episodeId ||
+                  _conversionPosition?.rawHtml !=
+                      viewState.currentContent.rawHtml) {
+                _conversionPosition = null;
               }
-              _progressDiagnostics.log(
-                'surface_owner',
-                fields: <String, Object?>{
-                  'novelId': widget.novelId,
-                  'owner': session.owner,
-                  'openPolicy': widget.openPolicy.name,
-                  'snapshotOffset': viewState.progressSnapshot.scrollOffset
-                      .toStringAsFixed(2),
-                  'snapshotPercent': viewState.progressSnapshot.progressPercent
-                      .toStringAsFixed(4),
-                  'snapshotFlowMode': viewState.progressSnapshot.flowMode.name,
-                },
-              );
-            }
-            final theme = Theme.of(context);
-            final palette = _themeResolver.resolve(
-              preferences: viewState.preferences,
-              theme: theme,
-              eInkMode: _eInkModeEnabled,
-            );
-            final typography = _typographyResolver.resolve(
-              preferences: viewState.preferences,
-              resolvedFont: viewState.bodyFont,
-              theme: theme,
-              palette: palette,
-            );
-            final readerIsLoading =
-                viewState.transition != null ||
-                _readyReaderSurfaceIdentity != readerSurfaceIdentity;
-            final contentTopInset = viewState.preferences.safeAreaEnabled
-                ? MediaQuery.viewPaddingOf(context).top
-                : 0.0;
-            final contentBottomInset =
-                ReaderReadingStatusBarLayout.heightForVariant(
-                  context,
-                  _readingStatusBarVariant,
+              if (_postRouteOwner != readerSurfaceIdentity) {
+                _postRouteOwner = readerSurfaceIdentity;
+                _postRouteSession.invalidate();
+                _chapterInteractionsPendingOwner = null;
+                _chapterInteractionsPendingTarget = null;
+              } else if (_chapterInteractionsPendingOwner ==
+                      readerSurfaceIdentity &&
+                  _chapterInteractionsPendingTarget !=
+                      _chapterInteractionsTarget(viewState)) {
+                _postRouteSession.invalidate();
+                _chapterInteractionsPendingOwner = null;
+                _chapterInteractionsPendingTarget = null;
+              }
+              final paginationGeometryOwner = readerSurfaceIdentity;
+              if (_progressControlOwner != paginationGeometryOwner) {
+                _readerGestureCoordinator.cancelPendingTap();
+                _progressControlOwner = paginationGeometryOwner;
+                _pagedPosition = null;
+                _bodyGeometry = null;
+                _bodyGeometryOwner = null;
+                _imagesReady = true;
+                _readingScrolling = false;
+                _userScrollActive = false;
+                _pendingPageSeekRequest = null;
+                _progressSliderPreview = null;
+                _isProgressSeekInFlight = false;
+                _clearVerticalPageMetrics();
+                // The owner flips exactly when a switched-to chapter arrives, so
+                // an entry request for *this* episode is the one that just landed
+                // and must survive. Anything else means the reader went somewhere
+                // that request no longer describes (catalog jump, mode switch).
+                if (_pendingChapterEntryRequest?.episodeId !=
+                    viewState.currentEpisode.episodeId) {
+                  _pendingChapterEntryRequest = null;
+                }
+              }
+              if (_verticalSession.session?.surfaceIdentity !=
+                  readerSurfaceIdentity) {
+                _scrollController.cancelRestore();
+                _verticalSeekRequest = null;
+                _isProgrammaticScrollChange = false;
+                _verticalTapTurn.retire();
+                final session = _verticalSession.bind(
+                  surfaceIdentity: readerSurfaceIdentity,
+                  episodeId: viewState.currentEpisode.episodeId,
+                  isTransitioning: viewState.transition != null,
                 );
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: _readerSystemUiOverlayStyle(palette),
-              child: NovelReaderBackground(
+                if (viewState.preferences.flowMode ==
+                        NovelReaderFlowMode.vertical &&
+                    _verticalSession.contentReady) {
+                  _scheduleVerticalRestoreAttempt(
+                    session: session,
+                    trigger: 'content_resume',
+                  );
+                } else if (_verticalSession.terminalReady) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_isCurrentVerticalSession(session)) {
+                      _markReaderSurfaceReady(session.surfaceIdentity);
+                    }
+                  });
+                }
+                _progressDiagnostics.log(
+                  'surface_owner',
+                  fields: <String, Object?>{
+                    'novelId': widget.novelId,
+                    'owner': session.owner,
+                    'openPolicy': widget.openPolicy.name,
+                    'snapshotOffset': viewState.progressSnapshot.scrollOffset
+                        .toStringAsFixed(2),
+                    'snapshotPercent': viewState
+                        .progressSnapshot
+                        .progressPercent
+                        .toStringAsFixed(4),
+                    'snapshotFlowMode':
+                        viewState.progressSnapshot.flowMode.name,
+                  },
+                );
+              }
+              final theme = Theme.of(context);
+              final palette = _themeResolver.resolve(
+                preferences: viewState.preferences,
+                theme: theme,
+                eInkMode: _eInkModeEnabled,
+              );
+              final typography = _typographyResolver.resolve(
+                preferences: viewState.preferences,
+                resolvedFont: viewState.bodyFont,
+                theme: theme,
                 palette: palette,
-                child: Builder(
-                  builder: (context) {
-                    final isVertical =
-                        viewState.preferences.flowMode ==
-                        NovelReaderFlowMode.vertical;
-                    // Text-only vertical mode has no double-tap zoom surface;
-                    // keeping the window would collapse rapid taps into one.
-                    _readerGestureCoordinator.doubleTapEnabled = !isVertical;
-                    final reader = ReaderOverlayScaffold(
-                      controller: _overlayController,
-                      gestureCoordinator: _readerGestureCoordinator,
-                      topBar: _buildTopBarConfig(viewState),
-                      bottomBar: _buildBottomBarConfig(viewState, controller),
-                      persistentFooter: _buildPersistentFooter(
-                        viewState,
-                        palette,
-                      ),
-                      bottomSafeFraction: 0,
-                      onLeftTap: isVertical
-                          ? () => _turnVerticalByTap(backward: true)
-                          : () => _turnPagedByPhysicalTap(
-                              surfaceIdentity: readerSurfaceIdentity,
-                              isLeftTap: true,
-                            ),
-                      onRightTap: isVertical
-                          ? () => _turnVerticalByTap(backward: false)
-                          : () => _turnPagedByPhysicalTap(
-                              surfaceIdentity: readerSurfaceIdentity,
-                              isLeftTap: false,
-                            ),
-                      child: _buildReaderList(
-                        viewState,
-                        typography,
-                        const NovelForumHtmlRenderThemeFactory().fromPalette(
+              );
+              final readerIsLoading =
+                  viewState.transition != null ||
+                  _readyReaderSurfaceIdentity != readerSurfaceIdentity;
+              final mediaQuery = MediaQuery.of(context);
+              final contentTopInset = viewState.preferences.safeAreaEnabled
+                  ? mediaQuery.viewPadding.top
+                  : (fullscreenEnabled ? 0.0 : mediaQuery.padding.top);
+              final contentBottomInset =
+                  ReaderReadingStatusBarLayout.heightForVariant(
+                    context,
+                    _readingStatusBarVariant,
+                  );
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: _readerSystemUiOverlayStyle(palette),
+                child: NovelReaderBackground(
+                  palette: palette,
+                  child: Builder(
+                    builder: (context) {
+                      final isVertical =
+                          viewState.preferences.flowMode ==
+                          NovelReaderFlowMode.vertical;
+                      // Text-only vertical mode has no double-tap zoom surface;
+                      // keeping the window would collapse rapid taps into one.
+                      _readerGestureCoordinator.doubleTapEnabled = !isVertical;
+                      final reader = ReaderOverlayScaffold(
+                        controller: _overlayController,
+                        gestureCoordinator: _readerGestureCoordinator,
+                        topBar: _buildTopBarConfig(viewState),
+                        bottomBar: _buildBottomBarConfig(viewState, controller),
+                        persistentFooter: _buildPersistentFooter(
+                          viewState,
                           palette,
                         ),
-                        imageReferer,
-                        externalLauncher,
-                        surfaceIdentity: readerSurfaceIdentity,
-                        contentTopInset: contentTopInset,
-                        contentBottomInset: contentBottomInset,
-                      ),
-                    );
-                    final loadingIdentity =
-                        viewState.transition?.targetEpisodeId ??
-                        viewState.currentEpisode.episodeId;
-                    return NovelReaderDelayedLoadingBoundary(
-                      identity: loadingIdentity,
-                      isLoading: readerIsLoading,
-                      backgroundColor: palette.background,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            // Keep a stable semantics parent while a native
-                            // route temporarily excludes the cached reader tree.
-                            child: Semantics(
-                              container: true,
-                              child: ExcludeSemantics(
-                                excluding: _readerSemanticsSuspendCount > 0,
-                                child: KeyedSubtree(
-                                  key: ValueKey<String>(readerSurfaceIdentity),
-                                  child: reader,
+                        bottomSafeFraction: 0,
+                        onLeftTap: isVertical
+                            ? () => _turnVerticalByTap(backward: true)
+                            : () => _turnPagedByPhysicalTap(
+                                surfaceIdentity: readerSurfaceIdentity,
+                                isLeftTap: true,
+                              ),
+                        onRightTap: isVertical
+                            ? () => _turnVerticalByTap(backward: false)
+                            : () => _turnPagedByPhysicalTap(
+                                surfaceIdentity: readerSurfaceIdentity,
+                                isLeftTap: false,
+                              ),
+                        child: _buildReaderList(
+                          viewState,
+                          typography,
+                          const NovelForumHtmlRenderThemeFactory().fromPalette(
+                            palette,
+                          ),
+                          imageReferer,
+                          externalLauncher,
+                          surfaceIdentity: readerSurfaceIdentity,
+                          contentTopInset: contentTopInset,
+                          contentBottomInset: contentBottomInset,
+                        ),
+                      );
+                      final loadingIdentity =
+                          viewState.transition?.targetEpisodeId ??
+                          viewState.currentEpisode.episodeId;
+                      return NovelReaderDelayedLoadingBoundary(
+                        identity: loadingIdentity,
+                        isLoading: readerIsLoading,
+                        backgroundColor: palette.background,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              // Keep a stable semantics parent while a native
+                              // route temporarily excludes the cached reader tree.
+                              child: Semantics(
+                                container: true,
+                                child: ExcludeSemantics(
+                                  excluding: _readerSemanticsSuspendCount > 0,
+                                  child: KeyedSubtree(
+                                    key: ValueKey<String>(
+                                      readerSurfaceIdentity,
+                                    ),
+                                    child: reader,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -2796,34 +2792,43 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
       preferences: viewState.editablePreferences,
       persistedPreferences: viewState.persistedPreferences,
     );
-    await _runWithReaderSemanticsSuspended(() async {
-      await showAdaptivePanel<void>(
-        context: context,
-        backgroundColor: panelPalette.panelSurface,
-        constraints: BoxConstraints(maxHeight: maxSheetHeight),
-        builder: (context) => NovelReaderDisplaySettingsSheet(
-          initialPreferences: viewState.editablePreferences,
-          onPreferencesChanged: coordinator.change,
-          onPreferencesCommitted: (_) => unawaited(coordinator.flush()),
-          fontPreviewStyle: _typographyResolver
-              .resolve(
-                preferences: viewState.preferences,
-                resolvedFont: viewState.bodyFont,
-                theme: Theme.of(this.context),
-                palette: _themeResolver.resolve(
+    if (mounted) {
+      setState(() => _displaySettingsOpen = true);
+    }
+    try {
+      await _runWithReaderSemanticsSuspended(() async {
+        await showAdaptivePanel<void>(
+          context: context,
+          backgroundColor: panelPalette.panelSurface,
+          constraints: BoxConstraints(maxHeight: maxSheetHeight),
+          builder: (context) => NovelReaderDisplaySettingsSheet(
+            initialPreferences: viewState.editablePreferences,
+            onPreferencesChanged: coordinator.change,
+            onPreferencesCommitted: (_) => unawaited(coordinator.flush()),
+            fontPreviewStyle: _typographyResolver
+                .resolve(
                   preferences: viewState.preferences,
+                  resolvedFont: viewState.bodyFont,
                   theme: Theme.of(this.context),
-                  eInkMode: _eInkModeEnabled,
-                ),
-              )
-              .body,
-        ),
-      );
-      if (!mounted) {
-        return;
+                  palette: _themeResolver.resolve(
+                    preferences: viewState.preferences,
+                    theme: Theme.of(this.context),
+                    eInkMode: _eInkModeEnabled,
+                  ),
+                )
+                .body,
+          ),
+        );
+        if (!mounted) {
+          return;
+        }
+        await coordinator.flush();
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _displaySettingsOpen = false);
       }
-      await coordinator.flush();
-    });
+    }
   }
 
   NovelReaderDisplayPreferencesCoordinator _displayPreferencesCoordinatorFor(

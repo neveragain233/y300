@@ -3,6 +3,7 @@ export 'reader_chrome_palette.dart';
 export 'reader_content_panel.dart';
 export 'reader_display_panel.dart';
 export 'reader_gesture_coordinator.dart';
+export 'reader_immersive_scope.dart';
 export 'reader_models.dart';
 export 'reader_option_row.dart';
 export 'reader_overlay_scaffold.dart';

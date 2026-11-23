@@ -882,7 +882,7 @@ class ThreadPostCard extends StatelessWidget {
             const SizedBox(height: 8),
             DefaultTextStyle.merge(
               style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: palette.bodyText, height: 1.5),
+                  ?.copyWith(color: resolvedPalette.bodyText, height: 1.5),
               child: ThreadPostHtmlBody(
                 key: Key('thread-post-${post.pid}'),
                 post: post,

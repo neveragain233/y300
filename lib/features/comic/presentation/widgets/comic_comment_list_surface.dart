@@ -172,6 +172,10 @@ class _ComicCommentListSurfaceState extends State<ComicCommentListSurface>
     final itemCount =
         projection.items.length +
         (hasPartialFailure || loadResult.hasMore ? 1 : 0);
+    final resolvedPadding = widget.padding.resolve(Directionality.of(context));
+    final listPadding = resolvedPadding.copyWith(
+      top: resolvedPadding.top + MediaQuery.paddingOf(context).top,
+    );
     return ListView.builder(
       controller: _presentation.scrollController,
       scrollCacheExtent: const ScrollCacheExtent.viewport(1),
@@ -183,7 +187,7 @@ class _ComicCommentListSurfaceState extends State<ComicCommentListSurface>
         return index < 0 ? null : index;
       },
       key: const Key('comic-comment-list'),
-      padding: widget.padding,
+      padding: listPadding,
       itemCount: itemCount,
       itemBuilder: (context, index) {
         if (index >= projection.items.length) {

@@ -3114,6 +3114,8 @@
   "threadControlsGroupScrolling": "捲動",
   "readerHardwarePageKeys": "硬體鍵翻頁",
   "readerHardwarePageKeysSubtitle": "使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效",
+  "readerImmersiveFullscreen": "沉浸全屏閱讀",
+  "readerImmersiveFullscreenSubtitle": "隱藏狀態列與底部導覽列，僅在閱讀器內生效",
   "appearanceTextSectionTitle": "文字",
   "appearanceBoldFontTitle": "加粗字體",
   "appearanceBoldFontSubtitle": "整體提升一檔字重，墨水屏和戶外更易辨認",

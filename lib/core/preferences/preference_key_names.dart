@@ -4,6 +4,7 @@ abstract final class PreferenceKeyNames {
   static const appAppearanceSnapshotV1 = 'app.appearance.snapshot.v1';
   static const appThemeFamily = 'app_theme_family';
   static const readerHardwarePageKeys = 'reader_hardware_page_keys';
+  static const readerImmersiveFullscreen = 'reader_immersive_fullscreen';
   static const readerBoldFont = 'reader_bold_font';
   static const appThemePreference = 'app_theme_preference';
   static const appLanguagePreference = 'app_language_preference';

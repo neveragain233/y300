@@ -206,6 +206,28 @@ void _verticalReadingCases() {
   );
 
   testWidgets(
+    'novel reader exits immersive mode when shared fullscreen switch is off',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'reader_immersive_fullscreen': false,
+      });
+      final systemUi = _RecordingReaderSystemUiController();
+      await tester.pumpWidget(
+        _buildReaderApp(
+          repository: _FakeNovelRepository(),
+          systemUiController: systemUi,
+          safeArea: const EdgeInsets.only(top: 24),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(systemUi.immersive, isFalse);
+      final list = find.byKey(const Key('novel-reader-paragraph-list'));
+      expect(tester.getTopLeft(list).dy, greaterThanOrEqualTo(24));
+    },
+  );
+
+  testWidgets(
     'vertical reading window respects the top inset and updates the footer',
     (tester) async {
       await tester.pumpWidget(

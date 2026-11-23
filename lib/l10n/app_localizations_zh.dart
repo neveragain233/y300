@@ -6472,6 +6472,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get readerHardwarePageKeysSubtitle => '使用音量键或侧边翻页键翻页，仅在阅读器内生效';
 
   @override
+  String get readerImmersiveFullscreen => '沉浸全屏阅读';
+
+  @override
+  String get readerImmersiveFullscreenSubtitle => '隐藏状态栏与底部导航条，仅在阅读器内生效';
+
+  @override
   String get appearanceTextSectionTitle => '文字';
 
   @override
@@ -13019,6 +13025,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerHardwarePageKeysSubtitle => '使用音量鍵或側邊翻頁鍵翻頁，僅在閱讀器內生效';
+
+  @override
+  String get readerImmersiveFullscreen => '沉浸全屏閱讀';
+
+  @override
+  String get readerImmersiveFullscreenSubtitle => '隱藏狀態列與底部導覽列，僅在閱讀器內生效';
 
   @override
   String get appearanceTextSectionTitle => '文字';

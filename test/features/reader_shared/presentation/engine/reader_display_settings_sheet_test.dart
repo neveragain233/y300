@@ -16,6 +16,7 @@ void main() {
       ReaderModePreference? selectedMode;
       ReaderPageFitPreference? selectedFit;
       ReaderBackgroundPreference? selectedBackground;
+      bool? selectedFullscreen;
       final spacingPreviews = <double>[];
       final spacingCommits = <double>[];
 
@@ -30,6 +31,8 @@ void main() {
               onPageSpacingPreview: spacingPreviews.add,
               onPageSpacingChanged: spacingCommits.add,
               onShowPageIndicatorChanged: (_) {},
+              fullscreenEnabled: true,
+              onFullscreenChanged: (value) => selectedFullscreen = value,
             ),
           ),
         ),
@@ -95,6 +98,13 @@ void main() {
         find.byKey(const Key('comic-reader-page-indicator-switch')),
         findsOneWidget,
       );
+      final fullscreenSwitch = find.byKey(
+        const Key('comic-reader-fullscreen-switch'),
+      );
+      expect(fullscreenSwitch, findsOneWidget);
+      await tester.tap(fullscreenSwitch);
+      await tester.pumpAndSettle();
+      expect(selectedFullscreen, isFalse);
     },
   );
 

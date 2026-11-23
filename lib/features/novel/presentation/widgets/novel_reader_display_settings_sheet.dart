@@ -11,6 +11,7 @@ import 'package:y300/features/novel/presentation/controllers/novel_chapter_inter
 import 'package:y300/features/novel/presentation/novel_text_resolver.dart';
 import 'package:y300/features/novel/presentation/services/novel_reader_display_resolvers.dart';
 import 'package:y300/features/reader_shared/presentation/reader_preferences/hardware_page_keys_provider.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/reader_fullscreen_provider.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_select_menu.dart';
@@ -317,6 +318,26 @@ class _NovelReaderDisplaySettingsSheetState
         value: _draft.safeAreaEnabled,
         onChanged: (value) =>
             _applyPreferences(_draft.copyWith(safeAreaEnabled: value)),
+      ),
+      Consumer(
+        builder: (context, ref, _) {
+          final enabled = ref.watch(readerFullscreenEnabledProvider);
+          return AppSwitchRow(
+            switchKey: const Key('novel-reader-fullscreen-switch'),
+            title: l10n.readerImmersiveFullscreen,
+            subtitle: l10n.readerImmersiveFullscreenSubtitle,
+            value: enabled.value ?? true,
+            onChanged: enabled.value == null
+                ? null
+                : (value) {
+                    unawaited(
+                      ref
+                          .read(readerFullscreenEnabledProvider.notifier)
+                          .setEnabled(value),
+                    );
+                  },
+          );
+        },
       ),
       Consumer(
         builder: (context, ref, _) {

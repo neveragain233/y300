@@ -18,6 +18,7 @@ import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/pla
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_diagnostics.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_converter.dart';
+import 'package:y300/features/comic/presentation/widgets/comic_comment_list_surface.dart';
 import 'package:y300/features/comic/presentation/widgets/comic_comment_tail_surface.dart';
 import 'package:y300/features/comic/presentation/widgets/comic_comment_surface.dart';
 import 'package:y300/features/reader_shared/presentation/engine/reader_tail_surface.dart';
@@ -225,6 +226,41 @@ void main() {
       find.byType(ForumHtmlWidgetPostRenderer),
     );
     expect(renderer.html, contains('評論正文'));
+  });
+
+  testWidgets('comment list pads top by visible system status bar inset', (
+    tester,
+  ) async {
+    final session = ComicCommentSessionController(
+      key: const ComicCommentSessionKey(episodeId: 'e1', sourceTid: '573279'),
+      loader: _TailFakeLoader(),
+    );
+    final projection = _projectionController(session);
+    addTearDown(projection.dispose);
+    addTearDown(session.dispose);
+    await session.load();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: LocalizedTestApp(
+          home: MediaQuery(
+            data: const MediaQueryData(padding: EdgeInsets.only(top: 28)),
+            child: Scaffold(
+              body: ComicCommentListSurface(
+                sourceTid: '573279',
+                projection: projection.projection,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final listView = tester.widget<ListView>(
+      find.byKey(const Key('comic-comment-list')),
+    );
+    expect(listView.padding, const EdgeInsets.fromLTRB(12, 40, 12, 24));
   });
 }
 

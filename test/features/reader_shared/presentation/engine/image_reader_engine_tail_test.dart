@@ -11,8 +11,10 @@ import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/domain/services/forum_image_precache_service.dart';
+import 'package:y300/features/library_shared/presentation/reader/reader.dart';
 import 'package:y300/features/reader_shared/domain/continuous_image/continuous_image.dart';
 import 'package:y300/features/reader_shared/presentation/engine/engine.dart';
+import 'package:y300/features/reader_shared/presentation/reader_preferences/reader_fullscreen_provider.dart';
 
 void main() {
   for (final mode in ['ltr', 'rtl']) {
@@ -186,26 +188,59 @@ void main() {
 
   for (final mode in ['ltr', 'rtl']) {
     testWidgets(
-      '$mode fixed actions follow the tail and yield to the reader menu',
+      '$mode fixed actions follow the tail and dismiss/suppress the reader menu',
       (tester) async {
         SharedPreferences.setMockInitialValues({'reader_pref_mode': mode});
         final tail = _ActionTail();
         await tester.pumpWidget(_host(tail));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('tail-action-button')), findsNothing);
+
+        // 在图片页打开阅读器上下菜单。
+        await tester.tapAt(
+          tester.getCenter(
+            find.byKey(const Key('shared-reader-center-tap-zone')),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<IgnorePointer>(
+                find.byKey(
+                  const Key('shared-reader-top-overlay-hit-test-gate'),
+                ),
+              )
+              .ignoring,
+          isFalse,
+        );
+
         final page = find.byKey(const Key('tail-test-page'));
         final swipe = Offset(mode == 'ltr' ? -700 : 700, 0);
         await tester.drag(page, swipe);
         await tester.pumpAndSettle();
         await tester.drag(page, swipe);
         await tester.pumpAndSettle();
+
+        // 进入尾页后菜单自动收起，评论操作栏正常可见。
+        expect(
+          tester
+              .widget<IgnorePointer>(
+                find.byKey(
+                  const Key('shared-reader-top-overlay-hit-test-gate'),
+                ),
+              )
+              .ignoring,
+          isTrue,
+        );
         final button = find.byKey(const Key('tail-action-button'));
         expect(button, findsOneWidget);
         await tester.tap(button);
         await tester.pumpAndSettle();
         expect(tail.actionCount, 1);
         expect(tail.advanceCount, 0);
-        expect(button, findsOneWidget);
+
+        // 评论页点击中部不会再弹出阅读器上下菜单。
         await tester.tapAt(
           tester.getCenter(
             find.byKey(const Key('shared-reader-center-tap-zone')),
@@ -213,15 +248,18 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 350));
         await tester.pumpAndSettle();
-        expect(button, findsNothing);
-        await tester.tapAt(
-          tester.getCenter(
-            find.byKey(const Key('shared-reader-center-tap-zone')),
-          ),
+        expect(
+          tester
+              .widget<IgnorePointer>(
+                find.byKey(
+                  const Key('shared-reader-top-overlay-hit-test-gate'),
+                ),
+              )
+              .ignoring,
+          isTrue,
         );
-        await tester.pump(const Duration(milliseconds: 350));
-        await tester.pumpAndSettle();
         expect(button, findsOneWidget);
+
         await tester.drag(page, swipe);
         await tester.pumpAndSettle();
         expect(button, findsNothing);
@@ -229,6 +267,94 @@ void main() {
       },
     );
   }
+
+  testWidgets('vertical tail hides and suppresses the reader menu', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'reader_pref_mode': 'vertical'});
+    final tail = _ActionTail();
+    await tester.pumpWidget(_host(tail));
+    await tester.pumpAndSettle();
+
+    final list = find.byKey(const Key('tail-test-list'));
+    final scroll = tester.widget<ListView>(list).controller!;
+    scroll.jumpTo(1500);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('tail-action-button')), findsOneWidget);
+
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const Key('shared-reader-center-tap-zone'))),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<IgnorePointer>(
+            find.byKey(const Key('shared-reader-top-overlay-hit-test-gate')),
+          )
+          .ignoring,
+      isTrue,
+    );
+  });
+
+  testWidgets('tail builder receives dark reader theme under light app theme', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'reader_pref_mode': 'ltr',
+      'reader_pref_background': 'black',
+    });
+    Brightness? observedBrightness;
+    final tail = _ThemeSpyTail(
+      onBuildPaged: (context) {
+        observedBrightness = Theme.of(context).brightness;
+      },
+    );
+    await tester.pumpWidget(_host(tail));
+    await tester.pumpAndSettle();
+
+    final page = find.byKey(const Key('tail-test-page'));
+    await tester.drag(page, const Offset(-700, 0));
+    await tester.pumpAndSettle();
+    await tester.drag(page, const Offset(-700, 0));
+    await tester.pumpAndSettle();
+
+    expect(observedBrightness, Brightness.dark);
+  });
+
+  testWidgets(
+    'image reader enters immersive fullscreen and responds to shared toggle',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'reader_pref_mode': 'ltr',
+      });
+      final systemUi = _RecordingReaderSystemUiController();
+      await tester.pumpWidget(
+        _host(_RecordingTailSurface(), systemUiController: systemUi),
+      );
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isTrue);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byKey(const Key('tail-test-engine'))),
+      );
+      await container
+          .read(readerFullscreenEnabledProvider.notifier)
+          .setEnabled(false);
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isFalse);
+
+      await container
+          .read(readerFullscreenEnabledProvider.notifier)
+          .setEnabled(true);
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isTrue);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      expect(systemUi.immersive, isFalse);
+    },
+  );
 
   testWidgets(
     'vertical cached tail does not show actions; long comments retain them',
@@ -453,12 +579,15 @@ Widget _host(
   ReaderAdjacentPreloadPlan? adjacentPlan,
   Future<ReaderAdjacentPreloadPlan?> Function()? adjacentBuilder,
   ContinuousImageDiagnosticRecorder? diagnosticRecorder,
+  ReaderSystemUiController? systemUiController,
 }) {
   return ProviderScope(
     overrides: [
       forumImagePrecacheServiceProvider.overrideWithValue(
         precacheService ?? _NoopForumImagePrecacheService(),
       ),
+      if (systemUiController != null)
+        readerSystemUiControllerProvider.overrideWithValue(systemUiController),
     ],
     child: LocalizedTestApp(
       home: ImageReaderEngine(
@@ -658,6 +787,33 @@ class _ActionTail extends _RecordingTailSurface
   );
   @override
   void onVisibilityChanged(bool visible) => visibility.add(visible);
+}
+
+class _ThemeSpyTail extends _RecordingTailSurface {
+  _ThemeSpyTail({required this.onBuildPaged});
+
+  final void Function(BuildContext context) onBuildPaged;
+
+  @override
+  Widget buildPaged(BuildContext context, ReaderTailActions actions) {
+    onBuildPaged(context);
+    return super.buildPaged(context, actions);
+  }
+}
+
+final class _RecordingReaderSystemUiController
+    implements ReaderSystemUiController {
+  bool immersive = false;
+
+  @override
+  Future<void> enterImmersive() async {
+    immersive = true;
+  }
+
+  @override
+  Future<void> restore() async {
+    immersive = false;
+  }
 }
 
 class _OwnerSwitchHarness extends StatefulWidget {

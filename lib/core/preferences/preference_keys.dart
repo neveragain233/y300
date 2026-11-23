@@ -81,6 +81,11 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.readerHardwarePageKeys,
   );
 
+  /// 阅读器沉浸全屏（隐藏状态栏与底部导航条）开关，漫画与小说阅读器共用。
+  static const readerImmersiveFullscreen = PreferenceKey<bool>(
+    PreferenceKeyNames.readerImmersiveFullscreen,
+  );
+
   /// 全应用加粗字体；墨水屏阅读器与普通界面共用同一份设置。
   static const readerBoldFont = PreferenceKey<bool>(
     PreferenceKeyNames.readerBoldFont,

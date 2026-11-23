@@ -10921,6 +10921,18 @@ abstract class AppLocalizations {
   /// **'使用音量键或侧边翻页键翻页，仅在阅读器内生效'**
   String get readerHardwarePageKeysSubtitle;
 
+  /// No description provided for @readerImmersiveFullscreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'沉浸全屏阅读'**
+  String get readerImmersiveFullscreen;
+
+  /// No description provided for @readerImmersiveFullscreenSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏状态栏与底部导航条，仅在阅读器内生效'**
+  String get readerImmersiveFullscreenSubtitle;
+
   /// No description provided for @appearanceTextSectionTitle.
   ///
   /// In zh, this message translates to:
