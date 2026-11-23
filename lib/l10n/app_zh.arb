@@ -948,8 +948,31 @@
   "libraryDetailSourceThread": "原帖",
   "libraryDetailNoNovelCover": "小说无封面",
   "libraryDetailAuthor": "作者",
-  "libraryDetailTranslator": "翻译者",
+  "libraryDetailTranslator": "译者",
   "libraryDetailTranslationGroup": "汉化组",
+  "libraryDetailOriginalWork": "原作",
+  "libraryDetailOriginalWorkHint": "同人作品可填写原作名称，留空不显示",
+  "libraryDetailMetadataSourceTranslator": "发帖人（默认译者）",
+  "libraryDetailTranslatorHelperWithDefault": "默认译者（发帖人）：{value}；清空可不显示译者",
+  "@libraryDetailTranslatorHelperWithDefault": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryDetailRestoreDefault": "恢复默认",
+  "libraryDetailWorkInfoSection": "基本信息",
+  "libraryDetailIntroSection": "作品简介",
+  "libraryDetailChaptersSection": "章节",
+  "libraryDetailChapterCountSummary": "共 {count} 章",
+  "@libraryDetailChapterCountSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryDetailPublisher": "发布者",
   "libraryDetailMetadataSemantics": "{label}：{value}",
   "@libraryDetailMetadataSemantics": {

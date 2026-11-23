@@ -94,6 +94,7 @@ abstract class ComicRepository implements CatalogUrlUpdater {
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   });
 
@@ -102,6 +103,7 @@ abstract class ComicRepository implements CatalogUrlUpdater {
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   });
 

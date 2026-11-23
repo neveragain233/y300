@@ -166,6 +166,7 @@ class ComicDetailStore {
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {
     final db = await _dbFuture;
@@ -198,6 +199,7 @@ class ComicDetailStore {
           'custom_title': normalizedTitle,
           'custom_author': normalizedAuthor,
           'custom_translation_group': normalizedGroup,
+          'custom_original_work': normalizeNullable(customOriginalWork),
           'custom_search_title': normalizeNullable(customSearchTitle),
           'title': displayString(
             customValue: normalizedTitle,
@@ -229,9 +231,14 @@ class ComicDetailStore {
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {
-    if (!title && !author && !translationGroup && !searchTitle) {
+    if (!title &&
+        !author &&
+        !translationGroup &&
+        !originalWork &&
+        !searchTitle) {
       return;
     }
 
@@ -272,6 +279,7 @@ class ComicDetailStore {
         if (title) 'custom_title': null,
         if (author) 'custom_author': null,
         if (translationGroup) 'custom_translation_group': null,
+        if (originalWork) 'custom_original_work': null,
         if (searchTitle) 'custom_search_title': null,
         'title': displayString(
           customValue: nextCustomTitle,
@@ -320,6 +328,7 @@ class ComicDetailStore {
         c.translation_group,
         c.source_translation_group,
         c.custom_translation_group,
+        c.custom_original_work,
         c.custom_search_title,
         COALESCE(c.custom_cover_image_url, c.cover_image_url) AS cover_image_url,
         c.custom_cover_image_url,
@@ -366,6 +375,7 @@ class ComicDetailStore {
       translationGroup: row['translation_group'] as String?,
       sourceTranslationGroup: row['source_translation_group'] as String?,
       customTranslationGroup: row['custom_translation_group'] as String?,
+      customOriginalWork: row['custom_original_work'] as String?,
       customSearchTitle: row['custom_search_title'] as String?,
       coverImageUrl: row['cover_image_url'] as String?,
       customCoverImageUrl: row['custom_cover_image_url'] as String?,

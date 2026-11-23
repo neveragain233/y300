@@ -2508,7 +2508,7 @@ abstract class AppLocalizations {
   /// No description provided for @libraryDetailTranslator.
   ///
   /// In zh, this message translates to:
-  /// **'翻译者'**
+  /// **'译者'**
   String get libraryDetailTranslator;
 
   /// No description provided for @libraryDetailTranslationGroup.
@@ -2516,6 +2516,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'汉化组'**
   String get libraryDetailTranslationGroup;
+
+  /// No description provided for @libraryDetailOriginalWork.
+  ///
+  /// In zh, this message translates to:
+  /// **'原作'**
+  String get libraryDetailOriginalWork;
+
+  /// No description provided for @libraryDetailOriginalWorkHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'同人作品可填写原作名称，留空不显示'**
+  String get libraryDetailOriginalWorkHint;
+
+  /// No description provided for @libraryDetailMetadataSourceTranslator.
+  ///
+  /// In zh, this message translates to:
+  /// **'发帖人（默认译者）'**
+  String get libraryDetailMetadataSourceTranslator;
+
+  /// No description provided for @libraryDetailTranslatorHelperWithDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认译者（发帖人）：{value}；清空可不显示译者'**
+  String libraryDetailTranslatorHelperWithDefault(String value);
+
+  /// No description provided for @libraryDetailRestoreDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认'**
+  String get libraryDetailRestoreDefault;
+
+  /// No description provided for @libraryDetailWorkInfoSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'基本信息'**
+  String get libraryDetailWorkInfoSection;
+
+  /// No description provided for @libraryDetailIntroSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'作品简介'**
+  String get libraryDetailIntroSection;
+
+  /// No description provided for @libraryDetailChaptersSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'章节'**
+  String get libraryDetailChaptersSection;
+
+  /// No description provided for @libraryDetailChapterCountSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 章'**
+  String libraryDetailChapterCountSummary(int count);
 
   /// No description provided for @libraryDetailPublisher.
   ///

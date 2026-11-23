@@ -73,9 +73,8 @@ void main() {
       expect(meta, contains('"coverFile": null'));
       expect(meta, contains('"customCoverFile": null'));
       expect(
-        await io.File(
-          p.join(io.File(result.cbzPath).parent.path, 'cover.jpg'),
-        ).exists(),
+        await io.File(p.join(io.File(result.cbzPath).parent.path, 'cover.jpg'))
+            .exists(),
         isFalse,
       );
       expect(meta, contains('"cbzFile": "001-第1话.cbz"'));
@@ -304,12 +303,13 @@ void main() {
         expect(await io.File(path).exists(), isTrue);
       }
       final stagingDirectories =
-          await io.Directory(
-            p.join(temp.path, 'reader-cache'),
-          ).list(recursive: true).where((entry) {
-            return entry is io.Directory &&
-                p.basename(entry.path).startsWith('.extracting-');
-          }).toList();
+          await io.Directory(p.join(temp.path, 'reader-cache'))
+              .list(recursive: true)
+              .where((entry) {
+                return entry is io.Directory &&
+                    p.basename(entry.path).startsWith('.extracting-');
+              })
+              .toList();
       expect(stagingDirectories, isEmpty);
     },
   );
@@ -654,6 +654,7 @@ class _ComicDownloadRepositoryFake
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {}
   @override
@@ -662,6 +663,7 @@ class _ComicDownloadRepositoryFake
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {}
   @override

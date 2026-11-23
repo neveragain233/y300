@@ -393,11 +393,15 @@ class _EditableDetailAdapter extends _FakeDetailAdapter
   String title = '测试作品';
   String? author = '作者A';
   String? translationGroup = '汉化组A';
+  String? originalWork;
   String? lastCustomTitle;
   String? lastCustomAuthor;
   String? lastCustomTranslationGroup;
+  String? lastCustomOriginalWork;
   String? lastCustomSearchTitle;
+  String intro = '这是一段简介';
   int updateCalls = 0;
+  int updateIntroCalls = 0;
 
   @override
   LibraryModuleKey get moduleKey => LibraryModuleKey.comic;
@@ -419,10 +423,21 @@ class _EditableDetailAdapter extends _FakeDetailAdapter
       translationGroup: translationGroup,
       sourceTranslationGroup: '来源汉化组',
       customTranslationGroup: lastCustomTranslationGroup,
+      originalWork: originalWork,
+      customOriginalWork: lastCustomOriginalWork,
       customSearchTitle: lastCustomSearchTitle,
       inShelf: true,
-      intro: '这是一段简介',
+      intro: intro,
     );
+  }
+
+  @override
+  Future<void> updateIntro({
+    required String workId,
+    required String intro,
+  }) async {
+    updateIntroCalls += 1;
+    this.intro = intro;
   }
 
   @override
@@ -431,16 +446,19 @@ class _EditableDetailAdapter extends _FakeDetailAdapter
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {
     updateCalls += 1;
     lastCustomTitle = customTitle;
     lastCustomAuthor = customAuthor;
     lastCustomTranslationGroup = customTranslationGroup;
+    lastCustomOriginalWork = customOriginalWork;
     lastCustomSearchTitle = customSearchTitle;
     title = customTitle ?? '来源标题';
     author = customAuthor ?? '来源作者';
     translationGroup = customTranslationGroup ?? '来源汉化组';
+    originalWork = customOriginalWork;
   }
 }
 

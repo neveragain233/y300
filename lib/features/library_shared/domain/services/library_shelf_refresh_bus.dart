@@ -13,6 +13,7 @@ enum LibraryMutationSource {
   readingStateBatch,
   bulkDownload,
   coverEdit,
+  metadataEdit,
 }
 
 class LibraryShelfRefreshSignal {

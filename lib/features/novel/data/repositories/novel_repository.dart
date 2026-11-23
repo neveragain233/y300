@@ -102,11 +102,15 @@ abstract class NovelCoverCacheWriter {
 
 /// 小说用户元数据写入能力。
 ///
-/// 来源标题和发布者继续由收藏同步维护；这里仅保存用户标题覆盖值。
+/// 来源标题和发布者继续由收藏同步维护；这里保存用户覆盖值。
+/// `customTranslationGroup` 为 `null` 时默认跟随发帖人，为空字符串 `""` 时显式隐藏译者。
 abstract class NovelCustomMetadataWriter {
   Future<void> updateCustomMetadata({
     required String novelId,
     String? customTitle,
+    String? customAuthor,
+    String? customTranslationGroup,
+    String? customOriginalWork,
   });
 }
 

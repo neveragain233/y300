@@ -244,6 +244,8 @@ class ComicDetailAdapter
       customTranslationGroup: useCustomMetadata
           ? detail.customTranslationGroup
           : null,
+      originalWork: useCustomMetadata ? detail.customOriginalWork : null,
+      customOriginalWork: useCustomMetadata ? detail.customOriginalWork : null,
       customSearchTitle: useCustomMetadata ? detail.customSearchTitle : null,
       sourceTid: detail.sourceTid,
       sourceTypeId: detail.sourceTypeId,
@@ -965,6 +967,7 @@ class ComicDetailAdapter
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) {
     return _repository.updateCustomMetadata(
@@ -972,6 +975,7 @@ class ComicDetailAdapter
       customTitle: customTitle,
       customAuthor: customAuthor,
       customTranslationGroup: customTranslationGroup,
+      customOriginalWork: customOriginalWork,
       customSearchTitle: customSearchTitle,
     );
   }

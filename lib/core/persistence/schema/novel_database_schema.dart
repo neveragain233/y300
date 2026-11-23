@@ -19,6 +19,9 @@ Future<void> createNovelTables(Database db) async {
         title TEXT NOT NULL,
         custom_title TEXT,
         author TEXT,
+        custom_author TEXT,
+        custom_translation_group TEXT,
+        custom_original_work TEXT,
         cover_image_url TEXT,
         cover_local_path TEXT,
         custom_cover_local_path TEXT,
@@ -243,7 +246,6 @@ Future<void> createNovelShelfTables(Database db) async {
       )
     ''');
 
-
   await db.execute(
     'CREATE INDEX IF NOT EXISTS idx_novel_shelf_items_category_sort ON $novelShelfItemsTable(category_id, sort_order)',
   );
@@ -402,4 +404,26 @@ Future<void> upgradeNovelFrom42To43(Database db) async {
     WHERE content_type = 'novel' AND EXISTS
       (SELECT 1 FROM $novelReadingProgressTable p WHERE p.novel_id = $libraryWorkStateTable.work_id)
   ''');
+}
+
+/// v46 -> v47: 支持小说自定义作者、译者（发帖人默认作为译者）与同人原作。
+Future<void> upgradeNovelFrom46To47(Database db) async {
+  await addColumnIfMissing(
+    db,
+    table: worksTable,
+    column: 'custom_author',
+    definition: 'TEXT',
+  );
+  await addColumnIfMissing(
+    db,
+    table: worksTable,
+    column: 'custom_translation_group',
+    definition: 'TEXT',
+  );
+  await addColumnIfMissing(
+    db,
+    table: worksTable,
+    column: 'custom_original_work',
+    definition: 'TEXT',
+  );
 }

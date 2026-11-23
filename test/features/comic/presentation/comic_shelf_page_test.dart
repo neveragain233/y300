@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -266,6 +268,7 @@ class _FakeComicRepository implements ComicRepository {
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {}
 
@@ -275,6 +278,7 @@ class _FakeComicRepository implements ComicRepository {
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {}
 

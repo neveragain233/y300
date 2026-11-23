@@ -117,6 +117,65 @@ void main() {
       expect(detail?.customCoverLocalPath, 'cache/replacement-cover.jpg');
     });
 
+    test('custom author, translator and originalWork persist with explicit clear semantics', () async {
+      const novelId = 'novel:49:200';
+      await seedNovelRepository(
+        await dbFuture,
+        seed: const NovelSourceSeed(fid: '49', tid: '200'),
+      );
+
+      var detail = await repository.getDetail(novelId: novelId);
+      expect(detail?.publisherName, '楼主A');
+      expect(
+        detail?.displayTranslator(sourcePublisher: detail.publisherName),
+        '楼主A',
+      );
+      expect(detail?.displayAuthor, isNull);
+      expect(detail?.displayOriginalWork, isNull);
+
+      await repository.updateCustomMetadata(
+        novelId: novelId,
+        customTitle: '同人标题',
+        customAuthor: '作者甲',
+        customTranslationGroup: '译者乙',
+        customOriginalWork: '某原作',
+      );
+      detail = await repository.getDetail(novelId: novelId);
+      expect(detail?.displayAuthor, '作者甲');
+      expect(
+        detail?.displayTranslator(sourcePublisher: detail.publisherName),
+        '译者乙',
+      );
+      expect(detail?.displayOriginalWork, '某原作');
+
+      // 显式清空译者（''）时不再回退发帖人；传入 null 时恢复跟随发帖人。
+      await repository.updateCustomMetadata(
+        novelId: novelId,
+        customAuthor: '作者甲',
+        customTranslationGroup: '',
+        customOriginalWork: '某原作',
+      );
+      detail = await repository.getDetail(novelId: novelId);
+      expect(detail?.customTranslationGroup, '');
+      expect(
+        detail?.displayTranslator(sourcePublisher: detail.publisherName),
+        isNull,
+      );
+
+      await repository.updateCustomMetadata(
+        novelId: novelId,
+        customAuthor: '作者甲',
+        customTranslationGroup: null,
+        customOriginalWork: '某原作',
+      );
+      detail = await repository.getDetail(novelId: novelId);
+      expect(detail?.customTranslationGroup, isNull);
+      expect(
+        detail?.displayTranslator(sourcePublisher: detail.publisherName),
+        '楼主A',
+      );
+    });
+
     test(
       'novel type view includes works stored in a custom collection',
       () async {
@@ -207,9 +266,8 @@ void main() {
         'scroll_offset': 128.0,
         'updated_at': DateTime(2026, 6, 1).millisecondsSinceEpoch,
       });
-      final beforeRead = (await db.query(
-        AppDatabase.novelReadingProgressTable,
-      )).single;
+      final beforeRead = (await db.query(AppDatabase.novelReadingProgressTable))
+          .single;
 
       final progress = await repository.getReadingProgress(
         novelId: 'novel:old:progress',
@@ -345,9 +403,8 @@ void main() {
           db,
           seed: const NovelSourceSeed(fid: '49', tid: '200'),
         );
-        final episode = (await repository.getEpisodes(
-          novelId: 'novel:49:200',
-        )).first;
+        final episode = (await repository.getEpisodes(novelId: 'novel:49:200'))
+            .first;
         await db.insert(AppDatabase.readerBookmarksTable, <String, Object?>{
           'bookmark_id': 'legacy-bookmark',
           'novel_id': episode.novelId,
@@ -362,9 +419,8 @@ void main() {
           'created_at': 1,
           'updated_at': 2,
         });
-        final beforeRead = (await db.query(
-          AppDatabase.readerBookmarksTable,
-        )).single;
+        final beforeRead = (await db.query(AppDatabase.readerBookmarksTable))
+            .single;
 
         final bookmark = (await repository.listReaderBookmarks(
           novelId: episode.novelId,
@@ -416,9 +472,8 @@ void main() {
           db,
           seed: const NovelSourceSeed(fid: '49', tid: '200'),
         );
-        final episode = (await repository.getEpisodes(
-          novelId: 'novel:49:200',
-        )).first;
+        final episode = (await repository.getEpisodes(novelId: 'novel:49:200'))
+            .first;
         for (final table in <String>[
           AppDatabase.novelReadingProgressTable,
           AppDatabase.readerBookmarksTable,
@@ -429,20 +484,22 @@ void main() {
         }
         const futureIdentity = ' future-v77|opaque ';
         const futureOffset = (1 << 35) + 13;
-        await db
-            .insert(AppDatabase.novelReadingProgressTable, <String, Object?>{
-              'novel_id': episode.novelId,
-              'episode_id': episode.episodeId,
-              'scroll_offset': 40.0,
-              'anchor_node_id': 'future-node',
-              'anchor_text_offset': futureOffset,
-              'anchor_format_version': 77,
-              'anchor_text_identity': futureIdentity,
-              'progress_percent': 0.4,
-              'progress_percent_valid': 0,
-              'future_extension': 'progress extension',
-              'updated_at': 1,
-            });
+        await db.insert(
+          AppDatabase.novelReadingProgressTable,
+          <String, Object?>{
+            'novel_id': episode.novelId,
+            'episode_id': episode.episodeId,
+            'scroll_offset': 40.0,
+            'anchor_node_id': 'future-node',
+            'anchor_text_offset': futureOffset,
+            'anchor_format_version': 77,
+            'anchor_text_identity': futureIdentity,
+            'progress_percent': 0.4,
+            'progress_percent_valid': 0,
+            'future_extension': 'progress extension',
+            'updated_at': 1,
+          },
+        );
         await db.insert(AppDatabase.readerBookmarksTable, <String, Object?>{
           'bookmark_id': 'future-bookmark',
           'novel_id': episode.novelId,
@@ -503,9 +560,8 @@ void main() {
         final progressRow = (await db.query(
           AppDatabase.novelReadingProgressTable,
         )).single;
-        final bookmarkRow = (await db.query(
-          AppDatabase.readerBookmarksTable,
-        )).single;
+        final bookmarkRow = (await db.query(AppDatabase.readerBookmarksTable))
+            .single;
         for (final row in <Map<String, Object?>>[progressRow, bookmarkRow]) {
           expect(row['anchor_format_version'], 77);
           expect(row['anchor_text_identity'], futureIdentity);

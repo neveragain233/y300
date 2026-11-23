@@ -144,6 +144,9 @@ class LocalNovelRepository
         w.title,
         w.custom_title,
         w.author,
+        w.custom_author,
+        w.custom_translation_group,
+        w.custom_original_work,
         w.cover_image_url,
         w.cover_local_path,
         w.custom_cover_local_path,
@@ -221,6 +224,9 @@ class LocalNovelRepository
         w.title,
         w.custom_title,
         w.author,
+        w.custom_author,
+        w.custom_translation_group,
+        w.custom_original_work,
         w.cover_image_url,
         w.cover_local_path,
         w.custom_cover_local_path,
@@ -310,6 +316,9 @@ class LocalNovelRepository
         w.title,
         w.custom_title,
         w.author,
+        w.custom_author,
+        w.custom_translation_group,
+        w.custom_original_work,
         w.cover_image_url,
         w.cover_local_path,
         w.custom_cover_local_path,
@@ -371,12 +380,19 @@ class LocalNovelRepository
   Future<void> updateCustomMetadata({
     required String novelId,
     String? customTitle,
+    String? customAuthor,
+    String? customTranslationGroup,
+    String? customOriginalWork,
   }) async {
     final db = await _dbFuture;
     await db.update(
       AppDatabase.worksTable,
       <String, Object?>{
         'custom_title': _normalizeNullable(customTitle),
+        'custom_author': _normalizeNullable(customAuthor),
+        // null 代表默认跟随发帖人；显式空串代表作者自发/同人无译者。
+        'custom_translation_group': customTranslationGroup?.trim(),
+        'custom_original_work': _normalizeNullable(customOriginalWork),
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       },
       where: 'work_id = ? AND content_type = ?',
@@ -837,6 +853,9 @@ class LocalNovelRepository
       title: row['title'] as String,
       author: row['author'] as String?,
       customTitle: row['custom_title'] as String?,
+      customAuthor: row['custom_author'] as String?,
+      customTranslationGroup: row['custom_translation_group'] as String?,
+      customOriginalWork: row['custom_original_work'] as String?,
       coverImageUrl: row['cover_image_url'] as String?,
       coverLocalPath: row['cover_local_path'] as String?,
       customCoverLocalPath: row['custom_cover_local_path'] as String?,
@@ -878,11 +897,18 @@ class LocalNovelRepository
 
   LibraryWorkItem _rowToLibraryWorkItem(Map<String, Object?> row) {
     final coverHidden = (row['cover_hidden'] as int? ?? 0) == 1;
+    final rawTranslator = row['custom_translation_group'] as String?;
+    final effectiveTranslator = rawTranslator != null
+        ? _normalizeNullable(rawTranslator)
+        : _normalizeNullable(row['author'] as String?);
+    final secondaryName =
+        _normalizeNullable(row['custom_author'] as String?) ??
+        effectiveTranslator;
     return LibraryWorkItem(
       workId: row['work_id'] as String,
       categoryId: (row['category_id'] as String?) ?? _defaultCategoryId,
       title: _preferredRowText(row['custom_title'], row['title']) ?? '',
-      secondaryName: _preferredRowText(row['author'], null),
+      secondaryName: secondaryName,
       coverImageUrl: coverHidden ? null : row['cover_image_url'] as String?,
       coverLocalPath: coverHidden ? null : row['cover_local_path'] as String?,
       customCoverLocalPath: coverHidden

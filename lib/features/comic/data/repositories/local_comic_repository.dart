@@ -219,6 +219,7 @@ class LocalComicRepository
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) {
     return _detailStore.updateCustomMetadata(
@@ -226,6 +227,7 @@ class LocalComicRepository
       customTitle: customTitle,
       customAuthor: customAuthor,
       customTranslationGroup: customTranslationGroup,
+      customOriginalWork: customOriginalWork,
       customSearchTitle: customSearchTitle,
     );
   }
@@ -236,6 +238,7 @@ class LocalComicRepository
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) {
     return _detailStore.clearCustomMetadata(
@@ -243,6 +246,7 @@ class LocalComicRepository
       title: title,
       author: author,
       translationGroup: translationGroup,
+      originalWork: originalWork,
       searchTitle: searchTitle,
     );
   }

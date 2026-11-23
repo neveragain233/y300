@@ -26,6 +26,7 @@ Future<void> createComicTables(Database db) async {
         translation_group TEXT,
         source_translation_group TEXT,
         custom_translation_group TEXT,
+        custom_original_work TEXT,
         custom_cover_source_episode_id TEXT,
         custom_cover_source_image_index INTEGER,
         custom_cover_source_image_url TEXT,
@@ -101,7 +102,6 @@ Future<void> createComicTables(Database db) async {
         FOREIGN KEY (comic_id) REFERENCES $comicsTable(comic_id) ON DELETE CASCADE
       )
     ''');
-
 
   await db.execute(
     'CREATE INDEX idx_episodes_comic_id ON $episodesTable(comic_id)',
@@ -349,4 +349,14 @@ Future<void> upgradeComicFrom36To38(Database db) async {
 
 Future<void> upgradeComicFrom38To40(Database db) async {
   await createComicCoverMergeJournalTables(db);
+}
+
+/// v46 -> v47: 支持漫画（同人漫）自定义原作。
+Future<void> upgradeComicFrom46To47(Database db) async {
+  await addColumnIfMissing(
+    db,
+    table: comicsTable,
+    column: 'custom_original_work',
+    definition: 'TEXT',
+  );
 }

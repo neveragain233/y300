@@ -422,6 +422,7 @@ class _FakeComicRepository
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {}
   @override
@@ -430,6 +431,7 @@ class _FakeComicRepository
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {}
   @override

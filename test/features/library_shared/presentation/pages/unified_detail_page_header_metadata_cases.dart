@@ -626,4 +626,70 @@ void _headerMetadataCases() {
       expect(fabFinder, findsNothing);
     },
   );
+
+  testWidgets(
+    'UnifiedDetailWorkEditPage saves originalWork and intro together without standalone overflow actions',
+    (tester) async {
+      final adapter = _EditableDetailAdapter(
+        fields: const <LibraryMetadataField>{
+          LibraryMetadataField.title,
+          LibraryMetadataField.author,
+          LibraryMetadataField.translationGroup,
+          LibraryMetadataField.originalWork,
+          LibraryMetadataField.searchTitle,
+        },
+      );
+      await tester.pumpWidget(
+        _scopedApp(
+          home: UnifiedDetailPage(
+            adapter: adapter,
+            workId: 'work-1',
+            onOpenReader: (context, target) async {},
+            onOpenThread: (context, target) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('unified-detail-manage-chapters')),
+        findsNothing,
+      );
+      expect(find.text('编辑简介'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('unified-detail-edit-metadata')));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('unified-detail-custom-original-work-input')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.byKey(const Key('unified-detail-custom-original-work-input')),
+        '原作名',
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('unified-detail-intro-input')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.byKey(const Key('unified-detail-intro-input')),
+        '第一行简介\n第二行简介',
+      );
+      await tester.tap(find.byKey(const Key('unified-detail-save-metadata')));
+      await tester.pumpAndSettle();
+
+      expect(adapter.lastCustomOriginalWork, '原作名');
+      expect(adapter.updateIntroCalls, 1);
+      expect(adapter.intro, '第一行简介\n第二行简介');
+      expect(
+        find.byKey(const Key('unified-detail-original-work-row')),
+        findsOneWidget,
+      );
+    },
+  );
 }

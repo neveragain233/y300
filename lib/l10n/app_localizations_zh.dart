@@ -1499,10 +1499,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDetailAuthor => '作者';
 
   @override
-  String get libraryDetailTranslator => '翻译者';
+  String get libraryDetailTranslator => '译者';
 
   @override
   String get libraryDetailTranslationGroup => '汉化组';
+
+  @override
+  String get libraryDetailOriginalWork => '原作';
+
+  @override
+  String get libraryDetailOriginalWorkHint => '同人作品可填写原作名称，留空不显示';
+
+  @override
+  String get libraryDetailMetadataSourceTranslator => '发帖人（默认译者）';
+
+  @override
+  String libraryDetailTranslatorHelperWithDefault(String value) {
+    return '默认译者（发帖人）：$value；清空可不显示译者';
+  }
+
+  @override
+  String get libraryDetailRestoreDefault => '恢复默认';
+
+  @override
+  String get libraryDetailWorkInfoSection => '基本信息';
+
+  @override
+  String get libraryDetailIntroSection => '作品简介';
+
+  @override
+  String get libraryDetailChaptersSection => '章节';
+
+  @override
+  String libraryDetailChapterCountSummary(int count) {
+    return '共 $count 章';
+  }
 
   @override
   String get libraryDetailPublisher => '发布者';
@@ -8051,10 +8082,41 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get libraryDetailAuthor => '作者';
 
   @override
-  String get libraryDetailTranslator => '翻譯者';
+  String get libraryDetailTranslator => '譯者';
 
   @override
   String get libraryDetailTranslationGroup => '漢化組';
+
+  @override
+  String get libraryDetailOriginalWork => '原作';
+
+  @override
+  String get libraryDetailOriginalWorkHint => '同人作品可填寫原作名稱，留空不顯示';
+
+  @override
+  String get libraryDetailMetadataSourceTranslator => '發帖人（預設譯者）';
+
+  @override
+  String libraryDetailTranslatorHelperWithDefault(String value) {
+    return '預設譯者（發帖人）：$value；清空可不顯示譯者';
+  }
+
+  @override
+  String get libraryDetailRestoreDefault => '恢復預設';
+
+  @override
+  String get libraryDetailWorkInfoSection => '基本資訊';
+
+  @override
+  String get libraryDetailIntroSection => '作品簡介';
+
+  @override
+  String get libraryDetailChaptersSection => '章節';
+
+  @override
+  String libraryDetailChapterCountSummary(int count) {
+    return '共 $count 章';
+  }
 
   @override
   String get libraryDetailPublisher => '發布者';

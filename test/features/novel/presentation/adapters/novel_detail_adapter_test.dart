@@ -675,7 +675,8 @@ void main() {
 
     expect(header.title, '自定义标题');
     expect(header.author, isNull);
-    expect(header.translationGroup, isNull);
+    expect(header.translationGroup, 'Novel Author');
+    expect(header.sourceTranslationGroup, 'Novel Author');
     expect(header.publisherName, 'Novel Author');
     expect(header.sourceAuthor, isNull);
     expect(header.customCoverLocalPath, 'cache/custom-cover.jpg');
@@ -726,6 +727,9 @@ void main() {
       await adapter.updateCustomMetadata(
         workId: 'novel:1',
         customTitle: '标题',
+        customAuthor: '作者',
+        customTranslationGroup: '译者',
+        customOriginalWork: '原作',
         customSearchTitle: 'ignored',
       );
       await adapter.setCustomCoverFromLocalFile(
@@ -742,6 +746,9 @@ void main() {
       await adapter.removeCustomCover(workId: 'novel:1');
 
       expect(repository.lastCustomTitle, '标题');
+      expect(repository.lastCustomAuthor, '作者');
+      expect(repository.lastCustomTranslationGroup, '译者');
+      expect(repository.lastCustomOriginalWork, '原作');
       expect(coverStore.installedSourcePath, '/picked/source.jpg');
       expect(coverStore.installedAsset?.assetId, 'novel/novel:1/custom');
       expect(coverStore.installedAsset?.revision, 1);
@@ -1017,6 +1024,10 @@ class _EditableNovelRepository extends _FakeNovelRepository
         NovelCustomCoverWriter,
         NovelCustomCoverAssetWriter {
   String? lastCustomTitle;
+  String? lastCustomAuthor;
+  String? lastCustomTranslationGroup;
+  String? lastCustomOriginalWork;
+  bool updateCustomMetadataCalled = false;
   String? lastCustomCoverPath;
   double? lastFocusX;
   double? lastFocusY;
@@ -1039,8 +1050,15 @@ class _EditableNovelRepository extends _FakeNovelRepository
   Future<void> updateCustomMetadata({
     required String novelId,
     String? customTitle,
+    String? customAuthor,
+    String? customTranslationGroup,
+    String? customOriginalWork,
   }) async {
+    updateCustomMetadataCalled = true;
     lastCustomTitle = customTitle;
+    lastCustomAuthor = customAuthor;
+    lastCustomTranslationGroup = customTranslationGroup;
+    lastCustomOriginalWork = customOriginalWork;
   }
 
   @override

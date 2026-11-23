@@ -14,6 +14,7 @@ class ComicRecord {
     required this.translationGroup,
     required this.sourceTranslationGroup,
     required this.customTranslationGroup,
+    this.customOriginalWork,
     required this.customSearchTitle,
     required this.coverImageUrl,
     required this.customCoverImageUrl,
@@ -48,6 +49,7 @@ class ComicRecord {
   final String? translationGroup;
   final String? sourceTranslationGroup;
   final String? customTranslationGroup;
+  final String? customOriginalWork;
   final String? customSearchTitle;
   final String? coverImageUrl;
   final String? customCoverImageUrl;
@@ -83,6 +85,7 @@ class ComicRecord {
       'translation_group': translationGroup,
       'source_translation_group': sourceTranslationGroup,
       'custom_translation_group': customTranslationGroup,
+      'custom_original_work': customOriginalWork,
       'custom_search_title': customSearchTitle,
       'cover_image_url': coverImageUrl,
       'custom_cover_image_url': customCoverImageUrl,
@@ -120,6 +123,7 @@ class ComicRecord {
       translationGroup: map['translation_group'] as String?,
       sourceTranslationGroup: map['source_translation_group'] as String?,
       customTranslationGroup: map['custom_translation_group'] as String?,
+      customOriginalWork: map['custom_original_work'] as String?,
       customSearchTitle: map['custom_search_title'] as String?,
       coverImageUrl: map['cover_image_url'] as String?,
       customCoverImageUrl: map['custom_cover_image_url'] as String?,

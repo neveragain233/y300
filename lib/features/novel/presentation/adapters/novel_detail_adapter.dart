@@ -61,7 +61,12 @@ class NovelDetailAdapter
   @override
   DetailMetadataEditorConfig get metadataEditorConfig =>
       const DetailMetadataEditorConfig(
-        fields: <LibraryMetadataField>{LibraryMetadataField.title},
+        fields: <LibraryMetadataField>{
+          LibraryMetadataField.title,
+          LibraryMetadataField.author,
+          LibraryMetadataField.translationGroup,
+          LibraryMetadataField.originalWork,
+        },
         fallbackToDisplaySourceValues: false,
       );
 
@@ -105,6 +110,16 @@ class NovelDetailAdapter
             ),
       sourceTitle: detail.sourceTitle,
       customTitle: detail.customTitle,
+      author: detail.displayAuthor,
+      customAuthor: detail.customAuthor,
+      sourceTranslationGroup:
+          sourceState?.publisherName ?? detail.publisherName,
+      customTranslationGroup: detail.customTranslationGroup,
+      translationGroup: detail.displayTranslator(
+        sourcePublisher: sourceState?.publisherName,
+      ),
+      originalWork: detail.displayOriginalWork,
+      customOriginalWork: detail.customOriginalWork,
       publisherName: sourceState?.publisherName ?? detail.publisherName,
       sourceTid: detail.sourceTid,
       sourceTypeId: detail.sourceTypeId,
@@ -456,6 +471,7 @@ class NovelDetailAdapter
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) {
     final repository = _repository;
@@ -464,6 +480,9 @@ class NovelDetailAdapter
       return writer.updateCustomMetadata(
         novelId: workId,
         customTitle: customTitle,
+        customAuthor: customAuthor,
+        customTranslationGroup: customTranslationGroup,
+        customOriginalWork: customOriginalWork,
       );
     }
     throw const LibraryOperationException(

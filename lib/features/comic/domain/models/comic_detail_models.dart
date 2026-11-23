@@ -14,6 +14,7 @@ class ComicDetail {
     required this.translationGroup,
     this.sourceTranslationGroup,
     this.customTranslationGroup,
+    this.customOriginalWork,
     this.customSearchTitle,
     required this.coverImageUrl,
     this.customCoverImageUrl,
@@ -54,6 +55,7 @@ class ComicDetail {
   final String? translationGroup;
   final String? sourceTranslationGroup;
   final String? customTranslationGroup;
+  final String? customOriginalWork;
 
   /// 更新搜索关键词的用户覆盖值；为空时刷新链路按标题优先级兜底。
   final String? customSearchTitle;

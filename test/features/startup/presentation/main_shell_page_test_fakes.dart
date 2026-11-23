@@ -530,6 +530,7 @@ class _FakeComicRepository implements ComicRepository {
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {}
 
@@ -539,6 +540,7 @@ class _FakeComicRepository implements ComicRepository {
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {}
 

@@ -32,26 +32,34 @@ abstract final class LibraryDetailTextResolver {
 
   static String metadataField(
     AppLocalizations l10n,
-    LibraryMetadataField field,
-  ) {
+    LibraryMetadataField field, {
+    LibraryModuleKey? moduleKey,
+  }) {
     return switch (field) {
       LibraryMetadataField.title => l10n.libraryDetailMetadataTitle,
       LibraryMetadataField.author => l10n.libraryDetailAuthor,
       LibraryMetadataField.translationGroup =>
-        l10n.libraryDetailTranslationGroup,
+        moduleKey == LibraryModuleKey.novel
+            ? l10n.libraryDetailTranslator
+            : l10n.libraryDetailTranslationGroup,
+      LibraryMetadataField.originalWork => l10n.libraryDetailOriginalWork,
       LibraryMetadataField.searchTitle => l10n.libraryDetailMetadataSearchTitle,
     };
   }
 
   static String metadataSourceField(
     AppLocalizations l10n,
-    LibraryMetadataField field,
-  ) {
+    LibraryMetadataField field, {
+    LibraryModuleKey? moduleKey,
+  }) {
     return switch (field) {
       LibraryMetadataField.title => l10n.libraryDetailMetadataSourceTitle,
       LibraryMetadataField.author => l10n.libraryDetailMetadataSourceAuthor,
       LibraryMetadataField.translationGroup =>
-        l10n.libraryDetailMetadataSourceTranslationGroup,
+        moduleKey == LibraryModuleKey.novel
+            ? l10n.libraryDetailMetadataSourceTranslator
+            : l10n.libraryDetailMetadataSourceTranslationGroup,
+      LibraryMetadataField.originalWork => l10n.libraryDetailOriginalWork,
       LibraryMetadataField.searchTitle => l10n.libraryDetailMetadataSearchTitle,
     };
   }

@@ -368,6 +368,7 @@ abstract class DetailMetadataEditor {
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   });
 }
@@ -378,6 +379,7 @@ class DetailMetadataEditorConfig {
       LibraryMetadataField.title,
       LibraryMetadataField.author,
       LibraryMetadataField.translationGroup,
+      LibraryMetadataField.originalWork,
       LibraryMetadataField.searchTitle,
     },
     this.fallbackToDisplaySourceValues = true,
@@ -387,7 +389,13 @@ class DetailMetadataEditorConfig {
   final bool fallbackToDisplaySourceValues;
 }
 
-enum LibraryMetadataField { title, author, translationGroup, searchTitle }
+enum LibraryMetadataField {
+  title,
+  author,
+  translationGroup,
+  originalWork,
+  searchTitle,
+}
 
 /// 作品目录 URL 编辑能力。
 ///

@@ -15,7 +15,6 @@ import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_glass_fab.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
-import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/transient_feedback_layout.dart';
 import 'package:y300/features/library_shared/domain/services/chapter_search_index.dart';
 import 'package:y300/features/library_shared/presentation/widgets/library_chapter_browser.dart';
@@ -35,9 +34,9 @@ import 'package:y300/features/library_shared/presentation/detail/unified_detail_
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_chapter_tile.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_filter_sheet.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_header.dart';
-import 'package:y300/features/library_shared/presentation/detail/unified_detail_metadata_sheet.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_misc_sections.dart';
 import 'package:y300/features/library_shared/presentation/detail/unified_detail_palette.dart';
+import 'package:y300/features/library_shared/presentation/detail/unified_detail_work_edit_page.dart';
 import 'package:y300/features/library_shared/presentation/services/route_content_presentation_guard.dart';
 import 'package:y300/features/library_shared/presentation/services/library_detail_text_resolver.dart';
 import 'package:y300/features/library_shared/presentation/services/library_shelf_text_resolver.dart';
@@ -649,13 +648,12 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                             label: l10n.libraryDetailChangeCategory,
                             icon: const Icon(Icons.category_outlined),
                           ),
-                          if (_page.adapter is DetailMetadataEditor)
-                            AppPopupMenuItem<String>(
-                              key: const Key('unified-detail-edit-metadata'),
-                              value: 'edit-metadata',
-                              label: l10n.libraryDetailEditMetadata,
-                              icon: const Icon(Icons.edit_outlined),
-                            ),
+                          AppPopupMenuItem<String>(
+                            key: const Key('unified-detail-edit-metadata'),
+                            value: 'edit-metadata',
+                            label: l10n.libraryDetailEditMetadata,
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
                           if (_page.adapter is DetailCatalogEditor)
                             AppPopupMenuItem<String>(
                               key: const Key(
@@ -671,15 +669,6 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                               value: 'source-tags',
                               label: l10n.libraryDetailSourceTags,
                               icon: const Icon(Icons.local_offer_outlined),
-                            ),
-                          // 章节长按之外的第二个入口：隐藏全部章节后列表为空，
-                          // 长按目标随之消失，只靠长按会把“全部显示”永久锁死。
-                          if (_chapterManagementAdapter != null)
-                            AppPopupMenuItem<String>(
-                              key: const Key('unified-detail-manage-chapters'),
-                              value: 'manage-chapters',
-                              label: l10n.libraryDetailManageChapters,
-                              icon: const Icon(Icons.checklist),
                             ),
                           if (_supportsCoverEditing)
                             AppPopupMenuItem<String>(
@@ -705,11 +694,6 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
                               icon: const Icon(Icons.hide_image_outlined),
                               danger: true,
                             ),
-                          AppPopupMenuItem<String>(
-                            value: 'edit-intro',
-                            label: l10n.libraryDetailEditIntro,
-                            icon: const Icon(Icons.notes_outlined),
-                          ),
                         ],
                         onSelected: (value) async {
                           await _handleMoreAction(value);
@@ -1367,17 +1351,17 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     );
   }
 
-  Future<void> _showChapterManagementSheet() async {
+  Future<int?> _showChapterManagementSheet({BuildContext? sheetContext}) async {
     final adapter = _chapterManagementAdapter;
     if (adapter == null) {
-      return;
+      return null;
     }
     var changed = false;
     await showAdaptivePanel<void>(
-      context: context,
+      context: sheetContext ?? context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (sheetContext) {
+      builder: (panelContext) {
         return UnifiedDetailChapterManagementSheet(
           workId: _page.workId,
           adapter: adapter,
@@ -1388,12 +1372,13 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     // 章节可见性直接决定详情列表与阅读器导航，关闭后必须重新加载一次；
     // 没有任何写入时跳过，避免长列表白重排一遍。
     if (!changed || !mounted) {
-      return;
+      return null;
     }
     await _controller.reload();
     if (mounted) {
       setState(() {});
     }
+    return _controller.state.chapters.length;
   }
 
   Future<void> _confirmAndResetWorkReadingState() async {
@@ -1440,7 +1425,7 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
       return;
     }
     if (value == 'edit-metadata') {
-      await _showEditMetadataSheet();
+      await _openEditWorkPage();
       return;
     }
     if (value == 'configure-catalog') {
@@ -1449,10 +1434,6 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     }
     if (value == 'source-tags') {
       await _showSourceTagsSheet();
-      return;
-    }
-    if (value == 'manage-chapters') {
-      await _showChapterManagementSheet();
       return;
     }
     if (value == 'set-custom-cover') {
@@ -1465,10 +1446,6 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     }
     if (value == 'remove-custom-cover') {
       await _handleRemoveCustomCover();
-      return;
-    }
-    if (value == 'edit-intro') {
-      await _showEditIntroDialog();
     }
   }
 
@@ -1688,20 +1665,38 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     showTransientSnackBar(context, message);
   }
 
-  Future<void> _showEditMetadataSheet() async {
+  Future<void> _openEditWorkPage() async {
+    final header = _controller.state.header;
+    if (header == null) {
+      return;
+    }
     final editor = _page.adapter is DetailMetadataEditor
         ? _page.adapter as DetailMetadataEditor
         : null;
-    final header = _controller.state.header;
-    if (editor == null || header == null) {
-      return;
-    }
-    final config = editor.metadataEditorConfig;
-    await showAdaptivePanel<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return UnifiedDetailMetadataSheet(
+    final config = editor?.metadataEditorConfig;
+    final moduleKey = _page.adapter.moduleKey;
+    final isNovel = moduleKey == LibraryModuleKey.novel;
+    final l10n = AppLocalizations.of(context);
+    final sourceTranslatorName =
+        header.sourceTranslationGroup ?? header.publisherName;
+    final initialTranslationGroup = isNovel
+        ? (header.customTranslationGroup ??
+              header.translationGroup ??
+              sourceTranslatorName ??
+              '')
+        : _metadataInitialValue(
+            customValue: header.customTranslationGroup,
+            displayValue: header.translationGroup,
+            sourceValue: header.sourceTranslationGroup,
+          );
+    final initialOriginalWork = _metadataInitialValue(
+      customValue: header.customOriginalWork,
+      displayValue: header.originalWork,
+    );
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => UnifiedDetailWorkEditPage(
+          moduleKey: moduleKey,
           initialTitle: _metadataInitialValue(
             customValue: header.customTitle,
             displayValue: header.title,
@@ -1712,63 +1707,87 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
             displayValue: header.author,
             sourceValue: header.sourceAuthor,
           ),
-          initialTranslationGroup: _metadataInitialValue(
-            customValue: header.customTranslationGroup,
-            displayValue: header.translationGroup,
-            sourceValue: header.sourceTranslationGroup,
-          ),
+          initialTranslationGroup: initialTranslationGroup,
+          initialOriginalWork: initialOriginalWork,
           initialSearchTitle: header.customSearchTitle ?? '',
+          initialIntro: header.intro ?? '',
           titleSourceText: LibraryDetailTextResolver.sourceValue(
-            AppLocalizations.of(sheetContext),
+            l10n,
             LibraryDetailTextResolver.metadataSourceField(
-              AppLocalizations.of(sheetContext),
+              l10n,
               LibraryMetadataField.title,
+              moduleKey: moduleKey,
             ),
             header.sourceTitle ?? header.title,
           ),
           authorSourceText: LibraryDetailTextResolver.sourceValue(
-            AppLocalizations.of(sheetContext),
+            l10n,
             LibraryDetailTextResolver.metadataSourceField(
-              AppLocalizations.of(sheetContext),
+              l10n,
               LibraryMetadataField.author,
+              moduleKey: moduleKey,
             ),
             header.sourceAuthor ??
-                (config.fallbackToDisplaySourceValues ? header.author : null),
-          ),
-          groupSourceText: LibraryDetailTextResolver.sourceValue(
-            AppLocalizations.of(sheetContext),
-            LibraryDetailTextResolver.metadataSourceField(
-              AppLocalizations.of(sheetContext),
-              LibraryMetadataField.translationGroup,
-            ),
-            header.sourceTranslationGroup ??
-                (config.fallbackToDisplaySourceValues
-                    ? header.translationGroup
+                (config != null && config.fallbackToDisplaySourceValues
+                    ? header.author
                     : null),
           ),
-          fields: config.fields,
+          groupSourceText: LibraryDetailTextResolver.sourceValue(
+            l10n,
+            LibraryDetailTextResolver.metadataSourceField(
+              l10n,
+              LibraryMetadataField.translationGroup,
+              moduleKey: moduleKey,
+            ),
+            isNovel
+                ? sourceTranslatorName
+                : (header.sourceTranslationGroup ??
+                      (config != null && config.fallbackToDisplaySourceValues
+                          ? header.translationGroup
+                          : null)),
+          ),
+          sourceTranslatorName: sourceTranslatorName,
+          isTranslatorCustom: header.customTranslationGroup != null,
+          fields: config?.fields ?? const <LibraryMetadataField>{},
+          chapterCount: _controller.state.chapters.length,
+          onOpenChapterManagement: _chapterManagementAdapter == null
+              ? null
+              : (sheetCtx) =>
+                    _showChapterManagementSheet(sheetContext: sheetCtx),
           onSave:
               ({
                 customTitle,
                 customAuthor,
                 customTranslationGroup,
+                customOriginalWork,
                 customSearchTitle,
+                required intro,
               }) async {
-                await editor.updateCustomMetadata(
-                  workId: _page.workId,
-                  customTitle: customTitle,
-                  customAuthor: customAuthor,
-                  customTranslationGroup: customTranslationGroup,
-                  customSearchTitle: customSearchTitle,
-                );
+                if (editor != null) {
+                  await editor.updateCustomMetadata(
+                    workId: _page.workId,
+                    customTitle: customTitle,
+                    customAuthor: customAuthor,
+                    customTranslationGroup: customTranslationGroup,
+                    customOriginalWork: customOriginalWork,
+                    customSearchTitle: customSearchTitle,
+                  );
+                }
+                if (intro != (header.intro ?? '').trim()) {
+                  await _page.adapter.updateIntro(
+                    workId: _page.workId,
+                    intro: intro,
+                  );
+                }
                 await _controller.reload();
                 if (!mounted) {
                   return;
                 }
+                _notifyMetadataChanged();
                 setState(() {});
               },
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1997,6 +2016,23 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
     _lastHandledRefreshSignalSequence = bus.signal.value?.sequence ?? 0;
   }
 
+  void _notifyMetadataChanged() {
+    final bus = _page.shelfRefreshBus;
+    if (bus == null) {
+      return;
+    }
+    bus.notify(
+      modules: <LibraryModuleKey>{
+        _page.adapter.moduleKey,
+        LibraryModuleKey.favorite,
+      },
+      reason: 'metadata_updated',
+      source: LibraryMutationSource.metadataEdit,
+      workId: _page.workId,
+    );
+    _lastHandledRefreshSignalSequence = bus.signal.value?.sequence ?? 0;
+  }
+
   Future<void> _showMoveCategorySheet() async {
     final categories = await _page.adapter.loadCategories();
     final currentCategoryId = await _page.adapter.currentCategoryId(
@@ -2055,44 +2091,6 @@ class _UnifiedDetailPageState extends State<_UnifiedDetailPageContent> {
           ),
         );
       },
-    );
-  }
-
-  Future<void> _showEditIntroDialog() async {
-    final current = _controller.state.header?.intro ?? '';
-    final inputController = TextEditingController(text: current);
-    final l10n = AppLocalizations.of(context);
-    final navigator = Navigator.of(context);
-    await showAppFormDialog<void>(
-      context: context,
-      title: l10n.libraryDetailEditIntro,
-      hasFields: true,
-      content: AppTextInput(
-        controller: inputController,
-        maxLines: 6,
-        hintText: l10n.libraryDetailIntroHint,
-      ),
-      actions: [
-        AppDialogAction(
-          label: l10n.commonCancel,
-          onPressed: () => navigator.pop(),
-        ),
-        AppDialogAction(
-          label: l10n.commonSave,
-          onPressed: () async {
-            await _page.adapter.updateIntro(
-              workId: _page.workId,
-              intro: inputController.text.trim(),
-            );
-            await _controller.reload();
-            if (!mounted || !navigator.mounted) {
-              return;
-            }
-            navigator.pop();
-            setState(() {});
-          },
-        ),
-      ],
     );
   }
 }

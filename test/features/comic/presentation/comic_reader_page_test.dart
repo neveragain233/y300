@@ -650,6 +650,7 @@ class _ReaderFakeRepository
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {}
   @override
@@ -658,6 +659,7 @@ class _ReaderFakeRepository
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {}
 

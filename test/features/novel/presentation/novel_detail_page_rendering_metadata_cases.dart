@@ -199,11 +199,8 @@ void _renderingMetadataCases() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('unified-detail-author-row')), findsNothing);
-    expect(find.byKey(const Key('unified-detail-group-row')), findsNothing);
-    expect(
-      find.byKey(const Key('unified-detail-publisher-row')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('unified-detail-group-row')), findsOneWidget);
+    expect(find.byKey(const Key('unified-detail-publisher-row')), findsNothing);
     expect(find.text('Author A'), findsOneWidget);
     expect(find.textContaining('UID:'), findsNothing);
     expect(
@@ -235,11 +232,15 @@ void _renderingMetadataCases() {
 
     expect(
       find.byKey(const Key('unified-detail-custom-author-input')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const Key('unified-detail-custom-group-input')),
-      findsNothing,
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('unified-detail-custom-original-work-input')),
+      findsOneWidget,
     );
     expect(
       find.byKey(const Key('unified-detail-custom-search-title-input')),

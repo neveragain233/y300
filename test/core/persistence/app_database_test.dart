@@ -28,7 +28,7 @@ void main() {
     'shared entry keeps the physical database and single connection',
     () async {
       expect(AppDatabase.dbName, 'comic_shelf.db');
-      expect(AppDatabase.dbVersion, 46);
+      expect(AppDatabase.dbVersion, 47);
       database = await AppDatabase.open(databaseName: databasePath);
       final second = await AppDatabase.open(databaseName: databasePath);
       expect(identical(database, second), isTrue);
@@ -124,9 +124,8 @@ void main() {
       'favorite before',
     );
     expect(
-      (await reopened.query(
-        AppDatabase.libraryWorkStateTable,
-      )).single['intro_text'],
+      (await reopened.query(AppDatabase.libraryWorkStateTable))
+          .single['intro_text'],
       'state before',
     );
     expect(

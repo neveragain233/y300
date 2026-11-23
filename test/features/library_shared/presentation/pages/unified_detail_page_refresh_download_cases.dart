@@ -404,6 +404,8 @@ void _refreshDownloadCases() {
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
       expect(find.text('显示或隐藏章节，手动添加或移除章节'), findsNothing);
+      await tester.tap(find.byKey(const Key('unified-detail-edit-metadata')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('unified-detail-manage-chapters')));
       await tester.pumpAndSettle();
 
@@ -421,6 +423,7 @@ void _refreshDownloadCases() {
       await tester.pumpAndSettle();
       await tester.tapAt(const Offset(1, 1));
       await tester.pumpAndSettle();
+      await tapBack(tester, within: find.byType(UnifiedDetailWorkEditPage));
 
       // 单章操作只隐藏目标章节，其他可见章节保持不变。
       await tester.scrollUntilVisible(
@@ -439,6 +442,8 @@ void _refreshDownloadCases() {
 
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('unified-detail-edit-metadata')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('unified-detail-manage-chapters')));
       await tester.pumpAndSettle();
       await tester.tap(
@@ -451,6 +456,7 @@ void _refreshDownloadCases() {
       await tester.pumpAndSettle();
       await tester.tapAt(const Offset(1, 1));
       await tester.pumpAndSettle();
+      await tapBack(tester, within: find.byType(UnifiedDetailWorkEditPage));
 
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey<String>('unified-detail-chapter-e1')),

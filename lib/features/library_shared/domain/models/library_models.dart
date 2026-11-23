@@ -292,6 +292,8 @@ class LibraryDetailHeader {
     this.customTitle,
     this.sourceTranslationGroup,
     this.customTranslationGroup,
+    this.originalWork,
+    this.customOriginalWork,
     this.customSearchTitle,
     this.intro,
     this.sourceTid,
@@ -322,6 +324,8 @@ class LibraryDetailHeader {
   final String? customTitle;
   final String? sourceTranslationGroup;
   final String? customTranslationGroup;
+  final String? originalWork;
+  final String? customOriginalWork;
   final String? customSearchTitle;
   final String? intro;
   final String? sourceTid;

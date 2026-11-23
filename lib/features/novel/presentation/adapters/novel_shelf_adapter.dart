@@ -164,9 +164,8 @@ class NovelShelfAdapter
       final mappedSource = category.categoryId == novelDefaultCategoryId
           ? await _loadTypeViewItems()
           : await Future.wait(
-              (await _repository.getShelfItems(
-                categoryId: category.categoryId,
-              )).map(_mapWork),
+              (await _repository.getShelfItems(categoryId: category.categoryId))
+                  .map(_mapWork),
             );
       result[category.categoryId] = mappedSource
           .where((item) {
@@ -410,7 +409,7 @@ class NovelShelfAdapter
       workId: source.novelId,
       categoryId: source.categoryId,
       title: source.displayTitle,
-      secondaryName: source.publisherName,
+      secondaryName: source.displayAuthor ?? source.displayTranslator(),
       coverImageUrl: source.coverHidden ? null : source.coverImageUrl,
       coverLocalPath: source.coverHidden ? null : source.coverLocalPath,
       customCoverLocalPath: source.coverHidden

@@ -281,6 +281,7 @@ class _HeroInfoSection extends StatelessWidget {
                       author: author,
                       sourceAuthorId: header?.sourceAuthorId,
                       translationGroup: group,
+                      originalWork: _nonEmpty(header?.originalWork),
                       publisherName: _nonEmpty(header?.publisherName),
                       publisherId: _nonEmpty(header?.publisherId),
                       foregroundColor: renderCoverBackground
@@ -371,6 +372,7 @@ class _PlainHeroInfoSection extends StatelessWidget {
               author: null,
               sourceAuthorId: null,
               translationGroup: null,
+              originalWork: null,
               publisherName: null,
               publisherId: null,
               foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -389,6 +391,7 @@ class _HeroMetaColumn extends StatelessWidget {
     required this.author,
     required this.sourceAuthorId,
     required this.translationGroup,
+    required this.originalWork,
     required this.publisherName,
     required this.publisherId,
     required this.foregroundColor,
@@ -399,6 +402,7 @@ class _HeroMetaColumn extends StatelessWidget {
   final String? author;
   final String? sourceAuthorId;
   final String? translationGroup;
+  final String? originalWork;
   final String? publisherName;
   final String? publisherId;
   final Color foregroundColor;
@@ -409,7 +413,6 @@ class _HeroMetaColumn extends StatelessWidget {
     final contributorLabel = moduleKey == LibraryModuleKey.novel
         ? l10n.libraryDetailTranslator
         : l10n.libraryDetailTranslationGroup;
-    final showContributorMetadata = moduleKey != LibraryModuleKey.novel;
 
     return DefaultTextStyle(
       style: Theme.of(context).textTheme.bodyMedium!
@@ -429,7 +432,7 @@ class _HeroMetaColumn extends StatelessWidget {
               fontWeight: FontWeight.normal,
             ),
           ),
-          if (showContributorMetadata && author != null) ...[
+          if (author != null) ...[
             const SizedBox(height: 8),
             _HeroMetadataRow(
               rowKey: const Key('unified-detail-author-row'),
@@ -439,7 +442,7 @@ class _HeroMetaColumn extends StatelessWidget {
               foregroundColor: foregroundColor,
             ),
           ],
-          if (showContributorMetadata &&
+          if (moduleKey != LibraryModuleKey.novel &&
               author != null &&
               sourceAuthorId != null) ...[
             const SizedBox(height: 6),
@@ -452,7 +455,7 @@ class _HeroMetaColumn extends StatelessWidget {
                   ?.copyWith(color: foregroundColor.withValues(alpha: 0.82)),
             ),
           ],
-          if (showContributorMetadata && translationGroup != null) ...[
+          if (translationGroup != null) ...[
             const SizedBox(height: 6),
             _HeroMetadataRow(
               rowKey: const Key('unified-detail-group-row'),
@@ -462,7 +465,17 @@ class _HeroMetaColumn extends StatelessWidget {
               foregroundColor: foregroundColor,
             ),
           ],
-          if (publisherName != null) ...[
+          if (originalWork != null) ...[
+            const SizedBox(height: 6),
+            _HeroMetadataRow(
+              rowKey: const Key('unified-detail-original-work-row'),
+              icon: Icons.auto_stories_outlined,
+              semanticLabel: l10n.libraryDetailOriginalWork,
+              value: originalWork!,
+              foregroundColor: foregroundColor,
+            ),
+          ],
+          if (moduleKey != LibraryModuleKey.novel && publisherName != null) ...[
             const SizedBox(height: 6),
             _HeroMetadataRow(
               rowKey: const Key('unified-detail-publisher-row'),

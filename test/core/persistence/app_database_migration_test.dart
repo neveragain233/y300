@@ -9,113 +9,103 @@ void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
-  test(
-    'v42 singleton migration retains future metadata, old read evidence and recent pointer',
-    () async {
-      final directory = await Directory.systemTemp.createTemp(
-        'y300-novel-v43-',
-      );
-      final path = p.join(directory.path, 'old.db');
-      Database? database;
-      addTearDown(() async {
-        await database?.close();
-        await directory.delete(recursive: true);
-      });
-      var db = await databaseFactory.openDatabase(
-        path,
-        options: OpenDatabaseOptions(
-          version: 42,
-          onCreate: (db, _) async {
-            await _createLegacyNovelMarkTables(db);
-            for (final table in [
-              AppDatabase.novelReadingProgressTable,
-              AppDatabase.readerBookmarksTable,
-            ]) {
-              await db.execute(
-                'ALTER TABLE $table ADD COLUMN anchor_format_version INTEGER NOT NULL DEFAULT 0',
-              );
-              await db.execute(
-                'ALTER TABLE $table ADD COLUMN anchor_text_identity TEXT',
-              );
-              await db.execute(
-                'ALTER TABLE $table ADD COLUMN progress_percent_valid INTEGER',
-              );
-            }
+  test('v42 singleton migration retains future metadata, old read evidence and recent pointer', () async {
+    final directory = await Directory.systemTemp.createTemp('y300-novel-v43-');
+    final path = p.join(directory.path, 'old.db');
+    Database? database;
+    addTearDown(() async {
+      await database?.close();
+      await directory.delete(recursive: true);
+    });
+    var db = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 42,
+        onCreate: (db, _) async {
+          await _createLegacyNovelMarkTables(db);
+          for (final table in [
+            AppDatabase.novelReadingProgressTable,
+            AppDatabase.readerBookmarksTable,
+          ]) {
             await db.execute(
-              'ALTER TABLE novel_reading_progress ADD COLUMN future_extension TEXT',
+              'ALTER TABLE $table ADD COLUMN anchor_format_version INTEGER NOT NULL DEFAULT 0',
             );
             await db.execute(
-              'CREATE INDEX future_progress_index ON novel_reading_progress(future_extension)',
+              'ALTER TABLE $table ADD COLUMN anchor_text_identity TEXT',
             );
-            await db.execute('''CREATE TABLE library_episode_state (
+            await db.execute(
+              'ALTER TABLE $table ADD COLUMN progress_percent_valid INTEGER',
+            );
+          }
+          await db.execute(
+            'ALTER TABLE novel_reading_progress ADD COLUMN future_extension TEXT',
+          );
+          await db.execute(
+            'CREATE INDEX future_progress_index ON novel_reading_progress(future_extension)',
+          );
+          await db.execute('''CREATE TABLE library_episode_state (
           content_type TEXT NOT NULL, episode_id TEXT NOT NULL, work_id TEXT NOT NULL,
           is_read INTEGER NOT NULL DEFAULT 0, is_downloaded INTEGER NOT NULL DEFAULT 0,
           is_bookmarked INTEGER NOT NULL DEFAULT 0, read_at INTEGER, downloaded_at INTEGER,
           future_extension TEXT, PRIMARY KEY(content_type, episode_id))''');
-          },
-        ),
-      );
-      database = db;
-      await db.insert(AppDatabase.novelReadingProgressTable, {
-        'novel_id': 'n',
-        'episode_id': 'a',
-        'scroll_offset': 123.5,
-        'progress_percent': .42,
-        'progress_percent_valid': null,
-        'anchor_format_version': 99,
-        'anchor_text_identity': ' future ',
-        'anchor_text_offset': 1 << 35,
-        'future_extension': 'opaque',
-        'updated_at': 123,
-      });
-      await db.insert(AppDatabase.libraryEpisodeStateTable, {
-        'content_type': 'novel',
-        'episode_id': 'a',
-        'work_id': 'n',
-        'is_read': 1,
-        'read_at': 456,
-        'is_bookmarked': 1,
-        'future_extension': 'shared opaque',
-      });
-      final oldProgress = (await db.query(
-        AppDatabase.novelReadingProgressTable,
-      )).single;
-      final oldState = (await db.query(
-        AppDatabase.libraryEpisodeStateTable,
-      )).single;
-      await db.close();
-      db = await AppDatabase.open(databaseName: path);
-      database = db;
-      expect(await db.getVersion(), AppDatabase.dbVersion);
-      expect((await db.query(AppDatabase.novelReadingProgressTable)).single, {
-        ...oldProgress,
-        'percent_basis': 'legacyReaderLayout',
-      });
-      expect((await db.query(AppDatabase.libraryEpisodeStateTable)).single, {
-        ...oldState,
-        'read_state_version': 0,
-      });
-      final recent = (await db.query(AppDatabase.libraryWorkStateTable)).single;
-      expect(recent['last_read_episode_id'], 'a');
-      expect(recent['last_read_at'], 123);
-      expect(
-        await db.rawQuery(
-          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'future_progress_index'",
-        ),
-        hasLength(1),
-      );
-      await db.insert(AppDatabase.novelReadingProgressTable, {
-        'novel_id': 'n',
-        'episode_id': 'b',
-        'scroll_offset': 10,
-        'updated_at': 200,
-      });
-      expect(
-        await db.query(AppDatabase.novelReadingProgressTable),
-        hasLength(2),
-      );
-    },
-  );
+        },
+      ),
+    );
+    database = db;
+    await db.insert(AppDatabase.novelReadingProgressTable, {
+      'novel_id': 'n',
+      'episode_id': 'a',
+      'scroll_offset': 123.5,
+      'progress_percent': .42,
+      'progress_percent_valid': null,
+      'anchor_format_version': 99,
+      'anchor_text_identity': ' future ',
+      'anchor_text_offset': 1 << 35,
+      'future_extension': 'opaque',
+      'updated_at': 123,
+    });
+    await db.insert(AppDatabase.libraryEpisodeStateTable, {
+      'content_type': 'novel',
+      'episode_id': 'a',
+      'work_id': 'n',
+      'is_read': 1,
+      'read_at': 456,
+      'is_bookmarked': 1,
+      'future_extension': 'shared opaque',
+    });
+    final oldProgress = (await db.query(AppDatabase.novelReadingProgressTable))
+        .single;
+    final oldState = (await db.query(AppDatabase.libraryEpisodeStateTable))
+        .single;
+    await db.close();
+    db = await AppDatabase.open(databaseName: path);
+    database = db;
+    expect(await db.getVersion(), AppDatabase.dbVersion);
+    expect((await db.query(AppDatabase.novelReadingProgressTable)).single, {
+      ...oldProgress,
+      'percent_basis': 'legacyReaderLayout',
+    });
+    expect((await db.query(AppDatabase.libraryEpisodeStateTable)).single, {
+      ...oldState,
+      'read_state_version': 0,
+    });
+    final recent = (await db.query(AppDatabase.libraryWorkStateTable)).single;
+    expect(recent['last_read_episode_id'], 'a');
+    expect(recent['last_read_at'], 123);
+    expect(
+      await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'future_progress_index'",
+      ),
+      hasLength(1),
+    );
+    await db.insert(AppDatabase.novelReadingProgressTable, {
+      'novel_id': 'n',
+      'episode_id': 'b',
+      'scroll_offset': 10,
+      'updated_at': 200,
+    });
+    expect(await db.query(AppDatabase.novelReadingProgressTable), hasLength(2));
+  });
 
   test(
     'v40 upgrade preserves cache payloads and adds v41 metadata defaults',
@@ -321,9 +311,8 @@ void main() {
       final oldProgress = (await db.query(
         AppDatabase.novelReadingProgressTable,
       )).single;
-      final oldBookmark = (await db.query(
-        AppDatabase.readerBookmarksTable,
-      )).single;
+      final oldBookmark = (await db.query(AppDatabase.readerBookmarksTable))
+          .single;
       await db.close();
 
       db = await AppDatabase.open(databaseName: databasePath);
@@ -374,6 +363,61 @@ void main() {
         (await db.query(AppDatabase.readerBookmarksTable)).single,
         migratedBookmark,
       );
+    },
+  );
+
+  test(
+    'v46 migration adds custom metadata columns on works and comics',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'y300_migration_v46_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final databasePath = p.join(directory.path, 'legacy_v46.db');
+      Database? database;
+      addTearDown(() async {
+        await database?.close();
+      });
+
+      var db = await openDatabase(
+        databasePath,
+        version: 46,
+        onCreate: (db, version) async {
+          await db.execute('''
+          CREATE TABLE ${AppDatabase.worksTable} (
+            work_id TEXT PRIMARY KEY,
+            content_type TEXT NOT NULL,
+            custom_title TEXT
+          )
+        ''');
+          await db.execute('''
+          CREATE TABLE ${AppDatabase.comicsTable} (
+            comic_id TEXT PRIMARY KEY,
+            custom_title TEXT,
+            custom_author TEXT,
+            custom_translation_group TEXT
+          )
+        ''');
+        },
+      );
+      database = db;
+      await db.close();
+
+      db = await AppDatabase.open(databaseName: databasePath);
+      database = db;
+      expect(await db.getVersion(), AppDatabase.dbVersion);
+
+      final workColumns = await _columnShape(db, AppDatabase.worksTable);
+      expect(
+        workColumns.keys,
+        containsAll(<String>[
+          'custom_author',
+          'custom_translation_group',
+          'custom_original_work',
+        ]),
+      );
+      final comicColumns = await _columnShape(db, AppDatabase.comicsTable);
+      expect(comicColumns.keys, contains('custom_original_work'));
     },
   );
 }

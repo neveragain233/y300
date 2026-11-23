@@ -14,6 +14,9 @@ class NovelItem {
     required this.title,
     this.author,
     this.customTitle,
+    this.customAuthor,
+    this.customTranslationGroup,
+    this.customOriginalWork,
     this.coverImageUrl,
     this.coverLocalPath,
     this.customCoverLocalPath,
@@ -34,9 +37,14 @@ class NovelItem {
   final String? sourceTagName;
   final String title;
 
-  /// 来源发布者名称；小说详情不额外维护作品作者或翻译者。
+  /// 来源发布者（发帖人）名称，未自定义译者时默认作为译者展示。
   final String? author;
   final String? customTitle;
+  final String? customAuthor;
+
+  /// 自定义译者：null 表示默认跟随发帖人；空字符串 `""` 表示显式隐藏译者。
+  final String? customTranslationGroup;
+  final String? customOriginalWork;
   final String? coverImageUrl;
   final String? coverLocalPath;
   final String? customCoverLocalPath;
@@ -55,6 +63,19 @@ class NovelItem {
       _preferredText(customTitle, sourceTitle) ?? sourceTitle;
 
   String? get publisherName => _preferredText(author, null);
+
+  String? get displayAuthor => _preferredText(customAuthor, null);
+
+  String? get displayOriginalWork => _preferredText(customOriginalWork, null);
+
+  String? displayTranslator({String? sourcePublisher}) {
+    final custom = customTranslationGroup;
+    if (custom != null) {
+      final trimmed = custom.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return _preferredText(sourcePublisher, publisherName);
+  }
 }
 
 String? _preferredText(String? preferred, String? fallback) {

@@ -2,7 +2,9 @@ import 'package:y300/features/comic/domain/services/comic_download_service.dart'
 import 'package:y300/features/comic/data/providers/comic_download_cover_providers.dart';
 import 'package:y300/features/comic/data/services/comic_download_cover_maintenance.dart';
 import 'package:flutter/material.dart';
+
 import '../../../test_support/localized_test_app.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -209,14 +211,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(observer.pushCount, 2);
 
-    Navigator.of(
-      tester.element(find.byKey(const Key('comic-reader-engine'))),
-    ).pop(
-      const ComicReaderExitResult(
-        comicId: 'comic:1',
-        lastReadEpisodeId: 'comic:1:e2',
-      ),
-    );
+    Navigator.of(tester.element(find.byKey(const Key('comic-reader-engine'))))
+        .pop(
+          const ComicReaderExitResult(
+            comicId: 'comic:1',
+            lastReadEpisodeId: 'comic:1:e2',
+          ),
+        );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -769,6 +770,7 @@ class _FakeComicRepository implements ComicRepository {
     String? customTitle,
     String? customAuthor,
     String? customTranslationGroup,
+    String? customOriginalWork,
     String? customSearchTitle,
   }) async {}
   @override
@@ -777,6 +779,7 @@ class _FakeComicRepository implements ComicRepository {
     bool title = false,
     bool author = false,
     bool translationGroup = false,
+    bool originalWork = false,
     bool searchTitle = false,
   }) async {}
 
