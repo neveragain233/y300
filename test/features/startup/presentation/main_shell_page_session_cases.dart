@@ -16,6 +16,7 @@ void _sessionCases() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
             comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
             novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
             libraryStateRepositoryProvider.overrideWithValue(
@@ -69,6 +70,7 @@ void _sessionCases() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
           comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
           novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
           libraryStateRepositoryProvider.overrideWithValue(
@@ -123,6 +125,7 @@ void _sessionCases() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
           comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
           novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
           libraryStateRepositoryProvider.overrideWithValue(

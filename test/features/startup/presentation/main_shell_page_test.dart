@@ -35,6 +35,7 @@ import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/app/navigation/history_entry_router.dart';
 import 'package:y300/app/navigation/main_destination_page.dart';
+import 'package:y300/app/navigation/main_destination_stack.dart';
 import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_settings_repository.dart';
 import 'package:y300/features/messages/data/message_repository_provider.dart';

@@ -136,7 +136,7 @@ abstract class AppLocalizations {
   /// No description provided for @networkOffline.
   ///
   /// In zh, this message translates to:
-  /// **'当前无网络连接，已切换至离线浏览'**
+  /// **'离线浏览，已隐藏论坛'**
   String get networkOffline;
 
   /// No description provided for @networkMaintenance.
@@ -144,6 +144,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'站点暂不可用，正在使用本地缓存'**
   String get networkMaintenance;
+
+  /// No description provided for @networkMaintenanceShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'站点异常，正在使用本地缓存'**
+  String get networkMaintenanceShort;
+
+  /// No description provided for @networkCacheBrowsing.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存浏览，已暂停远端请求'**
+  String get networkCacheBrowsing;
 
   /// No description provided for @networkForceCache.
   ///
@@ -6174,6 +6186,12 @@ abstract class AppLocalizations {
   /// **'请输入有效页码'**
   String get threadControlsInvalidPage;
 
+  /// No description provided for @threadControlsReplyPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'说点什么…'**
+  String get threadControlsReplyPrompt;
+
   /// No description provided for @threadDetailTitle.
   ///
   /// In zh, this message translates to:
@@ -10476,6 +10494,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'字体无法加载，请选择其他字体'**
   String get fontSelectorLoadFailed;
+
+  /// No description provided for @fontSelectorWeight.
+  ///
+  /// In zh, this message translates to:
+  /// **'字重'**
+  String get fontSelectorWeight;
+
+  /// No description provided for @fontSelectorWeightReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认'**
+  String get fontSelectorWeightReset;
 
   /// No description provided for @librarySelectionActionParse.
   ///

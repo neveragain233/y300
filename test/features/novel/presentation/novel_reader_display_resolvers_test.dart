@@ -249,6 +249,34 @@ void main() {
     expect(darkInEInk.foreground, const Color(0xFFFFFFFF));
     expect(darkInEInk.backgroundTexture, NovelReaderBackgroundTexture.solid);
   });
+
+  test('NovelReaderTypographyResolver projects variable font weights to body and chapterTitle', () {
+    final preferences = NovelReaderPreferences.defaults().copyWith(
+      fontFamily: _fontId,
+    );
+    final theme = ThemeData.light();
+    final palette = themeResolver.resolve(
+      preferences: preferences,
+      theme: theme,
+    );
+    final typography = typographyResolver.resolve(
+      preferences: preferences,
+      theme: theme,
+      palette: palette,
+      resolvedFont: const ResolvedFont(
+        id: _fontId,
+        fontFamily: 'variable-serif',
+        weightAxis: FontWeightAxis(min: 100, defaultValue: 400, max: 900),
+        customWeight: 520,
+      ),
+    );
+    expect(typography.body.fontVariations, const [FontVariation('wght', 520)]);
+    expect(typography.quote.fontVariations, const [FontVariation('wght', 520)]);
+    expect(typography.link.fontVariations, const [FontVariation('wght', 520)]);
+    expect(typography.chapterTitle.fontVariations, const [
+      FontVariation('wght', 770),
+    ]);
+  });
 }
 
 const _fontId =

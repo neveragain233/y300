@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:csslib/visitor.dart' as css;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
@@ -8,6 +9,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import '../contracts/forum_html_display_image.dart';
 import '../contracts/forum_html_image_host.dart';
 import '../contracts/forum_html_image_predecode_host.dart';
+import '../helpers/forum_html_variable_weight_policy.dart';
 import 'forum_html_prepared_render_document.dart';
 import 'forum_html_render_callbacks.dart';
 import 'forum_html_block_decorator.dart';
@@ -68,6 +70,12 @@ class ForumHtmlImageWidgetFactory extends WidgetFactory {
   @override
   void parse(BuildTree tree) {
     super.parse(tree);
+    final tag = tree.element.localName?.toLowerCase();
+    if (tag == 'b' || tag == 'strong') {
+      tree.inherit(_inheritRelativeBold, null);
+    } else if (tag == 'code' || tag == 'kbd' || tag == 'samp' || tag == 'tt') {
+      tree.inherit(_inheritClearWeightVariation, null);
+    }
     final decorate = decorateBlock;
     if (decorate == null ||
         blockDecorationEnabled?.call() == false ||
@@ -83,6 +91,106 @@ class ForumHtmlImageWidgetFactory extends WidgetFactory {
           }
         },
       ),
+    );
+  }
+
+  @override
+  void parseStyle(BuildTree tree, css.Declaration style) {
+    super.parseStyle(tree, style);
+    switch (style.property) {
+      case 'font-weight':
+        final value = style.value;
+        if (value is css.LiteralTerm) {
+          if (value is css.NumberTerm) {
+            final numWeight = value.number.toDouble();
+            if (numWeight >= 1 && numWeight <= 1000) {
+              tree.inherit(_inheritExplicitWeight, numWeight);
+            }
+          } else {
+            final keyword = value.valueAsString.trim().toLowerCase();
+            if (keyword == 'bold' || keyword == 'bolder') {
+              tree.inherit(_inheritRelativeBold, null);
+            } else if (keyword == 'lighter') {
+              tree.inherit(_inheritRelativeLighter, null);
+            } else if (keyword == 'normal') {
+              tree.inherit(_inheritExplicitWeight, 400.0);
+            }
+          }
+        }
+      case 'font-family':
+        tree.inherit(_inheritClearWeightVariation, null);
+    }
+  }
+
+  static InheritedProperties _inheritRelativeBold(
+    InheritedProperties resolving,
+    void _,
+  ) {
+    final current = resolving.get<TextStyle>();
+    if (current == null ||
+        ForumHtmlVariableWeightPolicy.wghtOf(current) == null) {
+      return resolving;
+    }
+    final updated = ForumHtmlVariableWeightPolicy.applyRelativeBold(current);
+    return resolving.copyWith(
+      style: TextStyle(
+        fontWeight: updated.fontWeight,
+        fontVariations: updated.fontVariations,
+      ),
+    );
+  }
+
+  static InheritedProperties _inheritRelativeLighter(
+    InheritedProperties resolving,
+    void _,
+  ) {
+    final current = resolving.get<TextStyle>();
+    if (current == null ||
+        ForumHtmlVariableWeightPolicy.wghtOf(current) == null) {
+      return resolving;
+    }
+    final updated = ForumHtmlVariableWeightPolicy.applyRelativeLighter(current);
+    return resolving.copyWith(
+      style: TextStyle(
+        fontWeight: updated.fontWeight,
+        fontVariations: updated.fontVariations,
+      ),
+    );
+  }
+
+  static InheritedProperties _inheritExplicitWeight(
+    InheritedProperties resolving,
+    double weight,
+  ) {
+    final current = resolving.get<TextStyle>();
+    if (current == null ||
+        ForumHtmlVariableWeightPolicy.wghtOf(current) == null) {
+      return resolving;
+    }
+    final updated = ForumHtmlVariableWeightPolicy.applyExplicitWeight(
+      current,
+      weight,
+    );
+    return resolving.copyWith(
+      style: TextStyle(
+        fontWeight: updated.fontWeight,
+        fontVariations: updated.fontVariations,
+      ),
+    );
+  }
+
+  static InheritedProperties _inheritClearWeightVariation(
+    InheritedProperties resolving,
+    void _,
+  ) {
+    final current = resolving.get<TextStyle>();
+    if (current == null ||
+        ForumHtmlVariableWeightPolicy.wghtOf(current) == null) {
+      return resolving;
+    }
+    final updated = ForumHtmlVariableWeightPolicy.clearWeightVariation(current);
+    return resolving.copyWith(
+      style: TextStyle(fontVariations: updated.fontVariations),
     );
   }
 

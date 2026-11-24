@@ -44,6 +44,12 @@ void _pageKeysCases() {
       expect(
         bottom + 8,
         lessThanOrEqualTo(
+          tester.getTopLeft(within('thread-previous-post-button')).dy,
+        ),
+      );
+      expect(
+        bottom + 8,
+        lessThanOrEqualTo(
           tester.getTopLeft(within('thread-next-post-button')).dy,
         ),
       );

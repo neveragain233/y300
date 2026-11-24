@@ -8,6 +8,7 @@ import '../domain/models/font_resolution.dart';
 import '../domain/models/imported_font.dart';
 import '../domain/models/resolved_font.dart';
 import '../domain/repositories/font_library_repository.dart';
+import '../domain/repositories/font_weight_preference_repository.dart';
 import '../domain/services/font_file_validator.dart';
 import '../domain/services/font_runtime_loader.dart';
 
@@ -56,6 +57,23 @@ final class FontLibraryService {
       // A rejected runtime load never publishes a persistent library entry.
       return _repository.importFont(fileName: fileName, bytes: snapshot);
     });
+  }
+
+  Future<ImportedFont> updateFontWeight(String fontId, double? customWeight) {
+    _ensureActive();
+    if (!FontIdentity.isImported(fontId)) {
+      return Future.error(
+        const FontLibraryException(FontLibraryFailure.notFound),
+      );
+    }
+    final repository = _repository;
+    if (repository is FontWeightPreferenceRepository) {
+      final weightRepository = repository as FontWeightPreferenceRepository;
+      return _mutate(
+        () => weightRepository.updateFontWeight(fontId, customWeight),
+      );
+    }
+    return Future.error(const FontLibraryException(FontLibraryFailure.storage));
   }
 
   Future<void> deleteFont(String fontId) {
@@ -120,7 +138,12 @@ final class FontLibraryService {
       _ensureActive();
       return FontResolution(
         requestedId: id,
-        font: ResolvedFont(id: id, fontFamily: family),
+        font: ResolvedFont(
+          id: id,
+          fontFamily: family,
+          weightAxis: current.weightAxis,
+          customWeight: current.customWeight,
+        ),
       );
     } on FontLibraryException catch (error) {
       return _fallback(id, error.code);

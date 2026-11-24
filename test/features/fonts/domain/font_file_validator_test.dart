@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/features/fonts/domain/models/font_library_failure.dart';
+import 'package:y300/features/fonts/domain/models/imported_font.dart';
 import 'package:y300/features/fonts/domain/services/font_file_validator.dart';
 
 import '../test_support/font_test_fixtures.dart';
@@ -252,6 +253,35 @@ void main() {
         );
       }
     });
+
+    test('parses valid fvar wght axis bounds', () {
+      final fvar = _buildFvarTable(min: 100, defaultValue: 400, max: 900);
+      final bytes = _appendTable(loadTestFont(), 'fvar', fvar);
+      final font = validator.validate(fileName: 'var.ttf', bytes: bytes);
+
+      expect(
+        font.weightAxis,
+        const FontWeightAxis(min: 100, defaultValue: 400, max: 900),
+      );
+      expect(font.weightAxisScanned, isTrue);
+    });
+
+    test('falls back safely when fvar table is malformed or out of range', () {
+      final badVersion = _buildFvarTable(
+        majorVersion: 2,
+        min: 100,
+        defaultValue: 400,
+        max: 900,
+      );
+      final badRange = _buildFvarTable(min: 100, defaultValue: 400, max: 1200);
+      final truncated = Uint8List(8);
+      for (final payload in [badVersion, badRange, truncated]) {
+        final bytes = _appendTable(loadTestFont(), 'fvar', payload);
+        final font = validator.validate(fileName: 'var.ttf', bytes: bytes);
+        expect(font.weightAxis, isNull);
+        expect(font.weightAxisScanned, isTrue);
+      }
+    });
   });
 }
 
@@ -272,3 +302,47 @@ int _recordOffset(Uint8List bytes, String tag) {
 
 int _tableOffset(Uint8List bytes, String tag) =>
     ByteData.sublistView(bytes).getUint32(_recordOffset(bytes, tag) + 8);
+
+Uint8List _buildFvarTable({
+  int majorVersion = 1,
+  required double min,
+  required double defaultValue,
+  required double max,
+}) {
+  final bytes = Uint8List(16 + 20);
+  final data = ByteData.sublistView(bytes);
+  data.setUint16(0, majorVersion);
+  data.setUint16(2, 0);
+  data.setUint16(4, 16);
+  data.setUint16(6, 2);
+  data.setUint16(8, 1);
+  data.setUint16(10, 20);
+  data.setUint32(16, 0x77676874); // 'wght'
+  data.setInt32(20, (min * 65536).round());
+  data.setInt32(24, (defaultValue * 65536).round());
+  data.setInt32(28, (max * 65536).round());
+  return bytes;
+}
+
+Uint8List _appendTable(Uint8List source, String tag, Uint8List payload) {
+  final sourceData = ByteData.sublistView(source);
+  final tableCount = sourceData.getUint16(4);
+  final oldHeaderEnd = 12 + tableCount * 16;
+  final newTableOffset = source.length + 16;
+  final out = Uint8List(newTableOffset + payload.length);
+  out.setRange(0, 12, source, 0);
+  final outData = ByteData.sublistView(out);
+  outData.setUint16(4, tableCount + 1);
+  for (var i = 0; i < tableCount; i++) {
+    final oldRec = 12 + i * 16;
+    out.setRange(oldRec, oldRec + 16, source, oldRec);
+    outData.setUint32(oldRec + 8, sourceData.getUint32(oldRec + 8) + 16);
+  }
+  final newRec = oldHeaderEnd;
+  out.setRange(newRec, newRec + 4, tag.codeUnits);
+  outData.setUint32(newRec + 8, newTableOffset);
+  outData.setUint32(newRec + 12, payload.length);
+  out.setRange(oldHeaderEnd + 16, newTableOffset, source, oldHeaderEnd);
+  out.setRange(newTableOffset, out.length, payload, 0);
+  return out;
+}

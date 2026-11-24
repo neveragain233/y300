@@ -118,17 +118,36 @@ void main() {
                 expect(size.width, 48);
               }
             }
-            final actions = [
-              if (compact) 'test-favorite-button',
-              'thread-detail-appbar-reply-button',
-              if (!compact) 'test-favorite-button',
-              'test-jump-button',
-              'test-more-button',
-            ];
-            for (var i = 1; i < actions.length; i++) {
-              final previous = tester.getRect(find.byKey(Key(actions[i - 1])));
-              final current = tester.getRect(find.byKey(Key(actions[i])));
-              expect(current.left - previous.right, closeTo(8, .01));
+            if (compact) {
+              final actions = [
+                'test-favorite-button',
+                'thread-detail-appbar-reply-button',
+                'test-jump-button',
+                'test-more-button',
+              ];
+              for (var i = 1; i < actions.length; i++) {
+                final previous = tester.getRect(
+                  find.byKey(Key(actions[i - 1])),
+                );
+                final current = tester.getRect(find.byKey(Key(actions[i])));
+                expect(current.left - previous.right, closeTo(8, .01));
+              }
+            } else {
+              final replyRect = tester.getRect(
+                find.byKey(const Key('thread-detail-appbar-reply-button')),
+              );
+              final favRect = tester.getRect(
+                find.byKey(const Key('test-favorite-button')),
+              );
+              expect(favRect.left - replyRect.right, closeTo(4, .01));
+              final navPrev = tester.getRect(
+                find.byKey(const Key('thread-previous-post-button')),
+              );
+              final navNext = tester.getRect(
+                find.byKey(const Key('thread-next-post-button')),
+              );
+              expect(navNext.top, closeTo(navPrev.bottom, .01));
+              expect(navPrev.left, closeTo(navNext.left, .01));
             }
           }
         }
@@ -136,7 +155,7 @@ void main() {
     },
   );
   testWidgets(
-    'double navigation stays at the viewport right edge on tablet widths',
+    'full bar aligns to 760px reading column with vertical double nav on tablet widths',
     (tester) async {
       final visibility = ValueNotifier(true);
       addTearDown(visibility.dispose);
@@ -150,18 +169,25 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        tester
-            .getTopLeft(
-              find.byKey(const Key('thread-detail-appbar-reply-button')),
-            )
-            .dx,
-        closeTo(20, .5),
+      final replyRect = tester.getRect(
+        find.byKey(const Key('thread-detail-appbar-reply-button')),
       );
-      expect(
-        tester.getTopRight(find.byKey(const Key('thread-next-post-button'))).dx,
-        closeTo(980, .5),
+      final moreRect = tester.getRect(
+        find.byKey(const Key('test-more-button')),
       );
+      final navPrevRect = tester.getRect(
+        find.byKey(const Key('thread-previous-post-button')),
+      );
+      final navNextRect = tester.getRect(
+        find.byKey(const Key('thread-next-post-button')),
+      );
+      // 1000px 视口下完整底栏居中收束到 760px（左右各 120px），主槽位左缩 8px，右侧动作缩 4px。
+      expect(replyRect.left, closeTo(128, .5));
+      expect(moreRect.right, closeTo(876, .5));
+      expect(navNextRect.right, closeTo(880, .5));
+      expect(navPrevRect.width, 48);
+      expect(navNextRect.top - navPrevRect.bottom, closeTo(0, .5));
+      expect(replyRect.top - 4 - navNextRect.bottom, closeTo(12, .5));
 
       // 紧凑栏的停靠侧只决定主栏位置，导航键保持右缘。
       for (final side in [ThreadControlsSide.left, ThreadControlsSide.right]) {
@@ -480,7 +506,8 @@ void main() {
           final shape = widget.shape;
           return widget.elevation == 0 &&
               shape is RoundedRectangleBorder &&
-              shape.borderRadius == BorderRadius.circular(28) &&
+              (shape.borderRadius == BorderRadius.circular(28) ||
+                  shape.borderRadius == BorderRadius.circular(24)) &&
               shape.side ==
                   BorderSide(
                     color: AppTheme.eInkBorderColor(scheme.brightness),
@@ -496,6 +523,87 @@ void main() {
       );
       expect(slide.duration, Duration.zero);
       expect(opacity.duration, Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'full bar browse-only Plan A shows page summary jump slot without width jump from loading',
+    (tester) async {
+      final visibility = ValueNotifier(true);
+      addTearDown(visibility.dispose);
+      final nav = _navigation(_Viewport());
+      addTearDown(nav.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(390, 800));
+
+      double? reportedMainHeight;
+      double? reportedRightHeight;
+      var jumpTaps = 0;
+
+      Widget buildShell({
+        required bool hasContent,
+        int currentPage = 2,
+        int? totalPages = 5,
+      }) => LocalizedTestApp(
+        home: Scaffold(
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: ThreadFloatingControls(
+            preferences: const ThreadControlsPreferences(),
+            navigation: nav,
+            visibility: visibility,
+            hasContent: hasContent,
+            currentPage: currentPage,
+            totalPages: totalPages,
+            onJumpPage: hasContent ? () => jumpTaps++ : null,
+            favorite: IconButton(
+              key: const Key('test-favorite-button'),
+              onPressed: () {},
+              icon: const Icon(Icons.star_border),
+            ),
+            reply: null,
+            jumpPage: IconButton(
+              key: const Key('test-jump-button'),
+              onPressed: () {},
+              icon: const Icon(Icons.numbers),
+            ),
+            more: IconButton(
+              key: const Key('test-more-button'),
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert),
+            ),
+            onFirstPost: () {},
+            onHeightChanged: (h) => reportedMainHeight = h,
+            onRightStackHeightChanged: (h) => reportedRightHeight = h,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(buildShell(hasContent: false));
+      await tester.pumpAndSettle();
+      final loadingBarRect = tester.getRect(find.byType(AppGlassSurface).first);
+      expect(loadingBarRect.width, closeTo(358, .5));
+      expect(loadingBarRect.height, closeTo(56, 0.01));
+      expect(reportedMainHeight, 56);
+      expect(reportedRightHeight, 56);
+
+      await tester.pumpWidget(buildShell(hasContent: true, totalPages: 5));
+      await tester.pumpAndSettle();
+      final browseBarRect = tester.getRect(find.byType(AppGlassSurface).last);
+      expect(browseBarRect.width, closeTo(loadingBarRect.width, .5));
+      expect(reportedMainHeight, 56);
+      expect(reportedRightHeight, 164);
+
+      final jumpSlot = find.byKey(const Key('test-jump-button'));
+      expect(jumpSlot, findsOneWidget);
+      final l10n = AppLocalizations.of(tester.element(jumpSlot));
+      expect(find.text(l10n.threadControlsPageSummary(2, 5)), findsOneWidget);
+      await tester.tap(jumpSlot);
+      expect(jumpTaps, 1);
+
+      await tester.pumpWidget(buildShell(hasContent: true, totalPages: null));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.threadControlsPageUnknown(2)), findsOneWidget);
     },
   );
 }

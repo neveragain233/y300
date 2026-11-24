@@ -3,6 +3,8 @@ library;
 
 export 'src/helpers/discuz_font_size_policy.dart' show DiscuzFontSizePolicy;
 export 'src/helpers/forum_collapse_chrome.dart' show ForumCollapseChrome;
+export 'src/helpers/forum_html_variable_weight_policy.dart'
+    show ForumHtmlVariableWeightPolicy;
 export 'src/helpers/rich_text_color_contrast.dart'
     show RichTextColorContrast, FlutterRichTextColorContrast;
 export 'src/helpers/rich_text_tone_resolver.dart'

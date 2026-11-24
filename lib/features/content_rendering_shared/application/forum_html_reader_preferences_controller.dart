@@ -184,7 +184,7 @@ class ForumHtmlReaderPreferencesController
         _writer.lastSuccessful?.fontFamily == _fontResolution.requestedId;
     final resolution = retainFailedFont
         ? _fontResolution
-        : next.fontFamily == _fontResolution.font.id
+        : !replaceFont && next.fontFamily == _fontResolution.font.id
         ? FontResolution(
             requestedId: next.fontFamily,
             font: _fontResolution.font,
@@ -279,8 +279,16 @@ class ForumHtmlReaderPreferencesController
     final latest = state.value;
     if (latest == null || latest.fontFamily != current.fontFamily) return;
     final next = latest.copyWith(fontFamily: resolution.font.id);
+    final resolutionChanged =
+        _fontResolution.font != resolution.font ||
+        _fontResolution.requestedId != resolution.requestedId ||
+        _fontResolution.failure != resolution.failure;
     _fontResolution = resolution;
-    if (next != latest || resolution.failure != null) state = AsyncData(next);
+    if (next != latest || resolution.failure != null) {
+      state = AsyncData(next);
+    } else if (resolutionChanged) {
+      ref.notifyListeners();
+    }
     _scheduleRepair(resolution);
   }
 

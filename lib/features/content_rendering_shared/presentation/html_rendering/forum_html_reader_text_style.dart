@@ -17,7 +17,19 @@ TextStyle resolveForumHtmlReaderTextStyle(
     preferences,
     theme: theme,
   ).baseTextStyle(context);
-  return font.isSystem
-      ? baseline
-      : baseline.copyWith(fontFamily: font.fontFamily);
+  if (font.isSystem) {
+    return baseline;
+  }
+  final axis = font.weightAxis;
+  final variations = axis != null && font.fontVariations != null
+      ? ForumHtmlVariableWeightPolicy.bindAxisBounds(
+          font.fontVariations,
+          min: axis.min,
+          max: axis.max,
+        )
+      : null;
+  return baseline.copyWith(
+    fontFamily: font.fontFamily,
+    fontVariations: variations,
+  );
 }

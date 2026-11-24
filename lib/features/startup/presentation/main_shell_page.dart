@@ -22,6 +22,7 @@ import 'package:y300/app/navigation/main_navigation_settings_controller.dart';
 import 'package:y300/app/navigation/main_navigation_widgets.dart';
 import 'package:y300/app/settings/app_appearance_controller.dart';
 import 'package:y300/app/settings/app_appearance_settings.dart';
+import 'package:y300/app/settings/app_glass_level.dart';
 import 'package:y300/app/settings/app_navigation_bar_style.dart';
 import 'package:y300/app/startup/main_shell_library_gate.dart';
 import 'package:y300/app/startup/main_shell_startup_coordinator.dart';
@@ -67,6 +68,7 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
   MainShellDestination? _currentDestination;
   final Set<MainShellDestination> _builtDestinations = <MainShellDestination>{};
   double? _chromeHeight;
+  double? _railBannerHeight;
   bool _interfacesReady = false;
   bool _restoreAttempted = false;
   int _navigationRevision = 0;
@@ -254,6 +256,12 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                   );
                 }
 
+                final onBookshelf =
+                    currentDestination == MainShellDestination.forum
+                    ? () => _selectDestination(
+                        grouping.destinationFor(MainNavigationGroup.bookshelf),
+                      )
+                    : null;
                 final content = Row(
                   children: [
                     Offstage(
@@ -294,6 +302,53 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                 final showLegacyBar = !useRail && showChrome;
                 final showImmersiveChrome =
                     isImmersive && !useRail && showChrome;
+                final immersiveChrome = isImmersive && !useRail
+                    ? _AnimatedImmersiveBottomChrome(
+                        visible: showImmersiveChrome,
+                        child: _BottomChromeSizeReporter(
+                          onHeight: _updateChromeHeight,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (availability.blocked)
+                                _ImmersiveFloatingAvailabilityBanner(
+                                  glassLevel: appearance.glassLevel,
+                                  bottomGap:
+                                      selection.isActive || selectedIndex < 0
+                                      ? 8
+                                      : 0,
+                                  onBookshelf: onBookshelf,
+                                ),
+                              ShelfSelectionBottomBar(
+                                fallback: selectedIndex < 0
+                                    ? MainLegacyNavigationBar(
+                                        items: items,
+                                        selectedIndex: selectedIndex,
+                                        onSelected: selectGroup,
+                                      )
+                                    : MainNavigationCapsule(
+                                        items: items,
+                                        selectedIndex: selectedIndex,
+                                        glassLevel: appearance.glassLevel,
+                                        swipeEnabled:
+                                            appearance.navigationSwipeEnabled &&
+                                            !selection.isActive,
+                                        dragFromSelection: appearance
+                                            .navigationLensMotion
+                                            .dragFromSelection,
+                                        onSelected: selection.isActive
+                                            ? null
+                                            : selectGroup,
+                                        onReselected: selection.isActive
+                                            ? null
+                                            : selectGroup,
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : null;
                 final chromeHeight =
                     _chromeHeight ??
                     media.padding.bottom + _immersiveChromeFallbackHeight;
@@ -311,9 +366,11 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                     : (isImmersive
                           ? chromeHeight
                           : media.padding.bottom + 72.0);
-                final feedbackBottomOverlap = showImmersiveChrome
-                    ? chromeHeight
-                    : 0.0;
+                final feedbackBottomOverlap = useRail
+                    ? (showChrome && availability.blocked
+                          ? (_railBannerHeight ?? media.padding.bottom + 50.0)
+                          : 0.0)
+                    : (showImmersiveChrome ? chromeHeight : 0.0);
                 final contentBottomPadding = showImmersiveChrome
                     ? 0.0
                     : media.padding.bottom;
@@ -336,60 +393,50 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                             child: MainShellBottomInset(
                               bottom: sourceOverlayInset,
                               fabBottom: fabBottomInset,
-                              child: Column(
-                                children: [
-                                  if (availability.blocked)
-                                    ForumAvailabilityBanner(
-                                      onBookshelf:
-                                          currentDestination ==
-                                              MainShellDestination.forum
-                                          ? () => _selectDestination(
-                                              grouping.destinationFor(
-                                                MainNavigationGroup.bookshelf,
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                  Expanded(child: content),
-                                ],
-                              ),
+                              child: content,
                             ),
                           ),
                         ),
-                        if (isImmersive && !useRail)
+                        if (immersiveChrome != null)
                           Positioned(
                             left: 0,
                             right: 0,
                             bottom: 0,
+                            child: immersiveChrome,
+                          ),
+                        if (useRail && availability.blocked)
+                          PositionedDirectional(
+                            start: railWidth,
+                            end: 0,
+                            bottom: 0,
                             child: _AnimatedImmersiveBottomChrome(
-                              visible: showImmersiveChrome,
+                              visible: showChrome,
                               child: _BottomChromeSizeReporter(
-                                onHeight: _updateChromeHeight,
-                                child: ShelfSelectionBottomBar(
-                                  fallback: selectedIndex < 0
-                                      ? MainLegacyNavigationBar(
-                                          items: items,
-                                          selectedIndex: selectedIndex,
-                                          onSelected: selectGroup,
-                                        )
-                                      : MainNavigationCapsule(
-                                          items: items,
-                                          selectedIndex: selectedIndex,
-                                          glassLevel: appearance.glassLevel,
-                                          swipeEnabled:
-                                              appearance
-                                                  .navigationSwipeEnabled &&
-                                              !selection.isActive,
-                                          dragFromSelection: appearance
-                                              .navigationLensMotion
-                                              .dragFromSelection,
-                                          onSelected: selection.isActive
-                                              ? null
-                                              : selectGroup,
-                                          onReselected: selection.isActive
-                                              ? null
-                                              : selectGroup,
-                                        ),
+                                onHeight: _updateRailBannerHeight,
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    left: 16,
+                                    right: 16,
+                                    bottom:
+                                        (selection.isActive
+                                            ? 0.0
+                                            : media.padding.bottom) +
+                                        12.0,
+                                  ),
+                                  child: Center(
+                                    heightFactor: 1,
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 560,
+                                      ),
+                                      child: ForumAvailabilityBanner(
+                                        variant: ForumAvailabilityBannerVariant
+                                            .floating,
+                                        glassLevel: appearance.glassLevel,
+                                        onBookshelf: onBookshelf,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -400,21 +447,38 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
                         ? const ShelfSelectionBottomBar()
                         : isImmersive
                         ? null
-                        : ShelfSelectionBottomBar(
-                            fallback: Offstage(
-                              offstage: !showLegacyBar,
-                              child: ExcludeFocus(
-                                excluding: !showLegacyBar,
-                                child: MainLegacyNavigationBar(
-                                  key: const ValueKey<String>(
-                                    'main-shell-navigation-bar',
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (availability.blocked)
+                                Offstage(
+                                  offstage: !showLegacyBar,
+                                  child: ExcludeFocus(
+                                    excluding: !showLegacyBar,
+                                    child: ForumAvailabilityBanner(
+                                      variant:
+                                          ForumAvailabilityBannerVariant.docked,
+                                      onBookshelf: onBookshelf,
+                                    ),
                                   ),
-                                  items: items,
-                                  selectedIndex: selectedIndex,
-                                  onSelected: selectGroup,
+                                ),
+                              ShelfSelectionBottomBar(
+                                fallback: Offstage(
+                                  offstage: !showLegacyBar,
+                                  child: ExcludeFocus(
+                                    excluding: !showLegacyBar,
+                                    child: MainLegacyNavigationBar(
+                                      key: const ValueKey<String>(
+                                        'main-shell-navigation-bar',
+                                      ),
+                                      items: items,
+                                      selectedIndex: selectedIndex,
+                                      onSelected: selectGroup,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                   ),
                 );
@@ -432,6 +496,15 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
     if (current != null && (current - height).abs() < 0.5) return;
     setState(() {
       _chromeHeight = height;
+    });
+  }
+
+  void _updateRailBannerHeight(double height) {
+    if (!mounted) return;
+    final current = _railBannerHeight;
+    if (current != null && (current - height).abs() < 0.5) return;
+    setState(() {
+      _railBannerHeight = height;
     });
   }
 
@@ -556,6 +629,49 @@ class _MainShellPageState extends ConsumerState<MainShellPage> {
         globalOrigin: _contentGlobalOrigin,
       ),
     };
+  }
+}
+
+class _ImmersiveFloatingAvailabilityBanner extends StatelessWidget {
+  const _ImmersiveFloatingAvailabilityBanner({
+    required this.glassLevel,
+    required this.bottomGap,
+    required this.onBookshelf,
+  });
+
+  final AppGlassLevel glassLevel;
+  final double bottomGap;
+  final VoidCallback? onBookshelf;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final region = AppWindowLayout(
+          size: Size(constraints.maxWidth, media.size.height),
+          displayFeatures: media.displayFeatures,
+        ).readingRegion;
+        return Padding(
+          padding: EdgeInsets.only(
+            left: region.left + 16,
+            right: (constraints.maxWidth - region.right) + 16,
+            bottom: bottomGap,
+          ),
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ForumAvailabilityBanner(
+                variant: ForumAvailabilityBannerVariant.floating,
+                glassLevel: glassLevel,
+                onBookshelf: onBookshelf,
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 

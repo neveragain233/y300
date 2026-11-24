@@ -28,10 +28,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreActiveReader => '启动时恢复上次打开的阅读器';
 
   @override
-  String get networkOffline => '当前无网络连接，已切换至离线浏览';
+  String get networkOffline => '离线浏览，已隐藏论坛';
 
   @override
   String get networkMaintenance => '站点暂不可用，正在使用本地缓存';
+
+  @override
+  String get networkMaintenanceShort => '站点异常，正在使用本地缓存';
+
+  @override
+  String get networkCacheBrowsing => '缓存浏览，已暂停远端请求';
 
   @override
   String get networkForceCache => '使用本地缓存浏览';
@@ -3687,6 +3693,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get threadControlsInvalidPage => '请输入有效页码';
 
   @override
+  String get threadControlsReplyPrompt => '说点什么…';
+
+  @override
   String get threadDetailTitle => '帖子详情';
 
   @override
@@ -6240,6 +6249,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fontSelectorLoadFailed => '字体无法加载，请选择其他字体';
 
   @override
+  String get fontSelectorWeight => '字重';
+
+  @override
+  String get fontSelectorWeightReset => '恢复默认';
+
+  @override
   String get librarySelectionActionParse => '解析';
 
   @override
@@ -6644,10 +6659,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get restoreActiveReader => '啟動時恢復上次開啟的閱讀器';
 
   @override
-  String get networkOffline => '目前沒有網路連線，已切換至離線瀏覽';
+  String get networkOffline => '離線瀏覽，已隱藏論壇';
 
   @override
   String get networkMaintenance => '站點暫時無法使用，正在使用本機快取';
+
+  @override
+  String get networkMaintenanceShort => '站點異常，正在使用本機快取';
+
+  @override
+  String get networkCacheBrowsing => '快取瀏覽，已暫停遠端請求';
 
   @override
   String get networkForceCache => '使用本機快取瀏覽';
@@ -10303,6 +10324,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get threadControlsInvalidPage => '請輸入有效頁碼';
 
   @override
+  String get threadControlsReplyPrompt => '說點什麼…';
+
+  @override
   String get threadDetailTitle => '帖子詳情';
 
   @override
@@ -12856,6 +12880,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get fontSelectorLoadFailed => '字型無法載入，請選擇其他字型';
+
+  @override
+  String get fontSelectorWeight => '字重';
+
+  @override
+  String get fontSelectorWeightReset => '恢復預設';
 
   @override
   String get librarySelectionActionParse => '解析';

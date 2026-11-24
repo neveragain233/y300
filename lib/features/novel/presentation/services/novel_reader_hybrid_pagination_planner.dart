@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:y300/features/novel/domain/models/novel_reader_preferences.dart';
 import 'package:y300/features/novel/presentation/models/novel_reader_classified_pagination_atom.dart';
@@ -1269,6 +1270,9 @@ final class DefaultNovelReaderHybridPaginationPlanner
             style.height,
             style.fontWeight?.value,
             style.fontStyle?.index,
+            style.fontVariations
+                ?.map((variation) => [variation.axis, variation.value])
+                .toList(),
           ]),
         );
       }
@@ -1285,7 +1289,8 @@ final class DefaultNovelReaderHybridPaginationPlanner
         style.fontFamily != baseStyle.fontFamily ||
         style.fontSize != baseStyle.fontSize ||
         style.fontWeight != baseStyle.fontWeight ||
-        style.fontStyle != baseStyle.fontStyle;
+        style.fontStyle != baseStyle.fontStyle ||
+        !listEquals(style.fontVariations, baseStyle.fontVariations);
   }
 
   void _validateInput(

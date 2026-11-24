@@ -166,6 +166,7 @@ List<riverpod_misc.Override> _threadDetailOverrides(
   HistoryDiagnosticRecorder? historyDiagnosticRecorder,
 }) {
   return [
+    forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
     historyVisitRecorderProvider.overrideWithValue(
       historyVisitRecorder ?? const _NoopHistoryVisitRecorder(),
     ),

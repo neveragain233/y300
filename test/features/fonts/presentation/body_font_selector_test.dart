@@ -467,6 +467,101 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'variable font shows weight slider with live preview and persists only on apply',
+    (tester) async {
+      final variableFont = ImportedFont(
+        id: selectorFontA.id,
+        displayName: 'VariableSerif',
+        storageFileName: selectorFontA.storageFileName,
+        byteLength: selectorFontA.byteLength,
+        weightAxis: const FontWeightAxis(min: 100, defaultValue: 400, max: 900),
+        weightAxisScanned: true,
+      );
+      double? persistedWeight;
+      var updateCalls = 0;
+      final varController = FontSelectorController(
+        listFonts: () async => [variableFont, selectorFontB],
+        resolveFont: (id) async {
+          if (id == variableFont.id) {
+            return FontResolution(
+              requestedId: id!,
+              font: ResolvedFont(
+                id: id,
+                fontFamily: 'variable-family',
+                weightAxis: variableFont.weightAxis,
+                customWeight: persistedWeight,
+              ),
+            );
+          }
+          if (id == selectorFontB.id) {
+            return FontResolution(
+              requestedId: id!,
+              font: ResolvedFont(id: id, fontFamily: 'static-family'),
+            );
+          }
+          return const FontResolution(
+            requestedId: FontIdentity.system,
+            font: ResolvedFont.system,
+          );
+        },
+        importFont: driver.importFont,
+        deleteFont: driver.deleteFont,
+        pickFont: driver.pickFont,
+        updateFontWeight: (id, weight) async {
+          updateCalls++;
+          persistedWeight = weight;
+          return variableFont.copyWith(
+            customWeight: weight,
+            clearCustomWeight: weight == null,
+          );
+        },
+      );
+      addTearDown(varController.dispose);
+
+      final results = <ResolvedFont?>[];
+      await _open(tester, varController, results: results);
+      expect(find.byKey(const Key('body-font-weight-controls')), findsNothing);
+
+      // 选中静态字体时同样不显示字重调节。
+      await tester.tap(find.byKey(Key('body-font-item-${selectorFontB.id}')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('body-font-weight-controls')), findsNothing);
+
+      // 选中可变字体后显示字重滑块与恢复默认按钮。
+      await tester.tap(find.byKey(Key('body-font-item-${variableFont.id}')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('body-font-weight-controls')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('body-font-weight-reset')))
+            .onPressed,
+        isNull,
+      );
+
+      varController.setDraftWeight(650);
+      await tester.pump();
+      final previewStyle = tester
+          .widget<Text>(find.byKey(const Key('body-font-preview')))
+          .style!;
+      expect(previewStyle.fontVariations, const [FontVariation('wght', 650)]);
+      expect(find.byKey(const Key('body-font-weight-value')), findsOneWidget);
+      expect(find.text('650'), findsOneWidget);
+      expect(updateCalls, 0);
+
+      await tester.tap(find.byKey(const Key('body-font-apply')));
+      await tester.pumpAndSettle();
+      expect(updateCalls, 1);
+      expect(persistedWeight, 650);
+      expect(results.single?.fontVariations, const [
+        FontVariation('wght', 650),
+      ]);
+    },
+  );
 }
 
 AppLocalizations _strings(WidgetTester tester) =>

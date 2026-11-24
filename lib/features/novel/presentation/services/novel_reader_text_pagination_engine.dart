@@ -670,6 +670,9 @@ final class DefaultNovelReaderTextPaginationEngine
         ..write('|${style.fontWeight?.value}')
         ..write('|${style.fontStyle?.index}')
         ..write('|${style.fontFamily}')
+        ..write(
+          '|${style.fontVariations?.map((v) => '${v.axis}:${v.value}').join(',')}',
+        )
         ..write('|${style.decoration}')
         ..write('|${run.href}');
     }

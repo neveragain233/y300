@@ -17,6 +17,7 @@ void _routingCases() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
           blogAccountIdProvider.overrideWithValue('101'),
           userBlogDirectoryRepositoryProvider.overrideWithValue(blogs),
           comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
@@ -243,6 +244,7 @@ void _routingCases() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
             mainNavigationSettingsRepositoryProvider.overrideWithValue(
               navigationRepository,
             ),
@@ -357,6 +359,7 @@ void _routingCases() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
           comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
           novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
           libraryStateRepositoryProvider.overrideWithValue(
@@ -434,6 +437,7 @@ void _routingCases() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
           comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
           novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
           libraryStateRepositoryProvider.overrideWithValue(
@@ -504,6 +508,7 @@ void _routingCases() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
             comicRepositoryProvider.overrideWithValue(_FakeComicRepository()),
             novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
             libraryStateRepositoryProvider.overrideWithValue(

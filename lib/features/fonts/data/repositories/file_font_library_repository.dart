@@ -10,13 +10,17 @@ import 'package:y300/features/fonts/domain/models/font_library_failure.dart';
 import 'package:y300/features/fonts/domain/models/imported_font.dart';
 import 'package:y300/features/fonts/domain/repositories/font_library_repository.dart';
 import 'package:y300/features/fonts/domain/repositories/font_library_storage_usage.dart';
+import 'package:y300/features/fonts/domain/repositories/font_weight_preference_repository.dart';
 import 'package:y300/features/fonts/domain/services/font_file_validator.dart';
 
 typedef FontLibraryDirectoryProvider = Future<Directory> Function();
 
 /// A single instance owns mutations to an application-private font directory.
 final class FileFontLibraryRepository
-    implements FontLibraryRepository, FontLibraryStorageUsage {
+    implements
+        FontLibraryRepository,
+        FontLibraryStorageUsage,
+        FontWeightPreferenceRepository {
   FileFontLibraryRepository({
     required FontLibraryDirectoryProvider directoryProvider,
     FontFileValidator validator = const FontFileValidator(),
@@ -42,7 +46,8 @@ final class FileFontLibraryRepository
   @override
   Future<List<ImportedFont>> listFonts() => _enqueue(() async {
     final directory = await _directory();
-    return _readIndex(directory);
+    final fonts = await _readIndex(directory);
+    return _backfillWeightAxesIfNeeded(directory, fonts);
   });
 
   @override
@@ -92,6 +97,10 @@ final class FileFontLibraryRepository
       final directory = await _directory();
       final fonts = await _readIndex(directory);
       final existing = _find(fonts, candidate.id);
+      final clampedCustomWeight =
+          candidate.weightAxis != null && existing?.customWeight != null
+          ? candidate.weightAxis!.clamp(existing!.customWeight!)
+          : null;
       final imported = existing == null
           ? candidate
           : ImportedFont(
@@ -99,11 +108,21 @@ final class FileFontLibraryRepository
               displayName: existing.displayName,
               storageFileName: candidate.storageFileName,
               byteLength: candidate.byteLength,
+              weightAxis: candidate.weightAxis,
+              customWeight: clampedCustomWeight,
+              weightAxisScanned: true,
             );
       if (existing != null) {
         try {
           await _readVerified(directory, existing);
-          return existing;
+          if (!existing.weightAxisScanned || imported != existing) {
+            await _writeIndex(directory, <ImportedFont>[
+              for (final font in fonts)
+                if (font.id != imported.id) font,
+              imported,
+            ]);
+          }
+          return imported;
         } on FontLibraryException catch (error) {
           if (error.code != FontLibraryFailure.notFound &&
               error.code != FontLibraryFailure.invalidFont) {
@@ -142,12 +161,64 @@ final class FileFontLibraryRepository
   Future<Uint8List> readFont(String fontId) => _enqueue(() async {
     _requireId(fontId);
     final directory = await _directory();
-    final font = _find(await _readIndex(directory), fontId);
+    final fonts = await _readIndex(directory);
+    final font = _find(fonts, fontId);
     if (font == null) {
       throw const FontLibraryException(FontLibraryFailure.notFound);
     }
-    return _readVerified(directory, font);
+    final (bytes, validated) = await _readVerifiedFont(directory, font);
+    if (!font.weightAxisScanned) {
+      final updated = font.copyWith(
+        weightAxis: validated.weightAxis,
+        clearWeightAxis: validated.weightAxis == null,
+        weightAxisScanned: true,
+      );
+      await _writeIndex(directory, <ImportedFont>[
+        for (final item in fonts) item.id == fontId ? updated : item,
+      ]);
+    }
+    return bytes;
   });
+
+  @override
+  Future<ImportedFont> updateFontWeight(String fontId, double? customWeight) =>
+      _enqueue(() async {
+        _requireId(fontId);
+        final directory = await _directory();
+        final fonts = await _backfillWeightAxesIfNeeded(
+          directory,
+          await _readIndex(directory),
+        );
+        final font = _find(fonts, fontId);
+        if (font == null) {
+          throw const FontLibraryException(FontLibraryFailure.notFound);
+        }
+        final axis = font.weightAxis;
+        if (axis == null) {
+          return font;
+        }
+        final double? normalized;
+        if (customWeight == null) {
+          normalized = null;
+        } else {
+          final clamped = axis.clamp(customWeight);
+          normalized = (clamped - axis.defaultValue).abs() < 0.001
+              ? null
+              : clamped;
+        }
+        if (font.customWeight == normalized) {
+          return font;
+        }
+        final updated = font.copyWith(
+          customWeight: normalized,
+          clearCustomWeight: normalized == null,
+        );
+        await _writeIndex(directory, <ImportedFont>[
+          for (final item in fonts) item.id == fontId ? updated : item,
+        ]);
+        _changes.add(null);
+        return updated;
+      });
 
   @override
   Future<void> deleteFont(String fontId) => _enqueue(() async {
@@ -285,7 +356,48 @@ final class FileFontLibraryRepository
     }
   }
 
+  Future<List<ImportedFont>> _backfillWeightAxesIfNeeded(
+    Directory directory,
+    List<ImportedFont> fonts,
+  ) async {
+    var changed = false;
+    final updated = <ImportedFont>[];
+    for (final font in fonts) {
+      if (font.weightAxisScanned) {
+        updated.add(font);
+        continue;
+      }
+      try {
+        final (_, validated) = await _readVerifiedFont(directory, font);
+        updated.add(
+          font.copyWith(
+            weightAxis: validated.weightAxis,
+            clearWeightAxis: validated.weightAxis == null,
+            weightAxisScanned: true,
+          ),
+        );
+        changed = true;
+      } on FontLibraryException {
+        updated.add(font);
+      }
+    }
+    if (!changed) {
+      return fonts;
+    }
+    final unmodifiable = List<ImportedFont>.unmodifiable(updated);
+    await _writeIndex(directory, unmodifiable);
+    return unmodifiable;
+  }
+
   Future<Uint8List> _readVerified(
+    Directory directory,
+    ImportedFont font,
+  ) async {
+    final (bytes, _) = await _readVerifiedFont(directory, font);
+    return bytes;
+  }
+
+  Future<(Uint8List, ImportedFont)> _readVerifiedFont(
     Directory directory,
     ImportedFont font,
   ) async {
@@ -316,7 +428,7 @@ final class FileFontLibraryRepository
         validated.storageFileName != font.storageFileName) {
       throw const FontLibraryException(FontLibraryFailure.invalidFont);
     }
-    return bytes;
+    return (bytes, validated);
   }
 
   static Future<Uint8List> _readBounded(

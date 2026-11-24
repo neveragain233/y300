@@ -443,6 +443,61 @@ void main() {
       );
     },
   );
+
+  test(
+    'lazily backfills legacy v1 entries and persists custom weight updates',
+    () async {
+      final font = await import();
+      // 模拟旧版无 weightAxis 字段的 v1 索引。
+      await indexFile().writeAsString(
+        jsonEncode(<String, Object>{
+          'version': 1,
+          'fonts': <Map<String, Object>>[
+            <String, Object>{
+              'id': font.id,
+              'displayName': font.displayName,
+              'storageFileName': font.storageFileName,
+              'byteLength': font.byteLength,
+            },
+          ],
+        }),
+        encoding: utf8,
+        flush: true,
+      );
+      var notifications = 0;
+      final sub = repository.changes.listen((_) => notifications++);
+      addTearDown(sub.cancel);
+
+      final listed = await repository.listFonts();
+      expect(listed.single.weightAxisScanned, isTrue);
+      expect(notifications, 0);
+      final persisted = await indexFile().readAsString(encoding: utf8);
+      expect(persisted, contains('"weightAxis":null'));
+
+      await indexFile().writeAsString(
+        const FontLibraryIndexCodec().encode(<ImportedFont>[
+          font.copyWith(
+            weightAxis: const FontWeightAxis(
+              min: 100,
+              defaultValue: 400,
+              max: 900,
+            ),
+            weightAxisScanned: true,
+          ),
+        ]),
+        encoding: utf8,
+        flush: true,
+      );
+
+      final updated = await repository.updateFontWeight(font.id, 620);
+      expect(updated.customWeight, 620);
+      expect(notifications, 1);
+
+      final reset = await repository.updateFontWeight(font.id, 400);
+      expect(reset.customWeight, isNull);
+      expect(notifications, 2);
+    },
+  );
 }
 
 Matcher _throwsCode(FontLibraryFailure code) => throwsA(

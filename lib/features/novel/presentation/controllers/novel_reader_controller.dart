@@ -448,7 +448,7 @@ class NovelReaderController extends AsyncNotifier<NovelReaderViewState> {
         _preferenceWritesInFlight == 0) {
       final persistedEffective = current.persistedPreferences;
       if (previewSerial == _fontPreviewSerial) {
-        previewPreferences(persistedEffective);
+        _publishPreferencePreview(persistedEffective, resolution);
       }
       return;
     }

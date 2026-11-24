@@ -129,6 +129,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   bool _tailAutoAttempted = false;
   final _controlsVisibility = ThreadControlsVisibilityController();
   double _controlsHeight = 56;
+  double _rightControlsHeight = 56;
   double _repliesHeaderHeight = 0;
   int _repliesHeaderAnchorRevision = 0;
   Timer? _highlightClearTimer;
@@ -563,7 +564,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
               controller: _scrollController,
               cornerPadding: EdgeInsets.only(
                 right: 12,
-                bottom: 24 + _controlsHeight,
+                bottom: 24 + _rightControlsHeight,
               ),
               edgeTapAllowed: true,
               edgeTopInset: _repliesHeaderHeight > 0
@@ -771,9 +772,19 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         navigation: _floorNavigation,
         visibility: _controlsVisibility,
         hasContent: state.posts.isNotEmpty,
+        currentPage: state.currentPage,
+        totalPages: state.lastPage,
+        onJumpPage: state.posts.isNotEmpty && !state.isLoadingMore
+            ? () => _selectThreadPage(controller, state)
+            : null,
         onHeightChanged: (height) {
           if (mounted && (_controlsHeight - height).abs() > .5) {
             setState(() => _controlsHeight = height);
+          }
+        },
+        onRightStackHeightChanged: (height) {
+          if (mounted && (_rightControlsHeight - height).abs() > .5) {
+            setState(() => _rightControlsHeight = height);
           }
         },
         favorite: state.supports(ThreadDetailCapability.favoriteEntry)

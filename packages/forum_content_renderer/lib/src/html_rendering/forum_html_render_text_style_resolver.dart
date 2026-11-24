@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as html_dom;
 import '../helpers/discuz_font_size_policy.dart';
+import '../helpers/forum_html_variable_weight_policy.dart';
 import '../models/forum_html_render_options.dart';
 import 'theme/css_author_color_parser.dart';
 import 'theme/css_inline_style_declarations.dart';
@@ -130,7 +131,7 @@ final class DefaultForumHtmlRenderTextStyleResolver
       return ForumHtmlResolvedTextStyle.unsupported(style, weight.failure);
     }
     if (weight.value != null) {
-      style = style.copyWith(fontWeight: weight.value);
+      style = weight.value!.apply(style);
     }
 
     final fontStyle = _resolveFontStyle(declarations);
@@ -147,6 +148,9 @@ final class DefaultForumHtmlRenderTextStyleResolver
         return ForumHtmlResolvedTextStyle.unsupported(style, family.failure);
       }
       if (family.hasValue) {
+        if (family.value != style.fontFamily) {
+          style = ForumHtmlVariableWeightPolicy.clearWeightVariation(style);
+        }
         style = style.copyWith(fontFamily: family.value);
       }
     }
@@ -161,8 +165,8 @@ final class DefaultForumHtmlRenderTextStyleResolver
   }) {
     final tag = element.localName?.toLowerCase();
     var style = parentStyle;
-    if (tag == 'strong' || tag == 'b') {
-      style = style.copyWith(fontWeight: FontWeight.w700);
+    if (tag == 'strong' || tag == 'b' || tag == 'th') {
+      style = ForumHtmlVariableWeightPolicy.applyRelativeBold(style);
     }
     if (tag == 'em' || tag == 'i') {
       style = style.copyWith(fontStyle: FontStyle.italic);
@@ -189,9 +193,10 @@ final class DefaultForumHtmlRenderTextStyleResolver
         5: 0.875,
         6: 0.75,
       };
-      style = style.copyWith(
-        fontSize: (baseStyle.fontSize ?? 14) * scales[headingLevel]!,
-        fontWeight: FontWeight.w700,
+      style = ForumHtmlVariableWeightPolicy.applyRelativeBold(
+        style.copyWith(
+          fontSize: (baseStyle.fontSize ?? 14) * scales[headingLevel]!,
+        ),
       );
     }
     return style;
@@ -273,7 +278,7 @@ final class DefaultForumHtmlRenderTextStyleResolver
     return null;
   }
 
-  _ResolvedValue<FontWeight> _resolveFontWeight(
+  _ResolvedValue<_WeightAdjustment> _resolveFontWeight(
     CssInlineStyleDeclarationList declarations,
   ) {
     final value = declarations
@@ -282,27 +287,35 @@ final class DefaultForumHtmlRenderTextStyleResolver
         .trim()
         .toLowerCase();
     if (value == null) {
-      return const _ResolvedValue<FontWeight>.absent();
+      return const _ResolvedValue<_WeightAdjustment>.absent();
     }
-    const weights = <String, FontWeight>{
-      'normal': FontWeight.w400,
-      'bold': FontWeight.w700,
-      '100': FontWeight.w100,
-      '200': FontWeight.w200,
-      '300': FontWeight.w300,
-      '400': FontWeight.w400,
-      '500': FontWeight.w500,
-      '600': FontWeight.w600,
-      '700': FontWeight.w700,
-      '800': FontWeight.w800,
-      '900': FontWeight.w900,
-    };
-    final weight = weights[value];
-    return weight == null
-        ? const _ResolvedValue<FontWeight>.failure(
-            ForumHtmlTextStyleResolutionFailure.unsupportedFontWeight,
-          )
-        : _ResolvedValue<FontWeight>.value(weight);
+    if (value == 'bold' || value == 'bolder') {
+      return const _ResolvedValue<_WeightAdjustment>.value(
+        _WeightAdjustment.relativeBold(),
+      );
+    }
+    if (value == 'lighter') {
+      return const _ResolvedValue<_WeightAdjustment>.value(
+        _WeightAdjustment.relativeLighter(),
+      );
+    }
+    if (value == 'normal') {
+      return const _ResolvedValue<_WeightAdjustment>.value(
+        _WeightAdjustment.explicit(400),
+      );
+    }
+    final numeric = double.tryParse(value);
+    if (numeric != null &&
+        numeric.isFinite &&
+        numeric >= 1 &&
+        numeric <= 1000) {
+      return _ResolvedValue<_WeightAdjustment>.value(
+        _WeightAdjustment.explicit(numeric),
+      );
+    }
+    return const _ResolvedValue<_WeightAdjustment>.failure(
+      ForumHtmlTextStyleResolutionFailure.unsupportedFontWeight,
+    );
   }
 
   _ResolvedValue<FontStyle> _resolveFontStyle(
@@ -370,6 +383,34 @@ final class DefaultForumHtmlRenderTextStyleResolver
         .toLowerCase();
   }
 }
+
+final class _WeightAdjustment {
+  const _WeightAdjustment.relativeBold()
+    : _mode = _WeightMode.relativeBold,
+      explicitWeight = null;
+  const _WeightAdjustment.relativeLighter()
+    : _mode = _WeightMode.relativeLighter,
+      explicitWeight = null;
+  const _WeightAdjustment.explicit(this.explicitWeight)
+    : _mode = _WeightMode.explicit;
+
+  final _WeightMode _mode;
+  final double? explicitWeight;
+
+  TextStyle apply(TextStyle style) => switch (_mode) {
+    _WeightMode.relativeBold => ForumHtmlVariableWeightPolicy.applyRelativeBold(
+      style,
+    ),
+    _WeightMode.relativeLighter =>
+      ForumHtmlVariableWeightPolicy.applyRelativeLighter(style),
+    _WeightMode.explicit => ForumHtmlVariableWeightPolicy.applyExplicitWeight(
+      style,
+      explicitWeight!,
+    ),
+  };
+}
+
+enum _WeightMode { relativeBold, relativeLighter, explicit }
 
 final class _ResolvedValue<T> {
   const _ResolvedValue.absent() : value = null, failure = null;

@@ -11,4 +11,5 @@ export 'domain/models/font_resolution.dart';
 export 'domain/models/imported_font.dart';
 export 'domain/models/resolved_font.dart';
 export 'domain/repositories/font_library_storage_usage.dart';
+export 'domain/repositories/font_weight_preference_repository.dart';
 export 'presentation/body_font_selector.dart';

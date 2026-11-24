@@ -181,6 +181,48 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'variable weight overrides recalculate wght on bold, heading, css weight and clear on code',
+    (tester) async {
+      final baseVariations = ForumHtmlVariableWeightPolicy.bindAxisBounds(
+        const [FontVariation('wght', 400)],
+        min: 100,
+        max: 900,
+      );
+      final baseStyle = TextStyle(fontSize: 16, fontVariations: baseVariations);
+      const html =
+          '<p>plain <b>bold</b> <strong>strong</strong> '
+          '<span style="font-weight: 600">w600</span> '
+          '<span style="font-weight: bold">cssbold</span> '
+          '<code>mono</code></p><h2>heading</h2>';
+      await tester.pumpWidget(_app(html: html, style: baseStyle));
+      await tester.pumpAndSettle();
+
+      final p = _paragraph(tester, 'plain');
+      expect(_styleFor(p.text, 'plain')?.fontVariations, const [
+        FontVariation('wght', 400),
+      ]);
+      expect(_styleFor(p.text, 'bold')?.fontVariations, const [
+        FontVariation('wght', 650),
+      ]);
+      expect(_styleFor(p.text, 'strong')?.fontVariations, const [
+        FontVariation('wght', 650),
+      ]);
+      expect(_styleFor(p.text, 'w600')?.fontVariations, const [
+        FontVariation('wght', 600),
+      ]);
+      expect(_styleFor(p.text, 'cssbold')?.fontVariations, const [
+        FontVariation('wght', 650),
+      ]);
+      expect(_styleFor(p.text, 'mono')?.fontVariations, isEmpty);
+
+      final h2 = _paragraph(tester, 'heading');
+      expect(_styleFor(h2.text, 'heading')?.fontVariations, const [
+        FontVariation('wght', 650),
+      ]);
+    },
+  );
 }
 
 const _html =

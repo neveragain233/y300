@@ -6,6 +6,7 @@ import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/features/fonts/application/font_library_providers.dart';
 import 'package:y300/features/fonts/domain/models/font_identity.dart';
 import 'package:y300/features/fonts/domain/models/font_library_failure.dart';
+import 'package:y300/features/fonts/domain/models/imported_font.dart';
 import 'package:y300/features/fonts/domain/models/resolved_font.dart';
 import 'package:y300/features/fonts/presentation/font_selector_controller.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -25,6 +26,7 @@ Future<ResolvedFont?> showBodyFontSelector({
     importFont: service.importFont,
     deleteFont: service.deleteFont,
     pickFont: picker.pickFont,
+    updateFontWeight: service.updateFontWeight,
     initialFontId: initialFontId,
     changes: service.changes,
   );
@@ -67,7 +69,12 @@ class BodyFontSelector extends StatelessWidget {
                 .copyWith(
                   fontFamily: selected.fontFamily ?? '',
                   fontFamilyFallback: const [],
+                  fontVariations:
+                      controller.previewFontVariations ??
+                      const <FontVariation>[],
                 );
+        final weightAxis = controller.selectedWeightAxis;
+        final previewWeight = controller.previewWeight;
         return ConstrainedBox(
           key: const Key('body-font-selector'),
           constraints: BoxConstraints(
@@ -212,6 +219,17 @@ class BodyFontSelector extends StatelessWidget {
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        if (weightAxis != null && previewWeight != null) ...[
+                          const SizedBox(height: 12),
+                          _WeightControls(
+                            axis: weightAxis,
+                            weight: previewWeight,
+                            canReset: controller.canResetWeight,
+                            enabled: controller.canSelect,
+                            onChanged: controller.setDraftWeight,
+                            onReset: controller.resetDraftWeight,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -356,4 +374,77 @@ class BodyFontSelector extends StatelessWidget {
           l10n.fontSelectorUnsupportedLibraryVersion,
         FontLibraryFailure.loadFailed => l10n.fontSelectorLoadFailed,
       };
+}
+
+class _WeightControls extends StatelessWidget {
+  const _WeightControls({
+    required this.axis,
+    required this.weight,
+    required this.canReset,
+    required this.enabled,
+    required this.onChanged,
+    required this.onReset,
+  });
+
+  final FontWeightAxis axis;
+  final double weight;
+  final bool canReset;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final span = axis.max - axis.min;
+    final divisions = span >= FontWeightAxis.step
+        ? (span / FontWeightAxis.step).round()
+        : null;
+    final clamped = axis.clamp(weight);
+    return Column(
+      key: const Key('body-font-weight-controls'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              l10n.fontSelectorWeight,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${clamped.round()}',
+              key: const Key('body-font-weight-value'),
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const Spacer(),
+            TextButton(
+              key: const Key('body-font-weight-reset'),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              onPressed: enabled && canReset ? onReset : null,
+              child: Text(l10n.fontSelectorWeightReset),
+            ),
+          ],
+        ),
+        Slider(
+          key: const Key('body-font-weight-slider'),
+          min: axis.min,
+          max: axis.max,
+          divisions: divisions,
+          value: clamped,
+          onChanged: enabled ? onChanged : null,
+        ),
+      ],
+    );
+  }
 }

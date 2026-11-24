@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' show FontVariation;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -342,6 +343,30 @@ void main() {
       host.expectCoherentPublications();
     },
   );
+
+  test('same-font weight updates refresh resolved font and cache key without changing font id', () async {
+    final host = _host();
+    host.fonts.setVariableAxis(
+      host.first.id,
+      const FontWeightAxis(min: 100, defaultValue: 400, max: 900),
+    );
+    host.preferences.current = host.preferences.current.copyWith(
+      fontFamily: host.first.id,
+    );
+    await host.load();
+    expect(host.binding.cacheKey, host.first.id);
+    expect(host.binding.resolvedFont.fontVariations, isNull);
+
+    await host.service.updateFontWeight(host.first.id, 620);
+    await _settle();
+    expect(host.binding.preferences.fontFamily, host.first.id);
+    expect(host.binding.resolvedFont.customWeight, 620);
+    expect(host.binding.cacheKey, '${host.first.id}@wght=620.0');
+    expect(host.binding.resolvedFont.fontVariations, const [
+      FontVariation('wght', 620),
+    ]);
+    host.expectCoherentPublications();
+  });
 }
 
 _Harness _host() {
@@ -458,10 +483,36 @@ final class _Runtime implements FontRuntimeLoader {
   }
 }
 
-final class _Fonts implements FontLibraryRepository {
+final class _Fonts
+    implements FontLibraryRepository, FontWeightPreferenceRepository {
   final _entries = <String, ImportedFont>{};
   final _bytes = <String, Uint8List>{};
   final _changes = StreamController<void>.broadcast(sync: true);
+
+  void setVariableAxis(String fontId, FontWeightAxis axis) {
+    final existing = _entries[fontId];
+    if (existing != null) {
+      _entries[fontId] = existing.copyWith(
+        weightAxis: axis,
+        weightAxisScanned: true,
+      );
+    }
+  }
+
+  @override
+  Future<ImportedFont> updateFontWeight(
+    String fontId,
+    double? customWeight,
+  ) async {
+    final existing = _entries[fontId]!;
+    final updated = existing.copyWith(
+      customWeight: customWeight,
+      clearCustomWeight: customWeight == null,
+    );
+    _entries[fontId] = updated;
+    publish();
+    return updated;
+  }
 
   ImportedFont seed(Uint8List bytes, {String fileName = 'reader.ttf'}) {
     final font = const FontFileValidator().validate(

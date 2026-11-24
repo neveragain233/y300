@@ -145,13 +145,49 @@ final class FontFileValidator {
         lastUnit >= 0xd800 && lastUnit <= 0xdbff ? 255 : 256,
       );
     }
+    final weightAxis = _parseWeightAxis(data, tables['fvar']);
     final id = sha256.convert(bytes).toString();
     return ImportedFont(
       id: id,
       displayName: displayName,
       storageFileName: '$id.${version == 0x00010000 ? 'ttf' : 'otf'}',
       byteLength: bytes.length,
+      weightAxis: weightAxis,
+      weightAxisScanned: true,
     );
+  }
+
+  static FontWeightAxis? _parseWeightAxis(ByteData data, _FontTable? table) {
+    if (table == null || table.length < 16) {
+      return null;
+    }
+    final majorVersion = data.getUint16(table.offset);
+    final axesArrayOffset = data.getUint16(table.offset + 4);
+    final axisCount = data.getUint16(table.offset + 8);
+    final axisSize = data.getUint16(table.offset + 10);
+    if (majorVersion != 1 ||
+        axesArrayOffset < 16 ||
+        axesArrayOffset > table.length ||
+        axisCount == 0 ||
+        axisSize < 20 ||
+        axisCount > (table.length - axesArrayOffset) ~/ axisSize) {
+      return null;
+    }
+    const wghtTag = 0x77676874;
+    for (var index = 0; index < axisCount; index++) {
+      final record = table.offset + axesArrayOffset + index * axisSize;
+      if (data.getUint32(record) != wghtTag) {
+        continue;
+      }
+      final min = data.getInt32(record + 4) / 65536.0;
+      final defaultValue = data.getInt32(record + 8) / 65536.0;
+      final max = data.getInt32(record + 12) / 65536.0;
+      if (!FontWeightAxis.isValidRange(min, defaultValue, max)) {
+        return null;
+      }
+      return FontWeightAxis(min: min, defaultValue: defaultValue, max: max);
+    }
+    return null;
   }
 
   static void _validateName(ByteData data, _FontTable table) {

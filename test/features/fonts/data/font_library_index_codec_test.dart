@@ -118,6 +118,42 @@ void main() {
     final result = codec.decode(codec.encode(<ImportedFont>[font]));
     expect(() => result.clear(), throwsUnsupportedError);
   });
+
+  test(
+    'round trips variable weight metadata and decodes legacy v1 entries',
+    () {
+      final legacy = codec.decode(
+        jsonEncode(<String, Object>{
+          'version': 1,
+          'fonts': <Map<String, Object>>[
+            <String, Object>{
+              'id': id,
+              'displayName': '旧版字体',
+              'storageFileName': '$id.ttf',
+              'byteLength': 1024,
+            },
+          ],
+        }),
+      );
+      expect(legacy.single.weightAxis, isNull);
+      expect(legacy.single.weightAxisScanned, isFalse);
+
+      final variable = ImportedFont(
+        id: id,
+        displayName: '可变字体',
+        storageFileName: '$id.ttf',
+        byteLength: 1024,
+        weightAxis: const FontWeightAxis(min: 100, defaultValue: 400, max: 900),
+        customWeight: 550,
+        weightAxisScanned: true,
+      );
+      final decoded = codec
+          .decode(codec.encode(<ImportedFont>[variable]))
+          .single;
+      expect(decoded, variable);
+      expect(decoded.weightAxisScanned, isTrue);
+    },
+  );
 }
 
 final _throwsCorrupt = throwsA(

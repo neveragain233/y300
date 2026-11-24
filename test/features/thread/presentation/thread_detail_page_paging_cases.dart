@@ -768,18 +768,18 @@ void _pagingCases() {
       find.byKey(const Key('thread-detail-appbar-reply-button')),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.reply), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     expect(find.byIcon(Icons.star_border_outlined), findsOneWidget);
     expect(find.byKey(const Key('thread-detail-share-button')), findsNothing);
     expect(
       _centerDxOf(
         tester,
-        find.byKey(const Key('thread-detail-favorite-button')),
+        find.byKey(const Key('thread-detail-appbar-reply-button')),
       ),
       lessThan(
         _centerDxOf(
           tester,
-          find.byKey(const Key('thread-detail-appbar-reply-button')),
+          find.byKey(const Key('thread-detail-favorite-button')),
         ),
       ),
     );

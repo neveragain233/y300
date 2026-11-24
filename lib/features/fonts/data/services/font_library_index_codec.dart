@@ -60,12 +60,17 @@ final class FontLibraryIndexCodec {
           byteLength > FontFileValidator.maxFontBytes) {
         throw const FontLibraryException(FontLibraryFailure.corruptLibrary);
       }
+      final (weightAxis, weightAxisScanned) = _decodeWeightAxis(entry);
+      final customWeight = _decodeCustomWeight(entry, weightAxis);
       fonts.add(
         ImportedFont(
           id: id,
           displayName: name,
           storageFileName: fileName,
           byteLength: byteLength,
+          weightAxis: weightAxis,
+          customWeight: customWeight,
+          weightAxisScanned: weightAxisScanned,
         ),
       );
     }
@@ -75,13 +80,23 @@ final class FontLibraryIndexCodec {
   String encode(List<ImportedFont> fonts) {
     final source = jsonEncode(<String, Object>{
       'version': version,
-      'fonts': <Map<String, Object>>[
+      'fonts': <Map<String, Object?>>[
         for (final font in fonts)
-          <String, Object>{
+          <String, Object?>{
             'id': font.id,
             'displayName': font.displayName,
             'storageFileName': font.storageFileName,
             'byteLength': font.byteLength,
+            if (font.weightAxis != null)
+              'weightAxis': <String, Object>{
+                'min': font.weightAxis!.min,
+                'default': font.weightAxis!.defaultValue,
+                'max': font.weightAxis!.max,
+              }
+            else if (font.weightAxisScanned)
+              'weightAxis': null,
+            if (font.customWeight != null && font.weightAxis != null)
+              'customWeight': font.customWeight!,
           },
       ],
     });
@@ -91,5 +106,60 @@ final class FontLibraryIndexCodec {
       throw const FontLibraryException(FontLibraryFailure.storage);
     }
     return source;
+  }
+
+  static (FontWeightAxis?, bool) _decodeWeightAxis(Map<String, dynamic> entry) {
+    if (!entry.containsKey('weightAxis')) {
+      return (null, false);
+    }
+    final raw = entry['weightAxis'];
+    if (raw == null) {
+      return (null, true);
+    }
+    if (raw is! Map<String, dynamic>) {
+      throw const FontLibraryException(FontLibraryFailure.corruptLibrary);
+    }
+    final min = raw['min'];
+    final defaultValue = raw['default'];
+    final max = raw['max'];
+    if (min is! num ||
+        defaultValue is! num ||
+        max is! num ||
+        !FontWeightAxis.isValidRange(
+          min.toDouble(),
+          defaultValue.toDouble(),
+          max.toDouble(),
+        )) {
+      throw const FontLibraryException(FontLibraryFailure.corruptLibrary);
+    }
+    return (
+      FontWeightAxis(
+        min: min.toDouble(),
+        defaultValue: defaultValue.toDouble(),
+        max: max.toDouble(),
+      ),
+      true,
+    );
+  }
+
+  static double? _decodeCustomWeight(
+    Map<String, dynamic> entry,
+    FontWeightAxis? axis,
+  ) {
+    if (!entry.containsKey('customWeight')) {
+      return null;
+    }
+    final raw = entry['customWeight'];
+    if (raw == null) {
+      return null;
+    }
+    if (raw is! num || !raw.isFinite || axis == null) {
+      throw const FontLibraryException(FontLibraryFailure.corruptLibrary);
+    }
+    final value = raw.toDouble();
+    if (value < axis.min || value > axis.max) {
+      throw const FontLibraryException(FontLibraryFailure.corruptLibrary);
+    }
+    return value;
   }
 }

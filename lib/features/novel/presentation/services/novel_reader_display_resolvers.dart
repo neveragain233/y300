@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:y300/features/content_rendering_shared/content_rendering.dart'
+    show ForumHtmlVariableWeightPolicy;
 import 'package:y300/features/fonts/fonts.dart' show ResolvedFont;
 import 'package:y300/features/novel/data/models/novel_models.dart';
 import 'package:y300/shared/utils/wcag_color_contrast.dart';
@@ -338,13 +340,31 @@ class NovelReaderTypographyResolver {
   }) {
     // Preferences store content identity. Only a completed runtime resolution
     // may provide a family name to the renderer or its measurement paths.
-    final fontFamily = (resolvedFont ?? ResolvedFont.system).fontFamily;
+    final effectiveFont = resolvedFont ?? ResolvedFont.system;
+    final fontFamily = effectiveFont.fontFamily;
+    final axis = effectiveFont.weightAxis;
+    final bodyVariations = axis != null && effectiveFont.fontVariations != null
+        ? ForumHtmlVariableWeightPolicy.bindAxisBounds(
+            effectiveFont.fontVariations,
+            min: axis.min,
+            max: axis.max,
+          )
+        : null;
+    final titleVariations =
+        axis != null && effectiveFont.boldFontVariations != null
+        ? ForumHtmlVariableWeightPolicy.bindAxisBounds(
+            effectiveFont.boldFontVariations,
+            min: axis.min,
+            max: axis.max,
+          )
+        : null;
     final body = TextStyle(
       color: palette.foreground,
       fontSize: preferences.fontSize,
       height: preferences.lineHeight,
       fontFamily: fontFamily,
       fontWeight: _resolveFontWeight(preferences.fontWeight),
+      fontVariations: bodyVariations,
     );
     return NovelReaderTypography(
       body: body,
@@ -353,12 +373,14 @@ class NovelReaderTypographyResolver {
             color: palette.foreground,
             fontFamily: fontFamily,
             fontWeight: FontWeight.w700,
+            fontVariations: titleVariations,
           ) ??
           TextStyle(
             color: palette.foreground,
             fontSize: preferences.fontSize + 4,
             fontWeight: FontWeight.w700,
             fontFamily: fontFamily,
+            fontVariations: titleVariations,
           ),
       quote: body,
       link: body.copyWith(color: palette.link),
