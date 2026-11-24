@@ -11508,6 +11508,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'隐藏'**
   String get threadBlacklistHideAgain;
+
+  /// No description provided for @threadKeywordCollapsedGeneric.
+  ///
+  /// In zh, this message translates to:
+  /// **'由于你的屏蔽设置，该楼层已被屏蔽'**
+  String get threadKeywordCollapsedGeneric;
+
+  /// No description provided for @keywordThreadGateGenericMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'由于你的屏蔽设置，此主题已被屏蔽。'**
+  String get keywordThreadGateGenericMessage;
+
+  /// No description provided for @keywordThreadGateManageRules.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理屏蔽规则'**
+  String get keywordThreadGateManageRules;
+
+  /// No description provided for @contentFilterListThreadHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'由于你的屏蔽设置，该帖已被隐藏'**
+  String get contentFilterListThreadHidden;
+
+  /// No description provided for @contentFilterRevealOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次显示'**
+  String get contentFilterRevealOnce;
+
+  /// No description provided for @contentFilterRevealedNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'已临时显示此隐藏帖子'**
+  String get contentFilterRevealedNotice;
+
+  /// No description provided for @contentFilterHideBlockedCompletely.
+  ///
+  /// In zh, this message translates to:
+  /// **'彻底隐藏被屏蔽的内容'**
+  String get contentFilterHideBlockedCompletely;
+
+  /// No description provided for @contentFilterHideBlockedCompletelyDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭时在版块、搜索和标签列表中显示已隐藏提示，打开后直接从列表移除'**
+  String get contentFilterHideBlockedCompletelyDetail;
+
+  /// No description provided for @contentFilterTabBlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽词'**
+  String get contentFilterTabBlock;
+
+  /// No description provided for @contentFilterTabAllow.
+  ///
+  /// In zh, this message translates to:
+  /// **'白名单'**
+  String get contentFilterTabAllow;
+
+  /// No description provided for @contentFilterWhitelistHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'命中白名单的内容不会被关键词规则屏蔽，优先级高于屏蔽词'**
+  String get contentFilterWhitelistHint;
+
+  /// No description provided for @contentFilterRuleKindLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'规则类型'**
+  String get contentFilterRuleKindLabel;
+
+  /// No description provided for @contentFilterRuleKindBlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽词'**
+  String get contentFilterRuleKindBlock;
+
+  /// No description provided for @contentFilterRuleKindAllow.
+  ///
+  /// In zh, this message translates to:
+  /// **'白名单'**
+  String get contentFilterRuleKindAllow;
+
+  /// No description provided for @contentFilterRuleMatchTypeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'匹配方式'**
+  String get contentFilterRuleMatchTypeLabel;
+
+  /// No description provided for @contentFilterRuleMatchPlain.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通关键词'**
+  String get contentFilterRuleMatchPlain;
+
+  /// No description provided for @contentFilterRuleMatchRegex.
+  ///
+  /// In zh, this message translates to:
+  /// **'正则表达式'**
+  String get contentFilterRuleMatchRegex;
+
+  /// No description provided for @contentFilterRuleDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已停用'**
+  String get contentFilterRuleDisabled;
+
+  /// No description provided for @contentFilterKeywordRegexHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入正则表达式（不区分大小写）'**
+  String get contentFilterKeywordRegexHint;
+
+  /// No description provided for @contentFilterKeywordRegexError.
+  ///
+  /// In zh, this message translates to:
+  /// **'正则表达式格式不正确'**
+  String get contentFilterKeywordRegexError;
+
+  /// No description provided for @contentFilterKeywordRegexTooLongError.
+  ///
+  /// In zh, this message translates to:
+  /// **'正则表达式过长（最多 160 个字符）'**
+  String get contentFilterKeywordRegexTooLongError;
+
+  /// No description provided for @contentFilterWhitelistEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有白名单规则，点击右上角添加。'**
+  String get contentFilterWhitelistEmpty;
 }
 
 class _AppLocalizationsDelegate

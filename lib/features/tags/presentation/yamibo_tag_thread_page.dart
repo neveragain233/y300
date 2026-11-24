@@ -9,6 +9,7 @@ import 'package:y300/features/content_filter/application/blocked_keywords_contro
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/content_filter/presentation/widgets/keyword_filtered_thread_tile.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -21,7 +22,7 @@ import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/native_page_dropdown_button.dart';
 
-class YamiboTagThreadPage extends ConsumerWidget {
+class YamiboTagThreadPage extends ConsumerStatefulWidget {
   const YamiboTagThreadPage({
     super.key,
     required this.tagId,
@@ -34,11 +35,30 @@ class YamiboTagThreadPage extends ConsumerWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<YamiboTagThreadPage> createState() =>
+      _YamiboTagThreadPageState();
+}
+
+class _YamiboTagThreadPageState extends ConsumerState<YamiboTagThreadPage> {
+  final Set<String> _revealedKeywordThreadIds = <String>{};
+  int? _lastObservedPage;
+  int? _lastKeywordRevision;
+
+  @override
+  void didUpdateWidget(covariant YamiboTagThreadPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tagId != widget.tagId || oldWidget.page != widget.page) {
+      _revealedKeywordThreadIds.clear();
+      _lastObservedPage = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final args = YamiboTagThreadPageArgs(
-      tagId: tagId,
-      page: page,
-      title: title,
+      tagId: widget.tagId,
+      page: widget.page,
+      title: widget.title,
     );
     final asyncState = ref.watch(yamiboTagThreadPageControllerProvider(args));
     final controller = ref.read(
@@ -52,26 +72,43 @@ class YamiboTagThreadPage extends ConsumerWidget {
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final keywordRules = ref.watch(keywordFilterRulesProvider);
-    final hideByKeyword =
-        keywordRules.hideMatchingThreadsInLists && keywordRules.hasBodyRules;
-    final visibleTopics = [
-      for (final thread in data?.topics ?? const <ForumTagTopicSummary>[])
-        if (!blockedThreadIds.contains(
-              ThreadBlockIdentity.normalizeTid(thread.tid),
-            ) &&
-            (!hideBlacklistedThreads ||
-                !(thread.authorId != null &&
-                    blacklistedUserIds.contains(thread.authorId!.trim()))) &&
-            (!hideByKeyword ||
-                KeywordFilterMatcher.matchPlainText(
-                      thread.title,
-                      keywordRules.bodyRules,
-                    ) ==
-                    null))
-          thread,
-    ];
+    final currentPage = data?.pagination.currentPage;
+    if ((currentPage != null && currentPage != _lastObservedPage) ||
+        (_lastKeywordRevision != null &&
+            _lastKeywordRevision != keywordRules.revision)) {
+      _revealedKeywordThreadIds.clear();
+    }
+    _lastObservedPage = currentPage;
+    _lastKeywordRevision = keywordRules.revision;
+
+    final visibleEntries =
+        <({ForumTagTopicSummary thread, bool isKeywordFiltered, String tid})>[];
+    for (final thread in data?.topics ?? const <ForumTagTopicSummary>[]) {
+      final normalizedTid =
+          ThreadBlockIdentity.normalizeTid(thread.tid) ?? thread.tid.trim();
+      if (blockedThreadIds.contains(normalizedTid)) {
+        continue;
+      }
+      if (hideBlacklistedThreads &&
+          thread.authorId != null &&
+          blacklistedUserIds.contains(thread.authorId!.trim())) {
+        continue;
+      }
+      final matchedKeyword = KeywordFilterMatcher.matchThreadListItem(
+        subject: thread.title,
+        ruleSet: keywordRules,
+      );
+      if (matchedKeyword != null && keywordRules.hideBlockedContentCompletely) {
+        continue;
+      }
+      visibleEntries.add((
+        thread: thread,
+        isKeywordFiltered: matchedKeyword != null,
+        tid: normalizedTid,
+      ));
+    }
     final hiddenByRules =
-        data != null && data.topics.isNotEmpty && visibleTopics.isEmpty;
+        data != null && data.topics.isNotEmpty && visibleEntries.isEmpty;
     final appBarTitle = data?.tag.name?.trim().isNotEmpty == true
         ? data!.tag.name!
         : (state.title.trim().isNotEmpty ? state.title : l10n.tagTitleFallback);
@@ -124,12 +161,50 @@ class YamiboTagThreadPage extends ConsumerWidget {
                                   data.pagination.totalPages!),
                     )
                   else
-                    for (final thread in visibleTopics) ...[
-                      _TagThreadCard(
-                        thread: thread,
-                        capabilities: state.capabilities,
-                        palette: palette,
-                        onTap: () => _openThread(context, thread),
+                    for (final entry in visibleEntries) ...[
+                      Builder(
+                        builder: (context) {
+                          final thread = entry.thread;
+                          final revealed =
+                              entry.isKeywordFiltered &&
+                              _revealedKeywordThreadIds.contains(entry.tid);
+                          if (entry.isKeywordFiltered && !revealed) {
+                            return KeywordFilteredThreadPlaceholder(
+                              tid: thread.tid,
+                              palette: palette,
+                              onRevealOnce: () {
+                                setState(
+                                  () =>
+                                      _revealedKeywordThreadIds.add(entry.tid),
+                                );
+                              },
+                            );
+                          }
+                          final card = _TagThreadCard(
+                            thread: thread,
+                            capabilities: state.capabilities,
+                            palette: palette,
+                            onTap: () => _openThread(
+                              context,
+                              thread,
+                              bypassKeywordThreadGate: revealed,
+                            ),
+                          );
+                          if (!revealed) {
+                            return card;
+                          }
+                          return KeywordRevealedThreadWrapper(
+                            tid: thread.tid,
+                            palette: palette,
+                            onHideAgain: () {
+                              setState(
+                                () =>
+                                    _revealedKeywordThreadIds.remove(entry.tid),
+                              );
+                            },
+                            child: card,
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -146,12 +221,19 @@ class YamiboTagThreadPage extends ConsumerWidget {
     );
   }
 
-  void _openThread(BuildContext context, ForumTagTopicSummary thread) {
+  void _openThread(
+    BuildContext context,
+    ForumTagTopicSummary thread, {
+    bool bypassKeywordThreadGate = false,
+  }) {
     openAdaptiveDetail(
       context,
       MaterialPageRoute<void>(
-        builder: (_) =>
-            ThreadDetailPage(tid: thread.tid, subject: thread.title),
+        builder: (_) => ThreadDetailPage(
+          tid: thread.tid,
+          subject: thread.title,
+          bypassKeywordThreadGate: bypassKeywordThreadGate,
+        ),
       ),
     );
   }

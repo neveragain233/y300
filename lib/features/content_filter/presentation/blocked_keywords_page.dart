@@ -6,13 +6,14 @@ import 'package:y300/features/content_filter/application/blocked_keywords_contro
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
+import 'package:y300/shared/widgets/app_capsule_tab_bar.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 import 'package:y300/shared/widgets/app_text_input.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
-/// 本地关键词屏蔽管理页：列表标题隐藏开关与规则增删改。
+/// 本地关键词屏蔽管理页：彻底隐藏开关、屏蔽词/白名单双页签、规则开关与增删改。
 class BlockedKeywordsPage extends ConsumerStatefulWidget {
   const BlockedKeywordsPage({super.key});
 
@@ -22,11 +23,19 @@ class BlockedKeywordsPage extends ConsumerStatefulWidget {
 }
 
 class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
+  int _selectedTabIndex = 0;
+
+  BlockedKeywordKind get _activeKind => _selectedTabIndex == 0
+      ? BlockedKeywordKind.block
+      : BlockedKeywordKind.allow;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final asyncRules = ref.watch(blockedKeywordsControllerProvider);
-    final hideInLists = ref.watch(hideKeywordThreadsInListsProvider);
+    final hideCompletely = ref.watch(
+      hideBlockedKeywordThreadsCompletelyProvider,
+    );
     return Scaffold(
       key: const Key('blocked-keywords-page'),
       appBar: AppPageAppBar(
@@ -35,7 +44,8 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
           IconButton(
             key: const Key('content-filter-add-keyword-button'),
             tooltip: l10n.contentFilterKeywordAdd,
-            onPressed: () => unawaited(_openKeywordEditor()),
+            onPressed: () =>
+                unawaited(_openKeywordEditor(defaultKind: _activeKind)),
             icon: const Icon(Icons.add),
           ),
         ],
@@ -57,16 +67,37 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
                         'content-filter-hide-keyword-threads-switch',
                       ),
                       leading: const Icon(Icons.visibility_off_outlined),
-                      title: l10n.contentFilterHideKeywordThreadsInLists,
-                      subtitle:
-                          l10n.contentFilterHideKeywordThreadsInListsDetail,
-                      value: hideInLists,
+                      title: l10n.contentFilterHideBlockedCompletely,
+                      subtitle: l10n.contentFilterHideBlockedCompletelyDetail,
+                      value: hideCompletely,
                       onChanged: (value) =>
-                          unawaited(_setHideMatchingThreads(value)),
+                          unawaited(_setHideCompletely(value)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                AppCapsuleTabBar(
+                  tabs: [
+                    AppCapsuleTabItem(
+                      id: 'block',
+                      label: l10n.contentFilterTabBlock,
+                    ),
+                    AppCapsuleTabItem(
+                      id: 'allow',
+                      label: l10n.contentFilterTabAllow,
+                    ),
+                  ],
+                  selectedIndex: _selectedTabIndex,
+                  indicatorKey: const Key('content-filter-tab-indicator'),
+                  tabKeyBuilder: (id) => Key('content-filter-tab-$id'),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  onTap: (index) {
+                    if (index != _selectedTabIndex) {
+                      setState(() => _selectedTabIndex = index);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
                 ...asyncRules.when(
                   loading: () => const [
                     Center(
@@ -96,19 +127,36 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
 
   List<Widget> _buildKeywordSection(
     AppLocalizations l10n,
-    List<BlockedKeyword> rules,
+    List<BlockedKeyword> allRules,
   ) {
     final theme = Theme.of(context);
+    final kind = _activeKind;
+    final filtered = [
+      for (final rule in allRules)
+        if (rule.kind == kind) rule,
+    ];
     return [
+      if (kind == BlockedKeywordKind.allow)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+          child: Text(
+            l10n.contentFilterWhitelistHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
       AppGroupedSection(
-        title: l10n.contentFilterKeywordsCount(rules.length),
+        title: l10n.contentFilterKeywordsCount(filtered.length),
         children: [
-          if (rules.isEmpty)
+          if (filtered.isEmpty)
             Padding(
               key: const Key('content-filter-blocked-keyword-empty'),
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
               child: Text(
-                l10n.contentFilterKeywordsEmpty,
+                kind == BlockedKeywordKind.allow
+                    ? l10n.contentFilterWhitelistEmpty
+                    : l10n.contentFilterKeywordsEmpty,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -116,27 +164,35 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
               ),
             )
           else
-            for (final rule in rules)
+            for (final rule in filtered)
               AppGroupedRow(
                 key: Key('content-filter-keyword-${rule.id}'),
-                leading: Icon(
-                  rule.scope == BlockedKeywordScope.includeBody
-                      ? Icons.article_outlined
-                      : Icons.chat_bubble_outline,
+                leading: Opacity(
+                  opacity: rule.enabled ? 1.0 : 0.45,
+                  child: Icon(_iconForRule(rule)),
                 ),
                 title: rule.keyword,
-                subtitle: rule.scope == BlockedKeywordScope.includeBody
-                    ? l10n.contentFilterKeywordScopeIncludeBody
-                    : l10n.contentFilterKeywordScopeRepliesOnly,
+                subtitle: _subtitleForRule(l10n, rule),
                 onTap: () => unawaited(_openKeywordEditor(existing: rule)),
-                trailing: TextButton(
-                  key: Key('content-filter-delete-keyword-${rule.id}'),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(72, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  onPressed: () => unawaited(_deleteKeyword(rule)),
-                  child: Text(l10n.contentFilterKeywordDelete),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch.adaptive(
+                      key: Key('content-filter-toggle-keyword-${rule.id}'),
+                      value: rule.enabled,
+                      onChanged: (value) =>
+                          unawaited(_toggleRuleEnabled(rule, value)),
+                    ),
+                    TextButton(
+                      key: Key('content-filter-delete-keyword-${rule.id}'),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(56, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () => unawaited(_deleteKeyword(rule)),
+                      child: Text(l10n.contentFilterKeywordDelete),
+                    ),
+                  ],
                 ),
               ),
         ],
@@ -144,13 +200,55 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
     ];
   }
 
-  Future<void> _setHideMatchingThreads(bool value) async {
+  IconData _iconForRule(BlockedKeyword rule) {
+    if (rule.isRegex) {
+      return Icons.code_rounded;
+    }
+    if (rule.isWhitelist) {
+      return Icons.verified_user_outlined;
+    }
+    return rule.scope == BlockedKeywordScope.includeBody
+        ? Icons.article_outlined
+        : Icons.chat_bubble_outline;
+  }
+
+  String _subtitleForRule(AppLocalizations l10n, BlockedKeyword rule) {
+    final matchLabel = rule.isRegex
+        ? l10n.contentFilterRuleMatchRegex
+        : l10n.contentFilterRuleMatchPlain;
+    final scopeLabel = rule.isWhitelist
+        ? l10n.contentFilterRuleKindAllow
+        : (rule.scope == BlockedKeywordScope.includeBody
+              ? l10n.contentFilterKeywordScopeIncludeBody
+              : l10n.contentFilterKeywordScopeRepliesOnly);
+    final base = '$matchLabel · $scopeLabel';
+    return rule.enabled ? base : '$base · ${l10n.contentFilterRuleDisabled}';
+  }
+
+  Future<void> _setHideCompletely(bool value) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
     final feedbackStyle = TransientFeedbackStyle.capture(context);
     final saved = await ref
         .read(keywordFilterPreferencesControllerProvider.notifier)
-        .setHideMatchingThreadsInLists(value);
+        .setHideBlockedContentCompletely(value);
+    if (!mounted || saved) {
+      return;
+    }
+    showTransientSnackBarWithMessenger(
+      messenger,
+      feedbackStyle,
+      l10n.contentFilterSaveFailed,
+    );
+  }
+
+  Future<void> _toggleRuleEnabled(BlockedKeyword rule, bool enabled) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
+    final saved = await ref
+        .read(blockedKeywordsControllerProvider.notifier)
+        .setEnabled(rule.id, enabled);
     if (!mounted || saved) {
       return;
     }
@@ -201,18 +299,26 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
     );
   }
 
-  Future<void> _openKeywordEditor({BlockedKeyword? existing}) async {
+  Future<void> _openKeywordEditor({
+    BlockedKeyword? existing,
+    BlockedKeywordKind defaultKind = BlockedKeywordKind.block,
+  }) async {
     await showAdaptivePanel<void>(
       context: context,
-      builder: (_) => _KeywordEditorSheet(existing: existing),
+      builder: (_) =>
+          _KeywordEditorSheet(existing: existing, defaultKind: defaultKind),
     );
   }
 }
 
 class _KeywordEditorSheet extends ConsumerStatefulWidget {
-  const _KeywordEditorSheet({this.existing});
+  const _KeywordEditorSheet({
+    this.existing,
+    this.defaultKind = BlockedKeywordKind.block,
+  });
 
   final BlockedKeyword? existing;
+  final BlockedKeywordKind defaultKind;
 
   @override
   ConsumerState<_KeywordEditorSheet> createState() =>
@@ -221,6 +327,8 @@ class _KeywordEditorSheet extends ConsumerStatefulWidget {
 
 class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
   late final TextEditingController _controller;
+  late BlockedKeywordKind _kind;
+  late BlockedKeywordMatchType _matchType;
   late BlockedKeywordScope _scope;
   String? _errorText;
   bool _saving = false;
@@ -229,6 +337,8 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.existing?.keyword ?? '');
+    _kind = widget.existing?.kind ?? widget.defaultKind;
+    _matchType = widget.existing?.matchType ?? BlockedKeywordMatchType.plain;
     _scope = widget.existing?.scope ?? BlockedKeywordScope.repliesOnly;
   }
 
@@ -238,12 +348,27 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
     super.dispose();
   }
 
+  String? _validateLocalError(AppLocalizations l10n, String raw) {
+    final error = validateBlockedKeywordPattern(raw, _matchType);
+    if (error == null) {
+      return null;
+    }
+    return switch (error) {
+      BlockedKeywordPatternError.empty => l10n.contentFilterKeywordEmptyError,
+      BlockedKeywordPatternError.regexTooLong =>
+        l10n.contentFilterKeywordRegexTooLongError,
+      BlockedKeywordPatternError.invalidRegex =>
+        l10n.contentFilterKeywordRegexError,
+    };
+  }
+
   Future<void> _submit() async {
     if (_saving) return;
     final l10n = AppLocalizations.of(context);
     final raw = _controller.text.trim();
-    if (normalizeBlockedKeyword(raw).isEmpty) {
-      setState(() => _errorText = l10n.contentFilterKeywordEmptyError);
+    final localError = _validateLocalError(l10n, raw);
+    if (localError != null) {
+      setState(() => _errorText = localError);
       return;
     }
     setState(() {
@@ -253,11 +378,18 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
     final controller = ref.read(blockedKeywordsControllerProvider.notifier);
     final existing = widget.existing;
     final result = existing == null
-        ? await controller.add(keyword: raw, scope: _scope)
+        ? await controller.add(
+            keyword: raw,
+            scope: _scope,
+            kind: _kind,
+            matchType: _matchType,
+          )
         : await controller.updateRule(
             id: existing.id,
             keyword: raw,
             scope: _scope,
+            kind: _kind,
+            matchType: _matchType,
           );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -267,6 +399,10 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
         Navigator.of(context).pop();
       case BlockedKeywordMutationStatus.invalid:
         setState(() => _errorText = l10n.contentFilterKeywordEmptyError);
+      case BlockedKeywordMutationStatus.invalidRegex:
+        setState(() => _errorText = l10n.contentFilterKeywordRegexError);
+      case BlockedKeywordMutationStatus.regexTooLong:
+        setState(() => _errorText = l10n.contentFilterKeywordRegexTooLongError);
       case BlockedKeywordMutationStatus.alreadyExists:
         setState(() => _errorText = l10n.contentFilterKeywordDuplicateError);
       case BlockedKeywordMutationStatus.failed:
@@ -300,7 +436,9 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
               key: const Key('content-filter-keyword-input'),
               controller: _controller,
               label: l10n.contentFilterKeywordLabel,
-              hintText: l10n.contentFilterKeywordHint,
+              hintText: _matchType == BlockedKeywordMatchType.regex
+                  ? l10n.contentFilterKeywordRegexHint
+                  : l10n.contentFilterKeywordHint,
               errorText: _errorText,
               autofocus: !isEditing,
               textInputAction: TextInputAction.done,
@@ -313,32 +451,99 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
             ),
             const SizedBox(height: 16),
             Text(
-              l10n.contentFilterKeywordScopeLabel,
+              l10n.contentFilterRuleKindLabel,
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
-            AppGroupedSection(
-              children: [
-                _ScopeOptionRow(
-                  optionKey: const Key('content-filter-scope-replies-only'),
-                  title: l10n.contentFilterKeywordScopeRepliesOnly,
-                  subtitle: l10n.contentFilterKeywordScopeRepliesOnlyDetail,
-                  selected: _scope == BlockedKeywordScope.repliesOnly,
-                  onTap: () =>
-                      setState(() => _scope = BlockedKeywordScope.repliesOnly),
+            SegmentedButton<BlockedKeywordKind>(
+              segments: [
+                ButtonSegment(
+                  value: BlockedKeywordKind.block,
+                  label: Text(
+                    l10n.contentFilterRuleKindBlock,
+                    key: const Key('content-filter-kind-block'),
+                  ),
                 ),
-                _ScopeOptionRow(
-                  optionKey: const Key('content-filter-scope-include-body'),
-                  title: l10n.contentFilterKeywordScopeIncludeBody,
-                  subtitle: l10n.contentFilterKeywordScopeIncludeBodyDetail,
-                  selected: _scope == BlockedKeywordScope.includeBody,
-                  onTap: () =>
-                      setState(() => _scope = BlockedKeywordScope.includeBody),
+                ButtonSegment(
+                  value: BlockedKeywordKind.allow,
+                  label: Text(
+                    l10n.contentFilterRuleKindAllow,
+                    key: const Key('content-filter-kind-allow'),
+                  ),
                 ),
               ],
+              selected: {_kind},
+              onSelectionChanged: (selection) {
+                setState(() => _kind = selection.first);
+              },
             ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.contentFilterRuleMatchTypeLabel,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<BlockedKeywordMatchType>(
+              segments: [
+                ButtonSegment(
+                  value: BlockedKeywordMatchType.plain,
+                  label: Text(
+                    l10n.contentFilterRuleMatchPlain,
+                    key: const Key('content-filter-match-plain'),
+                  ),
+                ),
+                ButtonSegment(
+                  value: BlockedKeywordMatchType.regex,
+                  label: Text(
+                    l10n.contentFilterRuleMatchRegex,
+                    key: const Key('content-filter-match-regex'),
+                  ),
+                ),
+              ],
+              selected: {_matchType},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _matchType = selection.first;
+                  _errorText = null;
+                });
+              },
+            ),
+            if (_kind == BlockedKeywordKind.block) ...[
+              const SizedBox(height: 16),
+              Text(
+                l10n.contentFilterKeywordScopeLabel,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              AppGroupedSection(
+                children: [
+                  _ScopeOptionRow(
+                    optionKey: const Key('content-filter-scope-replies-only'),
+                    title: l10n.contentFilterKeywordScopeRepliesOnly,
+                    subtitle: l10n.contentFilterKeywordScopeRepliesOnlyDetail,
+                    selected: _scope == BlockedKeywordScope.repliesOnly,
+                    onTap: () => setState(
+                      () => _scope = BlockedKeywordScope.repliesOnly,
+                    ),
+                  ),
+                  _ScopeOptionRow(
+                    optionKey: const Key('content-filter-scope-include-body'),
+                    title: l10n.contentFilterKeywordScopeIncludeBody,
+                    subtitle: l10n.contentFilterKeywordScopeIncludeBodyDetail,
+                    selected: _scope == BlockedKeywordScope.includeBody,
+                    onTap: () => setState(
+                      () => _scope = BlockedKeywordScope.includeBody,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
             Row(
               children: [

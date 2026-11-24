@@ -45,6 +45,7 @@ import 'package:y300/features/content_filter/domain/services/thread_block_identi
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/blacklist/presentation/blacklist_author_gate_view.dart';
+import 'package:y300/features/content_filter/presentation/blocked_keywords_page.dart';
 import 'package:y300/features/content_filter/presentation/services/blacklist_user_action.dart';
 import 'package:y300/features/content_filter/presentation/services/thread_block_action.dart';
 import 'package:y300/features/content_filter/presentation/widgets/blocked_keyword_thread_gate_view.dart';
@@ -94,6 +95,7 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
     this.initialForumName,
     this.bodyReadingObserver,
     this.gateBlockedEntry = false,
+    this.bypassKeywordThreadGate = false,
   }) : assert(
          landing == ThreadPostLanding.top ||
              (targetPid != null && targetPid != ''),
@@ -115,6 +117,10 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
   /// Direct links, favorites and history opt in; list entries already filter
   /// their rows and keep their existing first-frame behavior.
   final bool gateBlockedEntry;
+
+  /// Whether the reader already confirmed viewing this thread from a filtered
+  /// list placeholder in the current navigation flow.
+  final bool bypassKeywordThreadGate;
 
   @override
   ConsumerState<ThreadDetailPage> createState() => _ThreadDetailPageState();
@@ -163,6 +169,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   @override
   void initState() {
     super.initState();
+    _allowedKeywordThreadView = widget.bypassKeywordThreadGate;
     _scrollController = ScrollController();
     _titleObserver = ThreadDetailScrollTitleObserver(isMounted: () => mounted);
     _imageReaderReturnCoordinator = ThreadImageReaderReturnCoordinator(
@@ -472,28 +479,24 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       final rawSubject = state.subject.trim().isNotEmpty
           ? state.subject
           : widget.subject;
-      final matchedKeyword =
-          KeywordFilterMatcher.matchPlainText(
-            rawSubject,
-            keywordRules.bodyRules,
-            convertedText: projection.displaySubject,
-          ) ??
-          (topicAuthor != null
-              ? KeywordFilterMatcher.matchHtmlBody(
-                  topicAuthor.message,
-                  keywordRules.bodyRules,
-                  excludeQuotes: false,
-                  convertedHtml: projection
-                      .findByPid(topicAuthor.pid)
-                      ?.displayPost
-                      .message,
-                )
-              : null);
+      final matchedKeyword = KeywordFilterMatcher.matchThreadTopic(
+        subject: rawSubject,
+        convertedSubject: projection.displaySubject,
+        bodyHtml: topicAuthor?.message,
+        convertedBodyHtml: topicAuthor != null
+            ? projection.findByPid(topicAuthor.pid)?.displayPost.message
+            : null,
+        ruleSet: keywordRules,
+      );
       if (matchedKeyword != null) {
         return BlockedKeywordThreadGateView(
           subject: rawSubject,
-          matchedKeyword: matchedKeyword.keyword,
           onViewOnce: () => setState(() => _allowedKeywordThreadView = true),
+          onManageRules: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const BlockedKeywordsPage(),
+            ),
+          ),
         );
       }
     }
@@ -1229,6 +1232,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             keywordRules.replyRules,
             excludeQuotes: true,
             convertedHtml: convertedHtml,
+            allowRules: keywordRules.activeAllowRules,
           )?.keyword
         : null;
     if (!isBlacklisted && matchedKeyword == null) {

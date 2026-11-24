@@ -203,7 +203,14 @@ void main() {
         find.byKey(const Key('thread-blacklisted-post-p2')),
         findsOneWidget,
       );
-      expect(find.textContaining('剧透'), findsWidgets);
+      expect(find.text('由于你的屏蔽设置，该楼层已被屏蔽'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('thread-blacklisted-post-p2')),
+          matching: find.textContaining('剧透'),
+        ),
+        findsNothing,
+      );
 
       await tester.tap(find.byKey(const Key('thread-blacklisted-expand-p2')));
       await tester.pumpAndSettle();
@@ -281,6 +288,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('keyword-thread-gate')), findsOneWidget);
+    expect(find.text('由于你的屏蔽设置，此主题已被屏蔽。'), findsOneWidget);
+    expect(find.textContaining('剧透'), findsNothing);
     expect(find.byKey(const Key('thread-post-card-p1')), findsNothing);
 
     await tester.tap(find.byKey(const Key('keyword-thread-view-once-button')));
@@ -290,82 +299,133 @@ void main() {
     expect(find.byKey(const Key('thread-post-card-p1')), findsOneWidget);
   });
 
-  testWidgets('list filtering respects hideMatchingThreadsInLists toggle', (
-    tester,
-  ) async {
-    final now = DateTime(2026, 11, 24);
-    final includeBodyRule = BlockedKeyword(
-      id: 'k1',
-      keyword: '剧透',
-      normalizedKeyword: '剧透',
-      scope: BlockedKeywordScope.includeBody,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final threads = [
-      ForumThreadSummary(
-        tid: '1',
-        subject: '含剧透的帖子',
-        author: 'A',
-        uid: '10',
-        replies: 0,
-        views: 10,
-        dateline: '2026-11-24',
-      ),
-      ForumThreadSummary(
-        tid: '2',
-        subject: '正常帖子',
-        author: 'B',
-        uid: '11',
-        replies: 0,
-        views: 10,
-        dateline: '2026-11-24',
-      ),
-    ];
-    final projection = ForumDisplayContentProjection.raw(
-      ForumDisplayPageState.initial(
-        fid: '33',
-        title: '百合会',
-      ).copyWith(threads: threads, lastPage: 1),
-      mode: TextConversionMode.none,
-    );
+  testWidgets(
+    'list filtering shows placeholder by default, supports reveal/hide, and hides completely when enabled',
+    (tester) async {
+      final now = DateTime(2026, 11, 24);
+      final includeBodyRule = BlockedKeyword(
+        id: 'k1',
+        keyword: '剧透',
+        normalizedKeyword: '剧透',
+        scope: BlockedKeywordScope.includeBody,
+        createdAt: now,
+        updatedAt: now,
+      );
+      final allowRule = BlockedKeyword(
+        id: 'a1',
+        keyword: '剧透预警',
+        normalizedKeyword: '剧透预警',
+        scope: BlockedKeywordScope.includeBody,
+        kind: BlockedKeywordKind.allow,
+        createdAt: now,
+        updatedAt: now,
+      );
+      final threads = [
+        ForumThreadSummary(
+          tid: '1',
+          subject: '含剧透的帖子',
+          author: 'A',
+          uid: '10',
+          replies: 0,
+          views: 10,
+          dateline: '2026-11-24',
+        ),
+        ForumThreadSummary(
+          tid: '2',
+          subject: '正常帖子',
+          excerpt: '这里有剧透预警，可以安全阅读',
+          author: 'B',
+          uid: '11',
+          replies: 0,
+          views: 10,
+          dateline: '2026-11-24',
+        ),
+        ForumThreadSummary(
+          tid: '3',
+          subject: '标题正常的帖子',
+          excerpt: '摘要里出现了剧透内容',
+          author: 'C',
+          uid: '12',
+          replies: 0,
+          views: 10,
+          dateline: '2026-11-24',
+        ),
+      ];
+      final projection = ForumDisplayContentProjection.raw(
+        ForumDisplayPageState.initial(
+          fid: '33',
+          title: '百合会',
+        ).copyWith(threads: threads, lastPage: 1),
+        mode: TextConversionMode.none,
+      );
 
-    Widget buildWithHide(bool hide) => ProviderScope(
-      child: LocalizedTestApp(
-        home: Scaffold(
-          body: ForumDisplayContent(
-            projection: projection,
-            scrollController: ScrollController(),
-            filterAnchorKey: GlobalKey(),
-            headImageKey: GlobalKey(),
-            keywordFilterRules: KeywordFilterRuleSet(
-              rules: [includeBodyRule],
-              hideMatchingThreadsInLists: hide,
-              revision: hide ? 1 : 2,
+      Widget buildWithHide(bool hideCompletely) => ProviderScope(
+        child: LocalizedTestApp(
+          home: Scaffold(
+            body: ForumDisplayContent(
+              projection: projection,
+              scrollController: ScrollController(),
+              filterAnchorKey: GlobalKey(),
+              headImageKey: GlobalKey(),
+              keywordFilterRules: KeywordFilterRuleSet(
+                rules: [includeBodyRule, allowRule],
+                hideBlockedContentCompletely: hideCompletely,
+                revision: hideCompletely ? 1 : 2,
+              ),
+              onLoadMore: () {},
+              onLoadPrevious: () {},
+              onSelectPage: (_) {},
+              onOpenFilter: (_) {},
+              onOpenThreadTag: (_) {},
+              onOpenThread: (_) {},
+              onOpenTopEntry: (_) {},
+              onOpenSubForum: (_) {},
             ),
-            onLoadMore: () {},
-            onLoadPrevious: () {},
-            onSelectPage: (_) {},
-            onOpenFilter: (_) {},
-            onOpenThreadTag: (_) {},
-            onOpenThread: (_) {},
-            onOpenTopEntry: (_) {},
-            onOpenSubForum: (_) {},
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpWidget(buildWithHide(true));
-    await tester.pumpAndSettle();
-    expect(find.text('含剧透的帖子'), findsNothing);
-    expect(find.text('正常帖子'), findsOneWidget);
+      await tester.pumpWidget(buildWithHide(false));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-3')),
+        findsOneWidget,
+      );
+      expect(find.text('含剧透的帖子'), findsNothing);
+      expect(find.text('标题正常的帖子'), findsNothing);
+      expect(find.text('正常帖子'), findsOneWidget);
 
-    await tester.pumpWidget(buildWithHide(false));
-    await tester.pumpAndSettle();
-    expect(find.text('含剧透的帖子'), findsOneWidget);
-    expect(find.text('正常帖子'), findsOneWidget);
-  });
+      await tester.tap(
+        find.byKey(const Key('keyword-filtered-thread-reveal-1')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('含剧透的帖子'), findsOneWidget);
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-hide-1')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('keyword-filtered-thread-hide-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('含剧透的帖子'), findsNothing);
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-1')),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(buildWithHide(true));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('keyword-filtered-thread-1')), findsNothing);
+      expect(find.byKey(const Key('keyword-filtered-thread-3')), findsNothing);
+      expect(find.text('含剧透的帖子'), findsNothing);
+      expect(find.text('标题正常的帖子'), findsNothing);
+      expect(find.text('正常帖子'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'expanded blocked floor can be hidden again and tail collapse resets revealed floors',

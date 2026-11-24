@@ -214,6 +214,12 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
                     _runAndReturnToFilter(() => controller.openFilter(item)),
                 onOpenThreadTag: (thread) => _openThreadTag(context, thread),
                 onOpenThread: (thread) => _openThread(context, state, thread),
+                onOpenRevealedThread: (thread) => _openThread(
+                  context,
+                  state,
+                  thread,
+                  bypassKeywordThreadGate: true,
+                ),
                 onOpenTopEntry: (entry) => _openTopEntry(context, state, entry),
                 onOpenSubForum: (subForum) => _openSubForum(context, subForum),
               ),
@@ -513,8 +519,9 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
   void _openThread(
     BuildContext context,
     ForumDisplayPageState state,
-    ForumThreadSummary thread,
-  ) {
+    ForumThreadSummary thread, {
+    bool bypassKeywordThreadGate = false,
+  }) {
     openAdaptiveDetail(
       context,
       MaterialPageRoute<void>(
@@ -522,6 +529,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           tid: thread.tid,
           subject: thread.subject,
           initialForumName: _forumNameForThreadDetail(state),
+          bypassKeywordThreadGate: bypassKeywordThreadGate,
         ),
       ),
     );

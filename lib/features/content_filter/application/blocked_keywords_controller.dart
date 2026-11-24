@@ -10,6 +10,8 @@ enum BlockedKeywordMutationStatus {
   updated,
   alreadyExists,
   invalid,
+  invalidRegex,
+  regexTooLong,
   failed,
 }
 
@@ -18,6 +20,14 @@ final class BlockedKeywordMutationResult {
 
   const BlockedKeywordMutationResult.invalid()
     : status = BlockedKeywordMutationStatus.invalid,
+      entry = null;
+
+  const BlockedKeywordMutationResult.invalidRegex()
+    : status = BlockedKeywordMutationStatus.invalidRegex,
+      entry = null;
+
+  const BlockedKeywordMutationResult.regexTooLong()
+    : status = BlockedKeywordMutationStatus.regexTooLong,
       entry = null;
 
   const BlockedKeywordMutationResult.failed()
@@ -46,20 +56,27 @@ final class BlockedKeywordsController
   Future<BlockedKeywordMutationResult> add({
     required String keyword,
     required BlockedKeywordScope scope,
+    BlockedKeywordKind kind = BlockedKeywordKind.block,
+    BlockedKeywordMatchType matchType = BlockedKeywordMatchType.plain,
+    bool enabled = true,
   }) {
     return _serialize(() async {
-      final trimmed = keyword.trim();
-      final normalized = normalizeBlockedKeyword(trimmed);
-      if (normalized.isEmpty) {
-        return const BlockedKeywordMutationResult.invalid();
+      final validationError = validateBlockedKeywordPattern(keyword, matchType);
+      if (validationError != null) {
+        return _mapPatternError(validationError);
       }
+      final trimmed = keyword.trim();
+      final normalized = normalizeBlockedKeywordPattern(trimmed, matchType);
+      final effectiveScope = kind == BlockedKeywordKind.allow
+          ? BlockedKeywordScope.includeBody
+          : scope;
       final List<BlockedKeyword> current;
       try {
         current = await _currentRules();
       } catch (_) {
         return const BlockedKeywordMutationResult.failed();
       }
-      final existing = _findByNormalized(current, normalized);
+      final existing = _findByIdentity(current, kind, matchType, normalized);
       if (existing != null) {
         return BlockedKeywordMutationResult(
           BlockedKeywordMutationStatus.alreadyExists,
@@ -72,7 +89,10 @@ final class BlockedKeywordsController
         id: id,
         keyword: trimmed,
         normalizedKeyword: normalized,
-        scope: scope,
+        scope: effectiveScope,
+        kind: kind,
+        matchType: matchType,
+        enabled: enabled,
         createdAt: now,
         updatedAt: now,
       );
@@ -91,13 +111,11 @@ final class BlockedKeywordsController
     required String id,
     required String keyword,
     required BlockedKeywordScope scope,
+    BlockedKeywordKind? kind,
+    BlockedKeywordMatchType? matchType,
+    bool? enabled,
   }) {
     return _serialize(() async {
-      final trimmed = keyword.trim();
-      final normalized = normalizeBlockedKeyword(trimmed);
-      if (normalized.isEmpty) {
-        return const BlockedKeywordMutationResult.invalid();
-      }
       final List<BlockedKeyword> current;
       try {
         current = await _currentRules();
@@ -108,7 +126,30 @@ final class BlockedKeywordsController
       if (existing == null) {
         return const BlockedKeywordMutationResult.failed();
       }
-      final conflict = _findByNormalized(current, normalized);
+      final effectiveKind = kind ?? existing.kind;
+      final effectiveMatchType = matchType ?? existing.matchType;
+      final effectiveEnabled = enabled ?? existing.enabled;
+      final effectiveScope = effectiveKind == BlockedKeywordKind.allow
+          ? BlockedKeywordScope.includeBody
+          : scope;
+      final validationError = validateBlockedKeywordPattern(
+        keyword,
+        effectiveMatchType,
+      );
+      if (validationError != null) {
+        return _mapPatternError(validationError);
+      }
+      final trimmed = keyword.trim();
+      final normalized = normalizeBlockedKeywordPattern(
+        trimmed,
+        effectiveMatchType,
+      );
+      final conflict = _findByIdentity(
+        current,
+        effectiveKind,
+        effectiveMatchType,
+        normalized,
+      );
       if (conflict != null && conflict.id != id) {
         return BlockedKeywordMutationResult(
           BlockedKeywordMutationStatus.alreadyExists,
@@ -119,7 +160,10 @@ final class BlockedKeywordsController
       final updated = existing.copyWith(
         keyword: trimmed,
         normalizedKeyword: normalized,
-        scope: scope,
+        scope: effectiveScope,
+        kind: effectiveKind,
+        matchType: effectiveMatchType,
+        enabled: effectiveEnabled,
         updatedAt: now,
       );
       final next = List<BlockedKeyword>.unmodifiable([
@@ -134,6 +178,31 @@ final class BlockedKeywordsController
         BlockedKeywordMutationStatus.updated,
         updated,
       );
+    });
+  }
+
+  Future<bool> setEnabled(String id, bool enabled) {
+    return _serialize(() async {
+      final List<BlockedKeyword> current;
+      try {
+        current = await _currentRules();
+      } catch (_) {
+        return false;
+      }
+      final existing = _findById(current, id);
+      if (existing == null) {
+        return false;
+      }
+      if (existing.enabled == enabled) {
+        return true;
+      }
+      final now = ref.read(blockedKeywordClockProvider)();
+      final updated = existing.copyWith(enabled: enabled, updatedAt: now);
+      final next = List<BlockedKeyword>.unmodifiable([
+        for (final rule in current)
+          if (rule.id == id) updated else rule,
+      ]);
+      return _commit(next);
     });
   }
 
@@ -164,7 +233,13 @@ final class BlockedKeywordsController
         return false;
       }
       if (_findById(current, entry.id) != null ||
-          _findByNormalized(current, entry.normalizedKeyword) != null) {
+          _findByIdentity(
+                current,
+                entry.kind,
+                entry.matchType,
+                entry.normalizedKeyword,
+              ) !=
+              null) {
         return true;
       }
       final next = List<BlockedKeyword>.unmodifiable([entry, ...current]);
@@ -177,6 +252,19 @@ final class BlockedKeywordsController
     state = await AsyncValue.guard(
       () => ref.read(blockedKeywordRepositoryProvider).load(),
     );
+  }
+
+  BlockedKeywordMutationResult _mapPatternError(
+    BlockedKeywordPatternError error,
+  ) {
+    return switch (error) {
+      BlockedKeywordPatternError.empty =>
+        const BlockedKeywordMutationResult.invalid(),
+      BlockedKeywordPatternError.regexTooLong =>
+        const BlockedKeywordMutationResult.regexTooLong(),
+      BlockedKeywordPatternError.invalidRegex =>
+        const BlockedKeywordMutationResult.invalidRegex(),
+    };
   }
 
   Future<List<BlockedKeyword>> _currentRules() async {
@@ -215,12 +303,18 @@ final class BlockedKeywordsController
     return null;
   }
 
-  BlockedKeyword? _findByNormalized(
+  BlockedKeyword? _findByIdentity(
     List<BlockedKeyword> rules,
+    BlockedKeywordKind kind,
+    BlockedKeywordMatchType matchType,
     String normalized,
   ) {
     for (final rule in rules) {
-      if (rule.normalizedKeyword == normalized) return rule;
+      if (rule.kind == kind &&
+          rule.matchType == matchType &&
+          rule.normalizedKeyword == normalized) {
+        return rule;
+      }
     }
     return null;
   }
@@ -269,9 +363,9 @@ final class KeywordFilterPreferencesController
     }
   }
 
-  Future<bool> setHideMatchingThreadsInLists(bool value) {
+  Future<bool> setHideBlockedContentCompletely(bool value) {
     final current = state.value ?? _saved;
-    return _save(current.copyWith(hideMatchingThreadsInLists: value));
+    return _save(current.copyWith(hideBlockedContentCompletely: value));
   }
 
   Future<bool> _save(KeywordFilterPreferences preferences) {
@@ -307,24 +401,24 @@ final keywordFilterPreferencesControllerProvider =
       KeywordFilterPreferences
     >(KeywordFilterPreferencesController.new);
 
-final hideKeywordThreadsInListsProvider = Provider<bool>((ref) {
+final hideBlockedKeywordThreadsCompletelyProvider = Provider<bool>((ref) {
   final preferences = ref.watch(keywordFilterPreferencesControllerProvider);
-  return preferences.value?.hideMatchingThreadsInLists ?? true;
+  return preferences.value?.hideBlockedContentCompletely ?? false;
 });
 
 final keywordFilterRulesProvider = Provider<KeywordFilterRuleSet>((ref) {
   final rules = ref.watch(blockedKeywordsControllerProvider).value;
-  final hideInLists = ref.watch(hideKeywordThreadsInListsProvider);
+  final hideCompletely = ref.watch(hideBlockedKeywordThreadsCompletelyProvider);
   if (rules == null || rules.isEmpty) {
     return KeywordFilterRuleSet(
       rules: const <BlockedKeyword>[],
-      hideMatchingThreadsInLists: hideInLists,
-      revision: hideInLists ? 1 : 0,
+      hideBlockedContentCompletely: hideCompletely,
+      revision: hideCompletely ? 1 : 0,
     );
   }
   return KeywordFilterRuleSet(
     rules: rules,
-    hideMatchingThreadsInLists: hideInLists,
-    revision: Object.hash(hideInLists, Object.hashAll(rules)),
+    hideBlockedContentCompletely: hideCompletely,
+    revision: Object.hash(hideCompletely, Object.hashAll(rules)),
   );
 });

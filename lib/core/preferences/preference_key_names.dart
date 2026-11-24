@@ -81,6 +81,9 @@ abstract final class PreferenceKeyNames {
   static const contentFilterHideKeywordThreadsInListsV1 =
       'content_filter.hide_keyword_threads_in_lists.v1';
 
+  static const contentFilterHideBlockedKeywordThreadsCompletelyV1 =
+      'content_filter.hide_blocked_keyword_threads_completely.v1';
+
   static const contentFilterWebBlacklistSnapshotV1 =
       'content_filter.web_blacklist.snapshot.v1';
 

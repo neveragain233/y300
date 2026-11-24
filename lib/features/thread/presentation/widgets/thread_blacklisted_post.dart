@@ -30,11 +30,8 @@ class ThreadBlacklistedPostPlaceholder extends StatelessWidget {
       reason?.isBlacklistedAuthor ?? true,
       reason?.matchedKeyword,
     )) {
-      (true, final String keyword) => l10n.threadBlacklistAndKeywordCollapsed(
-        post.author,
-        keyword,
-      ),
-      (false, final String keyword) => l10n.threadKeywordCollapsed(keyword),
+      (true, _) => l10n.threadBlacklistCollapsed(post.author),
+      (false, final String _) => l10n.threadKeywordCollapsedGeneric,
       _ => l10n.threadBlacklistCollapsed(post.author),
     };
     final icon = (reason?.isBlacklistedAuthor ?? true)

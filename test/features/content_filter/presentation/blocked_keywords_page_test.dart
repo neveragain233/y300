@@ -70,8 +70,17 @@ void main() {
       find.byKey(const Key('content-filter-keyword-input')),
       '剧透',
     );
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-scope-include-body')),
+    );
     await tester.tap(
       find.byKey(const Key('content-filter-scope-include-body')),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-keyword-save')),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-keyword-save')),
     );
     await tester.tap(find.byKey(const Key('content-filter-keyword-save')));
     await tester.pumpAndSettle();
@@ -84,8 +93,17 @@ void main() {
     final rowKey = Key('content-filter-keyword-${savedRules.single.id}');
     await tester.tap(find.byKey(rowKey));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-scope-replies-only')),
+    );
     await tester.tap(
       find.byKey(const Key('content-filter-scope-replies-only')),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-keyword-save')),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-keyword-save')),
     );
     await tester.tap(find.byKey(const Key('content-filter-keyword-save')));
     await tester.pumpAndSettle();
@@ -96,10 +114,18 @@ void main() {
     final switchFinder = find.byKey(
       const Key('content-filter-hide-keyword-threads-switch'),
     );
-    expect(tester.widget<AppSwitchRow>(switchFinder).value, isTrue);
+    expect(tester.widget<AppSwitchRow>(switchFinder).value, isFalse);
     await tester.tap(switchFinder);
     await tester.pumpAndSettle();
-    expect(tester.widget<AppSwitchRow>(switchFinder).value, isFalse);
+    expect(tester.widget<AppSwitchRow>(switchFinder).value, isTrue);
+
+    await tester.tap(
+      find.byKey(
+        Key('content-filter-toggle-keyword-${updatedRules.single.id}'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect((await repo.load()).single.enabled, isFalse);
 
     await tester.tap(
       find.byKey(
@@ -115,5 +141,30 @@ void main() {
     await tester.tap(find.byType(SnackBarAction));
     await tester.pumpAndSettle();
     expect(find.text('剧透'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('content-filter-tab-allow')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('content-filter-add-keyword-button')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('content-filter-keyword-input')),
+      '官方剧透预警',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-keyword-save')),
+    );
+    await tester.tap(find.byKey(const Key('content-filter-keyword-save')));
+    await tester.pumpAndSettle();
+    expect(find.text('官方剧透预警'), findsOneWidget);
+    final rulesWithAllow = await repo.load();
+    expect(
+      rulesWithAllow.any(
+        (rule) =>
+            rule.keyword == '官方剧透预警' && rule.kind == BlockedKeywordKind.allow,
+      ),
+      isTrue,
+    );
   });
 }

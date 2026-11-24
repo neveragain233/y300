@@ -6814,6 +6814,73 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get threadBlacklistHideAgain => '隐藏';
+
+  @override
+  String get threadKeywordCollapsedGeneric => '由于你的屏蔽设置，该楼层已被屏蔽';
+
+  @override
+  String get keywordThreadGateGenericMessage => '由于你的屏蔽设置，此主题已被屏蔽。';
+
+  @override
+  String get keywordThreadGateManageRules => '管理屏蔽规则';
+
+  @override
+  String get contentFilterListThreadHidden => '由于你的屏蔽设置，该帖已被隐藏';
+
+  @override
+  String get contentFilterRevealOnce => '本次显示';
+
+  @override
+  String get contentFilterRevealedNotice => '已临时显示此隐藏帖子';
+
+  @override
+  String get contentFilterHideBlockedCompletely => '彻底隐藏被屏蔽的内容';
+
+  @override
+  String get contentFilterHideBlockedCompletelyDetail =>
+      '关闭时在版块、搜索和标签列表中显示已隐藏提示，打开后直接从列表移除';
+
+  @override
+  String get contentFilterTabBlock => '屏蔽词';
+
+  @override
+  String get contentFilterTabAllow => '白名单';
+
+  @override
+  String get contentFilterWhitelistHint => '命中白名单的内容不会被关键词规则屏蔽，优先级高于屏蔽词';
+
+  @override
+  String get contentFilterRuleKindLabel => '规则类型';
+
+  @override
+  String get contentFilterRuleKindBlock => '屏蔽词';
+
+  @override
+  String get contentFilterRuleKindAllow => '白名单';
+
+  @override
+  String get contentFilterRuleMatchTypeLabel => '匹配方式';
+
+  @override
+  String get contentFilterRuleMatchPlain => '普通关键词';
+
+  @override
+  String get contentFilterRuleMatchRegex => '正则表达式';
+
+  @override
+  String get contentFilterRuleDisabled => '已停用';
+
+  @override
+  String get contentFilterKeywordRegexHint => '输入正则表达式（不区分大小写）';
+
+  @override
+  String get contentFilterKeywordRegexError => '正则表达式格式不正确';
+
+  @override
+  String get contentFilterKeywordRegexTooLongError => '正则表达式过长（最多 160 个字符）';
+
+  @override
+  String get contentFilterWhitelistEmpty => '还没有白名单规则，点击右上角添加。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -13628,4 +13695,71 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get threadBlacklistHideAgain => '隱藏';
+
+  @override
+  String get threadKeywordCollapsedGeneric => '由於你的屏蔽設定，該樓層已被屏蔽';
+
+  @override
+  String get keywordThreadGateGenericMessage => '由於你的屏蔽設定，此主題已被屏蔽。';
+
+  @override
+  String get keywordThreadGateManageRules => '管理屏蔽規則';
+
+  @override
+  String get contentFilterListThreadHidden => '由於你的屏蔽設定，該帖已被隱藏';
+
+  @override
+  String get contentFilterRevealOnce => '本次顯示';
+
+  @override
+  String get contentFilterRevealedNotice => '已臨時顯示此隱藏帖子';
+
+  @override
+  String get contentFilterHideBlockedCompletely => '徹底隱藏被屏蔽的內容';
+
+  @override
+  String get contentFilterHideBlockedCompletelyDetail =>
+      '關閉時在版塊、搜尋和標籤列表中顯示已隱藏提示，打開後直接從列表移除';
+
+  @override
+  String get contentFilterTabBlock => '屏蔽詞';
+
+  @override
+  String get contentFilterTabAllow => '白名單';
+
+  @override
+  String get contentFilterWhitelistHint => '命中白名單的內容不會被關鍵詞規則屏蔽，優先順序高於屏蔽詞';
+
+  @override
+  String get contentFilterRuleKindLabel => '規則類型';
+
+  @override
+  String get contentFilterRuleKindBlock => '屏蔽詞';
+
+  @override
+  String get contentFilterRuleKindAllow => '白名單';
+
+  @override
+  String get contentFilterRuleMatchTypeLabel => '比對方式';
+
+  @override
+  String get contentFilterRuleMatchPlain => '普通關鍵詞';
+
+  @override
+  String get contentFilterRuleMatchRegex => '正則運算式';
+
+  @override
+  String get contentFilterRuleDisabled => '已停用';
+
+  @override
+  String get contentFilterKeywordRegexHint => '輸入正則運算式（不區分大小寫）';
+
+  @override
+  String get contentFilterKeywordRegexError => '正則運算式格式不正確';
+
+  @override
+  String get contentFilterKeywordRegexTooLongError => '正則運算式過長（最多 160 個字元）';
+
+  @override
+  String get contentFilterWhitelistEmpty => '還沒有白名單規則，點擊右上角新增。';
 }

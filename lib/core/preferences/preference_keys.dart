@@ -180,6 +180,11 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.contentFilterHideKeywordThreadsInListsV1,
   );
 
+  static const contentFilterHideBlockedKeywordThreadsCompletelyV1 =
+      PreferenceKey<bool>(
+        PreferenceKeyNames.contentFilterHideBlockedKeywordThreadsCompletelyV1,
+      );
+
   static const contentFilterWebBlacklistSnapshotV1 = PreferenceKey<String>(
     PreferenceKeyNames.contentFilterWebBlacklistSnapshotV1,
   );

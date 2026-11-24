@@ -3,17 +3,19 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 
 /// Whole-thread prompt for a topic whose title or body matched a keyword rule.
+///
+/// Intentionally omits the matched keyword itself.
 class BlockedKeywordThreadGateView extends StatelessWidget {
   const BlockedKeywordThreadGateView({
     super.key,
     required this.subject,
-    required this.matchedKeyword,
     required this.onViewOnce,
+    this.onManageRules,
   });
 
   final String subject;
-  final String matchedKeyword;
   final VoidCallback onViewOnce;
+  final VoidCallback? onManageRules;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +48,7 @@ class BlockedKeywordThreadGateView extends StatelessWidget {
                   ),
                 const SizedBox(height: 12),
                 Text(
-                  l10n.keywordThreadGateMessage(matchedKeyword),
+                  l10n.keywordThreadGateGenericMessage,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -61,6 +63,17 @@ class BlockedKeywordThreadGateView extends StatelessWidget {
                     child: Text(l10n.keywordThreadGateViewOnce),
                   ),
                 ),
+                if (onManageRules != null) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      key: const Key('keyword-thread-manage-rules-button'),
+                      onPressed: onManageRules,
+                      child: Text(l10n.keywordThreadGateManageRules),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

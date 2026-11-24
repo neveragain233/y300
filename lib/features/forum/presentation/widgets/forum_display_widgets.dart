@@ -13,6 +13,7 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/content_filter/presentation/widgets/keyword_filtered_thread_tile.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.dart';
 import 'package:y300/features/forum/presentation/forum_display_content_projection.dart';
@@ -43,6 +44,7 @@ class ForumDisplayContent extends StatefulWidget {
     required this.onOpenFilter,
     required this.onOpenThreadTag,
     required this.onOpenThread,
+    this.onOpenRevealedThread,
     required this.onOpenTopEntry,
     required this.onOpenSubForum,
     this.blockedThreadIds = const <String>{},
@@ -60,6 +62,7 @@ class ForumDisplayContent extends StatefulWidget {
   final ValueChanged<ForumDisplayFilterItem> onOpenFilter;
   final ValueChanged<ForumThreadSummary> onOpenThreadTag;
   final ValueChanged<ForumThreadSummary> onOpenThread;
+  final ValueChanged<ForumThreadSummary>? onOpenRevealedThread;
   final ValueChanged<ForumDisplayTopEntry> onOpenTopEntry;
   final ValueChanged<ForumDisplaySubForum> onOpenSubForum;
 
@@ -78,6 +81,7 @@ class ForumDisplayContent extends StatefulWidget {
 
 class _ForumDisplayContentState extends State<ForumDisplayContent> {
   bool _topEntriesExpanded = false;
+  final Set<String> _revealedKeywordThreadIds = <String>{};
 
   @override
   void didUpdateWidget(covariant ForumDisplayContent oldWidget) {
@@ -85,6 +89,14 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     if (_topEntrySignature(oldWidget.projection.sourceState.topEntries) !=
         _topEntrySignature(widget.projection.sourceState.topEntries)) {
       _topEntriesExpanded = false;
+    }
+    if (oldWidget.projection.sourceState.fid !=
+            widget.projection.sourceState.fid ||
+        oldWidget.projection.sourceState.currentPage !=
+            widget.projection.sourceState.currentPage ||
+        oldWidget.keywordFilterRules.revision !=
+            widget.keywordFilterRules.revision) {
+      _revealedKeywordThreadIds.clear();
     }
   }
 
@@ -97,39 +109,43 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     );
     final displayTypeFilters = _displayFilters(widget.projection.typeFilters);
     final displaySubForums = _displaySubForums(widget.projection.subForums);
-    final hideByKeyword =
-        widget.keywordFilterRules.hideMatchingThreadsInLists &&
-        widget.keywordFilterRules.hasBodyRules;
     final displayTopEntries = [
       for (final entry in _displayTopEntries(widget.projection.topEntries))
         if (!widget.blockedThreadIds.contains(
-              ThreadBlockIdentity.normalizeTid(entry.tid),
-            ) &&
-            (!hideByKeyword ||
-                KeywordFilterMatcher.matchPlainText(
-                      entry.title,
-                      widget.keywordFilterRules.bodyRules,
-                    ) ==
-                    null))
+          ThreadBlockIdentity.normalizeTid(entry.tid),
+        ))
           entry,
     ];
-    final allDisplayThreads = _displayThreads(widget.projection.threads);
-    final displayThreads = [
-      for (final thread in allDisplayThreads)
-        if (!widget.blockedThreadIds.contains(
-              ThreadBlockIdentity.normalizeTid(thread.tid),
-            ) &&
-            !widget.blacklistedUserIds.contains(thread.uid.trim()) &&
-            (!hideByKeyword ||
-                KeywordFilterMatcher.matchPlainText(
-                      thread.subject,
-                      widget.keywordFilterRules.bodyRules,
-                    ) ==
-                    null))
-          thread,
-    ];
+    final threadEntries = <_ForumThreadListItem>[];
+    for (final projection in widget.projection.threads) {
+      final source = projection.source;
+      final normalizedTid =
+          ThreadBlockIdentity.normalizeTid(source.tid) ?? source.tid.trim();
+      if (widget.blockedThreadIds.contains(normalizedTid) ||
+          widget.blacklistedUserIds.contains(source.uid.trim())) {
+        continue;
+      }
+      final matchedKeyword = KeywordFilterMatcher.matchThreadListItem(
+        subject: source.subject,
+        convertedSubject: projection.displaySubject,
+        excerpt: source.excerpt,
+        convertedExcerpt: projection.displayExcerpt,
+        ruleSet: widget.keywordFilterRules,
+      );
+      if (matchedKeyword != null &&
+          widget.keywordFilterRules.hideBlockedContentCompletely) {
+        continue;
+      }
+      threadEntries.add(
+        _ForumThreadListItem(
+          thread: _displayThread(projection),
+          isKeywordFiltered: matchedKeyword != null,
+          normalizedTid: normalizedTid,
+        ),
+      );
+    }
     final hiddenByRules =
-        allDisplayThreads.isNotEmpty && displayThreads.isEmpty;
+        widget.projection.threads.isNotEmpty && threadEntries.isEmpty;
     final filterPadding = EdgeInsets.fromLTRB(
       16,
       4,
@@ -201,7 +217,7 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
                 palette: palette,
               ),
             ),
-          if (displayThreads.isEmpty)
+          if (threadEntries.isEmpty)
             SliverToBoxAdapter(
               child: _EmptyThreadList(
                 palette: palette,
@@ -212,10 +228,25 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
           else
             _ThreadListSection(
               signature: _threadListSignature(state),
-              threads: displayThreads,
+              entries: threadEntries,
+              revealedKeywordThreadIds: _revealedKeywordThreadIds,
+              onRevealKeywordThread: (tid) {
+                setState(() => _revealedKeywordThreadIds.add(tid));
+              },
+              onHideKeywordThread: (tid) {
+                setState(() => _revealedKeywordThreadIds.remove(tid));
+              },
               onOpenThread: (item) => widget.onOpenThread(
                 _sourceThread(item, widget.projection.threads),
               ),
+              onOpenRevealedThread: (item) {
+                final source = _sourceThread(item, widget.projection.threads);
+                if (widget.onOpenRevealedThread != null) {
+                  widget.onOpenRevealedThread!(source);
+                } else {
+                  widget.onOpenThread(source);
+                }
+              },
               onOpenThreadTag: (item) => widget.onOpenThreadTag(
                 _sourceThread(item, widget.projection.threads),
               ),
@@ -305,20 +336,15 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     ];
   }
 
-  List<ForumThreadSummary> _displayThreads(
-    List<ForumDisplayThreadProjection> items,
-  ) {
-    return [
-      for (final item in items)
-        item.source.copyWith(
-          subject: item.displaySubject,
-          excerpt: item.displayExcerpt,
-          sourceTagName: item.displaySourceTagName,
-          badgeLabel: item.displayBadgeLabel,
-          badges: item.displayBadges,
-          dateline: item.displayDateline,
-        ),
-    ];
+  ForumThreadSummary _displayThread(ForumDisplayThreadProjection item) {
+    return item.source.copyWith(
+      subject: item.displaySubject,
+      excerpt: item.displayExcerpt,
+      sourceTagName: item.displaySourceTagName,
+      badgeLabel: item.displayBadgeLabel,
+      badges: item.displayBadges,
+      dateline: item.displayDateline,
+    );
   }
 
   ForumDisplayFilterItem _sourceFilter(
@@ -1184,26 +1210,46 @@ class _TopEntryTile extends StatelessWidget {
   }
 }
 
+class _ForumThreadListItem {
+  const _ForumThreadListItem({
+    required this.thread,
+    required this.isKeywordFiltered,
+    required this.normalizedTid,
+  });
+
+  final ForumThreadSummary thread;
+  final bool isKeywordFiltered;
+  final String normalizedTid;
+}
+
 class _ThreadListSection extends StatelessWidget {
   const _ThreadListSection({
     required this.signature,
-    required this.threads,
+    required this.entries,
+    required this.revealedKeywordThreadIds,
+    required this.onRevealKeywordThread,
+    required this.onHideKeywordThread,
     required this.onOpenThread,
+    required this.onOpenRevealedThread,
     required this.onOpenThreadTag,
     required this.palette,
   });
 
   final String signature;
-  final List<ForumThreadSummary> threads;
+  final List<_ForumThreadListItem> entries;
+  final Set<String> revealedKeywordThreadIds;
+  final ValueChanged<String> onRevealKeywordThread;
+  final ValueChanged<String> onHideKeywordThread;
   final ValueChanged<ForumThreadSummary> onOpenThread;
+  final ValueChanged<ForumThreadSummary> onOpenRevealedThread;
   final ValueChanged<ForumThreadSummary> onOpenThreadTag;
   final ForumDisplayThemePalette palette;
 
   @override
   Widget build(BuildContext context) {
     final indices = <Key, int>{
-      for (var index = 0; index < threads.length; index++)
-        ValueKey('forum-thread-row-${threads[index].tid}'): index,
+      for (var index = 0; index < entries.length; index++)
+        ValueKey('forum-thread-row-${entries[index].thread.tid}'): index,
     };
     // Keep only the viewport/cache extent alive. Cross-fading whole pages
     // would retain both lists and start offscreen avatar work on page changes.
@@ -1212,21 +1258,45 @@ class _ThreadListSection extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
       sliver: SliverList.builder(
         key: const Key('forum-thread-list-group'),
-        itemCount: threads.length,
+        itemCount: entries.length,
         findChildIndexCallback: (key) => indices[key],
         itemBuilder: (context, index) {
-          final thread = threads[index];
+          final entry = entries[index];
+          final thread = entry.thread;
+          final revealed =
+              entry.isKeywordFiltered &&
+              revealedKeywordThreadIds.contains(entry.normalizedTid);
+          Widget row;
+          if (entry.isKeywordFiltered && !revealed) {
+            row = KeywordFilteredThreadPlaceholder(
+              tid: thread.tid,
+              palette: palette,
+              onRevealOnce: () => onRevealKeywordThread(entry.normalizedTid),
+            );
+          } else {
+            final card = _ThreadCard(
+              thread: thread,
+              onTap: () => revealed
+                  ? onOpenRevealedThread(thread)
+                  : onOpenThread(thread),
+              onTapTag: () => onOpenThreadTag(thread),
+              palette: palette,
+            );
+            row = revealed
+                ? KeywordRevealedThreadWrapper(
+                    tid: thread.tid,
+                    palette: palette,
+                    onHideAgain: () => onHideKeywordThread(entry.normalizedTid),
+                    child: card,
+                  )
+                : card;
+          }
           // Lazy rows may be recreated when scrolling back. Keep ready cards
           // visible immediately instead of replaying an entrance fade each time.
           return Padding(
             key: ValueKey('forum-thread-row-${thread.tid}'),
             padding: EdgeInsets.only(top: index == 0 ? 0 : 8),
-            child: _ThreadCard(
-              thread: thread,
-              onTap: () => onOpenThread(thread),
-              onTapTag: () => onOpenThreadTag(thread),
-              palette: palette,
-            ),
+            child: row,
           );
         },
       ),

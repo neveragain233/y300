@@ -980,6 +980,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final maskedHtml = KeywordFilterMatcher.maskBlockedQuotesInHtml(
       item.displayPost.message,
       rules: applicableRules,
+      allowRules: rules.activeAllowRules,
       placeholderText: placeholder,
       convertedHtml: item.sourcePost.message != item.displayPost.message
           ? item.sourcePost.message

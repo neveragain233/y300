@@ -6,13 +6,19 @@ BlockedKeyword _rule(
   String keyword, {
   String id = 'id-1',
   BlockedKeywordScope scope = BlockedKeywordScope.repliesOnly,
+  BlockedKeywordKind kind = BlockedKeywordKind.block,
+  BlockedKeywordMatchType matchType = BlockedKeywordMatchType.plain,
+  bool enabled = true,
 }) {
   final now = DateTime(2026, 11, 24);
   return BlockedKeyword(
     id: id,
     keyword: keyword,
-    normalizedKeyword: normalizeBlockedKeyword(keyword),
+    normalizedKeyword: normalizeBlockedKeywordPattern(keyword, matchType),
     scope: scope,
+    kind: kind,
+    matchType: matchType,
+    enabled: enabled,
     createdAt: now,
     updatedAt: now,
   );
@@ -103,5 +109,72 @@ void main() {
       expect(masked, contains('正文不受影响'));
       expect(masked, contains('class="quote"'));
     });
+
+    test('whitelist overrides block rules and disabled rules are ignored', () {
+      final block = _rule(
+        '剧透',
+        id: 'b1',
+        scope: BlockedKeywordScope.includeBody,
+      );
+      final allow = _rule('剧透预警已折叠', id: 'a1', kind: BlockedKeywordKind.allow);
+      final disabled = _rule(
+        '正常',
+        id: 'b2',
+        scope: BlockedKeywordScope.includeBody,
+        enabled: false,
+      );
+      final ruleSet = KeywordFilterRuleSet(rules: [block, allow, disabled]);
+
+      expect(
+        KeywordFilterMatcher.matchThreadListItem(
+          subject: '正常讨论',
+          excerpt: '这里有剧透预警已折叠，可放心看',
+          ruleSet: ruleSet,
+        ),
+        isNull,
+      );
+      expect(
+        KeywordFilterMatcher.matchThreadListItem(
+          subject: '正常讨论',
+          excerpt: '直接剧透结局',
+          ruleSet: ruleSet,
+        )?.id,
+        'b1',
+      );
+    });
+
+    test(
+      'supports case-insensitive regex rules and tolerates invalid regex',
+      () {
+        final regexBlock = _rule(
+          r'\bep\s*\d+\b',
+          id: 'r1',
+          scope: BlockedKeywordScope.includeBody,
+          matchType: BlockedKeywordMatchType.regex,
+        );
+        final badRegex = _rule(
+          '[unclosed',
+          id: 'r2',
+          scope: BlockedKeywordScope.includeBody,
+          matchType: BlockedKeywordMatchType.regex,
+        );
+        final ruleSet = KeywordFilterRuleSet(rules: [badRegex, regexBlock]);
+
+        expect(
+          KeywordFilterMatcher.matchThreadListItem(
+            subject: 'Episode EP 12 discussion',
+            ruleSet: ruleSet,
+          )?.id,
+          'r1',
+        );
+        expect(
+          KeywordFilterMatcher.matchThreadListItem(
+            subject: 'Deep learning notes',
+            ruleSet: ruleSet,
+          ),
+          isNull,
+        );
+      },
+    );
   });
 }

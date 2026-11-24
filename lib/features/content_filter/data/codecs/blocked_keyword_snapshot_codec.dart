@@ -21,6 +21,9 @@ abstract final class BlockedKeywordSnapshotCodec {
             'id': rule.id,
             'keyword': rule.keyword,
             'scope': rule.scope.name,
+            'kind': rule.kind.name,
+            'matchType': rule.matchType.name,
+            'enabled': rule.enabled,
             'createdAt': rule.createdAt.millisecondsSinceEpoch,
             'updatedAt': rule.updatedAt.millisecondsSinceEpoch,
           },
@@ -42,18 +45,23 @@ abstract final class BlockedKeywordSnapshotCodec {
       if (values is! List) {
         return const <BlockedKeyword>[];
       }
-      final byNormalized = <String, BlockedKeyword>{};
+      final byIdentity =
+          <
+            (BlockedKeywordKind, BlockedKeywordMatchType, String),
+            BlockedKeyword
+          >{};
       for (final value in values) {
         final rule = _decodeRule(value);
         if (rule == null) {
           continue;
         }
-        final existing = byNormalized[rule.normalizedKeyword];
+        final identity = (rule.kind, rule.matchType, rule.normalizedKeyword);
+        final existing = byIdentity[identity];
         if (existing == null || rule.updatedAt.isAfter(existing.updatedAt)) {
-          byNormalized[rule.normalizedKeyword] = rule;
+          byIdentity[identity] = rule;
         }
       }
-      final rules = byNormalized.values.toList()
+      final rules = byIdentity.values.toList()
         ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
       return List<BlockedKeyword>.unmodifiable(rules.take(maxEntries));
     } on Object {
@@ -75,7 +83,31 @@ abstract final class BlockedKeywordSnapshotCodec {
       return null;
     }
     final keyword = rawKeyword.trim();
-    final normalizedKeyword = normalizeBlockedKeyword(keyword);
+    final kind = switch (value['kind']) {
+      null => BlockedKeywordKind.block,
+      'block' => BlockedKeywordKind.block,
+      'allow' => BlockedKeywordKind.allow,
+      _ => null,
+    };
+    if (kind == null) {
+      return null;
+    }
+    final matchType = switch (value['matchType']) {
+      null => BlockedKeywordMatchType.plain,
+      'plain' => BlockedKeywordMatchType.plain,
+      'regex' => BlockedKeywordMatchType.regex,
+      _ => null,
+    };
+    if (matchType == null) {
+      return null;
+    }
+    if (validateBlockedKeywordPattern(keyword, matchType) != null) {
+      return null;
+    }
+    final normalizedKeyword = normalizeBlockedKeywordPattern(
+      keyword,
+      matchType,
+    );
     if (normalizedKeyword.isEmpty) {
       return null;
     }
@@ -87,6 +119,11 @@ abstract final class BlockedKeywordSnapshotCodec {
     if (scope == null) {
       return null;
     }
+    final rawEnabled = value['enabled'];
+    if (rawEnabled != null && rawEnabled is! bool) {
+      return null;
+    }
+    final enabled = rawEnabled as bool? ?? true;
     final createdEpoch = value['createdAt'];
     final updatedEpoch = value['updatedAt'];
     if (createdEpoch is! int ||
@@ -99,7 +136,12 @@ abstract final class BlockedKeywordSnapshotCodec {
       id: id,
       keyword: keyword,
       normalizedKeyword: normalizedKeyword,
-      scope: scope,
+      scope: kind == BlockedKeywordKind.allow
+          ? BlockedKeywordScope.includeBody
+          : scope,
+      kind: kind,
+      matchType: matchType,
+      enabled: enabled,
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdEpoch),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedEpoch),
     );

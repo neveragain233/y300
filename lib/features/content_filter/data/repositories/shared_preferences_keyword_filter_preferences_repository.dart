@@ -11,19 +11,21 @@ final class SharedPreferencesKeywordFilterPreferencesRepository
 
   @override
   Future<KeywordFilterPreferences> load() async {
-    final hide =
+    final hideCompletely =
         await _store.read(
-          PreferenceKeys.contentFilterHideKeywordThreadsInListsV1,
+          PreferenceKeys.contentFilterHideBlockedKeywordThreadsCompletelyV1,
         ) ??
-        true;
-    return KeywordFilterPreferences(hideMatchingThreadsInLists: hide);
+        false;
+    return KeywordFilterPreferences(
+      hideBlockedContentCompletely: hideCompletely,
+    );
   }
 
   @override
   Future<void> save(KeywordFilterPreferences preferences) {
     return _store.write(
-      PreferenceKeys.contentFilterHideKeywordThreadsInListsV1,
-      preferences.hideMatchingThreadsInLists,
+      PreferenceKeys.contentFilterHideBlockedKeywordThreadsCompletelyV1,
+      preferences.hideBlockedContentCompletely,
     );
   }
 }

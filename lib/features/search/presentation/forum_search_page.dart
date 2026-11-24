@@ -13,6 +13,7 @@ import 'package:y300/features/content_filter/application/blocked_keywords_contro
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
+import 'package:y300/features/content_filter/presentation/widgets/keyword_filtered_thread_tile.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/features/library_shared/domain/contracts/shelf_module_adapter.dart';
@@ -55,6 +56,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
   DataReadMetadata? _metadata;
   final Set<ForumSearchPageIdentity> _requestedPages =
       <ForumSearchPageIdentity>{};
+  final Set<String> _revealedKeywordThreadIds = <String>{};
   int _queryRevision = 0;
 
   List<ForumSearchTopicSummary> get _items =>
@@ -95,6 +97,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     }
     final revision = ++_queryRevision;
     _requestedPages.clear();
+    _revealedKeywordThreadIds.clear();
     setState(() {
       _loading = true;
       _loadingMore = false;
@@ -305,6 +308,9 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     _queryRevision += 1;
     _requestedPages.clear();
     final clearing = value.trim().isEmpty;
+    if (clearing) {
+      _revealedKeywordThreadIds.clear();
+    }
     if (!clearing &&
         !_loading &&
         !_loadingMore &&
@@ -335,6 +341,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
   void _clearSearch() {
     _queryRevision += 1;
     _requestedPages.clear();
+    _revealedKeywordThreadIds.clear();
     setState(() {
       _loading = false;
       _loadingMore = false;
@@ -354,25 +361,35 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final keywordRules = ref.watch(keywordFilterRulesProvider);
-    final hideByKeyword =
-        keywordRules.hideMatchingThreadsInLists && keywordRules.hasBodyRules;
-    final visibleItems = [
-      for (final item in _items)
-        if (!blockedThreadIds.contains(
-              ThreadBlockIdentity.normalizeTid(item.tid),
-            ) &&
-            (!hideBlacklistedThreads ||
-                !(item.authorId != null &&
-                    blacklistedUserIds.contains(item.authorId!.trim()))) &&
-            (!hideByKeyword ||
-                KeywordFilterMatcher.matchPlainText(
-                      item.title,
-                      keywordRules.bodyRules,
-                    ) ==
-                    null))
-          item,
-    ];
-    final hiddenByRules = _items.isNotEmpty && visibleItems.isEmpty;
+    final visibleEntries =
+        <
+          ({ForumSearchTopicSummary item, bool isKeywordFiltered, String tid})
+        >[];
+    for (final item in _items) {
+      final normalizedTid =
+          ThreadBlockIdentity.normalizeTid(item.tid) ?? item.tid.trim();
+      if (blockedThreadIds.contains(normalizedTid)) {
+        continue;
+      }
+      if (hideBlacklistedThreads &&
+          item.authorId != null &&
+          blacklistedUserIds.contains(item.authorId!.trim())) {
+        continue;
+      }
+      final matchedKeyword = KeywordFilterMatcher.matchThreadListItem(
+        subject: item.title,
+        ruleSet: keywordRules,
+      );
+      if (matchedKeyword != null && keywordRules.hideBlockedContentCompletely) {
+        continue;
+      }
+      visibleEntries.add((
+        item: item,
+        isKeywordFiltered: matchedKeyword != null,
+        tid: normalizedTid,
+      ));
+    }
+    final hiddenByRules = _items.isNotEmpty && visibleEntries.isEmpty;
     final showRecent =
         _controller.text.trim().isEmpty &&
         !_loading &&
@@ -496,11 +513,11 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                   16 + mainShellBottomScrollInset(context),
                 ),
                 itemCount:
-                    visibleItems.length +
+                    visibleEntries.length +
                     ((_loadingMore || _loadMoreNotice != null) ? 1 : 0),
                 separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
-                  if (index == visibleItems.length) {
+                  if (index == visibleEntries.length) {
                     if (_loadingMore) {
                       return const Padding(
                         key: Key('forum-search-load-more-progress'),
@@ -541,8 +558,23 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                       ),
                     );
                   }
-                  final item = visibleItems[index];
-                  return ForumSearchResultCard(
+                  final entry = visibleEntries[index];
+                  final item = entry.item;
+                  final revealed =
+                      entry.isKeywordFiltered &&
+                      _revealedKeywordThreadIds.contains(entry.tid);
+                  if (entry.isKeywordFiltered && !revealed) {
+                    return KeywordFilteredThreadPlaceholder(
+                      tid: item.tid,
+                      palette: palette,
+                      onRevealOnce: () {
+                        setState(
+                          () => _revealedKeywordThreadIds.add(entry.tid),
+                        );
+                      },
+                    );
+                  }
+                  final card = ForumSearchResultCard(
                     key: Key('forum-search-result-${item.tid}'),
                     item: item,
                     capabilities: _capabilities,
@@ -560,10 +592,24 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                           builder: (_) => ThreadDetailPage(
                             tid: item.tid,
                             subject: item.title,
+                            bypassKeywordThreadGate: revealed,
                           ),
                         ),
                       );
                     },
+                  );
+                  if (!revealed) {
+                    return card;
+                  }
+                  return KeywordRevealedThreadWrapper(
+                    tid: item.tid,
+                    palette: palette,
+                    onHideAgain: () {
+                      setState(
+                        () => _revealedKeywordThreadIds.remove(entry.tid),
+                      );
+                    },
+                    child: card,
                   );
                 },
               ),

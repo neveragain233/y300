@@ -89,15 +89,42 @@ void main() {
       expect(updated.entry!.scope, BlockedKeywordScope.includeBody);
       expect(container.read(keywordFilterRulesProvider).hasBodyRules, isTrue);
 
+      final toggled = await controller.setEnabled(updated.entry!.id, false);
+      expect(toggled, isTrue);
+      expect(container.read(keywordFilterRulesProvider).hasBodyRules, isFalse);
+      await controller.setEnabled(updated.entry!.id, true);
+
+      final invalidRegex = await controller.add(
+        keyword: '[unclosed',
+        scope: BlockedKeywordScope.repliesOnly,
+        matchType: BlockedKeywordMatchType.regex,
+      );
+      expect(invalidRegex.status, BlockedKeywordMutationStatus.invalidRegex);
+
+      final allowRule = await controller.add(
+        keyword: '剧透预警',
+        scope: BlockedKeywordScope.repliesOnly,
+        kind: BlockedKeywordKind.allow,
+      );
+      expect(allowRule.status, BlockedKeywordMutationStatus.created);
+      expect(allowRule.entry!.scope, BlockedKeywordScope.includeBody);
+      expect(
+        container.read(keywordFilterRulesProvider).activeAllowRules.length,
+        1,
+      );
+
       final removed = await controller.remove(added.entry!.id);
       expect(removed, isTrue);
-      expect(container.read(blockedKeywordsControllerProvider).value, isEmpty);
+      expect(
+        container.read(blockedKeywordsControllerProvider).value?.length,
+        1,
+      );
 
       final undone = await controller.undoRemove(updated.entry!);
       expect(undone, isTrue);
       expect(
         container.read(blockedKeywordsControllerProvider).value?.length,
-        1,
+        2,
       );
     });
 
@@ -127,9 +154,12 @@ void main() {
       prefsRepo.failNextSave = true;
       final saved = await container
           .read(keywordFilterPreferencesControllerProvider.notifier)
-          .setHideMatchingThreadsInLists(false);
+          .setHideBlockedContentCompletely(true);
       expect(saved, isFalse);
-      expect(container.read(hideKeywordThreadsInListsProvider), isTrue);
+      expect(
+        container.read(hideBlockedKeywordThreadsCompletelyProvider),
+        isFalse,
+      );
     });
   });
 }
