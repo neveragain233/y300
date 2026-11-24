@@ -88,8 +88,12 @@ void _blacklistCases() {
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('thread-blacklisted-post-blacklist-p2')),
+        find.byKey(const Key('thread-filtered-tail-banner')),
         findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-blacklist-p2')),
+        findsNothing,
       );
       expect(
         find.byKey(const Key('thread-post-card-blacklist-p2')),
@@ -97,6 +101,14 @@ void _blacklistCases() {
       );
       expect(
         find.byKey(const Key('thread-post-card-blacklist-p3')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-blacklist-p2')),
         findsOneWidget,
       );
 
@@ -193,8 +205,12 @@ void _blacklistCases() {
       findsNothing,
     );
     expect(
-      find.byKey(const Key('thread-blacklisted-post-blacklist-default-p2')),
+      find.byKey(const Key('thread-filtered-tail-banner')),
       findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('thread-blacklisted-post-blacklist-default-p2')),
+      findsNothing,
     );
     expect(
       find.byKey(const Key('thread-post-card-blacklist-default-p3')),
@@ -209,6 +225,9 @@ void _blacklistCases() {
       find.byKey(const Key('thread-post-card-blacklist-default-p1')),
       findsOneWidget,
     );
+
+    await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+    await tester.pumpAndSettle();
     expect(
       find.byKey(const Key('thread-blacklisted-post-blacklist-default-p2')),
       findsOneWidget,
@@ -312,6 +331,22 @@ void _blacklistCases() {
 
       expect(requests, containsAll(<int>[1, 2]));
       expect(
+        find.byKey(const Key('thread-filtered-tail-banner')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-tail-page-b1')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-tail-page-b2')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(
         find.byKey(const Key('thread-blacklisted-post-tail-page-b1')),
         findsOneWidget,
       );
@@ -321,6 +356,9 @@ void _blacklistCases() {
       );
       final normalTop = tester
           .getTopLeft(find.byKey(const Key('thread-post-card-tail-page-p3')))
+          .dy;
+      final bannerTop = tester
+          .getTopLeft(find.byKey(const Key('thread-filtered-tail-banner')))
           .dy;
       final firstTailTop = tester
           .getTopLeft(
@@ -332,7 +370,8 @@ void _blacklistCases() {
             find.byKey(const Key('thread-blacklisted-post-tail-page-b2')),
           )
           .dy;
-      expect(firstTailTop, greaterThan(normalTop));
+      expect(bannerTop, greaterThan(normalTop));
+      expect(firstTailTop, greaterThan(bannerTop));
       expect(secondTailTop, greaterThan(firstTailTop));
     },
   );

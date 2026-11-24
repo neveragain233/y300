@@ -15,6 +15,8 @@ import 'package:flutter/rendering.dart'
 import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
+import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/domain/services/forum_image_precache_service.dart';
@@ -34,6 +36,7 @@ import '../services/thread_body_presentation.dart';
 import '../services/thread_floor_navigation_coordinator.dart';
 import '../services/thread_image_visibility_diagnostics.dart';
 import '../services/thread_detail_quick_scroll_coordinator.dart';
+import '../services/thread_reply_tail_coordinator.dart';
 
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
 import 'package:y300/features/thread/presentation/thread_post_rate_form_projection.dart';
@@ -119,6 +122,15 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.movedBlacklistedPids = const <String>{},
     this.showReplyTail = false,
     this.replyTailRevision = 0,
+    this.filteredTailExpanded = false,
+    this.onToggleFilteredTail,
+    this.tailReasonsByPid = const <String, ThreadReplyFilterReason>{},
+    this.tailCollecting = false,
+    this.tailHasFailure = false,
+    this.tailHasBudgetLimitation = false,
+    this.onRetryTailCollect,
+    this.keywordFilterRules = KeywordFilterRuleSet.empty,
+    this.hiddenQuotePlaceholderText = '',
     this.onToggleAuthorFilter,
     this.onOrderChanged,
     this.floorNavigation,
@@ -158,6 +170,33 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
 
   /// Display generation for the reply tail projection.
   final int replyTailRevision;
+
+  /// Whether the single tail banner on the last page is expanded.
+  final bool filteredTailExpanded;
+
+  /// Toggles the tail banner between collapsed and expanded states.
+  final VoidCallback? onToggleFilteredTail;
+
+  /// Filter reasons for replies collected into the tail, keyed by pid.
+  final Map<String, ThreadReplyFilterReason> tailReasonsByPid;
+
+  /// Whether background tail collection is currently in progress.
+  final bool tailCollecting;
+
+  /// Whether background tail collection failed on the last attempt.
+  final bool tailHasFailure;
+
+  /// Whether background tail collection paused due to page/memory budget.
+  final bool tailHasBudgetLimitation;
+
+  /// Explicit retry/continue callback for tail collection.
+  final VoidCallback? onRetryTailCollect;
+
+  /// Active local keyword rules for quote masking and reply filtering.
+  final KeywordFilterRuleSet keywordFilterRules;
+
+  /// Localized placeholder text shown when a quote block is masked.
+  final String hiddenQuotePlaceholderText;
 
   /// Topic author allowed for this route when the whole-thread prompt was
   /// accepted; their floors are not collapsed for this session.
@@ -378,11 +417,15 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage ||
         oldWidget.enableBodyChunking != widget.enableBodyChunking ||
-        oldWidget.bodyReadingCoordinator != widget.bodyReadingCoordinator) {
+        oldWidget.bodyReadingCoordinator != widget.bodyReadingCoordinator ||
+        oldWidget.keywordFilterRules.revision !=
+            widget.keywordFilterRules.revision) {
       _retirePreparedBodies();
     }
     if (widget.bodyReadingCoordinator != null &&
-        (oldWidget.state.posts.length != widget.state.posts.length ||
+        (oldWidget.keywordFilterRules.revision !=
+                widget.keywordFilterRules.revision ||
+            oldWidget.state.posts.length != widget.state.posts.length ||
             List.generate(widget.state.posts.length, (index) => index).any(
               (index) =>
                   index >= oldWidget.state.posts.length ||
@@ -403,6 +446,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final tailChanged =
         oldWidget.replyTailRevision != widget.replyTailRevision ||
         oldWidget.showReplyTail != widget.showReplyTail ||
+        oldWidget.filteredTailExpanded != widget.filteredTailExpanded ||
         !setEquals(oldWidget.movedBlacklistedPids, widget.movedBlacklistedPids);
     final shouldRestoreProjectionAnchor =
         identical(oldWidget.scrollController, widget.scrollController) &&
@@ -539,21 +583,24 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       },
     );
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
+    final tailPosts = _tailPostProjections;
+    final showFilteredTailHeader =
+        widget.showReplyTail &&
+        (tailPosts.isNotEmpty ||
+            widget.tailCollecting ||
+            widget.tailHasFailure ||
+            widget.tailHasBudgetLimitation);
     final entries = _entryPlanner.buildProjectionEntries(
-      posts: _postProjections,
+      posts: _normalPostProjections,
       targetPid: _endpointTarget == null ? _activeTargetPid : null,
       landing: _endpointTarget == null ? _activeLanding : ThreadPostLanding.top,
       bodyManifests: _preparedBodies.manifests,
-      isCollapsed: (post) {
-        final authorId = post.authorId.trim();
-        if (authorId.isNotEmpty &&
-            authorId == widget.allowedBlacklistedAuthorId) {
-          return false;
-        }
-        return authorId.isNotEmpty &&
-            blacklistedUserIds.contains(authorId) &&
-            !_expandedBlacklistedPids.contains(post.pid);
-      },
+      tailPosts: tailPosts,
+      showFilteredTailHeader: showFilteredTailHeader,
+      filteredTailExpanded: widget.filteredTailExpanded,
+      isCollapsed: (post) =>
+          _resolveFilterReason(post, blacklistedUserIds).isFiltered &&
+          !_expandedBlacklistedPids.contains(post.pid),
     );
     _projectionAnchorCoordinator.prune(
       _postProjections.map((post) => post.sourcePost.pid),
@@ -867,22 +914,103 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
   }
 
   ThreadDetailContent? _displayProjectionOwner;
+  List<ThreadDetailPostProjection>? _normalProjectionCache;
+  List<ThreadDetailPostProjection>? _tailProjectionCache;
   List<ThreadDetailPostProjection>? _displayProjectionCache;
+
+  void _ensureProjectionCaches(ThreadDetailContent target) {
+    if (identical(_displayProjectionOwner, target) &&
+        _normalProjectionCache != null &&
+        _tailProjectionCache != null &&
+        _displayProjectionCache != null) {
+      return;
+    }
+    _displayProjectionOwner = target;
+    final normal = _buildNormalDisplayProjections(target);
+    final tail = _buildTailDisplayProjections(target, normal);
+    _normalProjectionCache = normal;
+    _tailProjectionCache = tail;
+    _displayProjectionCache =
+        target.showReplyTail && target.filteredTailExpanded
+        ? List<ThreadDetailPostProjection>.unmodifiable([...normal, ...tail])
+        : normal;
+  }
+
+  List<ThreadDetailPostProjection> get _normalPostProjections {
+    _ensureProjectionCaches(widget);
+    return _normalProjectionCache!;
+  }
+
+  List<ThreadDetailPostProjection> get _tailPostProjections {
+    _ensureProjectionCaches(widget);
+    return _tailProjectionCache!;
+  }
 
   @override
   List<ThreadDetailPostProjection> get _postProjections {
     // The display list is the single projection shared by rendering, the floor
     // navigation sequence and anchor capture; compute it once per widget build.
     // A new widget instance is the only way the tail projection can change.
-    final cached = _displayProjectionCache;
-    if (cached != null && identical(_displayProjectionOwner, widget)) {
-      return cached;
-    }
-    _displayProjectionOwner = widget;
-    return _displayProjectionCache = _buildDisplayProjections(widget);
+    _ensureProjectionCaches(widget);
+    return _displayProjectionCache!;
   }
 
-  List<ThreadDetailPostProjection> _buildDisplayProjections(
+  ThreadDetailPostProjection _applyQuoteMask(
+    ThreadDetailContent target,
+    ThreadDetailPostProjection item,
+  ) {
+    final rules = target.keywordFilterRules;
+    final placeholder = target.hiddenQuotePlaceholderText;
+    if (rules.isEmpty || placeholder.isEmpty) {
+      return item;
+    }
+    final isFirst = item.sourcePost.isFirst || item.sourcePost.number == 1;
+    final applicableRules = isFirst ? rules.bodyRules : rules.replyRules;
+    if (applicableRules.isEmpty) {
+      return item;
+    }
+    final maskedHtml = KeywordFilterMatcher.maskBlockedQuotesInHtml(
+      item.displayPost.message,
+      rules: applicableRules,
+      placeholderText: placeholder,
+      convertedHtml: item.sourcePost.message != item.displayPost.message
+          ? item.sourcePost.message
+          : null,
+    );
+    if (maskedHtml == item.displayPost.message) {
+      return item;
+    }
+    return ThreadDetailPostProjection(
+      sourcePost: item.sourcePost,
+      displayPost: _copyPostWithMessage(item.displayPost, maskedHtml),
+    );
+  }
+
+  ThreadPost _copyPostWithMessage(ThreadPost post, String message) {
+    return ThreadPost(
+      pid: post.pid,
+      author: post.author,
+      authorId: post.authorId,
+      message: message,
+      number: post.number,
+      isFirst: post.isFirst,
+      dateline: post.dateline,
+      avatarUrl: post.avatarUrl,
+      replyUrl: post.replyUrl,
+      editUrl: post.editUrl,
+      rateUrl: post.rateUrl,
+      commentUrl: post.commentUrl,
+      rateSummary: post.rateSummary,
+      ratingSummary: post.ratingSummary,
+      poll: post.poll,
+      tagLinks: post.tagLinks,
+      comments: post.comments,
+      commentNextPage: post.commentNextPage,
+      attachmentImages: post.attachmentImages,
+    );
+  }
+
+  List<ThreadDetailPostProjection> _buildNormalDisplayProjections(
     ThreadDetailContent target,
   ) {
     final moved = target.movedBlacklistedPids;
@@ -893,26 +1021,43 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       for (final item in projected) {
         final pid = item.sourcePost.pid;
         if (moved.contains(pid) || !seen.add(pid)) continue;
-        projections.add(item);
+        projections.add(_applyQuoteMask(target, item));
       }
     } else {
       for (final post in target.state.posts) {
         if (moved.contains(post.pid) || !seen.add(post.pid)) continue;
         projections.add(
-          ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+          _applyQuoteMask(
+            target,
+            ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+          ),
         );
       }
     }
-    if (!target.showReplyTail) return List.unmodifiable(projections);
+    return List<ThreadDetailPostProjection>.unmodifiable(projections);
+  }
+
+  List<ThreadDetailPostProjection> _buildTailDisplayProjections(
+    ThreadDetailContent target,
+    List<ThreadDetailPostProjection> normal,
+  ) {
+    if (!target.showReplyTail || target.replyTailPosts.isEmpty) {
+      return const <ThreadDetailPostProjection>[];
+    }
+    final seen = <String>{for (final item in normal) item.sourcePost.pid};
+    final tail = <ThreadDetailPostProjection>[];
     for (final post in target.replyTailPosts) {
       if (!seen.add(post.pid)) continue;
       final converted = target.projection?.findByPid(post.pid);
-      projections.add(
-        converted ??
-            ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+      tail.add(
+        _applyQuoteMask(
+          target,
+          converted ??
+              ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+        ),
       );
     }
-    return List.unmodifiable(projections);
+    return List<ThreadDetailPostProjection>.unmodifiable(tail);
   }
 
   List<String> _displayPidsFor(ThreadDetailContent target) {
@@ -932,11 +1077,48 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         pids.add(post.pid);
       }
     }
-    if (!target.showReplyTail) return pids;
+    if (!target.showReplyTail || !target.filteredTailExpanded) return pids;
     for (final post in target.replyTailPosts) {
       if (seen.add(post.pid)) pids.add(post.pid);
     }
     return pids;
+  }
+
+  ThreadReplyFilterReason _resolveFilterReason(
+    ThreadPost sourcePost,
+    Set<String> blacklistedUserIds,
+  ) {
+    final authorId = sourcePost.authorId.trim();
+    final isBlacklisted =
+        authorId.isNotEmpty &&
+        authorId != widget.allowedBlacklistedAuthorId &&
+        blacklistedUserIds.contains(authorId);
+    final recorded = widget.tailReasonsByPid[sourcePost.pid];
+    if (recorded != null) {
+      return ThreadReplyFilterReason(
+        isBlacklistedAuthor: isBlacklisted || recorded.isBlacklistedAuthor,
+        matchedKeyword: recorded.matchedKeyword,
+      );
+    }
+    String? matchedKeyword;
+    if (!sourcePost.isFirst &&
+        sourcePost.number != 1 &&
+        widget.keywordFilterRules.hasReplyRules) {
+      final converted = widget.projection?.findByPid(sourcePost.pid);
+      matchedKeyword = KeywordFilterMatcher.matchHtmlBody(
+        sourcePost.message,
+        widget.keywordFilterRules.replyRules,
+        excludeQuotes: true,
+        convertedHtml: converted?.displayPost.message,
+      )?.keyword;
+    }
+    if (!isBlacklisted && matchedKeyword == null) {
+      return ThreadReplyFilterReason.none;
+    }
+    return ThreadReplyFilterReason(
+      isBlacklistedAuthor: isBlacklisted,
+      matchedKeyword: matchedKeyword,
+    );
   }
 
   @override
@@ -1622,16 +1804,32 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         );
       case ThreadDetailRenderEntryKind.blacklistedPost:
         final pid = entry.sourcePost!.pid;
+        final blacklistedUserIds = ref.read(blacklistedUserIdsProvider);
         return KeyedSubtree(
           key: _projectionAnchorCoordinator.keyForPid(pid),
           child: ThreadBlacklistedPostPlaceholder(
             continuous: true,
             post: entry.displayPost!,
             palette: palette,
+            filterReason: _resolveFilterReason(
+              entry.sourcePost!,
+              blacklistedUserIds,
+            ),
             onExpand: () {
               setState(() => _expandedBlacklistedPids.add(pid));
             },
           ),
+        );
+      case ThreadDetailRenderEntryKind.filteredTailHeader:
+        return ThreadFilteredRepliesTailBanner(
+          count: _tailPostProjections.length,
+          expanded: widget.filteredTailExpanded,
+          collecting: widget.tailCollecting,
+          hasFailure: widget.tailHasFailure,
+          hasBudgetLimitation: widget.tailHasBudgetLimitation,
+          palette: palette,
+          onToggle: widget.onToggleFilteredTail ?? () {},
+          onRetry: widget.onRetryTailCollect,
         );
       case ThreadDetailRenderEntryKind.pagination:
         return ThreadLoadMoreSection(

@@ -45,6 +45,10 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const Key('content-filter-blocked-keywords-entry')),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const Key('content-filter-web-blacklist-entry')),
       findsOneWidget,
     );

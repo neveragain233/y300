@@ -14,6 +14,7 @@ import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:y300/features/composer_shared/presentation/services/read_access_feedback.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
@@ -112,6 +113,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
+    final keywordRules = ref.watch(keywordFilterRulesProvider);
     final projection = _projectionOrRaw(
       state,
       mode: mode,
@@ -198,6 +200,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
                 blacklistedUserIds: hideBlacklistedThreads
                     ? blacklistedUserIds
                     : const <String>{},
+                keywordFilterRules: keywordRules,
                 scrollController: _scrollController,
                 filterAnchorKey: _filterAnchorKey,
                 headImageKey: _headImageKey,

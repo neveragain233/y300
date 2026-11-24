@@ -9,7 +9,9 @@ import 'package:y300/features/comic/data/providers/comic_refresh_workflow_provid
 import 'package:y300/features/comic/domain/services/comic_search_refresh_queue_models.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
@@ -351,6 +353,9 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
+    final keywordRules = ref.watch(keywordFilterRulesProvider);
+    final hideByKeyword =
+        keywordRules.hideMatchingThreadsInLists && keywordRules.hasBodyRules;
     final visibleItems = [
       for (final item in _items)
         if (!blockedThreadIds.contains(
@@ -358,7 +363,13 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
             ) &&
             (!hideBlacklistedThreads ||
                 !(item.authorId != null &&
-                    blacklistedUserIds.contains(item.authorId!.trim()))))
+                    blacklistedUserIds.contains(item.authorId!.trim()))) &&
+            (!hideByKeyword ||
+                KeywordFilterMatcher.matchPlainText(
+                      item.title,
+                      keywordRules.bodyRules,
+                    ) ==
+                    null))
           item,
     ];
     final hiddenByRules = _items.isNotEmpty && visibleItems.isEmpty;

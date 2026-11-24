@@ -21,7 +21,10 @@ void main() {
       threadId: '100',
       queryIdentity: '',
       page: 2,
-      posts: [_post('p21', 21, authorId: 'blocked'), _post('p22', 22)],
+      posts: [
+        _post('p21', 21, authorId: 'blocked'),
+        _post('p22', 22),
+      ],
       isLastPage: true,
       blacklistedUserIds: const {'blocked'},
     );
@@ -94,9 +97,7 @@ void main() {
   });
 
   test('a blocked topic body keeps its floor', () {
-    final coordinator = ThreadReplyTailCoordinator(
-      readPage: (_) async => null,
-    );
+    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -121,9 +122,7 @@ void main() {
         reads.add(page);
         return ThreadReplyTailPage(
           page: page,
-          posts: [
-            _post('p${page}1', page * 10 + 1, authorId: 'blocked'),
-          ],
+          posts: [_post('p${page}1', page * 10 + 1, authorId: 'blocked')],
           hasMore: true,
         );
       },
@@ -233,9 +232,7 @@ void main() {
   });
 
   test('thread and query changes discard the collected set', () {
-    final coordinator = ThreadReplyTailCoordinator(
-      readPage: (_) async => null,
-    );
+    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -260,9 +257,7 @@ void main() {
   });
 
   test('a pinned target stays on its floor and out of the moved set', () {
-    final coordinator = ThreadReplyTailCoordinator(
-      readPage: (_) async => null,
-    );
+    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -283,9 +278,7 @@ void main() {
   });
 
   test('duplicate posts across pages are collected once', () {
-    final coordinator = ThreadReplyTailCoordinator(
-      readPage: (_) async => null,
-    );
+    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -346,6 +339,47 @@ void main() {
 
     expect(coordinator.tailPosts.map((post) => post.pid), ['late']);
   });
+
+  test(
+    'supports keyword-only filtering and records per-pid filter reasons',
+    () async {
+      final reads = <int>[];
+      final coordinator = ThreadReplyTailCoordinator(
+        readPage: (page) async {
+          reads.add(page);
+          return ThreadReplyTailPage(
+            page: page,
+            posts: [_post('p1', 1, isFirst: true), _post('p11', 11)],
+            hasMore: true,
+          );
+        },
+      );
+      addTearDown(coordinator.dispose);
+
+      coordinator.observe(
+        threadId: '100',
+        queryIdentity: '',
+        page: 2,
+        posts: [_post('p21', 21), _post('p22', 22)],
+        isLastPage: true,
+        blacklistedUserIds: const <String>{},
+        hasActiveFilters: true,
+        filterIdentity: 1,
+        evaluatePost: (post) => post.pid == 'p11' || post.pid == 'p21'
+            ? const ThreadReplyFilterReason(matchedKeyword: '剧透')
+            : ThreadReplyFilterReason.none,
+      );
+      expect(coordinator.tailPending, isTrue);
+
+      await coordinator.ensureComplete(isCurrent: () => true);
+
+      expect(reads, [1]);
+      expect(coordinator.complete, isTrue);
+      expect(coordinator.tailPosts.map((post) => post.pid), ['p11', 'p21']);
+      expect(coordinator.reasonFor('p11')?.matchedKeyword, '剧透');
+      expect(coordinator.reasonFor('p21')?.isBlacklistedAuthor, isFalse);
+    },
+  );
 }
 
 ThreadPost _post(

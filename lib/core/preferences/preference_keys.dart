@@ -172,6 +172,14 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.contentFilterBlockedThreadsV1,
   );
 
+  static const contentFilterBlockedKeywordsV1 = PreferenceKey<String>(
+    PreferenceKeyNames.contentFilterBlockedKeywordsV1,
+  );
+
+  static const contentFilterHideKeywordThreadsInListsV1 = PreferenceKey<bool>(
+    PreferenceKeyNames.contentFilterHideKeywordThreadsInListsV1,
+  );
+
   static const contentFilterWebBlacklistSnapshotV1 = PreferenceKey<String>(
     PreferenceKeyNames.contentFilterWebBlacklistSnapshotV1,
   );

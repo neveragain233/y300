@@ -5,7 +5,9 @@ import 'package:y300/app/navigation/adaptive_detail_host.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
@@ -49,6 +51,9 @@ class YamiboTagThreadPage extends ConsumerWidget {
     final blockedThreadIds = ref.watch(blockedThreadIdsProvider);
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
+    final keywordRules = ref.watch(keywordFilterRulesProvider);
+    final hideByKeyword =
+        keywordRules.hideMatchingThreadsInLists && keywordRules.hasBodyRules;
     final visibleTopics = [
       for (final thread in data?.topics ?? const <ForumTagTopicSummary>[])
         if (!blockedThreadIds.contains(
@@ -56,7 +61,13 @@ class YamiboTagThreadPage extends ConsumerWidget {
             ) &&
             (!hideBlacklistedThreads ||
                 !(thread.authorId != null &&
-                    blacklistedUserIds.contains(thread.authorId!.trim()))))
+                    blacklistedUserIds.contains(thread.authorId!.trim()))) &&
+            (!hideByKeyword ||
+                KeywordFilterMatcher.matchPlainText(
+                      thread.title,
+                      keywordRules.bodyRules,
+                    ) ==
+                    null))
           thread,
     ];
     final hiddenByRules =

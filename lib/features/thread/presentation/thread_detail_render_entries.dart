@@ -35,6 +35,9 @@ class ThreadDetailRenderEntryPlanner {
     ThreadPostLanding landing = ThreadPostLanding.top,
     Map<String, ThreadDetailBodyManifest> bodyManifests = const {},
     bool Function(ThreadPost sourcePost)? isCollapsed,
+    List<ThreadDetailPostProjection> tailPosts = const [],
+    bool showFilteredTailHeader = false,
+    bool filteredTailExpanded = false,
   }) {
     final entries = <ThreadDetailRenderEntry>[];
     final normalizedTargetPid = targetPid?.trim();
@@ -43,77 +46,115 @@ class ThreadDetailRenderEntryPlanner {
       if (index > 0 && posts[index - 1].sourcePost.isFirst) {
         entries.add(const ThreadDetailRenderEntry.repliesHeader());
       }
-      if (isCollapsed?.call(post.sourcePost) ?? false) {
-        entries.add(
-          ThreadDetailRenderEntry.blacklistedPost(
-            key: 'thread-post-blacklisted-entry-${post.sourcePost.pid}',
-            sourcePost: post.sourcePost,
-            displayPost: post.displayPost,
-            postIndex: index,
-          ),
-        );
-        continue;
-      }
-      final manifest = bodyManifests[post.sourcePost.pid];
-      if (manifest != null ||
-          landing == ThreadPostLanding.bodyEnd &&
-              post.sourcePost.pid == normalizedTargetPid) {
-        final pid = post.sourcePost.pid;
-        entries.addAll([
-          ThreadDetailRenderEntry.postHeader(
-            key: 'thread-post-header-entry-$pid',
-            sourcePost: post.sourcePost,
-            displayPost: post.displayPost,
-            postIndex: index,
-          ),
-          if (manifest == null)
-            ThreadDetailRenderEntry.postBody(
-              key: 'thread-post-body-entry-$pid',
-              sourcePost: post.sourcePost,
-              displayPost: post.displayPost,
-              postIndex: index,
-            )
-          else
-            for (final chunk in manifest.chunks)
-              ThreadDetailRenderEntry.postBodyChunk(
-                key: 'thread-post-body-chunk-$pid-${chunk.ordinal}',
-                sourcePost: post.sourcePost,
-                displayPost: post.displayPost,
-                postIndex: index,
-                bodyManifest: manifest,
-                chunkOrdinal: chunk.ordinal,
-              ),
-          ThreadDetailRenderEntry.postFooter(
-            key: 'thread-post-footer-entry-$pid',
-            sourcePost: post.sourcePost,
-            displayPost: post.displayPost,
-            postIndex: index,
-          ),
-        ]);
-        continue;
-      }
-      entries.add(
-        ThreadDetailRenderEntry.postCard(
-          key: 'thread-post-card-entry-${post.sourcePost.pid}',
-          sourcePost: post.sourcePost,
-          displayPost: post.displayPost,
-          postIndex: index,
-        ),
+      _appendPostEntries(
+        entries: entries,
+        post: post,
+        postIndex: index,
+        normalizedTargetPid: normalizedTargetPid,
+        landing: landing,
+        bodyManifests: bodyManifests,
+        isCollapsed: isCollapsed,
       );
     }
     // 首楼不在本页时（分页或过滤），回复区从顶部开始，切换入口随之置顶。
-    if (posts.isNotEmpty && !posts.any((post) => post.sourcePost.isFirst)) {
+    if ((posts.isNotEmpty ||
+            (showFilteredTailHeader && tailPosts.isNotEmpty)) &&
+        !posts.any((post) => post.sourcePost.isFirst)) {
       entries.insert(0, const ThreadDetailRenderEntry.repliesHeader());
     }
     // 无回复或筛选后只有首楼时，仍在首楼末尾保留切换入口。
     if (posts.isNotEmpty && posts.last.sourcePost.isFirst) {
       entries.add(const ThreadDetailRenderEntry.repliesHeader());
     }
+    if (showFilteredTailHeader) {
+      entries.add(const ThreadDetailRenderEntry.filteredTailHeader());
+      if (filteredTailExpanded) {
+        for (var tailIndex = 0; tailIndex < tailPosts.length; tailIndex++) {
+          _appendPostEntries(
+            entries: entries,
+            post: tailPosts[tailIndex],
+            postIndex: posts.length + tailIndex,
+            normalizedTargetPid: normalizedTargetPid,
+            landing: landing,
+            bodyManifests: bodyManifests,
+            isCollapsed: isCollapsed,
+          );
+        }
+      }
+    }
     entries.add(const ThreadDetailRenderEntry.pagination());
     if (normalizedTargetPid?.isNotEmpty == true) {
       entries.add(const ThreadDetailRenderEntry.targetSpacer());
     }
     return List<ThreadDetailRenderEntry>.unmodifiable(entries);
+  }
+
+  void _appendPostEntries({
+    required List<ThreadDetailRenderEntry> entries,
+    required ThreadDetailPostProjection post,
+    required int postIndex,
+    required String? normalizedTargetPid,
+    required ThreadPostLanding landing,
+    required Map<String, ThreadDetailBodyManifest> bodyManifests,
+    required bool Function(ThreadPost sourcePost)? isCollapsed,
+  }) {
+    if (isCollapsed?.call(post.sourcePost) ?? false) {
+      entries.add(
+        ThreadDetailRenderEntry.blacklistedPost(
+          key: 'thread-post-blacklisted-entry-${post.sourcePost.pid}',
+          sourcePost: post.sourcePost,
+          displayPost: post.displayPost,
+          postIndex: postIndex,
+        ),
+      );
+      return;
+    }
+    final manifest = bodyManifests[post.sourcePost.pid];
+    if (manifest != null ||
+        landing == ThreadPostLanding.bodyEnd &&
+            post.sourcePost.pid == normalizedTargetPid) {
+      final pid = post.sourcePost.pid;
+      entries.addAll([
+        ThreadDetailRenderEntry.postHeader(
+          key: 'thread-post-header-entry-$pid',
+          sourcePost: post.sourcePost,
+          displayPost: post.displayPost,
+          postIndex: postIndex,
+        ),
+        if (manifest == null)
+          ThreadDetailRenderEntry.postBody(
+            key: 'thread-post-body-entry-$pid',
+            sourcePost: post.sourcePost,
+            displayPost: post.displayPost,
+            postIndex: postIndex,
+          )
+        else
+          for (final chunk in manifest.chunks)
+            ThreadDetailRenderEntry.postBodyChunk(
+              key: 'thread-post-body-chunk-$pid-${chunk.ordinal}',
+              sourcePost: post.sourcePost,
+              displayPost: post.displayPost,
+              postIndex: postIndex,
+              bodyManifest: manifest,
+              chunkOrdinal: chunk.ordinal,
+            ),
+        ThreadDetailRenderEntry.postFooter(
+          key: 'thread-post-footer-entry-$pid',
+          sourcePost: post.sourcePost,
+          displayPost: post.displayPost,
+          postIndex: postIndex,
+        ),
+      ]);
+      return;
+    }
+    entries.add(
+      ThreadDetailRenderEntry.postCard(
+        key: 'thread-post-card-entry-${post.sourcePost.pid}',
+        sourcePost: post.sourcePost,
+        displayPost: post.displayPost,
+        postIndex: postIndex,
+      ),
+    );
   }
 }
 
@@ -125,6 +166,7 @@ enum ThreadDetailRenderEntryKind {
   postBodyChunk,
   postFooter,
   blacklistedPost,
+  filteredTailHeader,
   pagination,
   targetSpacer,
 }
@@ -229,6 +271,13 @@ class ThreadDetailRenderEntry {
          displayPost: displayPost,
          postIndex: postIndex,
        );
+
+  const ThreadDetailRenderEntry.filteredTailHeader()
+    : this._(
+        kind: ThreadDetailRenderEntryKind.filteredTailHeader,
+        key: 'thread-filtered-tail-header',
+        postIndex: -1,
+      );
 
   const ThreadDetailRenderEntry.pagination()
     : this._(

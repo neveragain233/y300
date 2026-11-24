@@ -203,6 +203,58 @@ void main() {
         );
       },
     );
+
+    test(
+      'places filteredTailHeader before pagination and expands tail entries',
+      () {
+        final tail = [_post('b1', 2), _post('b2', 3)];
+        final collapsed = planner.buildProjectionEntries(
+          posts: [
+            ThreadDetailPostProjection(
+              sourcePost: _post('p1', 1),
+              displayPost: _post('p1', 1),
+            ),
+          ],
+          tailPosts: [
+            for (final post in tail)
+              ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+          ],
+          showFilteredTailHeader: true,
+          filteredTailExpanded: false,
+          isCollapsed: (post) => post.pid != 'p1',
+        );
+        expect(collapsed.map((entry) => entry.kind), [
+          ThreadDetailRenderEntryKind.postCard,
+          ThreadDetailRenderEntryKind.repliesHeader,
+          ThreadDetailRenderEntryKind.filteredTailHeader,
+          ThreadDetailRenderEntryKind.pagination,
+        ]);
+
+        final expanded = planner.buildProjectionEntries(
+          posts: [
+            ThreadDetailPostProjection(
+              sourcePost: _post('p1', 1),
+              displayPost: _post('p1', 1),
+            ),
+          ],
+          tailPosts: [
+            for (final post in tail)
+              ThreadDetailPostProjection(sourcePost: post, displayPost: post),
+          ],
+          showFilteredTailHeader: true,
+          filteredTailExpanded: true,
+          isCollapsed: (post) => post.pid != 'p1',
+        );
+        expect(expanded.map((entry) => entry.kind), [
+          ThreadDetailRenderEntryKind.postCard,
+          ThreadDetailRenderEntryKind.repliesHeader,
+          ThreadDetailRenderEntryKind.filteredTailHeader,
+          ThreadDetailRenderEntryKind.blacklistedPost,
+          ThreadDetailRenderEntryKind.blacklistedPost,
+          ThreadDetailRenderEntryKind.pagination,
+        ]);
+      },
+    );
   });
 }
 

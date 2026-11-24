@@ -10876,13 +10876,13 @@ abstract class AppLocalizations {
   /// 内容屏蔽页的摘要
   ///
   /// In zh, this message translates to:
-  /// **'黑名单作者、屏蔽帖子与过滤规则'**
+  /// **'黑名单作者、关键词屏蔽、屏蔽帖子与过滤规则'**
   String get settingsSearchSummaryContentFilter;
 
   /// 内容屏蔽页搜索的关键词
   ///
   /// In zh, this message translates to:
-  /// **'黑名单、屏蔽、过滤、隐藏、帖子、用户'**
+  /// **'黑名单、关键词、屏蔽、过滤、隐藏、帖子、用户'**
   String get settingsSearchKeywordsContentFilter;
 
   /// 帖子悬浮操作页的摘要
@@ -11220,6 +11220,192 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'内容'**
   String get readerContentTitle;
+
+  /// No description provided for @threadKeywordCollapsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽命中关键词「{keyword}」的楼层'**
+  String threadKeywordCollapsed(String keyword);
+
+  /// No description provided for @threadBlacklistAndKeywordCollapsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽用户「{name}」（命中关键词「{keyword}」）的楼层'**
+  String threadBlacklistAndKeywordCollapsed(String name, String keyword);
+
+  /// No description provided for @threadFilteredTailExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'已隐藏 {count} 条被屏蔽的回复 · 点击展开'**
+  String threadFilteredTailExpand(int count);
+
+  /// No description provided for @threadFilteredTailCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起已隐藏的 {count} 条回复'**
+  String threadFilteredTailCollapse(int count);
+
+  /// No description provided for @threadFilteredTailScanning.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在整理前序页的被屏蔽回复…'**
+  String get threadFilteredTailScanning;
+
+  /// No description provided for @threadFilteredTailCollecting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查前序页的被屏蔽回复…'**
+  String get threadFilteredTailCollecting;
+
+  /// No description provided for @threadFilteredTailFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分前序页未能检查，已显示当前结果'**
+  String get threadFilteredTailFailed;
+
+  /// No description provided for @threadFilteredTailBudgetReached.
+  ///
+  /// In zh, this message translates to:
+  /// **'前序页较多，已暂停继续检查'**
+  String get threadFilteredTailBudgetReached;
+
+  /// No description provided for @threadFilteredTailLoadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续检查'**
+  String get threadFilteredTailLoadMore;
+
+  /// No description provided for @threadKeywordHiddenQuote.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用发言因为关键词屏蔽被隐藏'**
+  String get threadKeywordHiddenQuote;
+
+  /// No description provided for @keywordThreadGateTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽的关键词帖子'**
+  String get keywordThreadGateTitle;
+
+  /// No description provided for @keywordThreadGateMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'此主题标题或首楼正文命中关键词「{keyword}」，已按本地关键词规则拦截。'**
+  String keywordThreadGateMessage(String keyword);
+
+  /// No description provided for @keywordThreadGateViewOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次继续查看'**
+  String get keywordThreadGateViewOnce;
+
+  /// No description provided for @contentFilterKeywordsSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键词屏蔽'**
+  String get contentFilterKeywordsSection;
+
+  /// No description provided for @contentFilterKeywordsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条本地规则'**
+  String contentFilterKeywordsCount(int count);
+
+  /// No description provided for @contentFilterKeywordsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有本地关键词规则，点击右上角添加。'**
+  String get contentFilterKeywordsEmpty;
+
+  /// No description provided for @contentFilterKeywordAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加关键词'**
+  String get contentFilterKeywordAdd;
+
+  /// No description provided for @contentFilterKeywordEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑关键词'**
+  String get contentFilterKeywordEdit;
+
+  /// No description provided for @contentFilterKeywordLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键词'**
+  String get contentFilterKeywordLabel;
+
+  /// No description provided for @contentFilterKeywordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入要屏蔽的词或短语（不区分大小写）'**
+  String get contentFilterKeywordHint;
+
+  /// No description provided for @contentFilterKeywordEmptyError.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入关键词'**
+  String get contentFilterKeywordEmptyError;
+
+  /// No description provided for @contentFilterKeywordDuplicateError.
+  ///
+  /// In zh, this message translates to:
+  /// **'该关键词规则已存在'**
+  String get contentFilterKeywordDuplicateError;
+
+  /// No description provided for @contentFilterKeywordScopeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽范围'**
+  String get contentFilterKeywordScopeLabel;
+
+  /// No description provided for @contentFilterKeywordScopeRepliesOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅回复'**
+  String get contentFilterKeywordScopeRepliesOnly;
+
+  /// No description provided for @contentFilterKeywordScopeRepliesOnlyDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'命中回复移入全帖末尾折叠栏；正常楼层内引用块命中时仅隐藏引用内容'**
+  String get contentFilterKeywordScopeRepliesOnlyDetail;
+
+  /// No description provided for @contentFilterKeywordScopeIncludeBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'包括正文'**
+  String get contentFilterKeywordScopeIncludeBody;
+
+  /// No description provided for @contentFilterKeywordScopeIncludeBodyDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'同时拦截标题或首楼正文命中的主题，并隐藏回复'**
+  String get contentFilterKeywordScopeIncludeBodyDetail;
+
+  /// No description provided for @contentFilterHideKeywordThreadsInLists.
+  ///
+  /// In zh, this message translates to:
+  /// **'在列表中隐藏标题命中关键词的帖子'**
+  String get contentFilterHideKeywordThreadsInLists;
+
+  /// No description provided for @contentFilterHideKeywordThreadsInListsDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅对作用域为“包括正文”的关键词生效；关闭后列表中仍显示标题，进帖时再提示'**
+  String get contentFilterHideKeywordThreadsInListsDetail;
+
+  /// No description provided for @contentFilterKeywordDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get contentFilterKeywordDelete;
+
+  /// No description provided for @contentFilterKeywordDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已删除关键词「{keyword}」'**
+  String contentFilterKeywordDeleted(String keyword);
 }
 
 class _AppLocalizationsDelegate

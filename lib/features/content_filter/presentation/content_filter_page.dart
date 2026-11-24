@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/presentation/blocked_keywords_page.dart';
 import 'package:y300/features/content_filter/presentation/blocked_threads_page.dart';
 import 'package:y300/features/content_filter/presentation/web_blacklist_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -22,6 +24,7 @@ class ContentFilterPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final blockedThreads = ref.watch(blockedThreadsControllerProvider);
+    final blockedKeywords = ref.watch(blockedKeywordsControllerProvider);
     final account = ref.watch(currentBlacklistAccountProvider);
     return Scaffold(
       key: const Key('content-filter-page'),
@@ -51,6 +54,23 @@ class ContentFilterPage extends ConsumerWidget {
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const BlockedThreadsPage(),
+                        ),
+                      ),
+                    ),
+                    AppGroupedRow(
+                      key: const Key('content-filter-blocked-keywords-entry'),
+                      leading: const Icon(Icons.filter_alt_off_outlined),
+                      title: l10n.contentFilterKeywordsSection,
+                      subtitle: blockedKeywords.when(
+                        data: (rules) =>
+                            l10n.contentFilterKeywordsCount(rules.length),
+                        loading: () => l10n.commonLoading,
+                        error: (_, _) => l10n.contentFilterLoadFailed,
+                      ),
+                      showChevron: true,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const BlockedKeywordsPage(),
                         ),
                       ),
                     ),

@@ -1,8 +1,33 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show immutable, listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+
+/// Reason why a reply floor was filtered into the thread tail.
+@immutable
+final class ThreadReplyFilterReason {
+  const ThreadReplyFilterReason({
+    this.isBlacklistedAuthor = false,
+    this.matchedKeyword,
+  });
+
+  static const ThreadReplyFilterReason none = ThreadReplyFilterReason();
+
+  final bool isBlacklistedAuthor;
+  final String? matchedKeyword;
+
+  bool get isFiltered => isBlacklistedAuthor || matchedKeyword != null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThreadReplyFilterReason &&
+      other.isBlacklistedAuthor == isBlacklistedAuthor &&
+      other.matchedKeyword == matchedKeyword;
+
+  @override
+  int get hashCode => Object.hash(isBlacklistedAuthor, matchedKeyword);
+}
 
 /// One source page read while collecting replies whose authors are blacklisted.
 final class ThreadReplyTailPage {
@@ -47,6 +72,8 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
 
   final Map<int, List<ThreadPost>> _blockedByPage = <int, List<ThreadPost>>{};
   final Map<int, List<String>> _blockedPidsByPage = <int, List<String>>{};
+  final Map<String, ThreadReplyFilterReason> _reasonsByPid =
+      <String, ThreadReplyFilterReason>{};
   final Set<int> _observedPages = <int>{};
   String? _threadId;
   String? _queryIdentity;
@@ -55,6 +82,9 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   int _currentPage = 0;
   bool _onLastPage = false;
   Set<String> _membership = const <String>{};
+  Object? _filterIdentity;
+  bool _hasActiveFilters = false;
+  ThreadReplyFilterReason Function(ThreadPost post)? _evaluatePost;
   List<ThreadPost>? _tailCache;
   int _revision = 0;
   int _generation = 0;
@@ -97,12 +127,18 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     return Set<String>.unmodifiable(pids);
   }
 
+  /// Reasons for filtered replies keyed by post id.
+  Map<String, ThreadReplyFilterReason> get reasonsByPid =>
+      Map<String, ThreadReplyFilterReason>.unmodifiable(_reasonsByPid);
+
+  ThreadReplyFilterReason? reasonFor(String pid) => _reasonsByPid[pid];
+
   /// The tail is only visible on the page that ended the thread.
   bool get showTail => _onLastPage;
 
   /// Every page from one to the last page has been scanned.
   bool get complete {
-    if (_membership.isEmpty) return true;
+    if (!_hasActiveFilters) return true;
     if (_lastPage <= 0) return false;
     if ((_threadId ?? '').isEmpty) return false;
     for (var page = 1; page <= _lastPage; page++) {
@@ -112,9 +148,9 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   }
 
   /// The last page is displayed while its complete tail is still unknown.
-  bool get tailPending => _membership.isNotEmpty && _onLastPage && !complete;
+  bool get tailPending => _hasActiveFilters && _onLastPage && !complete;
 
-  /// Records one visible page and its current blacklist membership.
+  /// Records one visible page and its current filter configuration.
   ///
   /// Called from build: state changes are published after the frame instead of
   /// notifying listeners during layout.
@@ -126,6 +162,9 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     required bool isLastPage,
     required Set<String> blacklistedUserIds,
     String? pinnedPid,
+    ThreadReplyFilterReason Function(ThreadPost post)? evaluatePost,
+    Object? filterIdentity,
+    bool? hasActiveFilters,
   }) {
     if (_disposed) return;
     final normalizedTid = threadId.trim();
@@ -141,10 +180,17 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     }
     if (normalizedTid.isNotEmpty) _threadId = normalizedTid;
     _queryIdentity = queryIdentity;
-    if (!_setEquals(_membership, blacklistedUserIds)) {
+    _evaluatePost = evaluatePost;
+    final effectiveHasActiveFilters =
+        hasActiveFilters ?? blacklistedUserIds.isNotEmpty;
+    if (!_setEquals(_membership, blacklistedUserIds) ||
+        filterIdentity != _filterIdentity ||
+        _hasActiveFilters != effectiveHasActiveFilters) {
       _membership = Set<String>.unmodifiable(blacklistedUserIds);
-      // Membership decides tail ownership; collected coverage is retired so
-      // every page is re-scanned with the new list.
+      _filterIdentity = filterIdentity;
+      _hasActiveFilters = effectiveHasActiveFilters;
+      // Filter rules decide tail ownership; collected coverage is retired so
+      // every page is re-scanned with the new configuration.
       _generation++;
       _clearCollected();
       _invalidate();
@@ -162,16 +208,42 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   }
 
   void _observePage(int page, List<ThreadPost> posts) {
-    final blocked = <ThreadPost>[
-      for (final post in posts)
-        if (_isBlocked(post)) post,
-    ];
+    final blocked = <ThreadPost>[];
+    final nextReasons = <String, ThreadReplyFilterReason>{};
+    for (final post in posts) {
+      if (post.isFirst || post.number == 1) continue;
+      final reason = _evaluatePost != null
+          ? _evaluatePost!(post)
+          : ThreadReplyFilterReason(isBlacklistedAuthor: _isBlocked(post));
+      if (!reason.isFiltered) continue;
+      blocked.add(post);
+      nextReasons[post.pid] = reason;
+    }
     final blockedPids = <String>[for (final post in blocked) post.pid];
     final previousPids = _blockedPidsByPage[page];
     _observedPages.add(page);
-    if (previousPids != null && listEquals(previousPids, blockedPids)) return;
+    var reasonsChanged = false;
+    for (final entry in nextReasons.entries) {
+      if (_reasonsByPid[entry.key] != entry.value) {
+        reasonsChanged = true;
+        break;
+      }
+    }
+    if (previousPids != null &&
+        listEquals(previousPids, blockedPids) &&
+        !reasonsChanged) {
+      return;
+    }
     final previous = _blockedByPage[page];
-    if (previous != null) _retainedPosts -= previous.length;
+    if (previous != null) {
+      _retainedPosts -= previous.length;
+      for (final oldPost in previous) {
+        if (!nextReasons.containsKey(oldPost.pid)) {
+          _reasonsByPid.remove(oldPost.pid);
+        }
+      }
+    }
+    _reasonsByPid.addAll(nextReasons);
     _blockedPidsByPage[page] = List<String>.unmodifiable(blockedPids);
     if (blocked.isEmpty) {
       _blockedByPage.remove(page);
@@ -197,6 +269,11 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
       if (page == _currentPage) continue;
       final removed = _blockedByPage.remove(page);
       _retainedPosts -= removed?.length ?? 0;
+      if (removed != null) {
+        for (final post in removed) {
+          _reasonsByPid.remove(post.pid);
+        }
+      }
       _blockedPidsByPage.remove(page);
       // A dropped page is re-readable; the session no longer claims coverage.
       _observedPages.remove(page);
@@ -212,7 +289,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     if (_disposed ||
         !_onLastPage ||
         complete ||
-        _membership.isEmpty ||
+        !_hasActiveFilters ||
         _lastPage < 2) {
       return Future<void>.value();
     }
@@ -257,6 +334,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   void _clearCollected() {
     _blockedByPage.clear();
     _blockedPidsByPage.clear();
+    _reasonsByPid.clear();
     _observedPages.clear();
     _retainedPosts = 0;
     _budgetExhausted = false;
@@ -287,6 +365,9 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     _threadId = null;
     _queryIdentity = null;
     _pinnedPid = null;
+    _filterIdentity = null;
+    _hasActiveFilters = false;
+    _evaluatePost = null;
     _lastPage = 0;
     _currentPage = 0;
     _onLastPage = false;

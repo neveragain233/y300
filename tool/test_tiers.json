@@ -171,6 +171,7 @@
         "test/features/thread/presentation/services/thread_image_reader_capability_test.dart",
         "test/features/thread/presentation/services/thread_post_navigation_clipboard_test.dart",
         "test/features/thread/presentation/services/thread_post_viewport_anchor_coordinator_test.dart",
+        "test/features/thread/presentation/thread_detail_keyword_filter_test.dart",
         "test/features/thread/presentation/thread_detail_scroll_stability_test.dart",
         "test/features/thread/presentation/thread_detail_scroll_title_test.dart",
         "test/features/thread/presentation/thread_post_rate_form_projection_test.dart",

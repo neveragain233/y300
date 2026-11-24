@@ -36,14 +36,18 @@ import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/composer_shared/domain/models/composer_kind.dart';
 import 'package:y300/features/composer_shared/presentation/services/composer_text_resolver.dart';
+import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
+import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/blacklist/presentation/blacklist_author_gate_view.dart';
 import 'package:y300/features/content_filter/presentation/services/blacklist_user_action.dart';
 import 'package:y300/features/content_filter/presentation/services/thread_block_action.dart';
+import 'package:y300/features/content_filter/presentation/widgets/blocked_keyword_thread_gate_view.dart';
 import 'package:y300/features/content_filter/presentation/widgets/blocked_thread_gate_view.dart';
 import 'package:y300/features/history/data/providers/history_providers.dart';
 import 'package:y300/features/history/domain/models/history_models.dart';
@@ -127,6 +131,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   int _blacklistRevision = 0;
   String? _tailPageKey;
   bool _tailAutoAttempted = false;
+  bool _filteredTailExpanded = false;
+  bool _allowedKeywordThreadView = false;
+  String? _lastTailContextKey;
   final _controlsVisibility = ThreadControlsVisibilityController();
   double _controlsHeight = 56;
   double _rightControlsHeight = 56;
@@ -338,6 +345,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     }
     if (oldWidget.tid != widget.tid) {
       _allowedBlacklistedAuthorView = false;
+      _allowedKeywordThreadView = false;
+      _filteredTailExpanded = false;
     }
     if (oldWidget.tid != widget.tid ||
         oldWidget.targetPid != widget.targetPid ||
@@ -347,6 +356,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       _postRouteSession.invalidate();
       _replyTail.reset();
       _tailAutoAttempted = false;
+      _filteredTailExpanded = false;
       _titleObserver.reset();
     }
     if (oldWidget.tid != widget.tid ||
@@ -457,6 +467,36 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       converterId: converter.id,
       candidate: projectionCandidate,
     );
+    final keywordRules = ref.watch(keywordFilterRulesProvider);
+    if (!_allowedKeywordThreadView && keywordRules.hasBodyRules) {
+      final rawSubject = state.subject.trim().isNotEmpty
+          ? state.subject
+          : widget.subject;
+      final matchedKeyword =
+          KeywordFilterMatcher.matchPlainText(
+            rawSubject,
+            keywordRules.bodyRules,
+            convertedText: projection.displaySubject,
+          ) ??
+          (topicAuthor != null
+              ? KeywordFilterMatcher.matchHtmlBody(
+                  topicAuthor.message,
+                  keywordRules.bodyRules,
+                  excludeQuotes: false,
+                  convertedHtml: projection
+                      .findByPid(topicAuthor.pid)
+                      ?.displayPost
+                      .message,
+                )
+              : null);
+      if (matchedKeyword != null) {
+        return BlockedKeywordThreadGateView(
+          subject: rawSubject,
+          matchedKeyword: matchedKeyword.keyword,
+          onViewOnce: () => setState(() => _allowedKeywordThreadView = true),
+        );
+      }
+    }
     final extraCommentProjection = ref
         .watch(threadPostCommentProjectionProvider(args))
         .value;
@@ -509,6 +549,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       _tailMembership = tailMembership;
       _blacklistRevision++;
     }
+    final tailContextKey =
+        '${state.tid}|${_queryIdentityFor(state)}|${state.currentPage}|$_blacklistRevision|${keywordRules.revision}';
+    if (_lastTailContextKey != tailContextKey) {
+      _lastTailContextKey = tailContextKey;
+      _filteredTailExpanded = false;
+    }
     _replyTail.observe(
       threadId: state.tid.trim().isEmpty ? widget.tid : state.tid,
       queryIdentity: _queryIdentityFor(state),
@@ -517,6 +563,15 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       isLastPage: _isThreadLastPage(state),
       blacklistedUserIds: _tailMembership,
       pinnedPid: widget.targetPid,
+      filterIdentity: Object.hash(_blacklistRevision, keywordRules.revision),
+      hasActiveFilters:
+          _tailMembership.isNotEmpty || keywordRules.hasReplyRules,
+      evaluatePost: (post) => _evaluateReplyFilter(
+        post,
+        blacklistedUserIds: _tailMembership,
+        keywordRules: keywordRules,
+        convertedHtml: projection.findByPid(post.pid)?.displayPost.message,
+      ),
     );
     _floorNavigation.refresh();
     _scheduleReplyTailCollection(state);
@@ -668,6 +723,23 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                     movedBlacklistedPids: _replyTail.movedPids,
                                     showReplyTail: _replyTail.showTail,
                                     replyTailRevision: _replyTail.revision,
+                                    filteredTailExpanded: _filteredTailExpanded,
+                                    onToggleFilteredTail: () {
+                                      setState(() {
+                                        _filteredTailExpanded =
+                                            !_filteredTailExpanded;
+                                      });
+                                      _floorNavigation.refresh();
+                                    },
+                                    tailReasonsByPid: _replyTail.reasonsByPid,
+                                    tailCollecting: _replyTail.isCollecting,
+                                    tailHasFailure: _replyTail.hasFailure,
+                                    tailHasBudgetLimitation:
+                                        _replyTail.hasBudgetLimitation,
+                                    onRetryTailCollect: _retryReplyTail,
+                                    keywordFilterRules: keywordRules,
+                                    hiddenQuotePlaceholderText:
+                                        l10n.threadKeywordHiddenQuote,
                                     scrollController: _scrollController,
                                     highlightPostPid: _highlightPostPid,
                                     targetPid: widget.targetPid,
@@ -1110,19 +1182,49 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     );
   }
 
-  /// 与渲染条目共用同一份展示顺序：移走的被屏蔽回复只出现在末页尾部。
+  /// 与渲染条目共用同一份展示顺序：未展开折叠栏时不包含尾部被屏蔽回复，
+  /// 使翻楼导航跳过未展开区；展开后再并入序列。
   List<ThreadPost> _displayPostsFor(ThreadDetailPageState state) {
     final moved = _replyTail.movedPids;
     final posts = <ThreadPost>[
       for (final post in state.posts)
         if (!moved.contains(post.pid)) post,
     ];
-    if (!_replyTail.showTail) return posts;
+    if (!_replyTail.showTail || !_filteredTailExpanded) return posts;
     final seen = <String>{for (final post in posts) post.pid};
     for (final post in _replyTail.tailPosts) {
       if (seen.add(post.pid)) posts.add(post);
     }
     return posts;
+  }
+
+  ThreadReplyFilterReason _evaluateReplyFilter(
+    ThreadPost post, {
+    required Set<String> blacklistedUserIds,
+    required KeywordFilterRuleSet keywordRules,
+    String? convertedHtml,
+  }) {
+    if (post.isFirst || post.number == 1) {
+      return ThreadReplyFilterReason.none;
+    }
+    final authorId = post.authorId.trim();
+    final isBlacklisted =
+        authorId.isNotEmpty && blacklistedUserIds.contains(authorId);
+    final matchedKeyword = keywordRules.hasReplyRules
+        ? KeywordFilterMatcher.matchHtmlBody(
+            post.message,
+            keywordRules.replyRules,
+            excludeQuotes: true,
+            convertedHtml: convertedHtml,
+          )?.keyword
+        : null;
+    if (!isBlacklisted && matchedKeyword == null) {
+      return ThreadReplyFilterReason.none;
+    }
+    return ThreadReplyFilterReason(
+      isBlacklistedAuthor: isBlacklisted,
+      matchedKeyword: matchedKeyword,
+    );
   }
 
   String? _topicPidOf(List<ThreadPost> posts) {

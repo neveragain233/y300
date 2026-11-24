@@ -10,6 +10,8 @@ import 'package:y300/features/cache/domain/models/forum_image_dimensions.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/presentation/widgets/cached_library_image.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
+import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/content_filter/presentation/widgets/thread_block_menu_button.dart';
 import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.dart';
@@ -45,6 +47,7 @@ class ForumDisplayContent extends StatefulWidget {
     required this.onOpenSubForum,
     this.blockedThreadIds = const <String>{},
     this.blacklistedUserIds = const <String>{},
+    this.keywordFilterRules = KeywordFilterRuleSet.empty,
   });
 
   final ForumDisplayContentProjection projection;
@@ -65,6 +68,9 @@ class ForumDisplayContent extends StatefulWidget {
 
   /// Author ids hidden by the synced web blacklist.
   final Set<String> blacklistedUserIds;
+
+  /// Active local keyword rules for list filtering.
+  final KeywordFilterRuleSet keywordFilterRules;
 
   @override
   State<ForumDisplayContent> createState() => _ForumDisplayContentState();
@@ -91,11 +97,20 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
     );
     final displayTypeFilters = _displayFilters(widget.projection.typeFilters);
     final displaySubForums = _displaySubForums(widget.projection.subForums);
+    final hideByKeyword =
+        widget.keywordFilterRules.hideMatchingThreadsInLists &&
+        widget.keywordFilterRules.hasBodyRules;
     final displayTopEntries = [
       for (final entry in _displayTopEntries(widget.projection.topEntries))
         if (!widget.blockedThreadIds.contains(
-          ThreadBlockIdentity.normalizeTid(entry.tid),
-        ))
+              ThreadBlockIdentity.normalizeTid(entry.tid),
+            ) &&
+            (!hideByKeyword ||
+                KeywordFilterMatcher.matchPlainText(
+                      entry.title,
+                      widget.keywordFilterRules.bodyRules,
+                    ) ==
+                    null))
           entry,
     ];
     final allDisplayThreads = _displayThreads(widget.projection.threads);
@@ -104,7 +119,13 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
         if (!widget.blockedThreadIds.contains(
               ThreadBlockIdentity.normalizeTid(thread.tid),
             ) &&
-            !widget.blacklistedUserIds.contains(thread.uid.trim()))
+            !widget.blacklistedUserIds.contains(thread.uid.trim()) &&
+            (!hideByKeyword ||
+                KeywordFilterMatcher.matchPlainText(
+                      thread.subject,
+                      widget.keywordFilterRules.bodyRules,
+                    ) ==
+                    null))
           thread,
     ];
     final hiddenByRules =

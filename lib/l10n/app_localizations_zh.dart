@@ -6452,10 +6452,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSearchKeywordsBrowsingPosts => '设置主页、浏览、帖子、屏蔽、评分、折叠、分组';
 
   @override
-  String get settingsSearchSummaryContentFilter => '黑名单作者、屏蔽帖子与过滤规则';
+  String get settingsSearchSummaryContentFilter => '黑名单作者、关键词屏蔽、屏蔽帖子与过滤规则';
 
   @override
-  String get settingsSearchKeywordsContentFilter => '黑名单、屏蔽、过滤、隐藏、帖子、用户';
+  String get settingsSearchKeywordsContentFilter => '黑名单、关键词、屏蔽、过滤、隐藏、帖子、用户';
 
   @override
   String get settingsSearchSummaryThreadControls => '帖子悬浮按钮的触区、导航与滚动';
@@ -6634,6 +6634,116 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readerContentTitle => '内容';
+
+  @override
+  String threadKeywordCollapsed(String keyword) {
+    return '已屏蔽命中关键词「$keyword」的楼层';
+  }
+
+  @override
+  String threadBlacklistAndKeywordCollapsed(String name, String keyword) {
+    return '已屏蔽用户「$name」（命中关键词「$keyword」）的楼层';
+  }
+
+  @override
+  String threadFilteredTailExpand(int count) {
+    return '已隐藏 $count 条被屏蔽的回复 · 点击展开';
+  }
+
+  @override
+  String threadFilteredTailCollapse(int count) {
+    return '收起已隐藏的 $count 条回复';
+  }
+
+  @override
+  String get threadFilteredTailScanning => '正在整理前序页的被屏蔽回复…';
+
+  @override
+  String get threadFilteredTailCollecting => '正在检查前序页的被屏蔽回复…';
+
+  @override
+  String get threadFilteredTailFailed => '部分前序页未能检查，已显示当前结果';
+
+  @override
+  String get threadFilteredTailBudgetReached => '前序页较多，已暂停继续检查';
+
+  @override
+  String get threadFilteredTailLoadMore => '继续检查';
+
+  @override
+  String get threadKeywordHiddenQuote => '引用发言因为关键词屏蔽被隐藏';
+
+  @override
+  String get keywordThreadGateTitle => '已屏蔽的关键词帖子';
+
+  @override
+  String keywordThreadGateMessage(String keyword) {
+    return '此主题标题或首楼正文命中关键词「$keyword」，已按本地关键词规则拦截。';
+  }
+
+  @override
+  String get keywordThreadGateViewOnce => '本次继续查看';
+
+  @override
+  String get contentFilterKeywordsSection => '关键词屏蔽';
+
+  @override
+  String contentFilterKeywordsCount(int count) {
+    return '$count 条本地规则';
+  }
+
+  @override
+  String get contentFilterKeywordsEmpty => '还没有本地关键词规则，点击右上角添加。';
+
+  @override
+  String get contentFilterKeywordAdd => '添加关键词';
+
+  @override
+  String get contentFilterKeywordEdit => '编辑关键词';
+
+  @override
+  String get contentFilterKeywordLabel => '关键词';
+
+  @override
+  String get contentFilterKeywordHint => '输入要屏蔽的词或短语（不区分大小写）';
+
+  @override
+  String get contentFilterKeywordEmptyError => '请输入关键词';
+
+  @override
+  String get contentFilterKeywordDuplicateError => '该关键词规则已存在';
+
+  @override
+  String get contentFilterKeywordScopeLabel => '屏蔽范围';
+
+  @override
+  String get contentFilterKeywordScopeRepliesOnly => '仅回复';
+
+  @override
+  String get contentFilterKeywordScopeRepliesOnlyDetail =>
+      '命中回复移入全帖末尾折叠栏；正常楼层内引用块命中时仅隐藏引用内容';
+
+  @override
+  String get contentFilterKeywordScopeIncludeBody => '包括正文';
+
+  @override
+  String get contentFilterKeywordScopeIncludeBodyDetail =>
+      '同时拦截标题或首楼正文命中的主题，并隐藏回复';
+
+  @override
+  String get contentFilterHideKeywordThreadsInLists => '在列表中隐藏标题命中关键词的帖子';
+
+  @override
+  String get contentFilterHideKeywordThreadsInListsDetail =>
+      '仅对作用域为“包括正文”的关键词生效；关闭后列表中仍显示标题，进帖时再提示';
+
+  @override
+  String get contentFilterKeywordDelete => '删除';
+
+  @override
+  String contentFilterKeywordDeleted(String keyword) {
+    return '已删除关键词「$keyword」';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -13086,10 +13196,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsSearchKeywordsBrowsingPosts => '設定主頁、瀏覽、帖子、屏蔽、評分、折疊、分組';
 
   @override
-  String get settingsSearchSummaryContentFilter => '黑名單作者、屏蔽帖子與過濾規則';
+  String get settingsSearchSummaryContentFilter => '黑名單作者、關鍵詞屏蔽、屏蔽帖子與過濾規則';
 
   @override
-  String get settingsSearchKeywordsContentFilter => '黑名單、屏蔽、過濾、隱藏、帖子、使用者';
+  String get settingsSearchKeywordsContentFilter => '黑名單、關鍵詞、屏蔽、過濾、隱藏、帖子、使用者';
 
   @override
   String get settingsSearchSummaryThreadControls => '帖子懸浮按鈕的觸控區、導覽與捲動';
@@ -13268,4 +13378,114 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get readerContentTitle => '內容';
+
+  @override
+  String threadKeywordCollapsed(String keyword) {
+    return '已屏蔽命中關鍵詞「$keyword」的樓層';
+  }
+
+  @override
+  String threadBlacklistAndKeywordCollapsed(String name, String keyword) {
+    return '已屏蔽使用者「$name」（命中關鍵詞「$keyword」）的樓層';
+  }
+
+  @override
+  String threadFilteredTailExpand(int count) {
+    return '已隱藏 $count 則被屏蔽的回覆 · 點擊展開';
+  }
+
+  @override
+  String threadFilteredTailCollapse(int count) {
+    return '收起已隱藏的 $count 則回覆';
+  }
+
+  @override
+  String get threadFilteredTailScanning => '正在整理前序頁的被屏蔽回覆…';
+
+  @override
+  String get threadFilteredTailCollecting => '正在檢查前序頁的被屏蔽回覆…';
+
+  @override
+  String get threadFilteredTailFailed => '部分前序頁未能檢查，已顯示目前結果';
+
+  @override
+  String get threadFilteredTailBudgetReached => '前序頁較多，已暫停繼續檢查';
+
+  @override
+  String get threadFilteredTailLoadMore => '繼續檢查';
+
+  @override
+  String get threadKeywordHiddenQuote => '引用發言因為關鍵詞屏蔽被隱藏';
+
+  @override
+  String get keywordThreadGateTitle => '已屏蔽的關鍵詞帖子';
+
+  @override
+  String keywordThreadGateMessage(String keyword) {
+    return '此主題標題或首樓正文命中關鍵詞「$keyword」，已依本機關鍵詞規則攔截。';
+  }
+
+  @override
+  String get keywordThreadGateViewOnce => '本次繼續查看';
+
+  @override
+  String get contentFilterKeywordsSection => '關鍵詞屏蔽';
+
+  @override
+  String contentFilterKeywordsCount(int count) {
+    return '$count 條本機規則';
+  }
+
+  @override
+  String get contentFilterKeywordsEmpty => '還沒有本機關鍵詞規則，點擊右上角新增。';
+
+  @override
+  String get contentFilterKeywordAdd => '新增關鍵詞';
+
+  @override
+  String get contentFilterKeywordEdit => '編輯關鍵詞';
+
+  @override
+  String get contentFilterKeywordLabel => '關鍵詞';
+
+  @override
+  String get contentFilterKeywordHint => '輸入要屏蔽的詞或短語（不區分大小寫）';
+
+  @override
+  String get contentFilterKeywordEmptyError => '請輸入關鍵詞';
+
+  @override
+  String get contentFilterKeywordDuplicateError => '該關鍵詞規則已存在';
+
+  @override
+  String get contentFilterKeywordScopeLabel => '屏蔽範圍';
+
+  @override
+  String get contentFilterKeywordScopeRepliesOnly => '僅回覆';
+
+  @override
+  String get contentFilterKeywordScopeRepliesOnlyDetail =>
+      '命中回覆移入全帖末尾折疊欄；正常樓層內引用區塊命中時僅隱藏引用內容';
+
+  @override
+  String get contentFilterKeywordScopeIncludeBody => '包括正文';
+
+  @override
+  String get contentFilterKeywordScopeIncludeBodyDetail =>
+      '同時攔截標題或首樓正文命中的主題，並隱藏回覆';
+
+  @override
+  String get contentFilterHideKeywordThreadsInLists => '在列表中隱藏標題命中關鍵詞的帖子';
+
+  @override
+  String get contentFilterHideKeywordThreadsInListsDetail =>
+      '僅對作用域為「包括正文」的關鍵詞生效；關閉後列表中仍顯示標題，進帖時再提示';
+
+  @override
+  String get contentFilterKeywordDelete => '刪除';
+
+  @override
+  String contentFilterKeywordDeleted(String keyword) {
+    return '已刪除關鍵詞「$keyword」';
+  }
 }

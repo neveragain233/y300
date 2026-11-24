@@ -4307,11 +4307,11 @@
   "@settingsSearchKeywordsBrowsingPosts": {
     "description": "设置主页浏览与帖子分组搜索的关键词"
   },
-  "settingsSearchSummaryContentFilter": "黑名单作者、屏蔽帖子与过滤规则",
+  "settingsSearchSummaryContentFilter": "黑名单作者、关键词屏蔽、屏蔽帖子与过滤规则",
   "@settingsSearchSummaryContentFilter": {
     "description": "内容屏蔽页的摘要"
   },
-  "settingsSearchKeywordsContentFilter": "黑名单、屏蔽、过滤、隐藏、帖子、用户",
+  "settingsSearchKeywordsContentFilter": "黑名单、关键词、屏蔽、过滤、隐藏、帖子、用户",
   "@settingsSearchKeywordsContentFilter": {
     "description": "内容屏蔽页搜索的关键词"
   },
@@ -4489,5 +4489,88 @@
       }
     }
   },
-  "readerContentTitle": "内容"
+  "readerContentTitle": "内容",
+  "threadKeywordCollapsed": "已屏蔽命中关键词「{keyword}」的楼层",
+  "@threadKeywordCollapsed": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "threadBlacklistAndKeywordCollapsed": "已屏蔽用户「{name}」（命中关键词「{keyword}」）的楼层",
+  "@threadBlacklistAndKeywordCollapsed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "threadFilteredTailExpand": "已隐藏 {count} 条被屏蔽的回复 · 点击展开",
+  "@threadFilteredTailExpand": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "threadFilteredTailCollapse": "收起已隐藏的 {count} 条回复",
+  "@threadFilteredTailCollapse": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "threadFilteredTailScanning": "正在整理前序页的被屏蔽回复…",
+  "threadFilteredTailCollecting": "正在检查前序页的被屏蔽回复…",
+  "threadFilteredTailFailed": "部分前序页未能检查，已显示当前结果",
+  "threadFilteredTailBudgetReached": "前序页较多，已暂停继续检查",
+  "threadFilteredTailLoadMore": "继续检查",
+  "threadKeywordHiddenQuote": "引用发言因为关键词屏蔽被隐藏",
+  "keywordThreadGateTitle": "已屏蔽的关键词帖子",
+  "keywordThreadGateMessage": "此主题标题或首楼正文命中关键词「{keyword}」，已按本地关键词规则拦截。",
+  "@keywordThreadGateMessage": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "keywordThreadGateViewOnce": "本次继续查看",
+  "contentFilterKeywordsSection": "关键词屏蔽",
+  "contentFilterKeywordsCount": "{count} 条本地规则",
+  "@contentFilterKeywordsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contentFilterKeywordsEmpty": "还没有本地关键词规则，点击右上角添加。",
+  "contentFilterKeywordAdd": "添加关键词",
+  "contentFilterKeywordEdit": "编辑关键词",
+  "contentFilterKeywordLabel": "关键词",
+  "contentFilterKeywordHint": "输入要屏蔽的词或短语（不区分大小写）",
+  "contentFilterKeywordEmptyError": "请输入关键词",
+  "contentFilterKeywordDuplicateError": "该关键词规则已存在",
+  "contentFilterKeywordScopeLabel": "屏蔽范围",
+  "contentFilterKeywordScopeRepliesOnly": "仅回复",
+  "contentFilterKeywordScopeRepliesOnlyDetail": "命中回复移入全帖末尾折叠栏；正常楼层内引用块命中时仅隐藏引用内容",
+  "contentFilterKeywordScopeIncludeBody": "包括正文",
+  "contentFilterKeywordScopeIncludeBodyDetail": "同时拦截标题或首楼正文命中的主题，并隐藏回复",
+  "contentFilterHideKeywordThreadsInLists": "在列表中隐藏标题命中关键词的帖子",
+  "contentFilterHideKeywordThreadsInListsDetail": "仅对作用域为“包括正文”的关键词生效；关闭后列表中仍显示标题，进帖时再提示",
+  "contentFilterKeywordDelete": "删除",
+  "contentFilterKeywordDeleted": "已删除关键词「{keyword}」",
+  "@contentFilterKeywordDeleted": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  }
 }
