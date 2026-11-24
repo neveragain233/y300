@@ -62,6 +62,7 @@ final class ForumClientSourcePlan {
     this.friendDirectory,
     this.friendBlacklist,
     this.friendBlacklistCommand,
+    this.friendBlacklistRemoveCommand,
     this.friendFeed,
     this.friendRemovalCommand,
     this.privateMessageBatchPreparation,
@@ -177,6 +178,8 @@ final class ForumClientSourcePlan {
     friendBlacklist: overrides.friendBlacklist ?? friendBlacklist,
     friendBlacklistCommand:
         overrides.friendBlacklistCommand ?? friendBlacklistCommand,
+    friendBlacklistRemoveCommand:
+        overrides.friendBlacklistRemoveCommand ?? friendBlacklistRemoveCommand,
     friendFeed: overrides.friendFeed ?? friendFeed,
     friendRemovalCommand:
         overrides.friendRemovalCommand ?? friendRemovalCommand,
@@ -309,6 +312,9 @@ final class ForumClientSourcePlan {
 
   /// Adds one user to the web blacklist, or `null` when not installed.
   final ForumBlacklistCommand? friendBlacklistCommand;
+
+  /// Removes one user from the web blacklist, or `null` when not installed.
+  final ForumBlacklistRemoveCommand? friendBlacklistRemoveCommand;
 
   /// Source for the current account's native friend-page member lists.
   final ForumFriendFeedRepository? friendFeed;

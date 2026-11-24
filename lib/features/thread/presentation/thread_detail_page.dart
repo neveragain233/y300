@@ -849,6 +849,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         onJumpPage: state.posts.isNotEmpty && !state.isLoadingMore
             ? () => _selectThreadPage(controller, state)
             : null,
+        onJumpPageFromContext: state.posts.isNotEmpty && !state.isLoadingMore
+            ? (anchorContext) => _selectThreadPage(
+                controller,
+                state,
+                anchorContext: anchorContext,
+              )
+            : null,
         onHeightChanged: (height) {
           if (mounted && (_controlsHeight - height).abs() > .5) {
             setState(() => _controlsHeight = height);
@@ -889,13 +896,19 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                 asyncState.value != null
             ? () => _openThreadReplyComposer(args, state)
             : null,
-        jumpPage: IconButton(
-          key: const Key('thread-detail-jump-page-button'),
-          tooltip: l10n.threadControlsJumpPage,
-          onPressed: state.posts.isNotEmpty && !state.isLoadingMore
-              ? () => _selectThreadPage(controller, state)
-              : null,
-          icon: const Icon(Icons.numbers),
+        jumpPage: Builder(
+          builder: (buttonContext) => IconButton(
+            key: const Key('thread-detail-jump-page-button'),
+            tooltip: l10n.threadControlsJumpPage,
+            onPressed: state.posts.isNotEmpty && !state.isLoadingMore
+                ? () => _selectThreadPage(
+                    controller,
+                    state,
+                    anchorContext: buttonContext,
+                  )
+                : null,
+            icon: const Icon(Icons.numbers),
+          ),
         ),
         more: _ThreadDetailMoreMenu(
           state: state,
@@ -1383,8 +1396,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
 
   Future<void> _selectThreadPage(
     ThreadDetailController controller,
-    ThreadDetailPageState state,
-  ) async {
+    ThreadDetailPageState state, {
+    BuildContext? anchorContext,
+  }) async {
     _cancelFloorNavigation();
     _controlsVisibility.reset();
     final owner = _readFloorPage()?.owner;
@@ -1393,6 +1407,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       currentPage: state.currentPage,
       lastPage: state.lastPage,
       hasMore: state.hasMore,
+      anchorContext: anchorContext,
     );
     if (!mounted ||
         selected == null ||

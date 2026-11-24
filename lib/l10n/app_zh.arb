@@ -243,7 +243,7 @@
   "contentFilterWebBlacklistRefreshing": "正在同步…",
   "contentFilterWebBlacklistSyncFailed": "名单同步失败，已保留上次成功的名单",
   "contentFilterWebBlacklistCount": "{count} 人",
-  "contentFilterWebBlacklistNote": "可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成",
+  "contentFilterWebBlacklistNote": "可在帖子与楼层菜单屏蔽用户，也可直接在此移除；网络不稳时将先在本地生效并在后续联网后同步",
   "contentFilterHideBlacklistedThreads": "屏蔽黑名单用户发起的帖子",
   "contentFilterHideBlacklistedThreadsDetail": "关闭时与原站一致：帖子照常显示，作者的全部楼层折叠；打开后从版块、搜索和标签列表隐藏，直链先显示整帖拦截。",
   "blacklistBlockUser": "屏蔽此用户",
@@ -4572,5 +4572,85 @@
         "type": "String"
       }
     }
-  }
+  },
+  "blacklistBlockQueued": "已在本地屏蔽「{name}」，联网后自动同步到网页黑名单",
+  "@blacklistBlockQueued": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistRemove": "移除",
+  "contentFilterWebBlacklistRemoveTitle": "移除黑名单成员",
+  "contentFilterWebBlacklistRemoveBody": "确定将「{name}」从网页版黑名单移除吗？",
+  "@contentFilterWebBlacklistRemoveBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistRemoveApplied": "已移除「{name}」",
+  "@contentFilterWebBlacklistRemoveApplied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistRemoveQueued": "已在本地移除「{name}」，联网后自动同步到网页",
+  "@contentFilterWebBlacklistRemoveQueued": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistRemoveNotListed": "「{name}」已不在网页黑名单中",
+  "@contentFilterWebBlacklistRemoveNotListed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistRemoveFailed": "移除失败，请稍后重试",
+  "contentFilterWebBlacklistRemoveUnknown": "暂时无法确认是否已移除，未自动重试",
+  "contentFilterWebBlacklistPendingAddQueued": "UID：{uid} · 本地已屏蔽，等待联网同步",
+  "@contentFilterWebBlacklistPendingAddQueued": {
+    "placeholders": {
+      "uid": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistPendingAddVerify": "UID：{uid} · 屏蔽结果待核对，请刷新或重试",
+  "@contentFilterWebBlacklistPendingAddVerify": {
+    "placeholders": {
+      "uid": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistPendingRemoveQueued": "UID：{uid} · 本地已移除，等待联网同步",
+  "@contentFilterWebBlacklistPendingRemoveQueued": {
+    "placeholders": {
+      "uid": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistPendingRemoveVerify": "UID：{uid} · 移除结果待核对，请刷新或重试",
+  "@contentFilterWebBlacklistPendingRemoveVerify": {
+    "placeholders": {
+      "uid": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWebBlacklistRetry": "重试",
+  "contentFilterWebBlacklistUndoPending": "撤销",
+  "threadBlacklistExpandedNotice": "已临时显示此屏蔽楼层",
+  "threadBlacklistHideAgain": "隐藏"
 }

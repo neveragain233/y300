@@ -10,6 +10,7 @@ final class DiscuzForumBlacklistPage {
   const DiscuzForumBlacklistPage({
     required this.entries,
     required this.nextPageUri,
+    this.deleteUrisByUserId = const <String, Uri>{},
   });
 
   /// Blacklisted users on this page, in source order.
@@ -17,6 +18,9 @@ final class DiscuzForumBlacklistPage {
 
   /// Validated same-list next page, or null when this is the last page.
   final Uri? nextPageUri;
+
+  /// Validated same-origin delete links keyed by target user id.
+  final Map<String, Uri> deleteUrisByUserId;
 }
 
 /// Parses Discuz's desktop `home.php?mod=space&do=friend&view=blacklist` page.
@@ -67,6 +71,7 @@ final class DiscuzForumBlacklistParser {
     }
 
     final entries = <ForumBlacklistEntry>[];
+    final deleteUrisByUserId = <String, Uri>{};
     final seen = <String>{};
     final resourceResolver = ForumResourceReferenceResolver(
       siteOrigin: siteOrigin,
@@ -108,6 +113,14 @@ final class DiscuzForumBlacklistParser {
       final avatarUrl = avatarSrc == null
           ? null
           : resourceResolver.resolve(avatarSrc)?.uri.toString();
+      final deleteUri = _deleteActionUri(
+        row,
+        requestUri: requestUri,
+        userId: userId,
+      );
+      if (deleteUri != null) {
+        deleteUrisByUserId[userId] = deleteUri;
+      }
       entries.add(
         ForumBlacklistEntry(
           userId: userId,
@@ -120,7 +133,37 @@ final class DiscuzForumBlacklistParser {
     return DiscuzForumBlacklistPage(
       entries: List<ForumBlacklistEntry>.unmodifiable(entries),
       nextPageUri: _nextPageUri(document, requestUri),
+      deleteUrisByUserId: Map<String, Uri>.unmodifiable(deleteUrisByUserId),
     );
+  }
+
+  Uri? _deleteActionUri(
+    html_dom.Element row, {
+    required Uri requestUri,
+    required String userId,
+  }) {
+    for (final anchor in row.querySelectorAll('a[href]')) {
+      final href = anchor.attributes['href'];
+      if (href == null) {
+        continue;
+      }
+      final uri = _resolve(requestUri, href);
+      if (uri == null || !_isSameSite(uri) || !uri.path.endsWith('/home.php')) {
+        continue;
+      }
+      final query = uri.queryParameters;
+      final uidValues = uri.queryParametersAll['uid'];
+      if (query['mod'] == 'spacecp' &&
+          query['ac'] == 'friend' &&
+          query['op'] == 'blacklist' &&
+          query['subop'] == 'delete' &&
+          uidValues != null &&
+          uidValues.length == 1 &&
+          uidValues.single == userId) {
+        return uri;
+      }
+    }
+    return null;
   }
 
   Uri? _nextPageUri(html_dom.Document document, Uri requestUri) {

@@ -366,4 +366,122 @@ void main() {
     expect(find.text('含剧透的帖子'), findsOneWidget);
     expect(find.text('正常帖子'), findsOneWidget);
   });
+
+  testWidgets(
+    'expanded blocked floor can be hidden again and tail collapse resets revealed floors',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.blocked_keywords.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': [
+            <String, Object?>{
+              'id': 'k1',
+              'keyword': '剧透',
+              'scope': 'repliesOnly',
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+      });
+      final repo = _FakeThreadRepository(
+        (tid, page) async => _detail(
+          tid: tid,
+          subject: '测试主题',
+          posts: [
+            _post(
+              pid: 'p1',
+              number: 1,
+              isFirst: true,
+              message: '<p>主楼正常内容</p>',
+            ),
+            _post(
+              pid: 'p2',
+              number: 2,
+              isFirst: false,
+              message: '<p>包含剧透的回复</p>',
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              forum_client.YamiboForumClient(
+                config: forum_client.ForumClientConfig(
+                  siteOrigin: Uri.parse('https://bbs.yamibo.com'),
+                  userAgent: 'test',
+                  desktopUserAgent: 'test',
+                ),
+                network: _UnusedNetwork(),
+                sourcePlan: forum_client.ForumClientSourcePlan(
+                  threadDetail: repo,
+                  threadPollVoteCommand: _UnusedPollVoteCommand(),
+                ),
+              ),
+            ),
+          ],
+          child: const LocalizedTestApp(
+            home: ThreadDetailPage(tid: '100', subject: '测试主题'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-p2')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('thread-blacklisted-expand-p2')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('thread-blacklisted-hide-p2')),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains('包含剧透的回复'),
+        ),
+        findsOneWidget,
+      );
+
+      // Tapping per-floor hide returns it to placeholder immediately.
+      await tester.tap(find.byKey(const Key('thread-blacklisted-hide-p2')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-p2')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('thread-blacklisted-hide-p2')), findsNothing);
+
+      // Expand again, then collapse the tail banner and re-expand: must reset to hidden.
+      await tester.tap(find.byKey(const Key('thread-blacklisted-expand-p2')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-blacklisted-hide-p2')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('thread-blacklisted-hide-p2')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-blacklisted-post-p2')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('thread-blacklisted-hide-p2')), findsNothing);
+    },
+  );
 }

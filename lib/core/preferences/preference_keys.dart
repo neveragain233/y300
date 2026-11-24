@@ -184,6 +184,10 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.contentFilterWebBlacklistSnapshotV1,
   );
 
+  static const contentFilterWebBlacklistPendingV1 = PreferenceKey<String>(
+    PreferenceKeyNames.contentFilterWebBlacklistPendingV1,
+  );
+
   static const blacklistHideInitiatedThreadsV1 = PreferenceKey<bool>(
     PreferenceKeyNames.blacklistHideInitiatedThreadsV1,
   );

@@ -442,7 +442,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get contentFilterWebBlacklistNote => '可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成';
+  String get contentFilterWebBlacklistNote =>
+      '可在帖子与楼层菜单屏蔽用户，也可直接在此移除；网络不稳时将先在本地生效并在后续联网后同步';
 
   @override
   String get contentFilterHideBlacklistedThreads => '屏蔽黑名单用户发起的帖子';
@@ -6744,6 +6745,75 @@ class AppLocalizationsZh extends AppLocalizations {
   String contentFilterKeywordDeleted(String keyword) {
     return '已删除关键词「$keyword」';
   }
+
+  @override
+  String blacklistBlockQueued(String name) {
+    return '已在本地屏蔽「$name」，联网后自动同步到网页黑名单';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRemove => '移除';
+
+  @override
+  String get contentFilterWebBlacklistRemoveTitle => '移除黑名单成员';
+
+  @override
+  String contentFilterWebBlacklistRemoveBody(String name) {
+    return '确定将「$name」从网页版黑名单移除吗？';
+  }
+
+  @override
+  String contentFilterWebBlacklistRemoveApplied(String name) {
+    return '已移除「$name」';
+  }
+
+  @override
+  String contentFilterWebBlacklistRemoveQueued(String name) {
+    return '已在本地移除「$name」，联网后自动同步到网页';
+  }
+
+  @override
+  String contentFilterWebBlacklistRemoveNotListed(String name) {
+    return '「$name」已不在网页黑名单中';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRemoveFailed => '移除失败，请稍后重试';
+
+  @override
+  String get contentFilterWebBlacklistRemoveUnknown => '暂时无法确认是否已移除，未自动重试';
+
+  @override
+  String contentFilterWebBlacklistPendingAddQueued(String uid) {
+    return 'UID：$uid · 本地已屏蔽，等待联网同步';
+  }
+
+  @override
+  String contentFilterWebBlacklistPendingAddVerify(String uid) {
+    return 'UID：$uid · 屏蔽结果待核对，请刷新或重试';
+  }
+
+  @override
+  String contentFilterWebBlacklistPendingRemoveQueued(String uid) {
+    return 'UID：$uid · 本地已移除，等待联网同步';
+  }
+
+  @override
+  String contentFilterWebBlacklistPendingRemoveVerify(String uid) {
+    return 'UID：$uid · 移除结果待核对，请刷新或重试';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRetry => '重试';
+
+  @override
+  String get contentFilterWebBlacklistUndoPending => '撤销';
+
+  @override
+  String get threadBlacklistExpandedNotice => '已临时显示此屏蔽楼层';
+
+  @override
+  String get threadBlacklistHideAgain => '隐藏';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -7183,7 +7253,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get contentFilterWebBlacklistNote => '可在帖子與樓層選單封鎖用戶；解除名單仍在網頁版完成';
+  String get contentFilterWebBlacklistNote =>
+      '可在帖子與樓層選單封鎖用戶，也可直接在此移除；網路不穩時將先在本地生效並在後續聯網後同步';
 
   @override
   String get contentFilterHideBlacklistedThreads => '封鎖黑名單用戶發起的主題';
@@ -13488,4 +13559,73 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String contentFilterKeywordDeleted(String keyword) {
     return '已刪除關鍵詞「$keyword」';
   }
+
+  @override
+  String blacklistBlockQueued(String name) {
+    return '已在本地封鎖「$name」，聯網後自動同步到網頁黑名單';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRemove => '移除';
+
+  @override
+  String get contentFilterWebBlacklistRemoveTitle => '移除黑名單成員';
+
+  @override
+  String contentFilterWebBlacklistRemoveBody(String name) {
+    return '確定將「$name」從網頁版黑名單移除嗎？';
+  }
+
+  @override
+  String contentFilterWebBlacklistRemoveApplied(String name) {
+    return '已移除「$name」';
+  }
+
+  @override
+  String contentFilterWebBlacklistRemoveQueued(String name) {
+    return '已在本地移除「$name」，聯網後自動同步到網頁';
+  }
+
+  @override
+  String contentFilterWebBlacklistRemoveNotListed(String name) {
+    return '「$name」已不在網頁黑名單中';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRemoveFailed => '移除失敗，請稍後重試';
+
+  @override
+  String get contentFilterWebBlacklistRemoveUnknown => '暫時無法確認是否已移除，未自動重試';
+
+  @override
+  String contentFilterWebBlacklistPendingAddQueued(String uid) {
+    return 'UID：$uid · 本地已封鎖，等待聯網同步';
+  }
+
+  @override
+  String contentFilterWebBlacklistPendingAddVerify(String uid) {
+    return 'UID：$uid · 封鎖結果待核對，請重新整理或重試';
+  }
+
+  @override
+  String contentFilterWebBlacklistPendingRemoveQueued(String uid) {
+    return 'UID：$uid · 本地已移除，等待聯網同步';
+  }
+
+  @override
+  String contentFilterWebBlacklistPendingRemoveVerify(String uid) {
+    return 'UID：$uid · 移除結果待核對，請重新整理或重試';
+  }
+
+  @override
+  String get contentFilterWebBlacklistRetry => '重試';
+
+  @override
+  String get contentFilterWebBlacklistUndoPending => '撤銷';
+
+  @override
+  String get threadBlacklistExpandedNotice => '已臨時顯示此屏蔽樓層';
+
+  @override
+  String get threadBlacklistHideAgain => '隱藏';
 }

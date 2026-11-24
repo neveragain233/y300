@@ -6,15 +6,26 @@ import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_client_provider.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/features/blacklist/data/repositories/shared_preferences_blacklist_display_preferences_repository.dart';
+import 'package:y300/features/blacklist/data/repositories/shared_preferences_blacklist_pending_repository.dart';
 import 'package:y300/features/blacklist/data/repositories/shared_preferences_blacklist_repository.dart';
 import 'package:y300/features/blacklist/domain/repositories/blacklist_display_preferences_repository.dart';
+import 'package:y300/features/blacklist/domain/repositories/blacklist_pending_repository.dart';
 import 'package:y300/features/blacklist/domain/repositories/blacklist_repository.dart';
+import 'package:y300/features/profile/presentation/account_display_controller.dart';
 
 final blacklistRepositoryProvider = Provider<BlacklistRepository>((ref) {
   return SharedPreferencesBlacklistRepository(
     ref.watch(preferencesStoreProvider),
   );
 });
+
+final blacklistPendingRepositoryProvider = Provider<BlacklistPendingRepository>(
+  (ref) {
+    return SharedPreferencesBlacklistPendingRepository(
+      ref.watch(preferencesStoreProvider),
+    );
+  },
+);
 
 final blacklistDisplayPreferencesRepositoryProvider =
     Provider<BlacklistDisplayPreferencesRepository>((ref) {
@@ -53,6 +64,25 @@ final blacklistAddSupportedProvider = Provider<bool>((ref) {
   return ref.watch(yamiboForumClientProvider).friendBlacklistCommand != null;
 });
 
+typedef BlacklistRemoveRemoteCommand =
+    Future<DataCommandResult<ForumBlacklistRemoveReceipt>> Function(
+      ForumBlacklistRemoveSubmission submission,
+    );
+
+/// Test seam for the authenticated web-blacklist remove command.
+final blacklistRemoveCommandProvider = Provider<BlacklistRemoveRemoteCommand>((
+  ref,
+) {
+  return (submission) =>
+      ref.read(yamiboForumClientProvider).removeFromBlacklist(submission);
+});
+
+/// Whether the configured forum client can remove blacklist members.
+final blacklistRemoveSupportedProvider = Provider<bool>((ref) {
+  return ref.watch(yamiboForumClientProvider).friendBlacklistRemoveCommand !=
+      null;
+});
+
 /// Whether a stale snapshot may be refreshed without an explicit request.
 final blacklistAutoSyncProvider = Provider<bool>((ref) => true);
 
@@ -69,20 +99,58 @@ final blacklistSessionUidProvider =
 
 final class _BlacklistSessionUidNotifier
     extends Notifier<BlacklistSessionIdentity?> {
+  static final RegExp _positiveUserId = RegExp(r'^[1-9]\d{0,19}$');
   var _revision = 0;
+  var _generation = 0;
 
   @override
   BlacklistSessionIdentity? build() {
     final store = ref.watch(yamiboSessionStoreProvider);
+    final prefs = ref.watch(preferencesStoreProvider);
     final subscription = store.identityChanges.listen((_) {
       _update(store);
     });
-    ref.onDispose(() => unawaited(subscription.cancel()));
+    ref.onDispose(() {
+      _generation++;
+      unawaited(subscription.cancel());
+    });
     final uid = _read(store);
-    return uid == null ? null : (uid: uid, revision: _revision);
+    if (uid != null) {
+      return (uid: uid, revision: _revision);
+    }
+    // Cold start or slow/DDoS network: fall back to the locally persisted
+    // account pointer without triggering an auth network request.
+    if (store.readCurrent() == null) {
+      final generation = _generation;
+      unawaited(
+        Future<void>.microtask(() async {
+          try {
+            final persisted = await prefs.read(
+              AccountDisplayController.storageKey,
+            );
+            if (!ref.mounted || generation != _generation) {
+              return;
+            }
+            if (store.readCurrent() != null) {
+              return;
+            }
+            final normalized = persisted?.trim() ?? '';
+            if (_positiveUserId.hasMatch(normalized) &&
+                state?.uid != normalized) {
+              _revision++;
+              state = (uid: normalized, revision: _revision);
+            }
+          } catch (_) {
+            // Missing or unavailable preferences leave state unauthenticated.
+          }
+        }),
+      );
+    }
+    return null;
   }
 
   void _update(YamiboSessionStore store) {
+    _generation++;
     final uid = _read(store);
     if (uid == null) {
       state = null;
@@ -98,6 +166,6 @@ final class _BlacklistSessionUidNotifier
       return null;
     }
     final uid = snapshot.uid.trim();
-    return RegExp(r'^[1-9]\d{0,19}$').hasMatch(uid) ? uid : null;
+    return _positiveUserId.hasMatch(uid) ? uid : null;
   }
 }

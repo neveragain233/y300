@@ -749,6 +749,18 @@ class _ForumWebViewPageState extends ConsumerState<ForumWebViewPage> {
             },
             icon: const Icon(Icons.reply),
           ),
+        if (popOnRootBack &&
+            hostPurpose != ForumWebViewHostPurpose.postEditFallback)
+          IconButton(
+            key: const Key('forum-webview-close-button'),
+            tooltip: l10n.commonClose,
+            onPressed: () {
+              if (mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            icon: const Icon(Icons.close),
+          ),
         AppPopupMenuButton<String>(
           key: const Key('forum-webview-more-button'),
           icon: const Icon(Icons.more_vert),

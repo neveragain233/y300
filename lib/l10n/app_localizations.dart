@@ -910,7 +910,7 @@ abstract class AppLocalizations {
   /// No description provided for @contentFilterWebBlacklistNote.
   ///
   /// In zh, this message translates to:
-  /// **'可在帖子与楼层菜单屏蔽用户；解除名单仍在网页版完成'**
+  /// **'可在帖子与楼层菜单屏蔽用户，也可直接在此移除；网络不稳时将先在本地生效并在后续联网后同步'**
   String get contentFilterWebBlacklistNote;
 
   /// No description provided for @contentFilterHideBlacklistedThreads.
@@ -11406,6 +11406,108 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已删除关键词「{keyword}」'**
   String contentFilterKeywordDeleted(String keyword);
+
+  /// No description provided for @blacklistBlockQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'已在本地屏蔽「{name}」，联网后自动同步到网页黑名单'**
+  String blacklistBlockQueued(String name);
+
+  /// No description provided for @contentFilterWebBlacklistRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get contentFilterWebBlacklistRemove;
+
+  /// No description provided for @contentFilterWebBlacklistRemoveTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除黑名单成员'**
+  String get contentFilterWebBlacklistRemoveTitle;
+
+  /// No description provided for @contentFilterWebBlacklistRemoveBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定将「{name}」从网页版黑名单移除吗？'**
+  String contentFilterWebBlacklistRemoveBody(String name);
+
+  /// No description provided for @contentFilterWebBlacklistRemoveApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已移除「{name}」'**
+  String contentFilterWebBlacklistRemoveApplied(String name);
+
+  /// No description provided for @contentFilterWebBlacklistRemoveQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'已在本地移除「{name}」，联网后自动同步到网页'**
+  String contentFilterWebBlacklistRemoveQueued(String name);
+
+  /// No description provided for @contentFilterWebBlacklistRemoveNotListed.
+  ///
+  /// In zh, this message translates to:
+  /// **'「{name}」已不在网页黑名单中'**
+  String contentFilterWebBlacklistRemoveNotListed(String name);
+
+  /// No description provided for @contentFilterWebBlacklistRemoveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除失败，请稍后重试'**
+  String get contentFilterWebBlacklistRemoveFailed;
+
+  /// No description provided for @contentFilterWebBlacklistRemoveUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法确认是否已移除，未自动重试'**
+  String get contentFilterWebBlacklistRemoveUnknown;
+
+  /// No description provided for @contentFilterWebBlacklistPendingAddQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'UID：{uid} · 本地已屏蔽，等待联网同步'**
+  String contentFilterWebBlacklistPendingAddQueued(String uid);
+
+  /// No description provided for @contentFilterWebBlacklistPendingAddVerify.
+  ///
+  /// In zh, this message translates to:
+  /// **'UID：{uid} · 屏蔽结果待核对，请刷新或重试'**
+  String contentFilterWebBlacklistPendingAddVerify(String uid);
+
+  /// No description provided for @contentFilterWebBlacklistPendingRemoveQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'UID：{uid} · 本地已移除，等待联网同步'**
+  String contentFilterWebBlacklistPendingRemoveQueued(String uid);
+
+  /// No description provided for @contentFilterWebBlacklistPendingRemoveVerify.
+  ///
+  /// In zh, this message translates to:
+  /// **'UID：{uid} · 移除结果待核对，请刷新或重试'**
+  String contentFilterWebBlacklistPendingRemoveVerify(String uid);
+
+  /// No description provided for @contentFilterWebBlacklistRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get contentFilterWebBlacklistRetry;
+
+  /// No description provided for @contentFilterWebBlacklistUndoPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get contentFilterWebBlacklistUndoPending;
+
+  /// No description provided for @threadBlacklistExpandedNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'已临时显示此屏蔽楼层'**
+  String get threadBlacklistExpandedNotice;
+
+  /// No description provided for @threadBlacklistHideAgain.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏'**
+  String get threadBlacklistHideAgain;
 }
 
 class _AppLocalizationsDelegate

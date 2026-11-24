@@ -556,6 +556,12 @@ void _pageKeysCases() {
     );
     expect(find.text(l10n.blacklistBlockApplied('bob')), findsOneWidget);
     expect(
+      find.byKey(const Key('thread-filtered-tail-banner')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+    await tester.pumpAndSettle();
+    expect(
       find.byKey(const Key('thread-blacklisted-post-block-floor-p2')),
       findsOneWidget,
     );

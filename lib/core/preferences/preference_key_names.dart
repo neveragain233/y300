@@ -84,6 +84,9 @@ abstract final class PreferenceKeyNames {
   static const contentFilterWebBlacklistSnapshotV1 =
       'content_filter.web_blacklist.snapshot.v1';
 
+  static const contentFilterWebBlacklistPendingV1 =
+      'content_filter.web_blacklist.pending.v1';
+
   static const blacklistHideInitiatedThreadsV1 =
       'blacklist.hide_initiated_threads.v1';
 

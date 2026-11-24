@@ -15,6 +15,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
     required this.imageReferer,
     required this.onOpenAuthorProfile,
     required this.onOpenPostActions,
+    this.onHideFilteredPost,
     this.firstPostTitleKey,
   });
 
@@ -27,6 +28,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
   final String? imageReferer;
   final ValueChanged<ThreadPost> onOpenAuthorProfile;
   final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
+  final VoidCallback? onHideFilteredPost;
 
   /// 首楼标题测点；页面据此换算标题在正文可读区中的可见性。
   final GlobalKey? firstPostTitleKey;
@@ -54,6 +56,12 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (onHideFilteredPost != null)
+              _FilteredPostExpandedBanner(
+                pid: sourcePost.pid,
+                palette: palette,
+                onHide: onHideFilteredPost!,
+              ),
             if (post.isFirst) ...[
               _FirstPostThreadSummary(
                 key: firstPostTitleKey,
@@ -90,6 +98,58 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilteredPostExpandedBanner extends StatelessWidget {
+  const _FilteredPostExpandedBanner({
+    required this.pid,
+    required this.palette,
+    required this.onHide,
+  });
+
+  final String pid;
+  final ThreadDetailNativePalette palette;
+  final VoidCallback onHide;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: palette.card,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: palette.border, width: 0.75),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.visibility_outlined, size: 16, color: palette.muted),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                l10n.threadBlacklistExpandedNotice,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: palette.muted,
+                ),
+              ),
+            ),
+            TextButton(
+              key: Key('thread-blacklisted-hide-$pid'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(56, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              onPressed: onHide,
+              child: Text(l10n.threadBlacklistHideAgain),
             ),
           ],
         ),
@@ -515,6 +575,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
     this.onPreparedBody,
     this.preparerSelector,
     this.enableSafeDisplayPlanning = false,
+    this.onHideFilteredPost,
     this.firstPostTitleKey,
   });
 
@@ -568,6 +629,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
   final ThreadPreparedBodyHandoff? onPreparedBody;
   final ThreadPreparedBodyPreparerSelector? preparerSelector;
   final bool enableSafeDisplayPlanning;
+  final VoidCallback? onHideFilteredPost;
   final GlobalKey? firstPostTitleKey;
 
   @override
@@ -610,6 +672,7 @@ class _ThreadPostCardEntryState extends State<_ThreadPostCardEntry>
           imageReferer: widget.imageReferer,
           onOpenAuthorProfile: widget.onOpenAuthorProfile,
           onOpenPostActions: widget.onOpenPostActions,
+          onHideFilteredPost: widget.onHideFilteredPost,
           firstPostTitleKey: widget.firstPostTitleKey,
         ),
         _ThreadPostCardBodyEntry(

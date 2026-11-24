@@ -408,6 +408,10 @@ final class YamiboForumClient {
   ForumBlacklistCommand? get friendBlacklistCommand =>
       sourcePlan.friendBlacklistCommand;
 
+  /// Configured web-blacklist remove command, if installed.
+  ForumBlacklistRemoveCommand? get friendBlacklistRemoveCommand =>
+      sourcePlan.friendBlacklistRemoveCommand;
+
   /// Adds one user to the current account's web blacklist.
   Future<DataCommandResult<ForumBlacklistAddReceipt>> addToBlacklist(
     ForumBlacklistAddSubmission submission,
@@ -415,6 +419,17 @@ final class YamiboForumClient {
     () =>
         sourcePlan.friendBlacklistCommand?.execute(submission) ??
         Future.value(const DataCommandUnsupported<ForumBlacklistAddReceipt>()),
+  );
+
+  /// Removes one user from the current account's web blacklist.
+  Future<DataCommandResult<ForumBlacklistRemoveReceipt>> removeFromBlacklist(
+    ForumBlacklistRemoveSubmission submission,
+  ) => _command(
+    () =>
+        sourcePlan.friendBlacklistRemoveCommand?.execute(submission) ??
+        Future.value(
+          const DataCommandUnsupported<ForumBlacklistRemoveReceipt>(),
+        ),
   );
 
   /// Loads the current account's complete web blacklist.

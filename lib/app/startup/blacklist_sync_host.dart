@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
 
@@ -40,6 +41,13 @@ class _BlacklistSyncHostState extends ConsumerState<BlacklistSyncHost> {
         }
       });
     }
+    if (ref.read(verifiedSessionOwnerProvider) != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_flushQueued());
+        }
+      });
+    }
   }
 
   @override
@@ -54,6 +62,15 @@ class _BlacklistSyncHostState extends ConsumerState<BlacklistSyncHost> {
       _lastIdentity = next;
       unawaited(_sync());
     });
+    ref.listen<VerifiedSessionOwner?>(verifiedSessionOwnerProvider, (
+      previous,
+      next,
+    ) {
+      if (next == null || next == previous) {
+        return;
+      }
+      unawaited(_flushQueued());
+    });
     return widget.child;
   }
 
@@ -62,5 +79,11 @@ class _BlacklistSyncHostState extends ConsumerState<BlacklistSyncHost> {
       return;
     }
     await ref.read(blacklistSyncControllerProvider.notifier).syncIfStale();
+  }
+
+  Future<void> _flushQueued() async {
+    await ref
+        .read(blacklistSyncControllerProvider.notifier)
+        .flushQueuedMutations();
   }
 }

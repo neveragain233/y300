@@ -413,6 +413,14 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     }
     if (oldWidget.state.tid != widget.state.tid) {
       _expandedBlacklistedPids.clear();
+    } else if (oldWidget.filteredTailExpanded && !widget.filteredTailExpanded) {
+      final firstPostPids = <String>{
+        for (final projection in _postProjections)
+          if (projection.sourcePost.isFirst) projection.sourcePost.pid,
+      };
+      _expandedBlacklistedPids.removeWhere(
+        (pid) => !firstPostPids.contains(pid),
+      );
     }
     if (oldWidget.state.tid != widget.state.tid ||
         oldWidget.state.currentPage != widget.state.currentPage ||
@@ -1636,8 +1644,15 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           ),
         );
       case ThreadDetailRenderEntryKind.postCard:
+        final cardPid = entry.sourcePost!.pid;
+        final canHideCard =
+            _expandedBlacklistedPids.contains(cardPid) &&
+            _resolveFilterReason(
+              entry.sourcePost!,
+              ref.read(blacklistedUserIdsProvider),
+            ).isFiltered;
         return KeyedSubtree(
-          key: _projectionAnchorCoordinator.keyForPid(entry.sourcePost!.pid),
+          key: _projectionAnchorCoordinator.keyForPid(cardPid),
           child: _ThreadPostCardEntry(
             keepAlive: widget.bodyReadingCoordinator != null,
             wholeBodyPresentation: _wholeBodyPresentationFor(
@@ -1690,24 +1705,37 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                 widget.landing == ThreadPostLanding.bodyEnd &&
                 widget.targetPid == entry.sourcePost!.pid,
             onPostBuilt: _handlePostBuilt,
+            onHideFilteredPost: canHideCard
+                ? () => setState(() => _expandedBlacklistedPids.remove(cardPid))
+                : null,
             firstPostTitleKey: widget.firstPostTitleKey,
           ),
         );
       case ThreadDetailRenderEntryKind.postHeader:
+        final headerPid = entry.sourcePost!.pid;
+        final canHideHeader =
+            _expandedBlacklistedPids.contains(headerPid) &&
+            _resolveFilterReason(
+              entry.sourcePost!,
+              ref.read(blacklistedUserIdsProvider),
+            ).isFiltered;
         final header = _ThreadPostCardHeaderEntry(
           key: widget.floorNavigation == null
               ? null
-              : _floorHeaderKey(entry.sourcePost!.pid),
+              : _floorHeaderKey(headerPid),
           sourcePost: entry.sourcePost!,
           displayPost: entry.displayPost!,
           displaySubject:
               widget.projection?.displaySubject ?? widget.state.subject,
           state: widget.state,
-          highlighted: entry.sourcePost!.pid == widget.highlightPostPid,
+          highlighted: headerPid == widget.highlightPostPid,
           palette: palette,
           imageReferer: widget.imageReferer,
           onOpenAuthorProfile: widget.onOpenAuthorProfile,
           onOpenPostActions: widget.onOpenPostActions,
+          onHideFilteredPost: canHideHeader
+              ? () => setState(() => _expandedBlacklistedPids.remove(headerPid))
+              : null,
           firstPostTitleKey: widget.firstPostTitleKey,
         );
         return KeyedSubtree(

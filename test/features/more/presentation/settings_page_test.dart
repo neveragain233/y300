@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
+import 'package:y300/features/forum/domain/models/forum_webview_launch_models.dart';
+import 'package:y300/features/forum/presentation/webview/forum_webview_route_factory.dart';
 import 'package:y300/features/more/presentation/about_page.dart';
 import 'package:y300/features/more/presentation/appearance_page.dart';
 import 'package:y300/features/more/presentation/more_debug_tools.dart';
@@ -199,6 +203,57 @@ void main() {
     expect(
       find.byKey(const Key('more-html-renderer-prototype-entry')),
       findsNothing,
+    );
+  });
+
+  testWidgets('managed blacklist web route pops on root back', (tester) async {
+    final launched = <ForumWebViewLaunchConfig>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          forumAvailabilityProvider.overrideWith((_) => ForumAvailability()),
+          blacklistAutoSyncProvider.overrideWithValue(false),
+          verifiedSessionOwnerProvider.overrideWithValue((
+            uid: '11',
+            revision: 1,
+          )),
+          forumWebViewRouteFactoryProvider.overrideWithValue((config) {
+            launched.add(config);
+            return MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(
+                key: Key('fake-blacklist-webview'),
+                body: SizedBox.shrink(),
+              ),
+            );
+          }),
+        ],
+        child: const LocalizedTestApp(
+          home: SettingsPage(debugTools: _NoDebugTools()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final contentFilter = find.byKey(const Key('more-content-filter-entry'));
+    await _scrollTo(tester, contentFilter);
+    await tester.tap(contentFilter);
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('content-filter-web-blacklist-entry')),
+    );
+    await tester.pumpAndSettle();
+
+    final openWeb = find.byKey(const Key('content-filter-open-blacklist-web'));
+    expect(openWeb, findsOneWidget);
+    await tester.tap(openWeb);
+    await tester.pumpAndSettle();
+    expect(launched, hasLength(1));
+    expect(launched.single.popOnRootBack, isTrue);
+    expect(launched.single.purpose, ForumWebViewHostPurpose.form);
+    expect(
+      launched.single.navigationPolicy,
+      ForumWebViewNavigationPolicy.keepWebView,
     );
   });
 }

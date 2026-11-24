@@ -49,3 +49,35 @@ abstract interface class ForumBlacklistCommand {
     ForumBlacklistAddSubmission submission,
   );
 }
+
+/// Removes one target from the current account's blacklist.
+final class ForumBlacklistRemoveSubmission {
+  /// Creates a remove-blacklist request.
+  const ForumBlacklistRemoveSubmission({
+    required this.userId,
+    this.cancellation,
+  });
+
+  /// Stable positive forum user id of the target.
+  final String userId;
+
+  /// Cancels local waiting; cannot roll back an already accepted command.
+  final ForumRequestCancellation? cancellation;
+}
+
+/// Proven server effect: the target is absent from the account's blacklist.
+final class ForumBlacklistRemoveReceipt {
+  /// Creates a receipt for the confirmed removal.
+  const ForumBlacklistRemoveReceipt({required this.userId});
+
+  /// Confirmed removed user id.
+  final String userId;
+}
+
+/// Removes one member from the forum account's web blacklist.
+abstract interface class ForumBlacklistRemoveCommand {
+  /// Returns applied only after a complete blacklist read omits the target.
+  Future<DataCommandResult<ForumBlacklistRemoveReceipt>> execute(
+    ForumBlacklistRemoveSubmission submission,
+  );
+}

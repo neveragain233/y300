@@ -7,8 +7,11 @@ import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
+import 'package:y300/features/blacklist/domain/models/blacklist_pending_mutation.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
+import 'package:y300/features/blacklist/domain/repositories/blacklist_pending_repository.dart';
 import 'package:y300/features/blacklist/domain/repositories/blacklist_repository.dart';
+import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/repositories/blocked_thread_repository.dart';
@@ -207,6 +210,142 @@ void main() {
     );
     expect(repository.rules, isEmpty);
   });
+
+  testWidgets(
+    'web blacklist page confirms native removal and shows queued undo',
+    (tester) async {
+      final sessionStore = YamiboSessionStore()
+        ..saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: '11',
+            username: 'Reader',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      final blacklistRepository = _SeededBlacklistRepository(
+        BlacklistSnapshot(
+          accounts: <String, BlacklistAccountSnapshot>{
+            '11': BlacklistAccountSnapshot(
+              ownerUid: '11',
+              members: const <BlacklistMember>[
+                BlacklistMember(userId: '42', username: 'BlockedUser'),
+                BlacklistMember(userId: '43', username: 'QueuedTarget'),
+              ],
+              lastSuccessAt: DateTime.fromMillisecondsSinceEpoch(1000),
+            ),
+          },
+        ),
+      );
+      final pendingRepository = _SeededPendingRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            blockedThreadRepositoryProvider.overrideWithValue(
+              _MemoryRepository(const <BlockedThread>[]),
+            ),
+            blacklistRepositoryProvider.overrideWithValue(blacklistRepository),
+            blacklistPendingRepositoryProvider.overrideWithValue(
+              pendingRepository,
+            ),
+            blacklistAutoSyncProvider.overrideWithValue(false),
+            blacklistRemoveSupportedProvider.overrideWithValue(true),
+            blacklistRemoveCommandProvider.overrideWithValue((
+              submission,
+            ) async {
+              if (submission.userId == '42') {
+                return const DataCommandApplied(
+                  ForumBlacklistRemoveReceipt(userId: '42'),
+                );
+              }
+              return const DataCommandNotSent(
+                DataCommandFailure(
+                  kind: DataCommandFailureKind.network,
+                  retryPolicy: DataCommandRetryPolicy.explicitOnly,
+                  code: 'offline',
+                  diagnosticMessage: 'offline',
+                ),
+              );
+            }),
+            blacklistRemoteLoaderProvider.overrideWithValue(
+              (_) async =>
+                  DataReadSuccess<
+                    ForumBlacklistData,
+                    ForumBlacklistReadCapabilities
+                  >(
+                    data: const ForumBlacklistData(
+                      entries: <ForumBlacklistEntry>[
+                        ForumBlacklistEntry(
+                          userId: '43',
+                          username: 'QueuedTarget',
+                        ),
+                      ],
+                      pagesRead: 1,
+                    ),
+                    capabilities: ForumBlacklistReadCapabilities(
+                      values: DataCapabilitySet.supported(
+                        ForumBlacklistCapability.values,
+                      ),
+                    ),
+                    metadata: const DataReadMetadata.network(),
+                  ),
+            ),
+            verifiedSessionOwnerProvider.overrideWithValue((
+              uid: '11',
+              revision: 1,
+            )),
+            yamiboSessionStoreProvider.overrideWithValue(sessionStore),
+          ],
+          child: const LocalizedTestApp(home: WebBlacklistPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-blacklist-remove-42')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('content-filter-blacklist-remove-confirm')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('content-filter-blacklist-member-42')),
+        findsNothing,
+      );
+
+      // Offline remove queues locally and allows undo.
+      await tester.tap(
+        find.byKey(const Key('content-filter-blacklist-remove-43')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('content-filter-blacklist-remove-confirm')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('content-filter-blacklist-pending-43')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('content-filter-blacklist-cancel-pending-43')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('content-filter-blacklist-pending-43')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('content-filter-blacklist-member-43')),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
 final class _MemoryRepository implements BlockedThreadRepository {
@@ -243,4 +382,16 @@ final class _EmptyBlacklistRepository implements BlacklistRepository {
 
   @override
   Future<void> save(BlacklistSnapshot snapshot) async {}
+}
+
+final class _SeededPendingRepository implements BlacklistPendingRepository {
+  BlacklistPendingSnapshot snapshot = BlacklistPendingSnapshot.empty;
+
+  @override
+  Future<BlacklistPendingSnapshot> load() async => snapshot;
+
+  @override
+  Future<void> save(BlacklistPendingSnapshot next) async {
+    snapshot = next;
+  }
 }

@@ -6,8 +6,11 @@ import 'package:intl/intl.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
+import 'package:y300/features/blacklist/domain/models/blacklist_pending_mutation.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/app_confirm_dialog.dart';
 import 'package:y300/shared/widgets/app_grouped_list.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
@@ -27,6 +30,7 @@ class WebBlacklistPage extends ConsumerStatefulWidget {
 
 class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
   bool _syncing = false;
+  final Set<String> _busyUserIds = <String>{};
 
   @override
   void initState() {
@@ -81,11 +85,100 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
     await _refreshBlacklist();
   }
 
+  Future<void> _removeMember(BlacklistMember member) async {
+    if (_busyUserIds.contains(member.userId)) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirmDialog(
+      context: context,
+      title: l10n.contentFilterWebBlacklistRemoveTitle,
+      message: l10n.contentFilterWebBlacklistRemoveBody(member.username),
+      confirmLabel: l10n.contentFilterWebBlacklistRemove,
+      cancelLabel: l10n.commonCancel,
+      destructive: true,
+      confirmKey: const Key('content-filter-blacklist-remove-confirm'),
+      cancelKey: const Key('content-filter-blacklist-remove-cancel'),
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final feedbackStyle = TransientFeedbackStyle.capture(context);
+    setState(() => _busyUserIds.add(member.userId));
+    final outcome = await ref
+        .read(blacklistSyncControllerProvider.notifier)
+        .removeUser(userId: member.userId, username: member.username);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _busyUserIds.remove(member.userId));
+    final message = switch (outcome) {
+      BlacklistRemoveOutcome.applied =>
+        l10n.contentFilterWebBlacklistRemoveApplied(member.username),
+      BlacklistRemoveOutcome.queued =>
+        l10n.contentFilterWebBlacklistRemoveQueued(member.username),
+      BlacklistRemoveOutcome.notListed =>
+        l10n.contentFilterWebBlacklistRemoveNotListed(member.username),
+      BlacklistRemoveOutcome.notLoggedIn =>
+        l10n.contentFilterWebBlacklistLoginRequired,
+      BlacklistRemoveOutcome.unsupported => l10n.blacklistBlockUnsupported,
+      BlacklistRemoveOutcome.invalidTarget || BlacklistRemoveOutcome.rejected =>
+        l10n.contentFilterWebBlacklistRemoveFailed,
+      BlacklistRemoveOutcome.outcomeUnknown =>
+        l10n.contentFilterWebBlacklistRemoveUnknown,
+      BlacklistRemoveOutcome.stale || BlacklistRemoveOutcome.cancelled => null,
+    };
+    if (message != null) {
+      showTransientSnackBarWithMessenger(messenger, feedbackStyle, message);
+    }
+  }
+
+  Future<void> _retryPending(BlacklistPendingMutation mutation) async {
+    if (_busyUserIds.contains(mutation.userId)) {
+      return;
+    }
+    setState(() => _busyUserIds.add(mutation.userId));
+    await ref
+        .read(blacklistSyncControllerProvider.notifier)
+        .retryPendingMutation(mutation);
+    if (mounted) {
+      setState(() => _busyUserIds.remove(mutation.userId));
+    }
+  }
+
+  Future<void> _cancelPending(BlacklistPendingMutation mutation) async {
+    if (_busyUserIds.contains(mutation.userId)) {
+      return;
+    }
+    setState(() => _busyUserIds.add(mutation.userId));
+    await ref
+        .read(blacklistSyncControllerProvider.notifier)
+        .cancelPendingMutation(mutation.userId);
+    if (mounted) {
+      setState(() => _busyUserIds.remove(mutation.userId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final owner = ref.watch(verifiedSessionOwnerProvider);
+    final sessionUid = ref.watch(blacklistSessionUidProvider);
     final account = ref.watch(currentBlacklistAccountProvider);
+    final pendingMutations = ref.watch(
+      currentBlacklistPendingMutationsProvider,
+    );
+    final pendingByUserId = <String, BlacklistPendingMutation>{
+      for (final item in pendingMutations) item.userId: item,
+    };
+    final visibleMembers = <BlacklistMember>[
+      for (final member in account?.members ?? const <BlacklistMember>[])
+        if (pendingByUserId[member.userId]?.action !=
+            BlacklistPendingAction.remove)
+          member,
+    ];
+    final removeSupported = ref.watch(blacklistRemoveSupportedProvider);
     final blacklistLoading = ref
         .watch(blacklistSyncControllerProvider)
         .isLoading;
@@ -108,7 +201,7 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
                   title: account == null
                       ? l10n.contentFilterWebBlacklistSection
                       : '${l10n.contentFilterWebBlacklistSection} · '
-                            '${l10n.contentFilterWebBlacklistCount(account.members.length)}',
+                            '${l10n.contentFilterWebBlacklistCount(visibleMembers.length)}',
                   children: [
                     AppGroupedRow(
                       key: const Key('content-filter-blacklist-refresh'),
@@ -123,7 +216,7 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
                       enabled: owner != null && !syncing,
                       onTap: _refreshBlacklist,
                     ),
-                    for (final member in account?.members ?? const [])
+                    for (final member in visibleMembers)
                       AppGroupedRow(
                         key: Key(
                           'content-filter-blacklist-member-${member.userId}',
@@ -133,6 +226,36 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
                         subtitle: l10n.contentFilterWebBlacklistMemberUid(
                           member.userId,
                         ),
+                        trailing: !removeSupported || sessionUid == null
+                            ? null
+                            : _busyUserIds.contains(member.userId)
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : TextButton(
+                                key: Key(
+                                  'content-filter-blacklist-remove-${member.userId}',
+                                ),
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(72, 48),
+                                ),
+                                onPressed: () => _removeMember(member),
+                                child: Text(
+                                  l10n.contentFilterWebBlacklistRemove,
+                                ),
+                              ),
+                      ),
+                    for (final item in pendingMutations)
+                      _PendingMutationRow(
+                        mutation: item,
+                        busy: _busyUserIds.contains(item.userId),
+                        canRetry: owner != null,
+                        l10n: l10n,
+                        onRetry: () => unawaited(_retryPending(item)),
+                        onCancel: () => unawaited(_cancelPending(item)),
                       ),
                     if (owner != null &&
                         widget.managedBlacklistRouteBuilder != null)
@@ -197,6 +320,80 @@ class _WebBlacklistPageState extends ConsumerState<WebBlacklistPage> {
       messenger,
       feedbackStyle,
       l10n.contentFilterSaveFailed,
+    );
+  }
+}
+
+class _PendingMutationRow extends StatelessWidget {
+  const _PendingMutationRow({
+    required this.mutation,
+    required this.busy,
+    required this.canRetry,
+    required this.l10n,
+    required this.onRetry,
+    required this.onCancel,
+  });
+
+  final BlacklistPendingMutation mutation;
+  final bool busy;
+  final bool canRetry;
+  final AppLocalizations l10n;
+  final VoidCallback onRetry;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = switch ((mutation.action, mutation.status)) {
+      (BlacklistPendingAction.add, BlacklistPendingStatus.queued) =>
+        l10n.contentFilterWebBlacklistPendingAddQueued(mutation.userId),
+      (BlacklistPendingAction.add, BlacklistPendingStatus.needsVerification) =>
+        l10n.contentFilterWebBlacklistPendingAddVerify(mutation.userId),
+      (BlacklistPendingAction.remove, BlacklistPendingStatus.queued) =>
+        l10n.contentFilterWebBlacklistPendingRemoveQueued(mutation.userId),
+      (
+        BlacklistPendingAction.remove,
+        BlacklistPendingStatus.needsVerification,
+      ) =>
+        l10n.contentFilterWebBlacklistPendingRemoveVerify(mutation.userId),
+    };
+    return AppGroupedRow(
+      key: Key('content-filter-blacklist-pending-${mutation.userId}'),
+      leading: Icon(
+        mutation.action == BlacklistPendingAction.remove
+            ? Icons.person_remove_outlined
+            : Icons.schedule_outlined,
+      ),
+      title: mutation.username,
+      subtitle: subtitle,
+      trailing: busy
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (canRetry)
+                  TextButton(
+                    key: Key(
+                      'content-filter-blacklist-retry-${mutation.userId}',
+                    ),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(56, 48),
+                    ),
+                    onPressed: onRetry,
+                    child: Text(l10n.contentFilterWebBlacklistRetry),
+                  ),
+                TextButton(
+                  key: Key(
+                    'content-filter-blacklist-cancel-pending-${mutation.userId}',
+                  ),
+                  style: TextButton.styleFrom(minimumSize: const Size(56, 48)),
+                  onPressed: onCancel,
+                  child: Text(l10n.contentFilterWebBlacklistUndoPending),
+                ),
+              ],
+            ),
     );
   }
 }

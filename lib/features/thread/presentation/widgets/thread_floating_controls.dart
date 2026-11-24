@@ -30,6 +30,7 @@ class ThreadFloatingControls extends StatefulWidget {
     this.currentPage = 1,
     this.totalPages,
     this.onJumpPage,
+    this.onJumpPageFromContext,
     this.hasContent = true,
     this.horizontalSafeInsets = EdgeInsets.zero,
   });
@@ -47,6 +48,7 @@ class ThreadFloatingControls extends StatefulWidget {
   final int currentPage;
   final int? totalPages;
   final VoidCallback? onJumpPage;
+  final ValueChanged<BuildContext>? onJumpPageFromContext;
   final bool hasContent;
 
   /// FAB 子树移除了系统安全区内边距，横向避让由页面传入后在这里补齐。
@@ -347,17 +349,22 @@ class _ThreadFloatingControlsState extends State<ThreadFloatingControls> {
       final pageLabel = total == null
           ? l10n.threadControlsPageUnknown(page)
           : l10n.threadControlsPageSummary(page, math.max(page, total));
-      slot = _FullBarSlot(
-        buttonKey:
-            widget.jumpPage.key ?? const Key('thread-detail-jump-page-button'),
-        semanticsLabel: l10n.threadControlsJumpPage,
-        icon: Icons.menu_book_outlined,
-        label: pageLabel,
-        onTap: widget.onJumpPage,
-        foreground: foreground,
-        eInk: eInk,
-        scheme: scheme,
-        textStyle: theme.textTheme.bodyMedium,
+      slot = Builder(
+        builder: (slotContext) => _FullBarSlot(
+          buttonKey:
+              widget.jumpPage.key ??
+              const Key('thread-detail-jump-page-button'),
+          semanticsLabel: l10n.threadControlsJumpPage,
+          icon: Icons.menu_book_outlined,
+          label: pageLabel,
+          onTap: widget.onJumpPageFromContext != null
+              ? () => widget.onJumpPageFromContext!(slotContext)
+              : widget.onJumpPage,
+          foreground: foreground,
+          eInk: eInk,
+          scheme: scheme,
+          textStyle: theme.textTheme.bodyMedium,
+        ),
       );
     } else {
       slot = _FullBarSlot(

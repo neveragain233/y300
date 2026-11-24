@@ -6,11 +6,17 @@ import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
+import 'package:y300/features/blacklist/domain/models/blacklist_pending_mutation.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
+import 'package:y300/features/blacklist/domain/repositories/blacklist_pending_repository.dart';
 import 'package:y300/features/blacklist/domain/repositories/blacklist_repository.dart';
+import 'package:y300/features/profile/presentation/account_display_controller.dart';
 
 void main() {
   test('does not read without a verified owner', () async {
@@ -266,7 +272,13 @@ void main() {
         blacklistSyncControllerProvider.notifier,
       );
       expect(await controller.addUser(userId: '22', username: 'Bob'), expected);
-      expect(container.read(blacklistedUserIdsProvider), isEmpty);
+      expect(container.read(currentBlacklistAccountProvider), isNull);
+      expect(
+        container.read(blacklistedUserIdsProvider),
+        expected == BlacklistAddOutcome.outcomeUnknown
+            ? <String>{'22'}
+            : isEmpty,
+      );
       expect(repository.saved, isEmpty);
     }
   });
@@ -437,6 +449,157 @@ void main() {
     expect(repository.saved, isEmpty);
     expect(container.read(blacklistedUserIdsProvider), isEmpty);
   });
+
+  test('removeUser removes confirmed member and reconciles', () async {
+    final repository = _MemoryRepository(
+      BlacklistSnapshot(
+        accounts: <String, BlacklistAccountSnapshot>{
+          '11': BlacklistAccountSnapshot(
+            ownerUid: '11',
+            members: const <BlacklistMember>[
+              BlacklistMember(userId: '21', username: 'Alice'),
+              BlacklistMember(userId: '22', username: 'Bob'),
+            ],
+            lastSuccessAt: DateTime(2026, 11, 24),
+          ),
+        },
+      ),
+    );
+    var reads = 0;
+    final container = _container(
+      owner: (uid: '11', revision: 1),
+      repository: repository,
+      removeSupported: true,
+      removeCommand: (submission) async {
+        expect(submission.userId, '22');
+        return const DataCommandApplied(
+          ForumBlacklistRemoveReceipt(userId: '22'),
+        );
+      },
+      load: (_) async {
+        reads++;
+        return _success(const <ForumBlacklistEntry>[
+          ForumBlacklistEntry(userId: '21', username: 'Alice'),
+        ]);
+      },
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(blacklistSyncControllerProvider.notifier);
+    final outcome = await controller.removeUser(userId: '22', username: 'Bob');
+
+    expect(outcome, BlacklistRemoveOutcome.applied);
+    expect(container.read(blacklistedUserIdsProvider), <String>{'21'});
+    for (var i = 0; i < 10 && reads == 0; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(reads, 1);
+  });
+
+  test('queues add/remove locally under weak network and flushes only queued items', () async {
+    final repository = _MemoryRepository(
+      BlacklistSnapshot(
+        accounts: <String, BlacklistAccountSnapshot>{
+          '11': BlacklistAccountSnapshot(
+            ownerUid: '11',
+            members: const <BlacklistMember>[
+              BlacklistMember(userId: '21', username: 'Alice'),
+            ],
+            lastSuccessAt: DateTime(2026, 11, 24),
+          ),
+        },
+      ),
+    );
+    final pendingRepo = _MemoryPendingRepository(
+      BlacklistPendingSnapshot(
+        accounts: <String, List<BlacklistPendingMutation>>{
+          '11': <BlacklistPendingMutation>[
+            BlacklistPendingMutation(
+              userId: '30',
+              username: 'AlreadySynced',
+              action: BlacklistPendingAction.add,
+              status: BlacklistPendingStatus.needsVerification,
+              updatedAt: DateTime(2026, 11, 24),
+            ),
+            BlacklistPendingMutation(
+              userId: '31',
+              username: 'NeedsManualCheck',
+              action: BlacklistPendingAction.remove,
+              status: BlacklistPendingStatus.needsVerification,
+              updatedAt: DateTime(2026, 11, 24),
+            ),
+          ],
+        },
+      ),
+    );
+    final prefs = _MemoryPreferencesStore(<String, Object>{
+      AccountDisplayController.storageKey.name: '11',
+    });
+    final sentAdds = <String>[];
+    final sentRemoves = <String>[];
+
+    final container = _container(
+      owner: null,
+      repository: repository,
+      pendingRepository: pendingRepo,
+      preferencesStore: prefs,
+      supported: true,
+      removeSupported: true,
+      command: (submission) async {
+        sentAdds.add(submission.userId);
+        return DataCommandApplied(
+          ForumBlacklistAddReceipt(
+            userId: submission.userId,
+            username: submission.username,
+          ),
+        );
+      },
+      removeCommand: (submission) async {
+        sentRemoves.add(submission.userId);
+        return DataCommandApplied(
+          ForumBlacklistRemoveReceipt(userId: submission.userId),
+        );
+      },
+      load: (_) async => _success(<ForumBlacklistEntry>[
+        const ForumBlacklistEntry(userId: '21', username: 'Alice'),
+        // 30 is already on server -> read-only reconciliation clears it.
+        const ForumBlacklistEntry(userId: '30', username: 'AlreadySynced'),
+        // 31 is still on server -> needsVerification stays, never auto-resent.
+        const ForumBlacklistEntry(userId: '31', username: 'NeedsManualCheck'),
+      ]),
+    );
+    addTearDown(container.dispose);
+
+    // Let fallback microtask read persisted UID without verified owner.
+    final sub = container.listen(blacklistSessionUidProvider, (_, _) {});
+    addTearDown(sub.close);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(blacklistSessionUidProvider)?.uid, '11');
+
+    final controller = container.read(blacklistSyncControllerProvider.notifier);
+    final queuedAdd = await controller.addUser(userId: '22', username: 'Bob');
+    final queuedRemove = await controller.removeUser(
+      userId: '21',
+      username: 'Alice',
+    );
+    expect(queuedAdd, BlacklistAddOutcome.queued);
+    expect(queuedRemove, BlacklistRemoveOutcome.queued);
+    expect(container.read(blacklistedUserIdsProvider), contains('22'));
+    expect(container.read(blacklistedUserIdsProvider), isNot(contains('21')));
+
+    // Verified session arrives -> flushQueuedMutations reconciles + flushes queued.
+    container.read(_ownerState.notifier).set((uid: '11', revision: 2));
+    await controller.flushQueuedMutations();
+
+    expect(sentAdds, <String>['22']);
+    expect(sentRemoves, <String>['21']);
+    // 31 (needsVerification) was NOT auto-resent and remains pending for user.
+    final remainingPending = container.read(
+      currentBlacklistPendingMutationsProvider,
+    );
+    expect(remainingPending.map((m) => m.userId), <String>['31']);
+  });
 }
 
 DataReadSuccess<ForumBlacklistData, ForumBlacklistReadCapabilities> _success(
@@ -457,12 +620,16 @@ DataReadSuccess<ForumBlacklistData, ForumBlacklistReadCapabilities> _success(
 ProviderContainer _container({
   required VerifiedSessionOwner? owner,
   _MemoryRepository? repository,
+  _MemoryPendingRepository? pendingRepository,
+  _MemoryPreferencesStore? preferencesStore,
   DateTime Function()? clock,
   Future<DataReadResult<ForumBlacklistData, ForumBlacklistReadCapabilities>>
   Function(ForumBlacklistQuery query)?
   load,
   BlacklistAddRemoteCommand? command,
+  BlacklistRemoveRemoteCommand? removeCommand,
   bool supported = false,
+  bool removeSupported = false,
 }) {
   final sessionStore = YamiboSessionStore();
   if (owner != null) {
@@ -479,16 +646,24 @@ ProviderContainer _container({
   }
   final container = ProviderContainer.test(
     overrides: [
+      if (preferencesStore != null)
+        preferencesStoreProvider.overrideWithValue(preferencesStore),
       blacklistRepositoryProvider.overrideWithValue(
         repository ?? _MemoryRepository(),
+      ),
+      blacklistPendingRepositoryProvider.overrideWithValue(
+        pendingRepository ?? _MemoryPendingRepository(),
       ),
       blacklistRemoteLoaderProvider.overrideWithValue(
         load ?? (_) async => _success(const <ForumBlacklistEntry>[]),
       ),
       blacklistAutoSyncProvider.overrideWithValue(false),
       blacklistAddSupportedProvider.overrideWithValue(supported),
+      blacklistRemoveSupportedProvider.overrideWithValue(removeSupported),
       if (command != null)
         blacklistAddCommandProvider.overrideWithValue(command),
+      if (removeCommand != null)
+        blacklistRemoveCommandProvider.overrideWithValue(removeCommand),
       if (clock != null) blacklistClockProvider.overrideWithValue(clock),
       verifiedSessionOwnerProvider.overrideWith(
         (ref) => ref.watch(_ownerState),
@@ -526,5 +701,46 @@ final class _MemoryRepository implements BlacklistRepository {
   Future<void> save(BlacklistSnapshot next) async {
     snapshot = next;
     saved.add(next);
+  }
+}
+
+final class _MemoryPendingRepository implements BlacklistPendingRepository {
+  _MemoryPendingRepository([BlacklistPendingSnapshot? snapshot])
+    : snapshot = snapshot ?? BlacklistPendingSnapshot.empty;
+
+  BlacklistPendingSnapshot snapshot;
+
+  @override
+  Future<BlacklistPendingSnapshot> load() async => snapshot;
+
+  @override
+  Future<void> save(BlacklistPendingSnapshot next) async {
+    snapshot = next;
+  }
+}
+
+final class _MemoryPreferencesStore implements PreferencesStore {
+  _MemoryPreferencesStore(this._values);
+
+  final Map<String, Object> _values;
+
+  @override
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
+      _values.containsKey(key.name);
+
+  @override
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async {
+    final value = _values[key.name];
+    return value is T ? value : null;
+  }
+
+  @override
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {
+    _values.remove(key.name);
+  }
+
+  @override
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
+    _values[key.name] = value;
   }
 }

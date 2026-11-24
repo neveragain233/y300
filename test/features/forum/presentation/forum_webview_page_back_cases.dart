@@ -21,6 +21,51 @@ void _routeBackCases() {
     expect(driver.goBackCallCount, 0);
     expect(driver.loadedUris, hasLength(1));
   });
+
+  testWidgets(
+    'close button pops pushed WebView immediately even when history exists',
+    (tester) async {
+      final driver = _FakeForumWebViewDriver()..title = '黑名单';
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            forumWebViewPopOnRootBackProvider.overrideWithValue(true),
+          ],
+          child: _buildRoutedTestApp(driver: driver),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open-forum-webview-page')));
+      await tester.pumpAndSettle();
+
+      driver.canGoBackValue = true;
+      await driver.dispatchPageFinished(
+        'https://bbs.yamibo.com/home.php?mod=space&do=friend&view=blacklist',
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('forum-webview-close-button')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('forum-webview-close-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-webview-page')), findsNothing);
+      expect(find.byKey(const Key('open-forum-webview-page')), findsOneWidget);
+      expect(driver.goBackCallCount, 0);
+    },
+  );
+
+  testWidgets('close button is hidden when popOnRootBack is false', (
+    tester,
+  ) async {
+    final driver = _FakeForumWebViewDriver();
+    await tester.pumpWidget(_buildRoutedTestApp(driver: driver));
+    await tester.tap(find.byKey(const Key('open-forum-webview-page')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('forum-webview-close-button')), findsNothing);
+  });
 }
 
 void _backCases() {

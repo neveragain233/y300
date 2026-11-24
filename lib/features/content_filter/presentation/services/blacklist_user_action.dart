@@ -57,6 +57,8 @@ Future<void> blockBlacklistUser(
   switch (outcome) {
     case BlacklistAddOutcome.applied:
       showTransientSnackBar(context, l10n.blacklistBlockApplied(username));
+    case BlacklistAddOutcome.queued:
+      showTransientSnackBar(context, l10n.blacklistBlockQueued(username));
     case BlacklistAddOutcome.alreadyListed:
       showTransientSnackBar(context, l10n.blacklistBlockAlready(username));
     case BlacklistAddOutcome.notLoggedIn:

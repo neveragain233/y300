@@ -389,6 +389,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               'view': 'blacklist',
             },
           ),
+          popOnRootBack: true,
+          purpose: ForumWebViewHostPurpose.form,
+          navigationPolicy: ForumWebViewNavigationPolicy.keepWebView,
           expectedAccountId: owner?.uid,
         ),
       );
