@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
+import 'package:y300/features/content_filter/application/whitelisted_users_controller.dart';
 import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
@@ -56,10 +57,22 @@ Future<void> blockBlacklistUser(
   }
   switch (outcome) {
     case BlacklistAddOutcome.applied:
+      await ref
+          .read(whitelistedUsersControllerProvider.notifier)
+          .remove(userId);
+      if (!context.mounted) return;
       showTransientSnackBar(context, l10n.blacklistBlockApplied(username));
     case BlacklistAddOutcome.queued:
+      await ref
+          .read(whitelistedUsersControllerProvider.notifier)
+          .remove(userId);
+      if (!context.mounted) return;
       showTransientSnackBar(context, l10n.blacklistBlockQueued(username));
     case BlacklistAddOutcome.alreadyListed:
+      await ref
+          .read(whitelistedUsersControllerProvider.notifier)
+          .remove(userId);
+      if (!context.mounted) return;
       showTransientSnackBar(context, l10n.blacklistBlockAlready(username));
     case BlacklistAddOutcome.notLoggedIn:
       showTransientSnackBar(context, l10n.blacklistBlockLogIn);

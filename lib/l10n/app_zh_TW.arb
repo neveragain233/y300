@@ -3359,5 +3359,16 @@
   "contentFilterBackupImportFailed": "匯入失敗，請重試",
   "contentFilterBuiltInExemptionTitle": "系統內建豁免",
   "contentFilterBuiltInExemptionDetail": "所有版塊的置頂/公告內容以及各子版塊內的全部內容永久豁免所有本地屏蔽攔截",
-  "contentFilterBuiltInExemptionLocked": "不可關閉"
+  "contentFilterBuiltInExemptionLocked": "不可關閉",
+  "contentFilterAddToWhitelistAction": "加入白名單",
+  "contentFilterWhitelistTopicAuthorAction": "將作者加入白名單",
+  "contentFilterWhitelistAuthorAdded": "已將 {name} 加入白名單",
+  "@contentFilterWhitelistAuthorAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWhitelistedUserBlacklistedError": "該使用者已在網頁黑名單中，請先移出黑名單後再加入白名單"
 }

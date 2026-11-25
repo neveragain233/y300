@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/content_filter/application/whitelisted_users_controller.dart';
 import 'package:y300/features/content_filter/domain/models/whitelisted_user.dart';
 import 'package:y300/l10n/app_localizations.dart';
@@ -188,8 +189,15 @@ class _AddWhitelistedUserSheetState
     if (_saving) return;
     final l10n = AppLocalizations.of(context);
     final uid = _uidController.text.trim();
-    if (normalizeWhitelistedUid(uid) == null) {
+    final normalizedUid = normalizeWhitelistedUid(uid);
+    if (normalizedUid == null) {
       setState(() => _errorText = l10n.contentFilterWhitelistedUserUidInvalid);
+      return;
+    }
+    if (ref.read(blacklistedUserIdsProvider).contains(normalizedUid)) {
+      setState(
+        () => _errorText = l10n.contentFilterWhitelistedUserBlacklistedError,
+      );
       return;
     }
     setState(() {

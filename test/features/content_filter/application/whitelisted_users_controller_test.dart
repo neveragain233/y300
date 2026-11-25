@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:y300/core/preferences/preference_key.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/content_filter/application/whitelisted_users_controller.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/whitelisted_user.dart';
@@ -104,5 +105,25 @@ void main() {
         expect(container.read(whitelistedUserIdsProvider), <String>{'67890'});
       },
     );
+
+    test('whitelistedUserIdsProvider excludes users present in blacklistedUserIdsProvider (deny-overrides)', () async {
+      final store = _MemoryPreferencesStore();
+      final container = ProviderContainer(
+        overrides: [
+          preferencesStoreProvider.overrideWithValue(store),
+          blacklistedUserIdsProvider.overrideWithValue(const <String>{'12345'}),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(whitelistedUsersControllerProvider.future);
+      final controller = container.read(
+        whitelistedUsersControllerProvider.notifier,
+      );
+      await controller.add(uid: '12345', username: 'Conflicted');
+      await controller.add(uid: '67890', username: 'Allowed');
+
+      expect(container.read(whitelistedUserIdsProvider), <String>{'67890'});
+    });
   });
 }

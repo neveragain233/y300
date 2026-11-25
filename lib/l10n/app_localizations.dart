@@ -11939,6 +11939,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'不可关闭'**
   String get contentFilterBuiltInExemptionLocked;
+
+  /// No description provided for @contentFilterAddToWhitelistAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入白名单'**
+  String get contentFilterAddToWhitelistAction;
+
+  /// No description provided for @contentFilterWhitelistTopicAuthorAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'将作者加入白名单'**
+  String get contentFilterWhitelistTopicAuthorAction;
+
+  /// No description provided for @contentFilterWhitelistAuthorAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将 {name} 加入白名单'**
+  String contentFilterWhitelistAuthorAdded(String name);
+
+  /// No description provided for @contentFilterWhitelistedUserBlacklistedError.
+  ///
+  /// In zh, this message translates to:
+  /// **'该用户已在网页黑名单中，请先移出黑名单后再加入白名单'**
+  String get contentFilterWhitelistedUserBlacklistedError;
 }
 
 class _AppLocalizationsDelegate

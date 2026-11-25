@@ -493,6 +493,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       if (matchedKeyword != null) {
         return BlockedKeywordThreadGateView(
           subject: rawSubject,
+          authorId: topicAuthor?.authorId,
+          authorName: topicAuthor?.author,
           onViewOnce: () => setState(() => _allowedKeywordThreadView = true),
           onManageRules: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -1263,12 +1265,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
           );
   }
 
-  String? _topicPidOf(List<ThreadPost> posts) {
-    for (final post in posts) {
-      if (post.isFirst || post.number == 1) return post.pid;
-    }
-    return null;
-  }
+  String? _topicPidOf(List<ThreadPost> posts) =>
+      posts.where((p) => p.isFirst || p.number == 1).firstOrNull?.pid;
 
   String _queryIdentityFor(ThreadDetailPageState state) {
     final entries = state.queryParameters.entries.toList()

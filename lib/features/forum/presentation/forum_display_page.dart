@@ -11,6 +11,8 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_source.dart';
 import 'package:y300/app/navigation/adaptive_detail_host.dart';
+import 'package:y300/app/navigation/main_shell_bottom_inset.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/features/composer_shared/presentation/services/read_access_feedback.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
@@ -200,41 +202,52 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
             )
           : ForumPullToRefresh(
               onRefresh: () => controller.refresh(forceNetwork: true),
-              child: ForumDisplayContent(
-                projection: projection,
-                blockedThreadIds: blockedThreadIds,
-                blacklistedUserIds: hideBlacklistedThreads
-                    ? blacklistedUserIds
-                    : const <String>{},
-                keywordFilterRules: keywordRules,
-                exemptFromContentFilter: isExemptSubForum,
-                scrollController: _scrollController,
-                filterAnchorKey: _filterAnchorKey,
-                headImageKey: _headImageKey,
-                onLoadMore: () => _runAndReturnToFilter(controller.loadMore),
-                onLoadPrevious: () =>
-                    _runAndReturnToFilter(controller.loadPreviousPage),
-                onSelectPage: (page) => _runAndReturnToFilter(
-                  () => controller.loadPageNumber(page),
+              child: EInkScrollPager(
+                controller: _scrollController,
+                cornerPadding: EdgeInsets.only(
+                  right: 12,
+                  bottom: 16 + mainShellBottomScrollInset(context),
                 ),
-                onOpenFilter: (item) =>
-                    _runAndReturnToFilter(() => controller.openFilter(item)),
-                onOpenThreadTag: (thread) => _openThreadTag(context, thread),
-                onOpenThread: (thread) => _openThread(
-                  context,
-                  state,
-                  thread,
-                  exemptSubForum: isExemptSubForum,
+                edgeTopInset: 56,
+                edgeBottomInset: mainShellBottomScrollInset(context),
+                child: ForumDisplayContent(
+                  projection: projection,
+                  blockedThreadIds: blockedThreadIds,
+                  blacklistedUserIds: hideBlacklistedThreads
+                      ? blacklistedUserIds
+                      : const <String>{},
+                  keywordFilterRules: keywordRules,
+                  exemptFromContentFilter: isExemptSubForum,
+                  scrollController: _scrollController,
+                  filterAnchorKey: _filterAnchorKey,
+                  headImageKey: _headImageKey,
+                  onLoadMore: () => _runAndReturnToFilter(controller.loadMore),
+                  onLoadPrevious: () =>
+                      _runAndReturnToFilter(controller.loadPreviousPage),
+                  onSelectPage: (page) => _runAndReturnToFilter(
+                    () => controller.loadPageNumber(page),
+                  ),
+                  onOpenFilter: (item) =>
+                      _runAndReturnToFilter(() => controller.openFilter(item)),
+                  onOpenThreadTag: (thread) => _openThreadTag(context, thread),
+                  onOpenThread: (thread) => _openThread(
+                    context,
+                    state,
+                    thread,
+                    exemptSubForum: isExemptSubForum,
+                  ),
+                  onOpenRevealedThread: (thread) => _openThread(
+                    context,
+                    state,
+                    thread,
+                    bypassKeywordThreadGate: true,
+                    exemptSubForum: isExemptSubForum,
+                  ),
+                  onOpenTopEntry: (entry) =>
+                      _openTopEntry(context, state, entry),
+                  onOpenSubForum: (subForum) =>
+                      _openSubForum(context, subForum),
                 ),
-                onOpenRevealedThread: (thread) => _openThread(
-                  context,
-                  state,
-                  thread,
-                  bypassKeywordThreadGate: true,
-                  exemptSubForum: isExemptSubForum,
-                ),
-                onOpenTopEntry: (entry) => _openTopEntry(context, state, entry),
-                onOpenSubForum: (subForum) => _openSubForum(context, subForum),
               ),
             ),
     );

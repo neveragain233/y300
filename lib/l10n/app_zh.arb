@@ -4800,5 +4800,16 @@
   "contentFilterBackupImportFailed": "导入失败，请重试",
   "contentFilterBuiltInExemptionTitle": "系统内置豁免",
   "contentFilterBuiltInExemptionDetail": "所有板块的置顶/公告内容以及各子版块内的全部内容永久豁免所有本地屏蔽拦截",
-  "contentFilterBuiltInExemptionLocked": "不可关闭"
+  "contentFilterBuiltInExemptionLocked": "不可关闭",
+  "contentFilterAddToWhitelistAction": "加入白名单",
+  "contentFilterWhitelistTopicAuthorAction": "将作者加入白名单",
+  "contentFilterWhitelistAuthorAdded": "已将 {name} 加入白名单",
+  "@contentFilterWhitelistAuthorAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWhitelistedUserBlacklistedError": "该用户已在网页黑名单中，请先移出黑名单后再加入白名单"
 }

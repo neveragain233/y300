@@ -16,15 +16,20 @@ import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/blacklist/data/codecs/blacklist_snapshot_codec.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/features/content_filter/application/whitelisted_users_controller.dart';
 import 'package:y300/features/content_filter/data/codecs/blocked_thread_snapshot_codec.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/presentation/blocked_threads_page.dart';
 import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
+import 'package:y300/features/content_filter/presentation/services/blacklist_user_action.dart';
 import 'package:y300/features/content_filter/presentation/web_blacklist_page.dart';
+import 'package:y300/features/content_filter/presentation/whitelisted_users_page.dart';
+import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
@@ -234,6 +239,7 @@ void main() {
       );
       await tester.pumpWidget(
         ProviderScope(
+          key: UniqueKey(),
           overrides: [
             preferencesStoreProvider.overrideWithValue(store),
             blacklistAutoSyncProvider.overrideWithValue(false),
@@ -366,6 +372,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          key: UniqueKey(),
           overrides: [
             preferencesStoreProvider.overrideWithValue(store),
             blacklistAutoSyncProvider.overrideWithValue(false),
@@ -453,6 +460,140 @@ void main() {
         ),
         findsNothing,
       );
+    },
+  );
+
+  testWidgets(
+    'WhitelistedUsersPage rejects blacklisted UID and blockBlacklistUser removes user from whitelist',
+    (tester) async {
+      final store = _MemoryPreferencesStore();
+      await tester.pumpWidget(
+        ProviderScope(
+          key: UniqueKey(),
+          overrides: [
+            preferencesStoreProvider.overrideWithValue(store),
+            blacklistedUserIdsProvider.overrideWithValue(const <String>{'42'}),
+          ],
+          child: const LocalizedTestApp(home: WhitelistedUsersPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-add-whitelist-user-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('content-filter-whitelist-uid-input')),
+        '42',
+      );
+      await tester.tap(find.byKey(const Key('content-filter-whitelist-save')));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byKey(const Key('whitelisted-users-page'))),
+      );
+      expect(
+        find.text(l10n.contentFilterWhitelistedUserBlacklistedError),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('content-filter-whitelist-cancel')),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify blockBlacklistUser removes user from whitelist on applied/queued,
+      // and leaves whitelist untouched on outcomeUnknown.
+      final syncStore = _MemoryPreferencesStore();
+      late WidgetRef capturedRef;
+      late BuildContext capturedContext;
+      await tester.pumpWidget(
+        ProviderScope(
+          key: UniqueKey(),
+          overrides: [
+            preferencesStoreProvider.overrideWithValue(syncStore),
+            blacklistAutoSyncProvider.overrideWithValue(false),
+            blacklistAddSupportedProvider.overrideWithValue(true),
+            blacklistRemoteLoaderProvider.overrideWithValue(
+              (_) async =>
+                  DataReadSuccess<
+                    ForumBlacklistData,
+                    ForumBlacklistReadCapabilities
+                  >(
+                    data: const ForumBlacklistData(
+                      entries: <ForumBlacklistEntry>[],
+                      pagesRead: 1,
+                    ),
+                    capabilities: ForumBlacklistReadCapabilities(
+                      values: DataCapabilitySet.supported(
+                        ForumBlacklistCapability.values,
+                      ),
+                    ),
+                    metadata: const DataReadMetadata.network(),
+                  ),
+            ),
+            blacklistAddCommandProvider.overrideWithValue((submission) async {
+              if (submission.userId == '1001') {
+                return const DataCommandApplied(
+                  ForumBlacklistAddReceipt(userId: '1001', username: 'U1'),
+                );
+              }
+              return const DataCommandOutcomeUnknown(
+                DataCommandFailure(
+                  kind: DataCommandFailureKind.network,
+                  retryPolicy: DataCommandRetryPolicy.explicitOnly,
+                  code: 'timeout',
+                  diagnosticMessage: 'timeout',
+                ),
+              );
+            }),
+            verifiedSessionOwnerProvider.overrideWithValue((
+              uid: '11',
+              revision: 1,
+            )),
+          ],
+          child: LocalizedTestApp(
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) {
+                  capturedContext = context;
+                  capturedRef = ref;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller = capturedRef.read(
+        whitelistedUsersControllerProvider.notifier,
+      );
+      await controller.add(uid: '1001', username: 'U1');
+      await controller.add(uid: '1002', username: 'U2');
+
+      await blockBlacklistUser(
+        capturedContext,
+        capturedRef,
+        userId: '1001',
+        username: 'U1',
+      );
+      await blockBlacklistUser(
+        capturedContext,
+        capturedRef,
+        userId: '1002',
+        username: 'U2',
+      );
+      await tester.pumpAndSettle();
+
+      final remaining = capturedRef
+          .read(whitelistedUsersControllerProvider)
+          .value!
+          .map((e) => e.uid)
+          .toSet();
+      expect(remaining.contains('1001'), isFalse);
+      expect(remaining.contains('1002'), isTrue);
     },
   );
 }

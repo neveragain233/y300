@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/eink/eink_mode_scope.dart';
+import 'package:y300/features/content_filter/presentation/services/whitelist_user_action.dart';
 import 'package:y300/features/forum/presentation/widgets/forum_display_theme.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
@@ -68,24 +72,29 @@ class KeywordFilteredThreadPlaceholder extends StatelessWidget {
 }
 
 /// Wraps a temporarily revealed thread card with a compact bar to hide it again.
-class KeywordRevealedThreadWrapper extends StatelessWidget {
+class KeywordRevealedThreadWrapper extends ConsumerWidget {
   const KeywordRevealedThreadWrapper({
     super.key,
     required this.tid,
     required this.palette,
     required this.onHideAgain,
     required this.child,
+    this.authorId,
+    this.authorName,
   });
 
   final String tid;
   final ForumDisplayThemePalette palette;
   final VoidCallback onHideAgain;
   final Widget child;
+  final String? authorId;
+  final String? authorName;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final canWhitelist = whitelistUserActionAvailable(ref, userId: authorId);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,6 +113,24 @@ class KeywordRevealedThreadWrapper extends StatelessWidget {
                   ),
                 ),
               ),
+              if (canWhitelist)
+                TextButton(
+                  key: Key('keyword-filtered-thread-whitelist-$tid'),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(48, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => unawaited(
+                    addAuthorToWhitelistAction(
+                      context,
+                      ref,
+                      userId: authorId!,
+                      username: authorName ?? '',
+                    ),
+                  ),
+                  child: Text(l10n.contentFilterAddToWhitelistAction),
+                ),
               TextButton(
                 key: Key('keyword-filtered-thread-hide-$tid'),
                 style: TextButton.styleFrom(

@@ -1282,6 +1282,8 @@ class _ThreadListSection extends StatelessWidget {
             row = revealed
                 ? KeywordRevealedThreadWrapper(
                     tid: thread.tid,
+                    authorId: thread.uid,
+                    authorName: thread.author,
                     palette: palette,
                     onHideAgain: () => onHideKeywordThread(entry.normalizedTid),
                     child: card,

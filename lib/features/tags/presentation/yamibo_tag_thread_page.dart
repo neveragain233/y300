@@ -19,6 +19,7 @@ import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/app_status_views.dart';
 import 'package:y300/shared/services/localized_error_summary.dart';
 import 'package:y300/shared/widgets/app_page_app_bar.dart';
+import 'package:y300/shared/widgets/eink_scroll_pager.dart';
 import 'package:y300/shared/widgets/forum_native_surface.dart';
 import 'package:y300/shared/widgets/native_page_dropdown_button.dart';
 
@@ -40,9 +41,16 @@ class YamiboTagThreadPage extends ConsumerStatefulWidget {
 }
 
 class _YamiboTagThreadPageState extends ConsumerState<YamiboTagThreadPage> {
+  final ScrollController _scrollController = ScrollController();
   final Set<String> _revealedKeywordThreadIds = <String>{};
   int? _lastObservedPage;
   int? _lastKeywordRevision;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant YamiboTagThreadPage oldWidget) {
@@ -132,91 +140,107 @@ class _YamiboTagThreadPageState extends ConsumerState<YamiboTagThreadPage> {
             )
           : RefreshIndicator(
               onRefresh: controller.refresh,
-              child: ListView(
-                key: const Key('yamibo-tag-thread-list'),
-                padding: EdgeInsets.fromLTRB(
-                  10,
-                  8,
-                  10,
-                  18 + mainShellBottomScrollInset(context),
+              child: EInkScrollPager(
+                controller: _scrollController,
+                cornerPadding: EdgeInsets.only(
+                  right: 12,
+                  bottom: 16 + mainShellBottomScrollInset(context),
                 ),
-                children: [
-                  _TagHeaderCard(data: data, palette: palette),
-                  const SizedBox(height: 8),
-                  if (state.errorMessage?.trim().isNotEmpty == true)
-                    _InlineError(
-                      message: l10n.tagLoadFailed(
-                        LocalizedErrorSummary.resolve(l10n, state.errorMessage),
+                edgeBottomInset: mainShellBottomScrollInset(context),
+                child: ListView(
+                  key: const Key('yamibo-tag-thread-list'),
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    10,
+                    8,
+                    10,
+                    18 + mainShellBottomScrollInset(context),
+                  ),
+                  children: [
+                    _TagHeaderCard(data: data, palette: palette),
+                    const SizedBox(height: 8),
+                    if (state.errorMessage?.trim().isNotEmpty == true)
+                      _InlineError(
+                        message: l10n.tagLoadFailed(
+                          LocalizedErrorSummary.resolve(
+                            l10n,
+                            state.errorMessage,
+                          ),
+                        ),
+                        palette: palette,
                       ),
-                      palette: palette,
-                    ),
-                  if (data.topics.isEmpty)
-                    const _EmptyTagThreadList()
-                  else if (hiddenByRules)
-                    _BlockedTagThreadList(
-                      palette: palette,
-                      hasMore:
-                          data.pagination.hasNext == true ||
-                          (data.pagination.totalPages != null &&
-                              data.pagination.currentPage <
-                                  data.pagination.totalPages!),
-                    )
-                  else
-                    for (final entry in visibleEntries) ...[
-                      Builder(
-                        builder: (context) {
-                          final thread = entry.thread;
-                          final revealed =
-                              entry.isKeywordFiltered &&
-                              _revealedKeywordThreadIds.contains(entry.tid);
-                          if (entry.isKeywordFiltered && !revealed) {
-                            return KeywordFilteredThreadPlaceholder(
-                              tid: thread.tid,
+                    if (data.topics.isEmpty)
+                      const _EmptyTagThreadList()
+                    else if (hiddenByRules)
+                      _BlockedTagThreadList(
+                        palette: palette,
+                        hasMore:
+                            data.pagination.hasNext == true ||
+                            (data.pagination.totalPages != null &&
+                                data.pagination.currentPage <
+                                    data.pagination.totalPages!),
+                      )
+                    else
+                      for (final entry in visibleEntries) ...[
+                        Builder(
+                          builder: (context) {
+                            final thread = entry.thread;
+                            final revealed =
+                                entry.isKeywordFiltered &&
+                                _revealedKeywordThreadIds.contains(entry.tid);
+                            if (entry.isKeywordFiltered && !revealed) {
+                              return KeywordFilteredThreadPlaceholder(
+                                tid: thread.tid,
+                                palette: palette,
+                                onRevealOnce: () {
+                                  setState(
+                                    () => _revealedKeywordThreadIds.add(
+                                      entry.tid,
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                            final card = _TagThreadCard(
+                              thread: thread,
+                              capabilities: state.capabilities,
                               palette: palette,
-                              onRevealOnce: () {
+                              onTap: () => _openThread(
+                                context,
+                                thread,
+                                bypassKeywordThreadGate: revealed,
+                              ),
+                            );
+                            if (!revealed) {
+                              return card;
+                            }
+                            return KeywordRevealedThreadWrapper(
+                              tid: thread.tid,
+                              authorId: thread.authorId,
+                              authorName: thread.authorName,
+                              palette: palette,
+                              onHideAgain: () {
                                 setState(
-                                  () =>
-                                      _revealedKeywordThreadIds.add(entry.tid),
+                                  () => _revealedKeywordThreadIds.remove(
+                                    entry.tid,
+                                  ),
                                 );
                               },
+                              child: card,
                             );
-                          }
-                          final card = _TagThreadCard(
-                            thread: thread,
-                            capabilities: state.capabilities,
-                            palette: palette,
-                            onTap: () => _openThread(
-                              context,
-                              thread,
-                              bypassKeywordThreadGate: revealed,
-                            ),
-                          );
-                          if (!revealed) {
-                            return card;
-                          }
-                          return KeywordRevealedThreadWrapper(
-                            tid: thread.tid,
-                            palette: palette,
-                            onHideAgain: () {
-                              setState(
-                                () =>
-                                    _revealedKeywordThreadIds.remove(entry.tid),
-                              );
-                            },
-                            child: card,
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  _TagPager(
-                    data: data,
-                    capabilities: state.capabilities,
-                    isLoading: state.isLoadingPage,
-                    palette: palette,
-                    onSelectPage: controller.loadPage,
-                  ),
-                ],
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    _TagPager(
+                      data: data,
+                      capabilities: state.capabilities,
+                      isLoading: state.isLoadingPage,
+                      palette: palette,
+                      onSelectPage: controller.loadPage,
+                    ),
+                  ],
+                ),
               ),
             ),
     );

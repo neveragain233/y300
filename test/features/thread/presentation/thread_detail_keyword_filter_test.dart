@@ -814,4 +814,185 @@ void main() {
       expect(find.byKey(const Key('thread-post-card-s2')), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'expanded keyword reply and thread gate offer one-tap Add to Whitelist with undo',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.blocked_keywords.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': <Object?>[
+            <String, Object?>{
+              'id': 'blk',
+              'keyword': '剧透',
+              'scope': 'repliesOnly',
+              'kind': 'block',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+      });
+
+      final repo = _FakeThreadRepository(
+        (tid, page) async => _detail(
+          tid: tid,
+          subject: '普通主题',
+          posts: [
+            _post(
+              pid: 'p1',
+              number: 1,
+              isFirst: true,
+              authorId: '101',
+              message: '<p>主楼正文</p>',
+            ),
+            _post(
+              pid: 'p2',
+              number: 2,
+              authorId: '202',
+              message: '<p>这里有剧透内容</p>',
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              forum_client.YamiboForumClient(
+                config: forum_client.ForumClientConfig(
+                  siteOrigin: Uri.parse('https://bbs.example.test'),
+                  apiOrigin: Uri.parse(
+                    'https://api.example.test/mobile/index.php',
+                  ),
+                  userAgent: 'test',
+                  desktopUserAgent: 'test',
+                ),
+                network: _UnusedNetwork(),
+                sourcePlan: forum_client.ForumClientSourcePlan(
+                  threadDetail: repo,
+                  threadPollVoteCommand: _UnusedPollVoteCommand(),
+                ),
+              ),
+            ),
+          ],
+          child: const LocalizedTestApp(
+            home: ThreadDetailPage(tid: '100', subject: '普通主题'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('thread-blacklisted-expand-p2')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('thread-keyword-whitelist-p2')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('thread-keyword-whitelist-p2')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('thread-keyword-whitelist-p2')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('thread-filtered-tail-banner')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('thread-post-card-p2')), findsOneWidget);
+
+      await tester.tap(find.byType(SnackBarAction));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('thread-filtered-tail-banner')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'BlockedKeywordThreadGateView whitelists topic author and unlocks thread',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.blocked_keywords.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': <Object?>[
+            <String, Object?>{
+              'id': 'blk',
+              'keyword': '剧透',
+              'scope': 'includeBody',
+              'kind': 'block',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+      });
+
+      final repo = _FakeThreadRepository(
+        (tid, page) async => _detail(
+          tid: tid,
+          subject: '包含剧透的主题',
+          posts: [
+            _post(
+              pid: 'p1',
+              number: 1,
+              isFirst: true,
+              authorId: '101',
+              message: '<p>主楼剧透正文</p>',
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              forum_client.YamiboForumClient(
+                config: forum_client.ForumClientConfig(
+                  siteOrigin: Uri.parse('https://bbs.example.test'),
+                  apiOrigin: Uri.parse(
+                    'https://api.example.test/mobile/index.php',
+                  ),
+                  userAgent: 'test',
+                  desktopUserAgent: 'test',
+                ),
+                network: _UnusedNetwork(),
+                sourcePlan: forum_client.ForumClientSourcePlan(
+                  threadDetail: repo,
+                  threadPollVoteCommand: _UnusedPollVoteCommand(),
+                ),
+              ),
+            ),
+          ],
+          child: const LocalizedTestApp(
+            home: ThreadDetailPage(tid: '100', subject: '包含剧透的主题'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('keyword-thread-whitelist-author-button')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('keyword-thread-whitelist-author-button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('keyword-thread-gate')), findsNothing);
+      expect(find.byKey(const Key('thread-post-card-p1')), findsOneWidget);
+    },
+  );
 }

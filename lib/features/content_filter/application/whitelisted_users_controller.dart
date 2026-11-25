@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
 import 'package:y300/features/content_filter/data/codecs/whitelisted_user_snapshot_codec.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/whitelisted_user.dart';
@@ -212,5 +213,12 @@ final whitelistedUserIdsProvider = Provider<Set<String>>((ref) {
   final users =
       ref.watch(whitelistedUsersControllerProvider).asData?.value ??
       const <WhitelistedUser>[];
-  return Set<String>.unmodifiable({for (final user in users) user.uid});
+  if (users.isEmpty) {
+    return const <String>{};
+  }
+  final blacklisted = ref.watch(blacklistedUserIdsProvider);
+  return Set<String>.unmodifiable({
+    for (final user in users)
+      if (!blacklisted.contains(user.uid)) user.uid,
+  });
 });

@@ -7051,6 +7051,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contentFilterBuiltInExemptionLocked => '不可关闭';
+
+  @override
+  String get contentFilterAddToWhitelistAction => '加入白名单';
+
+  @override
+  String get contentFilterWhitelistTopicAuthorAction => '将作者加入白名单';
+
+  @override
+  String contentFilterWhitelistAuthorAdded(String name) {
+    return '已将 $name 加入白名单';
+  }
+
+  @override
+  String get contentFilterWhitelistedUserBlacklistedError =>
+      '该用户已在网页黑名单中，请先移出黑名单后再加入白名单';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -14102,4 +14117,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get contentFilterBuiltInExemptionLocked => '不可關閉';
+
+  @override
+  String get contentFilterAddToWhitelistAction => '加入白名單';
+
+  @override
+  String get contentFilterWhitelistTopicAuthorAction => '將作者加入白名單';
+
+  @override
+  String contentFilterWhitelistAuthorAdded(String name) {
+    return '已將 $name 加入白名單';
+  }
+
+  @override
+  String get contentFilterWhitelistedUserBlacklistedError =>
+      '該使用者已在網頁黑名單中，請先移出黑名單後再加入白名單';
 }

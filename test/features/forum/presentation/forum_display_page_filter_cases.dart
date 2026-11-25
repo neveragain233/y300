@@ -416,4 +416,103 @@ void _filterCases() {
     expect(find.byKey(const Key('forum-thread-801')), findsOneWidget);
     expect(find.byKey(const Key('forum-thread-802')), findsOneWidget);
   });
+
+  testWidgets(
+    'eink mode shows corner paging buttons on ForumDisplayPage and hides when disabled',
+    (tester) async {
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 30,
+            threads: [
+              for (var i = 1; i <= 25; i++)
+                _blockedTestThread(tid: '$i', subject: '帖子 $i'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(
+        EInkModeScope(enabled: true, child: _buildTestApp(repository)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('eink-corner-page-down')), findsOneWidget);
+      expect(find.byKey(const Key('eink-corner-page-up')), findsOneWidget);
+
+      await tester.pumpWidget(
+        EInkModeScope(enabled: false, child: _buildTestApp(repository)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('eink-corner-page-down')), findsNothing);
+      expect(find.byKey(const Key('eink-corner-page-up')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'revealed keyword-filtered thread card supports quick Add to Whitelist',
+    (tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'content_filter.blocked_keywords.v1',
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': <Object?>[
+            <String, Object?>{
+              'id': 'kw1',
+              'keyword': '剧透',
+              'scope': 'includeBody',
+              'kind': 'block',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+      );
+
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 1,
+            threads: [
+              _blockedTestThread(tid: '701', subject: '剧透预警贴', uid: '505'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('keyword-filtered-thread-reveal-701')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-whitelist-701')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('keyword-filtered-thread-whitelist-701')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-whitelist-701')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('keyword-filtered-thread-hide-701')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('forum-thread-701')), findsOneWidget);
+    },
+  );
 }

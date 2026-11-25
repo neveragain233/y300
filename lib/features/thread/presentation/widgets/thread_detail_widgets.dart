@@ -38,6 +38,7 @@ import '../services/thread_image_visibility_diagnostics.dart';
 import '../services/thread_detail_quick_scroll_coordinator.dart';
 import '../services/thread_reply_tail_coordinator.dart';
 
+import 'package:y300/features/content_filter/presentation/services/whitelist_user_action.dart';
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
 import 'package:y300/features/thread/presentation/thread_post_rate_form_projection.dart';
 import 'package:y300/features/thread/presentation/thread_post_interaction_models.dart';

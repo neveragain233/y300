@@ -61,6 +61,8 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
             if (onHideFilteredPost != null)
               _FilteredPostExpandedBanner(
                 pid: sourcePost.pid,
+                authorId: sourcePost.authorId,
+                authorName: sourcePost.author,
                 palette: palette,
                 onHide: onHideFilteredPost!,
                 filterReason: expandedFilterReason,
@@ -109,25 +111,33 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
   }
 }
 
-class _FilteredPostExpandedBanner extends StatelessWidget {
+class _FilteredPostExpandedBanner extends ConsumerWidget {
   const _FilteredPostExpandedBanner({
     required this.pid,
+    required this.authorId,
+    required this.authorName,
     required this.palette,
     required this.onHide,
     this.filterReason,
   });
 
   final String pid;
+  final String authorId;
+  final String authorName;
   final ThreadDetailNativePalette palette;
   final VoidCallback onHide;
   final ThreadReplyFilterReason? filterReason;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final keyword = filterReason?.matchedKeyword;
     final snippet = filterReason?.matchedSnippet;
+    final canWhitelist =
+        keyword != null &&
+        !(filterReason?.isBlacklistedAuthor ?? false) &&
+        whitelistUserActionAvailable(ref, userId: authorId);
     final noticeText = keyword != null
         ? (snippet != null && snippet.isNotEmpty
               ? l10n.threadKeywordExpandedDiagnostic(keyword, snippet)
@@ -156,6 +166,23 @@ class _FilteredPostExpandedBanner extends StatelessWidget {
                 ),
               ),
             ),
+            if (canWhitelist)
+              TextButton(
+                key: Key('thread-keyword-whitelist-$pid'),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(56, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                onPressed: () => unawaited(
+                  addAuthorToWhitelistAction(
+                    context,
+                    ref,
+                    userId: authorId,
+                    username: authorName,
+                  ),
+                ),
+                child: Text(l10n.contentFilterAddToWhitelistAction),
+              ),
             TextButton(
               key: Key('thread-blacklisted-hide-$pid'),
               style: TextButton.styleFrom(
