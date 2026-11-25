@@ -63,6 +63,7 @@ class ImageLightboxPage<T> extends StatefulWidget {
     this.actionsFor,
     this.onPageChanged,
     this.onBeforeExit,
+    this.hudAutoHideDuration = const Duration(seconds: 3),
   }) : assert(itemCount > 0);
 
   final int itemCount;
@@ -78,6 +79,7 @@ class ImageLightboxPage<T> extends StatefulWidget {
   actionsFor;
   final ValueChanged<int>? onPageChanged;
   final Future<T?> Function(int currentIndex, bool hasNavigated)? onBeforeExit;
+  final Duration? hudAutoHideDuration;
 
   @override
   State<ImageLightboxPage<T>> createState() => _ImageLightboxPageState<T>();
@@ -90,6 +92,7 @@ class _ImageLightboxPageState<T> extends State<ImageLightboxPage<T>> {
   final Map<int, ImageLightboxZoomController> _zoomControllers =
       <int, ImageLightboxZoomController>{};
 
+  Timer? _hudAutoHideTimer;
   late int _currentIndex;
   bool _hasNavigated = false;
   bool _hudVisible = true;
@@ -102,16 +105,61 @@ class _ImageLightboxPageState<T> extends State<ImageLightboxPage<T>> {
     _currentIndex = widget.initialIndex.clamp(0, widget.itemCount - 1);
     _pageController = PageController(initialPage: _currentIndex);
     _dismissProgress = ValueNotifier<double>(0.0);
+    _scheduleHudAutoHide();
+  }
+
+  @override
+  void didUpdateWidget(covariant ImageLightboxPage<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hudAutoHideDuration != widget.hudAutoHideDuration) {
+      if (_hudVisible) {
+        _scheduleHudAutoHide();
+      } else {
+        _cancelHudAutoHide();
+      }
+    }
   }
 
   @override
   void dispose() {
+    _cancelHudAutoHide();
     _pageController.dispose();
     _dismissProgress.dispose();
     for (final controller in _zoomControllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  void _cancelHudAutoHide() {
+    _hudAutoHideTimer?.cancel();
+    _hudAutoHideTimer = null;
+  }
+
+  void _scheduleHudAutoHide() {
+    _cancelHudAutoHide();
+    final duration = widget.hudAutoHideDuration;
+    if (!_hudVisible ||
+        _exiting ||
+        duration == null ||
+        duration <= Duration.zero) {
+      return;
+    }
+    _hudAutoHideTimer = Timer(duration, () {
+      if (!mounted || !_hudVisible || _exiting) return;
+      setState(() => _hudVisible = false);
+    });
+  }
+
+  void _setHudVisible(bool visible) {
+    if (_hudVisible != visible) {
+      setState(() => _hudVisible = visible);
+    }
+    if (visible) {
+      _scheduleHudAutoHide();
+    } else {
+      _cancelHudAutoHide();
+    }
   }
 
   ImageLightboxZoomController _zoomControllerFor(int index) {
@@ -136,6 +184,7 @@ class _ImageLightboxPageState<T> extends State<ImageLightboxPage<T>> {
   Future<void> _exit() async {
     if (_exiting) return;
     _exiting = true;
+    _cancelHudAutoHide();
     T? result;
     final onBeforeExit = widget.onBeforeExit;
     if (onBeforeExit != null) {
@@ -253,6 +302,9 @@ class _ImageLightboxPageState<T> extends State<ImageLightboxPage<T>> {
                                 _hasNavigated || index != widget.initialIndex;
                             _pageZoomed = false;
                           });
+                          if (_hudVisible) {
+                            _scheduleHudAutoHide();
+                          }
                           widget.onPageChanged?.call(index);
                         },
                         itemBuilder: (context, index) {
@@ -264,9 +316,7 @@ class _ImageLightboxPageState<T> extends State<ImageLightboxPage<T>> {
                             ),
                             zoomController: _zoomControllerFor(index),
                             isActivePage: index == _currentIndex,
-                            onSingleTap: () {
-                              setState(() => _hudVisible = !_hudVisible);
-                            },
+                            onSingleTap: () => _setHudVisible(!_hudVisible),
                             onZoomChanged: (zoomed) {
                               if (index == _currentIndex &&
                                   _pageZoomed != zoomed) {
@@ -379,14 +429,22 @@ class _ImageLightboxPageState<T> extends State<ImageLightboxPage<T>> {
                                               ? Icons.fullscreen_exit_rounded
                                               : Icons.fit_screen_rounded,
                                         ),
-                                        onPressed: currentZoom.toggleFit,
+                                        onPressed: () {
+                                          _scheduleHudAutoHide();
+                                          currentZoom.toggleFit();
+                                        },
                                       ),
                                     for (final action in customActions)
                                       IconButton(
                                         key: action.key,
                                         tooltip: action.tooltip,
                                         icon: Icon(action.icon),
-                                        onPressed: action.onPressed,
+                                        onPressed: action.onPressed == null
+                                            ? null
+                                            : () {
+                                                _scheduleHudAutoHide();
+                                                action.onPressed!.call();
+                                              },
                                       ),
                                   ];
                                   if (actions.isEmpty) {

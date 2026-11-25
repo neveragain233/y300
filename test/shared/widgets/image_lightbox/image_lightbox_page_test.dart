@@ -213,4 +213,59 @@ void main() {
       expect(receivedResult, 'exit:1:true');
     },
   );
+
+  testWidgets('HUD auto-hides after timeout and resets timer on paging', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    double hudOpacity() {
+      return tester
+          .widget<AnimatedOpacity>(
+            find
+                .ancestor(
+                  of: find.byKey(const Key('image-lightbox-close-button')),
+                  matching: find.byType(AnimatedOpacity),
+                )
+                .first,
+          )
+          .opacity;
+    }
+
+    await tester.pumpWidget(buildHost());
+    await tester.tap(find.byKey(const Key('open-lightbox')));
+    await tester.pumpAndSettle();
+    expect(hudOpacity(), 1.0);
+
+    // 3 秒无操作后自动隐藏
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(hudOpacity(), 0.0);
+
+    // 单击重新唤出
+    await tester.tapAt(const Offset(200, 400));
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(hudOpacity(), 1.0);
+
+    // 2 秒后翻页，重置 3 秒计时器，再过 2 秒仍应保持显示
+    await tester.pump(const Duration(seconds: 2));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(hudOpacity(), 1.0);
+
+    // 再过 1.1 秒到达完整 3 秒无操作，自动隐藏
+    await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pumpAndSettle();
+    expect(hudOpacity(), 0.0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(ImageLightboxPage<String>), findsNothing);
+  });
 }
