@@ -101,5 +101,51 @@ void main() {
         expect(withBadRegex, isEmpty);
       },
     );
+
+    test(
+      'applies v1 legacy defaults and round-trips wholeWord and caseSensitive',
+      () {
+        final legacyDecoded = BlockedKeywordSnapshotCodec.decode('''
+        {
+          "schemaVersion": 1,
+          "keywords": [
+            {"id": "p1", "keyword": "AI", "scope": "includeBody", "kind": "block", "matchType": "plain", "enabled": true, "createdAt": 1000, "updatedAt": 2000},
+            {"id": "r1", "keyword": "\\\\bAI\\\\b", "scope": "repliesOnly", "kind": "block", "matchType": "regex", "enabled": true, "createdAt": 1000, "updatedAt": 3000}
+          ]
+        }
+      ''');
+        expect(legacyDecoded.length, 2);
+        final regexRule = legacyDecoded.firstWhere((e) => e.id == 'r1');
+        final plainRule = legacyDecoded.firstWhere((e) => e.id == 'p1');
+        expect(plainRule.wholeWord, isTrue);
+        expect(plainRule.caseSensitive, isFalse);
+        expect(regexRule.wholeWord, isFalse);
+        expect(regexRule.caseSensitive, isTrue);
+
+        final t1 = DateTime.fromMillisecondsSinceEpoch(4000);
+        final customPlain = BlockedKeyword(
+          id: 'p2',
+          keyword: 'AI',
+          normalizedKeyword: 'AI',
+          scope: BlockedKeywordScope.includeBody,
+          wholeWord: false,
+          caseSensitive: true,
+          createdAt: t1,
+          updatedAt: t1,
+        );
+        final roundTripped = BlockedKeywordSnapshotCodec.decode(
+          BlockedKeywordSnapshotCodec.encode(<BlockedKeyword>[
+            plainRule,
+            customPlain,
+          ]),
+        );
+        expect(roundTripped.length, 2);
+        expect(
+          roundTripped.firstWhere((e) => e.id == 'p2').caseSensitive,
+          isTrue,
+        );
+        expect(roundTripped.firstWhere((e) => e.id == 'p2').wholeWord, isFalse);
+      },
+    );
   });
 }

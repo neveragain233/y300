@@ -974,9 +974,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     }
     final isFirst = item.sourcePost.isFirst || item.sourcePost.number == 1;
     final applicableRules = isFirst ? rules.bodyRules : rules.replyRules;
-    if (applicableRules.isEmpty) {
-      return item;
-    }
+    if (applicableRules.isEmpty) return item;
     final maskedHtml = KeywordFilterMatcher.maskBlockedQuotesInHtml(
       item.displayPost.message,
       rules: applicableRules,
@@ -986,9 +984,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           ? item.sourcePost.message
           : null,
     );
-    if (maskedHtml == item.displayPost.message) {
-      return item;
-    }
+    if (maskedHtml == item.displayPost.message) return item;
     return ThreadDetailPostProjection(
       sourcePost: item.sourcePost,
       displayPost: _copyPostWithMessage(item.displayPost, maskedHtml),
@@ -1093,6 +1089,17 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     return pids;
   }
 
+  VoidCallback? _hideCallbackFor(ThreadReplyFilterReason? reason, String pid) =>
+      reason == null
+      ? null
+      : () => setState(() => _expandedBlacklistedPids.remove(pid));
+
+  ThreadReplyFilterReason? _expandedReasonFor(ThreadPost post) {
+    if (!_expandedBlacklistedPids.contains(post.pid)) return null;
+    final r = _resolveFilterReason(post, ref.read(blacklistedUserIdsProvider));
+    return r.isFiltered ? r : null;
+  }
+
   ThreadReplyFilterReason _resolveFilterReason(
     ThreadPost sourcePost,
     Set<String> blacklistedUserIds,
@@ -1107,26 +1114,31 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
       return ThreadReplyFilterReason(
         isBlacklistedAuthor: isBlacklisted || recorded.isBlacklistedAuthor,
         matchedKeyword: recorded.matchedKeyword,
+        matchedSnippet: recorded.matchedSnippet,
       );
     }
-    String? matchedKeyword;
+    KeywordMatchDetail? matchedDetail;
     if (!sourcePost.isFirst &&
         sourcePost.number != 1 &&
         widget.keywordFilterRules.hasReplyRules) {
       final converted = widget.projection?.findByPid(sourcePost.pid);
-      matchedKeyword = KeywordFilterMatcher.matchHtmlBody(
+      matchedDetail = KeywordFilterMatcher.matchReplyHtmlDetail(
         sourcePost.message,
         widget.keywordFilterRules.replyRules,
         excludeQuotes: true,
         convertedHtml: converted?.displayPost.message,
-      )?.keyword;
+        allowRules: widget.keywordFilterRules.activeAllowRules,
+        authorId: authorId,
+        whitelistedUserIds: widget.keywordFilterRules.whitelistedUserIds,
+      );
     }
-    if (!isBlacklisted && matchedKeyword == null) {
+    if (!isBlacklisted && matchedDetail == null) {
       return ThreadReplyFilterReason.none;
     }
     return ThreadReplyFilterReason(
       isBlacklistedAuthor: isBlacklisted,
-      matchedKeyword: matchedKeyword,
+      matchedKeyword: matchedDetail?.rule.keyword,
+      matchedSnippet: matchedDetail?.snippet,
     );
   }
 
@@ -1646,21 +1658,16 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         );
       case ThreadDetailRenderEntryKind.postCard:
         final cardPid = entry.sourcePost!.pid;
-        final canHideCard =
-            _expandedBlacklistedPids.contains(cardPid) &&
-            _resolveFilterReason(
-              entry.sourcePost!,
-              ref.read(blacklistedUserIdsProvider),
-            ).isFiltered;
+        final cardReason = _expandedReasonFor(entry.sourcePost!);
         return KeyedSubtree(
           key: _projectionAnchorCoordinator.keyForPid(cardPid),
           child: _ThreadPostCardEntry(
             keepAlive: widget.bodyReadingCoordinator != null,
             wholeBodyPresentation: _wholeBodyPresentationFor(
-              entry.sourcePost!.pid,
+              cardPid,
               entry.displayPost!.message,
             ),
-            footerExpansion: _footerExpansionFor(entry.sourcePost!.pid),
+            footerExpansion: _footerExpansionFor(cardPid),
             sourcePost: entry.sourcePost!,
             displayPost: entry.displayPost!,
             displaySubject:
@@ -1670,7 +1677,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
                 widget.state.ratingsByPostId,
             postIndex: entry.postIndex,
             state: widget.state,
-            highlighted: entry.sourcePost!.pid == widget.highlightPostPid,
+            highlighted: cardPid == widget.highlightPostPid,
             imageReferer: widget.imageReferer,
             palette: palette,
             onOpenAuthorProfile: widget.onOpenAuthorProfile,
@@ -1685,7 +1692,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             onHtmlFirstBlockImageResolved: _handleBlockImageResolved,
             imageViewportCoordinator: _imageViewportCoordinator,
             imageAnchorController: widget.imageReaderReturnCoordinator
-                ?.anchorsFor(entry.sourcePost!.pid),
+                ?.anchorsFor(cardPid),
             imagePrecacheService: widget.htmlImagePrecacheService,
             bodyReadingCoordinator: widget.bodyReadingCoordinator,
             onPreparedBody: _canChunkBodies ? _handoffPreparedBody : null,
@@ -1700,26 +1707,19 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             onSubmitPollVote: widget.onSubmitPollVote,
             onLoadAllRatings: widget.onLoadAllRatings ?? _ignoreRatingLoad,
             onLoadMoreComments: widget.onLoadMoreComments,
-            displayExtraComments:
-                widget.displayExtraCommentsByPostId[entry.sourcePost!.pid],
+            displayExtraComments: widget.displayExtraCommentsByPostId[cardPid],
             showEmptyInteractionHint:
                 widget.landing == ThreadPostLanding.bodyEnd &&
-                widget.targetPid == entry.sourcePost!.pid,
+                widget.targetPid == cardPid,
             onPostBuilt: _handlePostBuilt,
-            onHideFilteredPost: canHideCard
-                ? () => setState(() => _expandedBlacklistedPids.remove(cardPid))
-                : null,
+            onHideFilteredPost: _hideCallbackFor(cardReason, cardPid),
+            expandedFilterReason: cardReason,
             firstPostTitleKey: widget.firstPostTitleKey,
           ),
         );
       case ThreadDetailRenderEntryKind.postHeader:
         final headerPid = entry.sourcePost!.pid;
-        final canHideHeader =
-            _expandedBlacklistedPids.contains(headerPid) &&
-            _resolveFilterReason(
-              entry.sourcePost!,
-              ref.read(blacklistedUserIdsProvider),
-            ).isFiltered;
+        final headerReason = _expandedReasonFor(entry.sourcePost!);
         final header = _ThreadPostCardHeaderEntry(
           key: widget.floorNavigation == null
               ? null
@@ -1734,15 +1734,14 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           imageReferer: widget.imageReferer,
           onOpenAuthorProfile: widget.onOpenAuthorProfile,
           onOpenPostActions: widget.onOpenPostActions,
-          onHideFilteredPost: canHideHeader
-              ? () => setState(() => _expandedBlacklistedPids.remove(headerPid))
-              : null,
+          onHideFilteredPost: _hideCallbackFor(headerReason, headerPid),
+          expandedFilterReason: headerReason,
           firstPostTitleKey: widget.firstPostTitleKey,
         );
         return KeyedSubtree(
-          key: _preparedBodies[entry.sourcePost!.pid] == null
+          key: _preparedBodies[headerPid] == null
               ? null
-              : _projectionAnchorCoordinator.keyForPid(entry.sourcePost!.pid),
+              : _projectionAnchorCoordinator.keyForPid(headerPid),
           child: _PostBuildObserver(
             index: entry.postIndex,
             onPostBuilt: _handlePostBuilt,

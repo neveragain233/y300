@@ -11644,7 +11644,7 @@ abstract class AppLocalizations {
   /// No description provided for @contentFilterKeywordRegexHint.
   ///
   /// In zh, this message translates to:
-  /// **'输入正则表达式（不区分大小写）'**
+  /// **'输入正则表达式（可切换大小写敏感）'**
   String get contentFilterKeywordRegexHint;
 
   /// No description provided for @contentFilterKeywordRegexError.
@@ -11664,6 +11664,263 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'还没有白名单规则，点击右上角添加。'**
   String get contentFilterWhitelistEmpty;
+
+  /// No description provided for @threadKeywordExpandedDiagnostic.
+  ///
+  /// In zh, this message translates to:
+  /// **'临时展开：命中规则「{keyword}」（片段：{snippet}）'**
+  String threadKeywordExpandedDiagnostic(String keyword, String snippet);
+
+  /// No description provided for @threadKeywordExpandedRule.
+  ///
+  /// In zh, this message translates to:
+  /// **'临时展开：命中规则「{keyword}」'**
+  String threadKeywordExpandedRule(String keyword);
+
+  /// No description provided for @contentFilterWholeWordLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'拉丁字母整词匹配'**
+  String get contentFilterWholeWordLabel;
+
+  /// No description provided for @contentFilterWholeWordDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后，英文词边界需为非字母（例如屏蔽 AI 不会误伤 all in 或 daily）'**
+  String get contentFilterWholeWordDetail;
+
+  /// No description provided for @contentFilterCaseSensitiveLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'区分大小写'**
+  String get contentFilterCaseSensitiveLabel;
+
+  /// No description provided for @contentFilterCaseSensitiveDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后严格区分英文字母大小写'**
+  String get contentFilterCaseSensitiveDetail;
+
+  /// No description provided for @contentFilterRuleWholeWordTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'整词'**
+  String get contentFilterRuleWholeWordTag;
+
+  /// No description provided for @contentFilterRuleCaseSensitiveTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'区分大小写'**
+  String get contentFilterRuleCaseSensitiveTag;
+
+  /// No description provided for @contentFilterTesterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'规则即时测试'**
+  String get contentFilterTesterTitle;
+
+  /// No description provided for @contentFilterTesterHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入测试文本，即时查看是否会被当前规则命中'**
+  String get contentFilterTesterHint;
+
+  /// No description provided for @contentFilterTesterBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'将被屏蔽：命中「{keyword}」（{snippet}）'**
+  String contentFilterTesterBlocked(String keyword, String snippet);
+
+  /// No description provided for @contentFilterTesterExempted.
+  ///
+  /// In zh, this message translates to:
+  /// **'白名单豁免：命中「{allowKeyword}」（原命中屏蔽词「{blockKeyword}」）'**
+  String contentFilterTesterExempted(String allowKeyword, String blockKeyword);
+
+  /// No description provided for @contentFilterTesterAllowedOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'不会被屏蔽：命中白名单「{keyword}」'**
+  String contentFilterTesterAllowedOnly(String keyword);
+
+  /// No description provided for @contentFilterTesterNoMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'不会被屏蔽：未命中任何屏蔽规则'**
+  String get contentFilterTesterNoMatch;
+
+  /// No description provided for @contentFilterWhitelistedUsersSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'可信用户白名单'**
+  String get contentFilterWhitelistedUsersSection;
+
+  /// No description provided for @contentFilterWhitelistedUsersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位用户'**
+  String contentFilterWhitelistedUsersCount(int count);
+
+  /// No description provided for @contentFilterWhitelistedUsersHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'白名单用户的主题帖和回复不会触发关键词屏蔽'**
+  String get contentFilterWhitelistedUsersHint;
+
+  /// No description provided for @contentFilterWhitelistedUsersEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有可信用户，点击右上角添加用户 UID。'**
+  String get contentFilterWhitelistedUsersEmpty;
+
+  /// No description provided for @contentFilterWhitelistedUserAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加可信用户'**
+  String get contentFilterWhitelistedUserAdd;
+
+  /// No description provided for @contentFilterWhitelistedUserUidLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户 UID'**
+  String get contentFilterWhitelistedUserUidLabel;
+
+  /// No description provided for @contentFilterWhitelistedUserUidHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入数字 UID（例如 12345）'**
+  String get contentFilterWhitelistedUserUidHint;
+
+  /// No description provided for @contentFilterWhitelistedUserNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'备注名称（可选）'**
+  String get contentFilterWhitelistedUserNameLabel;
+
+  /// No description provided for @contentFilterWhitelistedUserNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'方便识别的用户名或备注'**
+  String get contentFilterWhitelistedUserNameHint;
+
+  /// No description provided for @contentFilterWhitelistedUserUidInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的纯数字 UID'**
+  String get contentFilterWhitelistedUserUidInvalid;
+
+  /// No description provided for @contentFilterWhitelistedUserDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'该用户已在白名单中'**
+  String get contentFilterWhitelistedUserDuplicate;
+
+  /// No description provided for @contentFilterBackupSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'规则备份与恢复'**
+  String get contentFilterBackupSectionTitle;
+
+  /// No description provided for @contentFilterBackupExport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出规则备份'**
+  String get contentFilterBackupExport;
+
+  /// No description provided for @contentFilterBackupExportDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出关键词规则、屏蔽主题与用户白名单为 JSON 文件'**
+  String get contentFilterBackupExportDetail;
+
+  /// No description provided for @contentFilterBackupImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入规则备份'**
+  String get contentFilterBackupImport;
+
+  /// No description provided for @contentFilterBackupImportDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'从 JSON 备份文件合并或替换现有规则'**
+  String get contentFilterBackupImportDetail;
+
+  /// No description provided for @contentFilterBackupExportSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导出规则备份'**
+  String get contentFilterBackupExportSuccess;
+
+  /// No description provided for @contentFilterBackupExportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出失败，请重试'**
+  String get contentFilterBackupExportFailed;
+
+  /// No description provided for @contentFilterBackupInvalidFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份文件格式无效或已损坏'**
+  String get contentFilterBackupInvalidFile;
+
+  /// No description provided for @contentFilterBackupUnsupportedVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'不支持的备份版本'**
+  String get contentFilterBackupUnsupportedVersion;
+
+  /// No description provided for @contentFilterBackupFileTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份文件过大'**
+  String get contentFilterBackupFileTooLarge;
+
+  /// No description provided for @contentFilterBackupEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份文件中没有可导入的内容'**
+  String get contentFilterBackupEmpty;
+
+  /// No description provided for @contentFilterBackupPreviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认导入备份'**
+  String get contentFilterBackupPreviewTitle;
+
+  /// No description provided for @contentFilterBackupPreviewSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'共识别 {total} 条记录：关键词规则 {keywords} 条、屏蔽主题 {threads} 条、白名单用户 {users} 位。'**
+  String contentFilterBackupPreviewSummary(
+    int total,
+    int keywords,
+    int threads,
+    int users,
+  );
+
+  /// No description provided for @contentFilterBackupImportMerge.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并导入'**
+  String get contentFilterBackupImportMerge;
+
+  /// No description provided for @contentFilterBackupImportReplace.
+  ///
+  /// In zh, this message translates to:
+  /// **'覆盖替换'**
+  String get contentFilterBackupImportReplace;
+
+  /// No description provided for @contentFilterBackupImportSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入完成：新增 {imported} 条，跳过 {skipped} 条'**
+  String contentFilterBackupImportSuccess(int imported, int skipped);
+
+  /// No description provided for @contentFilterBackupImportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入失败，请重试'**
+  String get contentFilterBackupImportFailed;
 }
 
 class _AppLocalizationsDelegate

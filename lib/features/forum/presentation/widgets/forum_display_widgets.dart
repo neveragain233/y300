@@ -131,18 +131,18 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
         excerpt: source.excerpt,
         convertedExcerpt: projection.displayExcerpt,
         ruleSet: widget.keywordFilterRules,
+        authorId: source.uid,
       );
-      if (matchedKeyword != null &&
-          widget.keywordFilterRules.hideBlockedContentCompletely) {
-        continue;
+      if (matchedKeyword == null ||
+          !widget.keywordFilterRules.hideBlockedContentCompletely) {
+        threadEntries.add(
+          _ForumThreadListItem(
+            thread: _displayThread(projection),
+            isKeywordFiltered: matchedKeyword != null,
+            normalizedTid: normalizedTid,
+          ),
+        );
       }
-      threadEntries.add(
-        _ForumThreadListItem(
-          thread: _displayThread(projection),
-          isKeywordFiltered: matchedKeyword != null,
-          normalizedTid: normalizedTid,
-        ),
-      );
     }
     final hiddenByRules =
         widget.projection.threads.isNotEmpty && threadEntries.isEmpty;

@@ -8,16 +8,24 @@ BlockedKeyword _rule(
   BlockedKeywordScope scope = BlockedKeywordScope.repliesOnly,
   BlockedKeywordKind kind = BlockedKeywordKind.block,
   BlockedKeywordMatchType matchType = BlockedKeywordMatchType.plain,
+  bool wholeWord = true,
+  bool caseSensitive = false,
   bool enabled = true,
 }) {
   final now = DateTime(2026, 11, 24);
   return BlockedKeyword(
     id: id,
     keyword: keyword,
-    normalizedKeyword: normalizeBlockedKeywordPattern(keyword, matchType),
+    normalizedKeyword: normalizeBlockedKeywordPattern(
+      keyword,
+      matchType,
+      caseSensitive: caseSensitive,
+    ),
     scope: scope,
     kind: kind,
     matchType: matchType,
+    wholeWord: wholeWord,
+    caseSensitive: caseSensitive,
     enabled: enabled,
     createdAt: now,
     updatedAt: now,
@@ -176,5 +184,131 @@ void main() {
         );
       },
     );
+
+    test(
+      'wholeWord spares Latin substrings while catching boundary and CJK edges',
+      () {
+        final aiRule = _rule('AI', id: 'r1', wholeWord: true);
+        for (final safeText in const <String>[
+          'all in',
+          'daily',
+          'again',
+          'detail',
+          'kawaii',
+          'maid',
+          'waifu',
+        ]) {
+          expect(
+            KeywordFilterMatcher.matchPlainText(safeText, <BlockedKeyword>[
+              aiRule,
+            ]),
+            isNull,
+            reason: 'Expected "$safeText" not to match whole-word "AI"',
+          );
+        }
+        for (final blockedText in const <String>[
+          'AI画图',
+          '用AI写的',
+          'AI2026',
+          'This is AI!',
+        ]) {
+          expect(
+            KeywordFilterMatcher.matchPlainText(blockedText, <BlockedKeyword>[
+              aiRule,
+            ])?.id,
+            'r1',
+            reason: 'Expected "$blockedText" to match whole-word "AI"',
+          );
+        }
+        final substringRule = _rule('AI', id: 'r2', wholeWord: false);
+        expect(
+          KeywordFilterMatcher.matchPlainText('daily', <BlockedKeyword>[
+            substringRule,
+          ])?.id,
+          'r2',
+        );
+      },
+    );
+
+    test('supports caseSensitive, invisible-char stripping, HTML boundaries, and author whitelist', () {
+      final upperOnly = _rule('AI', id: 'cs', caseSensitive: true);
+      expect(
+        KeywordFilterMatcher.matchPlainText('ai tools', <BlockedKeyword>[
+          upperOnly,
+        ]),
+        isNull,
+      );
+      expect(
+        KeywordFilterMatcher.matchPlainText('AI tools', <BlockedKeyword>[
+          upperOnly,
+        ])?.id,
+        'cs',
+      );
+
+      final regexCs = _rule(
+        r'\bAI\b',
+        id: 'rcs',
+        matchType: BlockedKeywordMatchType.regex,
+        caseSensitive: true,
+      );
+      expect(
+        KeywordFilterMatcher.matchPlainText('ai', <BlockedKeyword>[regexCs]),
+        isNull,
+      );
+      expect(
+        KeywordFilterMatcher.matchPlainText('AI', <BlockedKeyword>[
+          regexCs,
+        ])?.id,
+        'rcs',
+      );
+
+      final spoiler = _rule('剧透', id: 'sp');
+      expect(
+        KeywordFilterMatcher.matchPlainText('剧\u200B透预警', <BlockedKeyword>[
+          spoiler,
+        ])?.id,
+        'sp',
+      );
+
+      final inRule = _rule('ain', id: 'in', wholeWord: true);
+      expect(
+        KeywordFilterMatcher.matchHtmlBody(
+          '<p>a<img src="x.png">in <a href="https://example.com/ain">https://example.com/ain</a></p>',
+          <BlockedKeyword>[inRule],
+          excludeQuotes: true,
+        ),
+        isNull,
+      );
+
+      final detail = KeywordFilterMatcher.matchReplyHtmlDetail(
+        '<p>这里是包含剧透的正文内容</p>',
+        <BlockedKeyword>[spoiler],
+        excludeQuotes: true,
+        authorId: '1001',
+        whitelistedUserIds: const <String>{'1001'},
+      );
+      expect(detail, isNull);
+
+      final matchedDetail = KeywordFilterMatcher.matchReplyHtmlDetail(
+        '<p>这里是包含剧透的正文内容</p>',
+        <BlockedKeyword>[spoiler],
+        excludeQuotes: true,
+        authorId: '1002',
+        whitelistedUserIds: const <String>{'1001'},
+      );
+      expect(matchedDetail?.rule.id, 'sp');
+      expect(matchedDetail?.snippet, contains('剧透'));
+
+      final eval = KeywordFilterMatcher.evaluatePlainText(
+        '官方AI画图',
+        <BlockedKeyword>[
+          _rule('官方', id: 'allow', kind: BlockedKeywordKind.allow),
+          _rule('AI', id: 'blk'),
+        ],
+      );
+      expect(eval.isBlocked, isFalse);
+      expect(eval.matchedAllow?.rule.id, 'allow');
+      expect(eval.matchedBlock?.rule.id, 'blk');
+    });
   });
 }

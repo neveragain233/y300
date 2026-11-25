@@ -23,6 +23,8 @@ abstract final class BlockedKeywordSnapshotCodec {
             'scope': rule.scope.name,
             'kind': rule.kind.name,
             'matchType': rule.matchType.name,
+            'wholeWord': rule.wholeWord,
+            'caseSensitive': rule.caseSensitive,
             'enabled': rule.enabled,
             'createdAt': rule.createdAt.millisecondsSinceEpoch,
             'updatedAt': rule.updatedAt.millisecondsSinceEpoch,
@@ -47,7 +49,7 @@ abstract final class BlockedKeywordSnapshotCodec {
       }
       final byIdentity =
           <
-            (BlockedKeywordKind, BlockedKeywordMatchType, String),
+            (BlockedKeywordKind, BlockedKeywordMatchType, bool, bool, String),
             BlockedKeyword
           >{};
       for (final value in values) {
@@ -55,7 +57,13 @@ abstract final class BlockedKeywordSnapshotCodec {
         if (rule == null) {
           continue;
         }
-        final identity = (rule.kind, rule.matchType, rule.normalizedKeyword);
+        final identity = (
+          rule.kind,
+          rule.matchType,
+          rule.wholeWord,
+          rule.caseSensitive,
+          rule.normalizedKeyword,
+        );
         final existing = byIdentity[identity];
         if (existing == null || rule.updatedAt.isAfter(existing.updatedAt)) {
           byIdentity[identity] = rule;
@@ -82,7 +90,7 @@ abstract final class BlockedKeywordSnapshotCodec {
     if (rawKeyword is! String) {
       return null;
     }
-    final keyword = rawKeyword.trim();
+    final keyword = stripInvisibleFilterChars(rawKeyword).trim();
     final kind = switch (value['kind']) {
       null => BlockedKeywordKind.block,
       'block' => BlockedKeywordKind.block,
@@ -101,12 +109,30 @@ abstract final class BlockedKeywordSnapshotCodec {
     if (matchType == null) {
       return null;
     }
-    if (validateBlockedKeywordPattern(keyword, matchType) != null) {
+    final rawWholeWord = value['wholeWord'];
+    if (rawWholeWord != null && rawWholeWord is! bool) {
+      return null;
+    }
+    final wholeWord = rawWholeWord as bool? ?? true;
+    final rawCaseSensitive = value['caseSensitive'];
+    if (rawCaseSensitive != null && rawCaseSensitive is! bool) {
+      return null;
+    }
+    final caseSensitive =
+        rawCaseSensitive as bool? ??
+        (matchType == BlockedKeywordMatchType.regex);
+    if (validateBlockedKeywordPattern(
+          keyword,
+          matchType,
+          caseSensitive: caseSensitive,
+        ) !=
+        null) {
       return null;
     }
     final normalizedKeyword = normalizeBlockedKeywordPattern(
       keyword,
       matchType,
+      caseSensitive: caseSensitive,
     );
     if (normalizedKeyword.isEmpty) {
       return null;
@@ -141,6 +167,8 @@ abstract final class BlockedKeywordSnapshotCodec {
           : scope,
       kind: kind,
       matchType: matchType,
+      wholeWord: matchType == BlockedKeywordMatchType.regex ? false : wholeWord,
+      caseSensitive: caseSensitive,
       enabled: enabled,
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdEpoch),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedEpoch),

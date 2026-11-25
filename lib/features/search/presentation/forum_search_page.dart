@@ -379,6 +379,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
       final matchedKeyword = KeywordFilterMatcher.matchThreadListItem(
         subject: item.title,
         ruleSet: keywordRules,
+        authorId: item.authorId,
       );
       if (matchedKeyword != null && keywordRules.hideBlockedContentCompletely) {
         continue;

@@ -16,30 +16,62 @@ enum BlockedKeywordPatternError { empty, regexTooLong, invalidRegex }
 const int kMaxBlockedKeywordRegexLength = 160;
 
 final RegExp _whitespaceCollapsePattern = RegExp(r'\s+');
+final RegExp _asciiLetterPattern = RegExp(r'[A-Za-z]');
+final RegExp _invisibleFilterCharsPattern = RegExp(
+  r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u00AD\u034F\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]',
+);
 
-/// Normalizes [raw] for case-insensitive and whitespace-collapsed matching.
-String normalizeBlockedKeyword(String raw) {
-  final collapsed = raw.trim().replaceAll(_whitespaceCollapsePattern, ' ');
-  return collapsed.toLowerCase();
+/// Removes zero-width, directional, and control characters used to evade
+/// keyword matching.
+String stripInvisibleFilterChars(String raw) =>
+    raw.replaceAll(_invisibleFilterCharsPattern, '');
+
+/// Whether [raw] contains any ASCII Latin letters (`A-Z` / `a-z`).
+bool keywordHasAsciiLetters(String raw) => _asciiLetterPattern.hasMatch(raw);
+
+/// Whether [raw] starts or ends with an ASCII Latin letter, so whole-word
+/// Latin boundary matching applies on at least one edge.
+bool keywordHasLatinBoundaryTarget(String raw) {
+  final trimmed = stripInvisibleFilterChars(raw).trim();
+  if (trimmed.isEmpty) {
+    return false;
+  }
+  return _asciiLetterPattern.hasMatch(trimmed[0]) ||
+      _asciiLetterPattern.hasMatch(trimmed[trimmed.length - 1]);
 }
 
-/// Normalizes [raw] according to [matchType] for storage and deduplication.
+/// Normalizes [raw] for whitespace-collapsed (and optionally case-folded)
+/// matching.
+String normalizeBlockedKeyword(String raw, {bool caseSensitive = false}) {
+  final collapsed = stripInvisibleFilterChars(raw)
+      .trim()
+      .replaceAll(_whitespaceCollapsePattern, ' ');
+  return caseSensitive ? collapsed : collapsed.toLowerCase();
+}
+
+/// Normalizes [raw] according to [matchType] and [caseSensitive] for storage
+/// and deduplication.
 String normalizeBlockedKeywordPattern(
   String raw,
-  BlockedKeywordMatchType matchType,
-) {
+  BlockedKeywordMatchType matchType, {
+  bool caseSensitive = false,
+}) {
   return switch (matchType) {
-    BlockedKeywordMatchType.plain => normalizeBlockedKeyword(raw),
-    BlockedKeywordMatchType.regex => raw.trim(),
+    BlockedKeywordMatchType.plain => normalizeBlockedKeyword(
+      raw,
+      caseSensitive: caseSensitive,
+    ),
+    BlockedKeywordMatchType.regex => stripInvisibleFilterChars(raw).trim(),
   };
 }
 
 /// Validates [raw] for [matchType], returning `null` when valid.
 BlockedKeywordPatternError? validateBlockedKeywordPattern(
   String raw,
-  BlockedKeywordMatchType matchType,
-) {
-  final trimmed = raw.trim();
+  BlockedKeywordMatchType matchType, {
+  bool caseSensitive = false,
+}) {
+  final trimmed = stripInvisibleFilterChars(raw).trim();
   if (trimmed.isEmpty) {
     return BlockedKeywordPatternError.empty;
   }
@@ -51,7 +83,7 @@ BlockedKeywordPatternError? validateBlockedKeywordPattern(
         return BlockedKeywordPatternError.regexTooLong;
       }
       try {
-        RegExp(trimmed, caseSensitive: false, unicode: true);
+        RegExp(trimmed, caseSensitive: caseSensitive, unicode: true);
         return null;
       } on FormatException {
         return BlockedKeywordPatternError.invalidRegex;
@@ -71,6 +103,8 @@ final class BlockedKeyword {
     required this.updatedAt,
     this.kind = BlockedKeywordKind.block,
     this.matchType = BlockedKeywordMatchType.plain,
+    this.wholeWord = true,
+    this.caseSensitive = false,
     this.enabled = true,
   });
 
@@ -80,12 +114,16 @@ final class BlockedKeyword {
   final BlockedKeywordScope scope;
   final BlockedKeywordKind kind;
   final BlockedKeywordMatchType matchType;
+  final bool wholeWord;
+  final bool caseSensitive;
   final bool enabled;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   bool get isWhitelist => kind == BlockedKeywordKind.allow;
   bool get isRegex => matchType == BlockedKeywordMatchType.regex;
+  bool get effectiveWholeWord =>
+      !isRegex && wholeWord && keywordHasLatinBoundaryTarget(keyword);
 
   BlockedKeyword copyWith({
     String? id,
@@ -94,6 +132,8 @@ final class BlockedKeyword {
     BlockedKeywordScope? scope,
     BlockedKeywordKind? kind,
     BlockedKeywordMatchType? matchType,
+    bool? wholeWord,
+    bool? caseSensitive,
     bool? enabled,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -105,6 +145,8 @@ final class BlockedKeyword {
       scope: scope ?? this.scope,
       kind: kind ?? this.kind,
       matchType: matchType ?? this.matchType,
+      wholeWord: wholeWord ?? this.wholeWord,
+      caseSensitive: caseSensitive ?? this.caseSensitive,
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -118,6 +160,8 @@ final class BlockedKeyword {
       scope == other.scope &&
       kind == other.kind &&
       matchType == other.matchType &&
+      wholeWord == other.wholeWord &&
+      caseSensitive == other.caseSensitive &&
       enabled == other.enabled &&
       createdAt.isAtSameMomentAs(other.createdAt) &&
       updatedAt.isAtSameMomentAs(other.updatedAt);
@@ -134,6 +178,8 @@ final class BlockedKeyword {
     scope,
     kind,
     matchType,
+    wholeWord,
+    caseSensitive,
     enabled,
     createdAt,
     updatedAt,
@@ -172,6 +218,7 @@ final class KeywordFilterPreferences {
 final class KeywordFilterRuleSet {
   const KeywordFilterRuleSet({
     this.rules = const <BlockedKeyword>[],
+    this.whitelistedUserIds = const <String>{},
     this.hideBlockedContentCompletely = false,
     this.revision = 0,
   });
@@ -179,8 +226,17 @@ final class KeywordFilterRuleSet {
   static const KeywordFilterRuleSet empty = KeywordFilterRuleSet();
 
   final List<BlockedKeyword> rules;
+  final Set<String> whitelistedUserIds;
   final bool hideBlockedContentCompletely;
   final int revision;
+
+  bool isWhitelistedAuthor(String? authorId) {
+    if (authorId == null || whitelistedUserIds.isEmpty) {
+      return false;
+    }
+    final trimmed = authorId.trim();
+    return trimmed.isNotEmpty && whitelistedUserIds.contains(trimmed);
+  }
 
   List<BlockedKeyword> get activeAllowRules =>
       List<BlockedKeyword>.unmodifiable(

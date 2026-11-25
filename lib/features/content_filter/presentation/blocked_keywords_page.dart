@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
+import 'package:y300/features/content_filter/presentation/widgets/keyword_rule_tester_card.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/adaptive_panel.dart';
 import 'package:y300/shared/widgets/app_capsule_tab_bar.dart';
@@ -197,6 +198,8 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
               ),
         ],
       ),
+      const SizedBox(height: 16),
+      KeywordRuleTesterCard(rules: allRules),
     ];
   }
 
@@ -213,16 +216,20 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
   }
 
   String _subtitleForRule(AppLocalizations l10n, BlockedKeyword rule) {
-    final matchLabel = rule.isRegex
-        ? l10n.contentFilterRuleMatchRegex
-        : l10n.contentFilterRuleMatchPlain;
-    final scopeLabel = rule.isWhitelist
-        ? l10n.contentFilterRuleKindAllow
-        : (rule.scope == BlockedKeywordScope.includeBody
-              ? l10n.contentFilterKeywordScopeIncludeBody
-              : l10n.contentFilterKeywordScopeRepliesOnly);
-    final base = '$matchLabel · $scopeLabel';
-    return rule.enabled ? base : '$base · ${l10n.contentFilterRuleDisabled}';
+    final parts = <String>[
+      rule.isRegex
+          ? l10n.contentFilterRuleMatchRegex
+          : l10n.contentFilterRuleMatchPlain,
+      rule.isWhitelist
+          ? l10n.contentFilterRuleKindAllow
+          : (rule.scope == BlockedKeywordScope.includeBody
+                ? l10n.contentFilterKeywordScopeIncludeBody
+                : l10n.contentFilterKeywordScopeRepliesOnly),
+      if (rule.effectiveWholeWord) l10n.contentFilterRuleWholeWordTag,
+      if (rule.caseSensitive) l10n.contentFilterRuleCaseSensitiveTag,
+      if (!rule.enabled) l10n.contentFilterRuleDisabled,
+    ];
+    return parts.join(' · ');
   }
 
   Future<void> _setHideCompletely(bool value) async {
@@ -330,6 +337,8 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
   late BlockedKeywordKind _kind;
   late BlockedKeywordMatchType _matchType;
   late BlockedKeywordScope _scope;
+  late bool _wholeWord;
+  late bool _caseSensitive;
   String? _errorText;
   bool _saving = false;
 
@@ -340,6 +349,10 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
     _kind = widget.existing?.kind ?? widget.defaultKind;
     _matchType = widget.existing?.matchType ?? BlockedKeywordMatchType.plain;
     _scope = widget.existing?.scope ?? BlockedKeywordScope.repliesOnly;
+    _wholeWord = widget.existing?.wholeWord ?? true;
+    _caseSensitive =
+        widget.existing?.caseSensitive ??
+        (_matchType == BlockedKeywordMatchType.regex);
   }
 
   @override
@@ -349,7 +362,11 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
   }
 
   String? _validateLocalError(AppLocalizations l10n, String raw) {
-    final error = validateBlockedKeywordPattern(raw, _matchType);
+    final error = validateBlockedKeywordPattern(
+      raw,
+      _matchType,
+      caseSensitive: _caseSensitive,
+    );
     if (error == null) {
       return null;
     }
@@ -383,6 +400,8 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
             scope: _scope,
             kind: _kind,
             matchType: _matchType,
+            wholeWord: _wholeWord,
+            caseSensitive: _caseSensitive,
           )
         : await controller.updateRule(
             id: existing.id,
@@ -390,6 +409,8 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
             scope: _scope,
             kind: _kind,
             matchType: _matchType,
+            wholeWord: _wholeWord,
+            caseSensitive: _caseSensitive,
           );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -506,11 +527,36 @@ class _KeywordEditorSheetState extends ConsumerState<_KeywordEditorSheet> {
               ],
               selected: {_matchType},
               onSelectionChanged: (selection) {
+                final nextType = selection.first;
                 setState(() {
-                  _matchType = selection.first;
+                  _matchType = nextType;
+                  if (widget.existing == null) {
+                    _caseSensitive = nextType == BlockedKeywordMatchType.regex;
+                    _wholeWord = nextType == BlockedKeywordMatchType.plain;
+                  }
                   _errorText = null;
                 });
               },
+            ),
+            const SizedBox(height: 16),
+            AppGroupedSection(
+              children: [
+                if (_matchType == BlockedKeywordMatchType.plain)
+                  AppSwitchRow(
+                    key: const Key('content-filter-whole-word-switch'),
+                    title: l10n.contentFilterWholeWordLabel,
+                    subtitle: l10n.contentFilterWholeWordDetail,
+                    value: _wholeWord,
+                    onChanged: (value) => setState(() => _wholeWord = value),
+                  ),
+                AppSwitchRow(
+                  key: const Key('content-filter-case-sensitive-switch'),
+                  title: l10n.contentFilterCaseSensitiveLabel,
+                  subtitle: l10n.contentFilterCaseSensitiveDetail,
+                  value: _caseSensitive,
+                  onChanged: (value) => setState(() => _caseSensitive = value),
+                ),
+              ],
             ),
             if (_kind == BlockedKeywordKind.block) ...[
               const SizedBox(height: 16),

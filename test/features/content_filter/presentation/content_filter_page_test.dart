@@ -1,7 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/app/storage/app_data_backup_providers.dart';
+import 'package:y300/features/content_filter/data/backup/content_filter_backup_sections.dart';
+import 'package:y300/features/storage/data/app_data_backup_service.dart';
+import 'package:y300/features/storage/domain/app_data_backup.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
@@ -22,6 +28,7 @@ import 'package:y300/features/content_filter/presentation/web_blacklist_page.dar
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
+import '../../../test_support/page_flow_test_support.dart';
 
 void main() {
   testWidgets('content filter entry lists two submenus without content', (
@@ -322,6 +329,118 @@ void main() {
       expect(
         find.byKey(const Key('content-filter-blacklist-member-43')),
         findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'content filter entry navigates to whitelisted users and runs backup export/import',
+    (tester) async {
+      final store = _MemoryPreferencesStore();
+      String? exportedJson;
+      final incomingBackup = AppDataBackupEnvelopeCodec.encode(
+        exportedAt: DateTime.utc(2026, 11, 25),
+        sections: <String, DecodedBackupSectionEntry>{
+          'content_filter.blocked_keywords': const DecodedBackupSectionEntry(
+            version: 1,
+            data: <String, Object?>{
+              'schemaVersion': 1,
+              'keywords': <Object?>[
+                <String, Object?>{
+                  'id': 'imp-1',
+                  'keyword': 'AI',
+                  'scope': 'includeBody',
+                  'kind': 'block',
+                  'matchType': 'plain',
+                  'wholeWord': true,
+                  'caseSensitive': false,
+                  'enabled': true,
+                  'createdAt': 1000,
+                  'updatedAt': 1000,
+                },
+              ],
+            },
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            preferencesStoreProvider.overrideWithValue(store),
+            blacklistAutoSyncProvider.overrideWithValue(false),
+            verifiedSessionOwnerProvider.overrideWithValue(null),
+            appDataBackupServiceProvider.overrideWith((ref) {
+              return AppDataBackupService(
+                sections: <AppDataBackupSection>[
+                  BlockedKeywordsBackupSection(ref),
+                  BlockedThreadsBackupSection(ref),
+                  WhitelistedUsersBackupSection(ref),
+                ],
+                saveJsonFile:
+                    ({required fileName, required bytes, dialogTitle}) async {
+                      exportedJson = utf8.decode(bytes);
+                      return Uri.parse('file:///tmp/$fileName');
+                    },
+                pickJsonFile: () async => incomingBackup,
+              );
+            }),
+          ],
+          child: const LocalizedTestApp(home: ContentFilterPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-whitelisted-users-entry')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('whitelisted-users-page')), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-add-whitelist-user-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('content-filter-whitelist-uid-input')),
+        '5566',
+      );
+      await tester.tap(find.byKey(const Key('content-filter-whitelist-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('content-filter-whitelist-user-5566')),
+        findsOneWidget,
+      );
+
+      await tapBack(
+        tester,
+        within: find.byKey(const Key('whitelisted-users-page')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-backup-export-entry')),
+      );
+      await tester.pumpAndSettle();
+      expect(exportedJson, isNotNull);
+      expect(exportedJson, contains('5566'));
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-backup-import-entry')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('content-filter-backup-preview-dialog')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('content-filter-backup-import-merge')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('content-filter-backup-preview-dialog')),
+        findsNothing,
       );
     },
   );

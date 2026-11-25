@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/features/content_filter/application/whitelisted_users_controller.dart';
 import 'package:y300/features/content_filter/data/codecs/blocked_keyword_snapshot_codec.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
@@ -64,15 +65,30 @@ final class BlockedKeywordsController
     required BlockedKeywordScope scope,
     BlockedKeywordKind kind = BlockedKeywordKind.block,
     BlockedKeywordMatchType matchType = BlockedKeywordMatchType.plain,
+    bool? wholeWord,
+    bool? caseSensitive,
     bool enabled = true,
   }) {
     return _serialize(() async {
-      final validationError = validateBlockedKeywordPattern(keyword, matchType);
+      final effectiveWholeWord = matchType == BlockedKeywordMatchType.regex
+          ? false
+          : (wholeWord ?? true);
+      final effectiveCaseSensitive =
+          caseSensitive ?? (matchType == BlockedKeywordMatchType.regex);
+      final validationError = validateBlockedKeywordPattern(
+        keyword,
+        matchType,
+        caseSensitive: effectiveCaseSensitive,
+      );
       if (validationError != null) {
         return _mapPatternError(validationError);
       }
-      final trimmed = keyword.trim();
-      final normalized = normalizeBlockedKeywordPattern(trimmed, matchType);
+      final trimmed = stripInvisibleFilterChars(keyword).trim();
+      final normalized = normalizeBlockedKeywordPattern(
+        trimmed,
+        matchType,
+        caseSensitive: effectiveCaseSensitive,
+      );
       final effectiveScope = kind == BlockedKeywordKind.allow
           ? BlockedKeywordScope.includeBody
           : scope;
@@ -82,7 +98,14 @@ final class BlockedKeywordsController
       } catch (_) {
         return const BlockedKeywordMutationResult.failed();
       }
-      final existing = _findByIdentity(current, kind, matchType, normalized);
+      final existing = _findByIdentity(
+        current,
+        kind,
+        matchType,
+        effectiveWholeWord,
+        effectiveCaseSensitive,
+        normalized,
+      );
       if (existing != null) {
         return BlockedKeywordMutationResult(
           BlockedKeywordMutationStatus.alreadyExists,
@@ -98,6 +121,8 @@ final class BlockedKeywordsController
         scope: effectiveScope,
         kind: kind,
         matchType: matchType,
+        wholeWord: effectiveWholeWord,
+        caseSensitive: effectiveCaseSensitive,
         enabled: enabled,
         createdAt: now,
         updatedAt: now,
@@ -119,6 +144,8 @@ final class BlockedKeywordsController
     required BlockedKeywordScope scope,
     BlockedKeywordKind? kind,
     BlockedKeywordMatchType? matchType,
+    bool? wholeWord,
+    bool? caseSensitive,
     bool? enabled,
   }) {
     return _serialize(() async {
@@ -134,6 +161,15 @@ final class BlockedKeywordsController
       }
       final effectiveKind = kind ?? existing.kind;
       final effectiveMatchType = matchType ?? existing.matchType;
+      final effectiveWholeWord =
+          effectiveMatchType == BlockedKeywordMatchType.regex
+          ? false
+          : (wholeWord ?? existing.wholeWord);
+      final effectiveCaseSensitive =
+          caseSensitive ??
+          (effectiveMatchType == existing.matchType
+              ? existing.caseSensitive
+              : effectiveMatchType == BlockedKeywordMatchType.regex);
       final effectiveEnabled = enabled ?? existing.enabled;
       final effectiveScope = effectiveKind == BlockedKeywordKind.allow
           ? BlockedKeywordScope.includeBody
@@ -141,19 +177,23 @@ final class BlockedKeywordsController
       final validationError = validateBlockedKeywordPattern(
         keyword,
         effectiveMatchType,
+        caseSensitive: effectiveCaseSensitive,
       );
       if (validationError != null) {
         return _mapPatternError(validationError);
       }
-      final trimmed = keyword.trim();
+      final trimmed = stripInvisibleFilterChars(keyword).trim();
       final normalized = normalizeBlockedKeywordPattern(
         trimmed,
         effectiveMatchType,
+        caseSensitive: effectiveCaseSensitive,
       );
       final conflict = _findByIdentity(
         current,
         effectiveKind,
         effectiveMatchType,
+        effectiveWholeWord,
+        effectiveCaseSensitive,
         normalized,
       );
       if (conflict != null && conflict.id != id) {
@@ -169,6 +209,8 @@ final class BlockedKeywordsController
         scope: effectiveScope,
         kind: effectiveKind,
         matchType: effectiveMatchType,
+        wholeWord: effectiveWholeWord,
+        caseSensitive: effectiveCaseSensitive,
         enabled: effectiveEnabled,
         updatedAt: now,
       );
@@ -243,6 +285,8 @@ final class BlockedKeywordsController
                 current,
                 entry.kind,
                 entry.matchType,
+                entry.wholeWord,
+                entry.caseSensitive,
                 entry.normalizedKeyword,
               ) !=
               null) {
@@ -250,6 +294,50 @@ final class BlockedKeywordsController
       }
       final next = List<BlockedKeyword>.unmodifiable([entry, ...current]);
       return _commit(next);
+    });
+  }
+
+  Future<(int imported, int skipped)> importRules(
+    List<BlockedKeyword> incoming, {
+    required bool replace,
+  }) {
+    return _serialize(() async {
+      final List<BlockedKeyword> current;
+      try {
+        current = replace ? const <BlockedKeyword>[] : await _currentRules();
+      } catch (_) {
+        return (0, incoming.length);
+      }
+      final merged = List<BlockedKeyword>.from(current);
+      var imported = 0;
+      var skipped = 0;
+      for (final item in incoming) {
+        if (_findByIdentity(
+              merged,
+              item.kind,
+              item.matchType,
+              item.wholeWord,
+              item.caseSensitive,
+              item.normalizedKeyword,
+            ) !=
+            null) {
+          skipped++;
+          continue;
+        }
+        final entry = _findById(merged, item.id) == null
+            ? item
+            : item.copyWith(id: _nextId(item.updatedAt, merged));
+        merged.add(entry);
+        imported++;
+      }
+      merged.sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+      final bounded = List<BlockedKeyword>.unmodifiable(
+        merged.take(BlockedKeywordSnapshotCodec.maxEntries),
+      );
+      if (!await _commit(bounded)) {
+        return (0, incoming.length);
+      }
+      return (imported, skipped);
     });
   }
 
@@ -321,11 +409,15 @@ final class BlockedKeywordsController
     List<BlockedKeyword> rules,
     BlockedKeywordKind kind,
     BlockedKeywordMatchType matchType,
+    bool wholeWord,
+    bool caseSensitive,
     String normalized,
   ) {
     for (final rule in rules) {
       if (rule.kind == kind &&
           rule.matchType == matchType &&
+          rule.wholeWord == wholeWord &&
+          rule.caseSensitive == caseSensitive &&
           rule.normalizedKeyword == normalized) {
         return rule;
       }
@@ -436,17 +528,25 @@ final hideBlockedKeywordThreadsCompletelyProvider = Provider<bool>((ref) {
 
 final keywordFilterRulesProvider = Provider<KeywordFilterRuleSet>((ref) {
   final rules = ref.watch(blockedKeywordsControllerProvider).value;
+  final whitelistedUserIds = ref.watch(whitelistedUserIdsProvider);
   final hideCompletely = ref.watch(hideBlockedKeywordThreadsCompletelyProvider);
-  if (rules == null || rules.isEmpty) {
+  if ((rules == null || rules.isEmpty) && whitelistedUserIds.isEmpty) {
     return KeywordFilterRuleSet(
       rules: const <BlockedKeyword>[],
+      whitelistedUserIds: const <String>{},
       hideBlockedContentCompletely: hideCompletely,
       revision: hideCompletely ? 1 : 0,
     );
   }
+  final effectiveRules = rules ?? const <BlockedKeyword>[];
   return KeywordFilterRuleSet(
-    rules: rules,
+    rules: effectiveRules,
+    whitelistedUserIds: whitelistedUserIds,
     hideBlockedContentCompletely: hideCompletely,
-    revision: Object.hash(hideCompletely, Object.hashAll(rules)),
+    revision: Object.hash(
+      hideCompletely,
+      Object.hashAll(effectiveRules),
+      Object.hashAllUnordered(whitelistedUserIds),
+    ),
   );
 });

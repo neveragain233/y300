@@ -132,6 +132,42 @@ final class BlockedThreadsController
     });
   }
 
+  Future<(int imported, int skipped)> importThreads(
+    List<BlockedThread> incoming, {
+    required bool replace,
+  }) {
+    return _serialize(() async {
+      final List<BlockedThread> current;
+      try {
+        current = replace ? const <BlockedThread>[] : await _currentRules();
+      } catch (_) {
+        return (0, incoming.length);
+      }
+      final byTid = <String, BlockedThread>{
+        for (final existing in current) existing.tid: existing,
+      };
+      var imported = 0;
+      var skipped = 0;
+      for (final item in incoming) {
+        if (byTid.containsKey(item.tid)) {
+          skipped++;
+          continue;
+        }
+        byTid[item.tid] = item;
+        imported++;
+      }
+      final next = byTid.values.toList()
+        ..sort((left, right) => right.blockedAt.compareTo(left.blockedAt));
+      final bounded = List<BlockedThread>.unmodifiable(
+        next.take(BlockedThreadSnapshotCodec.maxEntries),
+      );
+      if (!await _commit(bounded)) {
+        return (0, incoming.length);
+      }
+      return (imported, skipped);
+    });
+  }
+
   /// Retries loading after a failed read.
   Future<void> reload() async {
     state = const AsyncLoading();

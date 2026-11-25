@@ -1,21 +1,141 @@
 import 'dart:collection';
 
+import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 
+/// 命中的单条关键词规则及其上下文片段。
+@immutable
+final class KeywordMatchDetail {
+  const KeywordMatchDetail({
+    required this.rule,
+    required this.matchedText,
+    required this.snippet,
+  });
+
+  final BlockedKeyword rule;
+  final String matchedText;
+  final String snippet;
+}
+
+/// 规则测试与诊断的完整评估结果（同时保留白名单与屏蔽命中信息）。
+@immutable
+final class KeywordEvaluationResult {
+  const KeywordEvaluationResult({
+    this.matchedBlock,
+    this.matchedAllow,
+    this.whitelistedAuthor = false,
+  });
+
+  final KeywordMatchDetail? matchedBlock;
+  final KeywordMatchDetail? matchedAllow;
+  final bool whitelistedAuthor;
+
+  bool get isBlocked =>
+      !whitelistedAuthor && matchedAllow == null && matchedBlock != null;
+
+  BlockedKeyword? get blockingRule => isBlocked ? matchedBlock!.rule : null;
+}
+
 /// Pure visible-text keyword matching and quote-block masking for forum content.
 ///
-/// Supports enabled/disabled state, whitelist-first exemption, plain-text
-/// normalized substring matching, and bounded-length regular expressions.
+/// Supports enabled/disabled state, whitelist-first exemption, Latin
+/// whole-word boundary matching, per-rule case sensitivity, invisible-character
+/// stripping, and bounded-length regular expressions.
 abstract final class KeywordFilterMatcher {
   static const int _maxCacheEntries = 256;
-  static final LinkedHashMap<Object, String?> _matchCache =
-      LinkedHashMap<Object, String?>();
+  static final LinkedHashMap<Object, KeywordMatchDetail?> _matchCache =
+      LinkedHashMap<Object, KeywordMatchDetail?>();
   static final LinkedHashMap<Object, String> _maskCache =
       LinkedHashMap<Object, String>();
-  static final LinkedHashMap<String, RegExp?> _regexCache =
-      LinkedHashMap<String, RegExp?>();
+  static final LinkedHashMap<(String, bool), RegExp?> _regexCache =
+      LinkedHashMap<(String, bool), RegExp?>();
+
+  static final RegExp _whitespaceCollapsePattern = RegExp(r'\s+');
+  static final RegExp _asciiLetterPattern = RegExp(r'[A-Za-z]');
+  static final RegExp _pureUrlPattern = RegExp(
+    r'^(?:https?:\/\/|www\.)\S+$',
+    caseSensitive: false,
+  );
+
+  static const Set<String> _spaceBoundaryTags = <String>{
+    'br',
+    'hr',
+    'wbr',
+    'img',
+    'video',
+    'audio',
+    'source',
+    'track',
+    'embed',
+    'object',
+    'iframe',
+    'svg',
+    'canvas',
+    'input',
+  };
+
+  static const Set<String> _blockTags = <String>{
+    'p',
+    'div',
+    'section',
+    'article',
+    'blockquote',
+    'li',
+    'tr',
+    'td',
+    'th',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+  };
+
+  /// 完整评估 [texts] 对启用白名单与屏蔽规则的命中情况（供规则测试器与诊断使用）。
+  static KeywordEvaluationResult evaluateTexts(
+    Iterable<String?> texts, {
+    required Iterable<BlockedKeyword> blockRules,
+    Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
+    bool whitelistedAuthor = false,
+  }) {
+    final activeBlocks = _activeBlockRules(blockRules);
+    final activeAllows = _activeAllowRules(allowRules);
+    final segments = _prepareSegments(texts);
+    if (segments.isEmpty) {
+      return KeywordEvaluationResult(whitelistedAuthor: whitelistedAuthor);
+    }
+    final matchedAllow = activeAllows.isEmpty
+        ? null
+        : _matchSegmentsDetail(segments, activeAllows);
+    final matchedBlock = activeBlocks.isEmpty
+        ? null
+        : _matchSegmentsDetail(segments, activeBlocks);
+    return KeywordEvaluationResult(
+      matchedBlock: matchedBlock,
+      matchedAllow: matchedAllow,
+      whitelistedAuthor: whitelistedAuthor,
+    );
+  }
+
+  /// 完整评估纯文本 [text]（及可选简繁转换文本 [convertedText]）。
+  static KeywordEvaluationResult evaluatePlainText(
+    String text,
+    Iterable<BlockedKeyword> rules, {
+    String? convertedText,
+    Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
+    bool whitelistedAuthor = false,
+  }) {
+    final (activeBlocks, combinedAllows) = _splitActiveRules(rules, allowRules);
+    return evaluateTexts(
+      <String?>[text, convertedText],
+      blockRules: activeBlocks,
+      allowRules: combinedAllows,
+      whitelistedAuthor: whitelistedAuthor,
+    );
+  }
 
   /// Evaluates [texts] against enabled [allowRules] and [blockRules].
   ///
@@ -26,95 +146,82 @@ abstract final class KeywordFilterMatcher {
     required Iterable<BlockedKeyword> blockRules,
     Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
   }) {
+    return matchTextsDetail(
+      texts,
+      blockRules: blockRules,
+      allowRules: allowRules,
+    )?.rule;
+  }
+
+  /// Evaluates [texts] and returns the matched blocking rule with snippet.
+  static KeywordMatchDetail? matchTextsDetail(
+    Iterable<String?> texts, {
+    required Iterable<BlockedKeyword> blockRules,
+    Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
+  }) {
     final activeBlocks = _activeBlockRules(blockRules);
     if (activeBlocks.isEmpty) {
       return null;
     }
     final activeAllows = _activeAllowRules(allowRules);
-    final rawSegments = <String>[];
-    final normalizedSegments = <String>[];
-    for (final segment in texts) {
-      if (segment == null || segment.trim().isEmpty) {
-        continue;
-      }
-      if (!rawSegments.contains(segment)) {
-        rawSegments.add(segment);
-        final normalized = normalizeBlockedKeyword(segment);
-        if (normalized.isNotEmpty) {
-          normalizedSegments.add(normalized);
-        }
-      }
-    }
-    if (rawSegments.isEmpty) {
+    final segments = _prepareSegments(texts);
+    if (segments.isEmpty) {
       return null;
     }
     if (activeAllows.isNotEmpty &&
-        _matchesAnyRule(rawSegments, normalizedSegments, activeAllows) !=
-            null) {
+        _matchSegmentsDetail(segments, activeAllows) != null) {
       return null;
     }
-    return _matchesAnyRule(rawSegments, normalizedSegments, activeBlocks);
+    return _matchSegmentsDetail(segments, activeBlocks);
   }
 
   /// Matches [text] (and optional [convertedText]) against [rules] and
   /// optional [allowRules].
-  ///
-  /// Whitelist entries inside [rules] are automatically combined with
-  /// [allowRules] and take precedence over block entries.
   static BlockedKeyword? matchPlainText(
     String text,
     Iterable<BlockedKeyword> rules, {
     String? convertedText,
     Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
   }) {
-    final activeBlocks = <BlockedKeyword>[];
-    final combinedAllows = <BlockedKeyword>[..._activeAllowRules(allowRules)];
-    for (final rule in rules) {
-      if (!rule.enabled) {
-        continue;
-      }
-      if (rule.kind == BlockedKeywordKind.allow) {
-        combinedAllows.add(rule);
-      } else {
-        activeBlocks.add(rule);
-      }
-    }
+    final (activeBlocks, combinedAllows) = _splitActiveRules(rules, allowRules);
     return matchTexts(
-      [text, convertedText],
+      <String?>[text, convertedText],
       blockRules: activeBlocks,
       allowRules: combinedAllows,
     );
   }
 
   /// Matches a list entry's subject and optional excerpt (raw and converted)
-  /// against [ruleSet].
+  /// against [ruleSet], respecting [authorId] user whitelist.
   static BlockedKeyword? matchThreadListItem({
     required String subject,
     String? convertedSubject,
     String? excerpt,
     String? convertedExcerpt,
     required KeywordFilterRuleSet ruleSet,
+    String? authorId,
   }) {
-    if (!ruleSet.hasBodyRules) {
+    if (!ruleSet.hasBodyRules || ruleSet.isWhitelistedAuthor(authorId)) {
       return null;
     }
     return matchTexts(
-      [subject, convertedSubject, excerpt, convertedExcerpt],
+      <String?>[subject, convertedSubject, excerpt, convertedExcerpt],
       blockRules: ruleSet.activeBodyBlockRules,
       allowRules: ruleSet.activeAllowRules,
     );
   }
 
   /// Matches a thread's topic title and first-post HTML body (raw and converted)
-  /// against [ruleSet].
+  /// against [ruleSet], respecting [authorId] user whitelist.
   static BlockedKeyword? matchThreadTopic({
     required String subject,
     String? convertedSubject,
     String? bodyHtml,
     String? convertedBodyHtml,
     required KeywordFilterRuleSet ruleSet,
+    String? authorId,
   }) {
-    if (!ruleSet.hasBodyRules) {
+    if (!ruleSet.hasBodyRules || ruleSet.isWhitelistedAuthor(authorId)) {
       return null;
     }
     final primaryBody = bodyHtml == null || bodyHtml.trim().isEmpty
@@ -127,7 +234,7 @@ abstract final class KeywordFilterMatcher {
         ? null
         : _extractVisibleText(convertedBodyHtml, excludeQuotes: false);
     return matchTexts(
-      [subject, convertedSubject, primaryBody, convertedBody],
+      <String?>[subject, convertedSubject, primaryBody, convertedBody],
       blockRules: ruleSet.activeBodyBlockRules,
       allowRules: ruleSet.activeAllowRules,
     );
@@ -135,31 +242,46 @@ abstract final class KeywordFilterMatcher {
 
   /// Extracts visible text from [html] and matches against [rules] and
   /// optional [allowRules].
-  ///
-  /// Tag names, attributes, URLs, `<script>` and `<style>` are excluded. When
-  /// [excludeQuotes] is true, `.quote` and `<blockquote>` subtrees are skipped.
   static BlockedKeyword? matchHtmlBody(
     String html,
     Iterable<BlockedKeyword> rules, {
     required bool excludeQuotes,
     String? convertedHtml,
     Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
+    String? authorId,
+    Set<String> whitelistedUserIds = const <String>{},
+  }) {
+    return matchReplyHtmlDetail(
+      html,
+      rules,
+      excludeQuotes: excludeQuotes,
+      convertedHtml: convertedHtml,
+      allowRules: allowRules,
+      authorId: authorId,
+      whitelistedUserIds: whitelistedUserIds,
+    )?.rule;
+  }
+
+  /// 提取回复正文可见文本并匹配关键词，同时返回命中片段供展开后诊断展示。
+  static KeywordMatchDetail? matchReplyHtmlDetail(
+    String html,
+    Iterable<BlockedKeyword> rules, {
+    required bool excludeQuotes,
+    String? convertedHtml,
+    Iterable<BlockedKeyword> allowRules = const <BlockedKeyword>[],
+    String? authorId,
+    Set<String> whitelistedUserIds = const <String>{},
   }) {
     if (html.trim().isEmpty) {
       return null;
     }
-    final activeBlocks = <BlockedKeyword>[];
-    final combinedAllows = <BlockedKeyword>[..._activeAllowRules(allowRules)];
-    for (final rule in rules) {
-      if (!rule.enabled) {
-        continue;
-      }
-      if (rule.kind == BlockedKeywordKind.allow) {
-        combinedAllows.add(rule);
-      } else {
-        activeBlocks.add(rule);
-      }
+    final trimmedAuthorId = authorId?.trim();
+    if (trimmedAuthorId != null &&
+        trimmedAuthorId.isNotEmpty &&
+        whitelistedUserIds.contains(trimmedAuthorId)) {
+      return null;
     }
+    final (activeBlocks, combinedAllows) = _splitActiveRules(rules, allowRules);
     if (activeBlocks.isEmpty) {
       return null;
     }
@@ -175,14 +297,18 @@ abstract final class KeywordFilterMatcher {
       convertedHtml == html ? null : convertedHtml,
     );
     if (_matchCache.containsKey(cacheKey)) {
-      final cachedId = _matchCache.remove(cacheKey);
-      _matchCache[cacheKey] = cachedId;
-      if (cachedId == null) {
+      final cached = _matchCache.remove(cacheKey);
+      _matchCache[cacheKey] = cached;
+      if (cached == null) {
         return null;
       }
       for (final rule in activeBlocks) {
-        if (rule.id == cachedId) {
-          return rule;
+        if (rule.id == cached.rule.id) {
+          return KeywordMatchDetail(
+            rule: rule,
+            matchedText: cached.matchedText,
+            snippet: cached.snippet,
+          );
         }
       }
     }
@@ -191,13 +317,13 @@ abstract final class KeywordFilterMatcher {
     final convertedText = convertedHtml != null && convertedHtml != html
         ? _extractVisibleText(convertedHtml, excludeQuotes: excludeQuotes)
         : null;
-    final matched = matchTexts(
-      [primaryText, convertedText],
+    final matched = matchTextsDetail(
+      <String?>[primaryText, convertedText],
       blockRules: activeBlocks,
       allowRules: combinedAllows,
     );
 
-    _putMatchCache(cacheKey, matched?.id);
+    _putMatchCache(cacheKey, matched);
     return matched;
   }
 
@@ -214,18 +340,7 @@ abstract final class KeywordFilterMatcher {
     if (html.trim().isEmpty) {
       return html;
     }
-    final activeBlocks = <BlockedKeyword>[];
-    final combinedAllows = <BlockedKeyword>[..._activeAllowRules(allowRules)];
-    for (final rule in rules) {
-      if (!rule.enabled) {
-        continue;
-      }
-      if (rule.kind == BlockedKeywordKind.allow) {
-        combinedAllows.add(rule);
-      } else {
-        activeBlocks.add(rule);
-      }
-    }
+    final (activeBlocks, combinedAllows) = _splitActiveRules(rules, allowRules);
     if (activeBlocks.isEmpty) {
       return html;
     }
@@ -276,7 +391,7 @@ abstract final class KeywordFilterMatcher {
               excludeQuotes: false,
             );
       final matched = matchTexts(
-        [primaryQuoteText, convertedQuoteText],
+        <String?>[primaryQuoteText, convertedQuoteText],
         blockRules: activeBlocks,
         allowRules: combinedAllows,
       );
@@ -297,10 +412,29 @@ abstract final class KeywordFilterMatcher {
     return output;
   }
 
+  static (List<BlockedKeyword>, List<BlockedKeyword>) _splitActiveRules(
+    Iterable<BlockedKeyword> rules,
+    Iterable<BlockedKeyword> allowRules,
+  ) {
+    final activeBlocks = <BlockedKeyword>[];
+    final combinedAllows = <BlockedKeyword>[..._activeAllowRules(allowRules)];
+    for (final rule in rules) {
+      if (!rule.enabled) {
+        continue;
+      }
+      if (rule.kind == BlockedKeywordKind.allow) {
+        combinedAllows.add(rule);
+      } else {
+        activeBlocks.add(rule);
+      }
+    }
+    return (activeBlocks, combinedAllows);
+  }
+
   static List<BlockedKeyword> _activeBlockRules(
     Iterable<BlockedKeyword> rules,
   ) {
-    return [
+    return <BlockedKeyword>[
       for (final rule in rules)
         if (rule.enabled && rule.kind == BlockedKeywordKind.block) rule,
     ];
@@ -309,61 +443,187 @@ abstract final class KeywordFilterMatcher {
   static List<BlockedKeyword> _activeAllowRules(
     Iterable<BlockedKeyword> rules,
   ) {
-    return [
+    return <BlockedKeyword>[
       for (final rule in rules)
         if (rule.enabled && rule.kind == BlockedKeywordKind.allow) rule,
     ];
   }
 
-  static BlockedKeyword? _matchesAnyRule(
-    List<String> rawSegments,
-    List<String> normalizedSegments,
+  static List<_PreparedSegment> _prepareSegments(Iterable<String?> texts) {
+    final segments = <_PreparedSegment>[];
+    final seenCollapsed = <String>{};
+    for (final raw in texts) {
+      if (raw == null || raw.trim().isEmpty) {
+        continue;
+      }
+      final cleaned = stripInvisibleFilterChars(raw);
+      final collapsed = cleaned.trim().replaceAll(
+        _whitespaceCollapsePattern,
+        ' ',
+      );
+      if (collapsed.isEmpty || !seenCollapsed.add(collapsed)) {
+        continue;
+      }
+      segments.add(
+        _PreparedSegment(
+          collapsed: collapsed,
+          lowerCollapsed: collapsed.toLowerCase(),
+        ),
+      );
+    }
+    return segments;
+  }
+
+  static KeywordMatchDetail? _matchSegmentsDetail(
+    List<_PreparedSegment> segments,
     List<BlockedKeyword> rules,
   ) {
     for (final rule in rules) {
+      if (rule.normalizedKeyword.isEmpty) {
+        continue;
+      }
       if (rule.matchType == BlockedKeywordMatchType.regex) {
-        final regex = _compileRegex(rule.normalizedKeyword);
+        final regex = _compileRegex(
+          rule.normalizedKeyword,
+          caseSensitive: rule.caseSensitive,
+        );
         if (regex == null) {
           continue;
         }
-        for (final segment in rawSegments) {
-          if (regex.hasMatch(segment)) {
-            return rule;
+        for (final segment in segments) {
+          final match = regex.firstMatch(segment.collapsed);
+          if (match != null) {
+            return _buildDetail(
+              rule,
+              segment.collapsed,
+              match.start,
+              match.end,
+            );
           }
         }
-      } else {
-        if (rule.normalizedKeyword.isEmpty) {
+        continue;
+      }
+
+      if (rule.effectiveWholeWord) {
+        final regex = _compileWholeWordPlainRegex(
+          rule.normalizedKeyword,
+          caseSensitive: rule.caseSensitive,
+        );
+        if (regex == null) {
           continue;
         }
-        for (final segment in normalizedSegments) {
-          if (segment.contains(rule.normalizedKeyword)) {
-            return rule;
+        for (final segment in segments) {
+          final match = regex.firstMatch(segment.collapsed);
+          if (match != null) {
+            return _buildDetail(
+              rule,
+              segment.collapsed,
+              match.start,
+              match.end,
+            );
           }
+        }
+        continue;
+      }
+
+      final needle = rule.normalizedKeyword;
+      for (final segment in segments) {
+        final haystack = rule.caseSensitive
+            ? segment.collapsed
+            : segment.lowerCollapsed;
+        final index = haystack.indexOf(needle);
+        if (index >= 0) {
+          return _buildDetail(
+            rule,
+            segment.collapsed,
+            index,
+            index + needle.length,
+          );
         }
       }
     }
     return null;
   }
 
-  static RegExp? _compileRegex(String pattern) {
+  static KeywordMatchDetail _buildDetail(
+    BlockedKeyword rule,
+    String text,
+    int start,
+    int end,
+  ) {
+    final safeStart = start.clamp(0, text.length);
+    final safeEnd = end.clamp(safeStart, text.length);
+    final matchedText = text.substring(safeStart, safeEnd);
+    const contextRadius = 12;
+    final windowStart = (safeStart - contextRadius).clamp(0, text.length);
+    final windowEnd = (safeEnd + contextRadius).clamp(0, text.length);
+    final prefix = windowStart > 0 ? '…' : '';
+    final suffix = windowEnd < text.length ? '…' : '';
+    final snippet = '$prefix${text.substring(windowStart, windowEnd)}$suffix';
+    return KeywordMatchDetail(
+      rule: rule,
+      matchedText: matchedText.isEmpty ? rule.keyword : matchedText,
+      snippet: snippet,
+    );
+  }
+
+  static RegExp? _compileRegex(String pattern, {required bool caseSensitive}) {
     if (pattern.isEmpty || pattern.length > kMaxBlockedKeywordRegexLength) {
       return null;
     }
-    if (_regexCache.containsKey(pattern)) {
-      final cached = _regexCache.remove(pattern);
-      _regexCache[pattern] = cached;
+    final key = (pattern, caseSensitive);
+    if (_regexCache.containsKey(key)) {
+      final cached = _regexCache.remove(key);
+      _regexCache[key] = cached;
       return cached;
     }
     RegExp? compiled;
     try {
-      compiled = RegExp(pattern, caseSensitive: false, unicode: true);
+      compiled = RegExp(pattern, caseSensitive: caseSensitive, unicode: true);
     } on FormatException {
       compiled = null;
     }
     if (_regexCache.length >= _maxCacheEntries) {
       _regexCache.remove(_regexCache.keys.first);
     }
-    _regexCache[pattern] = compiled;
+    _regexCache[key] = compiled;
+    return compiled;
+  }
+
+  static RegExp? _compileWholeWordPlainRegex(
+    String normalizedKeyword, {
+    required bool caseSensitive,
+  }) {
+    if (normalizedKeyword.isEmpty) {
+      return null;
+    }
+    final escaped = RegExp.escape(normalizedKeyword);
+    final leftBoundary = _asciiLetterPattern.hasMatch(normalizedKeyword[0])
+        ? r'(?<![A-Za-z])'
+        : '';
+    final rightBoundary =
+        _asciiLetterPattern.hasMatch(
+          normalizedKeyword[normalizedKeyword.length - 1],
+        )
+        ? r'(?![A-Za-z])'
+        : '';
+    final pattern = '$leftBoundary$escaped$rightBoundary';
+    final key = (pattern, caseSensitive);
+    if (_regexCache.containsKey(key)) {
+      final cached = _regexCache.remove(key);
+      _regexCache[key] = cached;
+      return cached;
+    }
+    RegExp? compiled;
+    try {
+      compiled = RegExp(pattern, caseSensitive: caseSensitive, unicode: true);
+    } on FormatException {
+      compiled = null;
+    }
+    if (_regexCache.length >= _maxCacheEntries) {
+      _regexCache.remove(_regexCache.keys.first);
+    }
+    _regexCache[key] = compiled;
     return compiled;
   }
 
@@ -414,33 +674,31 @@ abstract final class KeywordFilterMatcher {
       }
       if (node is html_dom.Element) {
         final tag = node.localName?.toLowerCase();
-        if (tag == 'script' || tag == 'style') {
+        if (tag == 'script' ||
+            tag == 'style' ||
+            tag == 'noscript' ||
+            tag == 'template') {
           return;
         }
         if (excludeQuotes && _isQuoteElement(node)) {
           return;
         }
-        if (tag == 'br') {
-          buffer.write(' ');
+        if (tag != null && _spaceBoundaryTags.contains(tag)) {
+          if (buffer.isNotEmpty) {
+            buffer.write(' ');
+          }
           return;
         }
-        final isBlock = const <String>{
-          'p',
-          'div',
-          'section',
-          'article',
-          'blockquote',
-          'li',
-          'tr',
-          'td',
-          'th',
-          'h1',
-          'h2',
-          'h3',
-          'h4',
-          'h5',
-          'h6',
-        }.contains(tag);
+        if (tag == 'a') {
+          final anchorText = node.text.trim();
+          if (anchorText.isNotEmpty && _pureUrlPattern.hasMatch(anchorText)) {
+            if (buffer.isNotEmpty) {
+              buffer.write(' ');
+            }
+            return;
+          }
+        }
+        final isBlock = tag != null && _blockTags.contains(tag);
         if (isBlock && buffer.isNotEmpty) {
           buffer.write(' ');
         }
@@ -462,7 +720,7 @@ abstract final class KeywordFilterMatcher {
   }
 
   static int _rulesSignature(List<BlockedKeyword> rules) {
-    return Object.hashAll([
+    return Object.hashAll(<int>[
       for (final rule in rules)
         Object.hash(
           rule.id,
@@ -470,12 +728,14 @@ abstract final class KeywordFilterMatcher {
           rule.scope,
           rule.kind,
           rule.matchType,
+          rule.wholeWord,
+          rule.caseSensitive,
           rule.enabled,
         ),
     ]);
   }
 
-  static void _putMatchCache(Object key, String? value) {
+  static void _putMatchCache(Object key, KeywordMatchDetail? value) {
     if (_matchCache.length >= _maxCacheEntries) {
       _matchCache.remove(_matchCache.keys.first);
     }
@@ -497,4 +757,14 @@ abstract final class KeywordFilterMatcher {
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
   }
+}
+
+final class _PreparedSegment {
+  const _PreparedSegment({
+    required this.collapsed,
+    required this.lowerCollapsed,
+  });
+
+  final String collapsed;
+  final String lowerCollapsed;
 }

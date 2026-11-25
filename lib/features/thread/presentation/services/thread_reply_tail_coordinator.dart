@@ -10,12 +10,14 @@ final class ThreadReplyFilterReason {
   const ThreadReplyFilterReason({
     this.isBlacklistedAuthor = false,
     this.matchedKeyword,
+    this.matchedSnippet,
   });
 
   static const ThreadReplyFilterReason none = ThreadReplyFilterReason();
 
   final bool isBlacklistedAuthor;
   final String? matchedKeyword;
+  final String? matchedSnippet;
 
   bool get isFiltered => isBlacklistedAuthor || matchedKeyword != null;
 
@@ -23,10 +25,12 @@ final class ThreadReplyFilterReason {
   bool operator ==(Object other) =>
       other is ThreadReplyFilterReason &&
       other.isBlacklistedAuthor == isBlacklistedAuthor &&
-      other.matchedKeyword == matchedKeyword;
+      other.matchedKeyword == matchedKeyword &&
+      other.matchedSnippet == matchedSnippet;
 
   @override
-  int get hashCode => Object.hash(isBlacklistedAuthor, matchedKeyword);
+  int get hashCode =>
+      Object.hash(isBlacklistedAuthor, matchedKeyword, matchedSnippet);
 }
 
 /// One source page read while collecting replies whose authors are blacklisted.

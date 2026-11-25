@@ -97,6 +97,7 @@ class _YamiboTagThreadPageState extends ConsumerState<YamiboTagThreadPage> {
       final matchedKeyword = KeywordFilterMatcher.matchThreadListItem(
         subject: thread.title,
         ruleSet: keywordRules,
+        authorId: thread.authorId,
       );
       if (matchedKeyword != null && keywordRules.hideBlockedContentCompletely) {
         continue;

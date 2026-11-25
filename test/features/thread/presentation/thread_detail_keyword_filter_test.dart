@@ -70,12 +70,13 @@ ThreadPost _post({
   required String pid,
   required int number,
   required String message,
+  String? authorId,
   bool isFirst = false,
 }) {
   return ThreadPost(
     pid: pid,
     author: 'User$number',
-    authorId: 'u$number',
+    authorId: authorId ?? 'u$number',
     message: message,
     number: number,
     isFirst: isFirst,
@@ -219,8 +220,15 @@ void main() {
       expect(
         find.byWidgetPredicate(
           (widget) =>
+              widget is RichText && widget.text.toPlainText() == '这里有剧透内容',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
               widget is RichText &&
-              widget.text.toPlainText().contains('这里有剧透内容'),
+              widget.text.toPlainText().contains('临时展开：命中规则「剧透」'),
         ),
         findsOneWidget,
       );
@@ -471,7 +479,10 @@ void main() {
             yamiboForumClientProvider.overrideWithValue(
               forum_client.YamiboForumClient(
                 config: forum_client.ForumClientConfig(
-                  siteOrigin: Uri.parse('https://bbs.yamibo.com'),
+                  siteOrigin: Uri.parse('https://bbs.example.test'),
+                  apiOrigin: Uri.parse(
+                    'https://api.example.test/mobile/index.php',
+                  ),
                   userAgent: 'test',
                   desktopUserAgent: 'test',
                 ),
@@ -508,8 +519,7 @@ void main() {
       expect(
         find.byWidgetPredicate(
           (widget) =>
-              widget is RichText &&
-              widget.text.toPlainText().contains('包含剧透的回复'),
+              widget is RichText && widget.text.toPlainText() == '包含剧透的回复',
         ),
         findsOneWidget,
       );
@@ -542,6 +552,113 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('thread-blacklisted-hide-p2')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'whitelisted author and allow keyword exempt reply from keyword blocking',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.blocked_keywords.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': <Object?>[
+            <String, Object?>{
+              'id': 'blk',
+              'keyword': '剧透',
+              'scope': 'repliesOnly',
+              'kind': 'block',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+            <String, Object?>{
+              'id': 'allow',
+              'keyword': '官方',
+              'scope': 'includeBody',
+              'kind': 'allow',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+        'content_filter.whitelisted_users.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'users': <Object?>[
+            <String, Object?>{
+              'uid': '777',
+              'username': 'Trusted',
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+      });
+
+      final repo = _FakeThreadRepository(
+        (tid, page) async => _detail(
+          tid: tid,
+          subject: '普通主题',
+          posts: [
+            _post(
+              pid: 'p1',
+              number: 1,
+              isFirst: true,
+              authorId: '1',
+              message: '<p>主楼正文</p>',
+            ),
+            _post(
+              pid: 'p2',
+              number: 2,
+              authorId: '777',
+              message: '<p>剧透内容但作者在白名单</p>',
+            ),
+            _post(
+              pid: 'p3',
+              number: 3,
+              authorId: '888',
+              message: '<p>官方剧透豁免</p>',
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              forum_client.YamiboForumClient(
+                config: forum_client.ForumClientConfig(
+                  siteOrigin: Uri.parse('https://bbs.example.test'),
+                  apiOrigin: Uri.parse(
+                    'https://api.example.test/mobile/index.php',
+                  ),
+                  userAgent: 'test',
+                  desktopUserAgent: 'test',
+                ),
+                network: _UnusedNetwork(),
+                sourcePlan: forum_client.ForumClientSourcePlan(
+                  threadDetail: repo,
+                  threadPollVoteCommand: _UnusedPollVoteCommand(),
+                ),
+              ),
+            ),
+          ],
+          child: const LocalizedTestApp(
+            home: ThreadDetailPage(tid: '100', subject: '普通主题'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('thread-filtered-tail-banner')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('thread-post-card-p2')), findsOneWidget);
+      expect(find.byKey(const Key('thread-post-card-p3')), findsOneWidget);
     },
   );
 }

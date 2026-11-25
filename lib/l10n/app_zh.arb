@@ -4675,8 +4675,127 @@
   "contentFilterRuleMatchPlain": "普通关键词",
   "contentFilterRuleMatchRegex": "正则表达式",
   "contentFilterRuleDisabled": "已停用",
-  "contentFilterKeywordRegexHint": "输入正则表达式（不区分大小写）",
+  "contentFilterKeywordRegexHint": "输入正则表达式（可切换大小写敏感）",
   "contentFilterKeywordRegexError": "正则表达式格式不正确",
   "contentFilterKeywordRegexTooLongError": "正则表达式过长（最多 160 个字符）",
-  "contentFilterWhitelistEmpty": "还没有白名单规则，点击右上角添加。"
+  "contentFilterWhitelistEmpty": "还没有白名单规则，点击右上角添加。",
+  "threadKeywordExpandedDiagnostic": "临时展开：命中规则「{keyword}」（片段：{snippet}）",
+  "@threadKeywordExpandedDiagnostic": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      },
+      "snippet": {
+        "type": "String"
+      }
+    }
+  },
+  "threadKeywordExpandedRule": "临时展开：命中规则「{keyword}」",
+  "@threadKeywordExpandedRule": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterWholeWordLabel": "拉丁字母整词匹配",
+  "contentFilterWholeWordDetail": "开启后，英文词边界需为非字母（例如屏蔽 AI 不会误伤 all in 或 daily）",
+  "contentFilterCaseSensitiveLabel": "区分大小写",
+  "contentFilterCaseSensitiveDetail": "开启后严格区分英文字母大小写",
+  "contentFilterRuleWholeWordTag": "整词",
+  "contentFilterRuleCaseSensitiveTag": "区分大小写",
+  "contentFilterTesterTitle": "规则即时测试",
+  "contentFilterTesterHint": "输入测试文本，即时查看是否会被当前规则命中",
+  "contentFilterTesterBlocked": "将被屏蔽：命中「{keyword}」（{snippet}）",
+  "@contentFilterTesterBlocked": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      },
+      "snippet": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterTesterExempted": "白名单豁免：命中「{allowKeyword}」（原命中屏蔽词「{blockKeyword}」）",
+  "@contentFilterTesterExempted": {
+    "placeholders": {
+      "allowKeyword": {
+        "type": "String"
+      },
+      "blockKeyword": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterTesterAllowedOnly": "不会被屏蔽：命中白名单「{keyword}」",
+  "@contentFilterTesterAllowedOnly": {
+    "placeholders": {
+      "keyword": {
+        "type": "String"
+      }
+    }
+  },
+  "contentFilterTesterNoMatch": "不会被屏蔽：未命中任何屏蔽规则",
+  "contentFilterWhitelistedUsersSection": "可信用户白名单",
+  "contentFilterWhitelistedUsersCount": "{count} 位用户",
+  "@contentFilterWhitelistedUsersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contentFilterWhitelistedUsersHint": "白名单用户的主题帖和回复不会触发关键词屏蔽",
+  "contentFilterWhitelistedUsersEmpty": "还没有可信用户，点击右上角添加用户 UID。",
+  "contentFilterWhitelistedUserAdd": "添加可信用户",
+  "contentFilterWhitelistedUserUidLabel": "用户 UID",
+  "contentFilterWhitelistedUserUidHint": "输入数字 UID（例如 12345）",
+  "contentFilterWhitelistedUserNameLabel": "备注名称（可选）",
+  "contentFilterWhitelistedUserNameHint": "方便识别的用户名或备注",
+  "contentFilterWhitelistedUserUidInvalid": "请输入有效的纯数字 UID",
+  "contentFilterWhitelistedUserDuplicate": "该用户已在白名单中",
+  "contentFilterBackupSectionTitle": "规则备份与恢复",
+  "contentFilterBackupExport": "导出规则备份",
+  "contentFilterBackupExportDetail": "导出关键词规则、屏蔽主题与用户白名单为 JSON 文件",
+  "contentFilterBackupImport": "导入规则备份",
+  "contentFilterBackupImportDetail": "从 JSON 备份文件合并或替换现有规则",
+  "contentFilterBackupExportSuccess": "已导出规则备份",
+  "contentFilterBackupExportFailed": "导出失败，请重试",
+  "contentFilterBackupInvalidFile": "备份文件格式无效或已损坏",
+  "contentFilterBackupUnsupportedVersion": "不支持的备份版本",
+  "contentFilterBackupFileTooLarge": "备份文件过大",
+  "contentFilterBackupEmpty": "备份文件中没有可导入的内容",
+  "contentFilterBackupPreviewTitle": "确认导入备份",
+  "contentFilterBackupPreviewSummary": "共识别 {total} 条记录：关键词规则 {keywords} 条、屏蔽主题 {threads} 条、白名单用户 {users} 位。",
+  "@contentFilterBackupPreviewSummary": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "keywords": {
+        "type": "int"
+      },
+      "threads": {
+        "type": "int"
+      },
+      "users": {
+        "type": "int"
+      }
+    }
+  },
+  "contentFilterBackupImportMerge": "合并导入",
+  "contentFilterBackupImportReplace": "覆盖替换",
+  "contentFilterBackupImportSuccess": "导入完成：新增 {imported} 条，跳过 {skipped} 条",
+  "@contentFilterBackupImportSuccess": {
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "contentFilterBackupImportFailed": "导入失败，请重试"
 }

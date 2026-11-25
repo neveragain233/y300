@@ -155,5 +155,67 @@ void main() {
         isFalse,
       );
     });
+
+    test('imports rules with merge and replace modes', () async {
+      final store = _MemoryPreferencesStore();
+      final container = ProviderContainer(
+        overrides: [preferencesStoreProvider.overrideWithValue(store)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(blockedKeywordsControllerProvider.future);
+      final controller = container.read(
+        blockedKeywordsControllerProvider.notifier,
+      );
+      await controller.add(
+        keyword: 'AI',
+        scope: BlockedKeywordScope.includeBody,
+      );
+
+      final now = DateTime.utc(2026, 11, 25);
+      final incoming = <BlockedKeyword>[
+        BlockedKeyword(
+          id: 'ext-1',
+          keyword: 'AI',
+          normalizedKeyword: 'ai',
+          scope: BlockedKeywordScope.includeBody,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        BlockedKeyword(
+          id: 'ext-2',
+          keyword: '剧透',
+          normalizedKeyword: '剧透',
+          scope: BlockedKeywordScope.repliesOnly,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ];
+
+      final (importedMerge, skippedMerge) = await controller.importRules(
+        incoming,
+        replace: false,
+      );
+      expect(importedMerge, 1);
+      expect(skippedMerge, 1);
+      expect(
+        container.read(blockedKeywordsControllerProvider).value?.length,
+        2,
+      );
+
+      final (importedReplace, skippedReplace) = await controller.importRules(
+        <BlockedKeyword>[incoming.last],
+        replace: true,
+      );
+      expect(importedReplace, 1);
+      expect(skippedReplace, 0);
+      expect(
+        container
+            .read(blockedKeywordsControllerProvider)
+            .value
+            ?.map((e) => e.keyword),
+        <String>['剧透'],
+      );
+    });
   });
 }

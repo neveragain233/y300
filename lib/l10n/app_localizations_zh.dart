@@ -6883,7 +6883,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contentFilterRuleDisabled => '已停用';
 
   @override
-  String get contentFilterKeywordRegexHint => '输入正则表达式（不区分大小写）';
+  String get contentFilterKeywordRegexHint => '输入正则表达式（可切换大小写敏感）';
 
   @override
   String get contentFilterKeywordRegexError => '正则表达式格式不正确';
@@ -6893,6 +6893,154 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contentFilterWhitelistEmpty => '还没有白名单规则，点击右上角添加。';
+
+  @override
+  String threadKeywordExpandedDiagnostic(String keyword, String snippet) {
+    return '临时展开：命中规则「$keyword」（片段：$snippet）';
+  }
+
+  @override
+  String threadKeywordExpandedRule(String keyword) {
+    return '临时展开：命中规则「$keyword」';
+  }
+
+  @override
+  String get contentFilterWholeWordLabel => '拉丁字母整词匹配';
+
+  @override
+  String get contentFilterWholeWordDetail =>
+      '开启后，英文词边界需为非字母（例如屏蔽 AI 不会误伤 all in 或 daily）';
+
+  @override
+  String get contentFilterCaseSensitiveLabel => '区分大小写';
+
+  @override
+  String get contentFilterCaseSensitiveDetail => '开启后严格区分英文字母大小写';
+
+  @override
+  String get contentFilterRuleWholeWordTag => '整词';
+
+  @override
+  String get contentFilterRuleCaseSensitiveTag => '区分大小写';
+
+  @override
+  String get contentFilterTesterTitle => '规则即时测试';
+
+  @override
+  String get contentFilterTesterHint => '输入测试文本，即时查看是否会被当前规则命中';
+
+  @override
+  String contentFilterTesterBlocked(String keyword, String snippet) {
+    return '将被屏蔽：命中「$keyword」（$snippet）';
+  }
+
+  @override
+  String contentFilterTesterExempted(String allowKeyword, String blockKeyword) {
+    return '白名单豁免：命中「$allowKeyword」（原命中屏蔽词「$blockKeyword」）';
+  }
+
+  @override
+  String contentFilterTesterAllowedOnly(String keyword) {
+    return '不会被屏蔽：命中白名单「$keyword」';
+  }
+
+  @override
+  String get contentFilterTesterNoMatch => '不会被屏蔽：未命中任何屏蔽规则';
+
+  @override
+  String get contentFilterWhitelistedUsersSection => '可信用户白名单';
+
+  @override
+  String contentFilterWhitelistedUsersCount(int count) {
+    return '$count 位用户';
+  }
+
+  @override
+  String get contentFilterWhitelistedUsersHint => '白名单用户的主题帖和回复不会触发关键词屏蔽';
+
+  @override
+  String get contentFilterWhitelistedUsersEmpty => '还没有可信用户，点击右上角添加用户 UID。';
+
+  @override
+  String get contentFilterWhitelistedUserAdd => '添加可信用户';
+
+  @override
+  String get contentFilterWhitelistedUserUidLabel => '用户 UID';
+
+  @override
+  String get contentFilterWhitelistedUserUidHint => '输入数字 UID（例如 12345）';
+
+  @override
+  String get contentFilterWhitelistedUserNameLabel => '备注名称（可选）';
+
+  @override
+  String get contentFilterWhitelistedUserNameHint => '方便识别的用户名或备注';
+
+  @override
+  String get contentFilterWhitelistedUserUidInvalid => '请输入有效的纯数字 UID';
+
+  @override
+  String get contentFilterWhitelistedUserDuplicate => '该用户已在白名单中';
+
+  @override
+  String get contentFilterBackupSectionTitle => '规则备份与恢复';
+
+  @override
+  String get contentFilterBackupExport => '导出规则备份';
+
+  @override
+  String get contentFilterBackupExportDetail => '导出关键词规则、屏蔽主题与用户白名单为 JSON 文件';
+
+  @override
+  String get contentFilterBackupImport => '导入规则备份';
+
+  @override
+  String get contentFilterBackupImportDetail => '从 JSON 备份文件合并或替换现有规则';
+
+  @override
+  String get contentFilterBackupExportSuccess => '已导出规则备份';
+
+  @override
+  String get contentFilterBackupExportFailed => '导出失败，请重试';
+
+  @override
+  String get contentFilterBackupInvalidFile => '备份文件格式无效或已损坏';
+
+  @override
+  String get contentFilterBackupUnsupportedVersion => '不支持的备份版本';
+
+  @override
+  String get contentFilterBackupFileTooLarge => '备份文件过大';
+
+  @override
+  String get contentFilterBackupEmpty => '备份文件中没有可导入的内容';
+
+  @override
+  String get contentFilterBackupPreviewTitle => '确认导入备份';
+
+  @override
+  String contentFilterBackupPreviewSummary(
+    int total,
+    int keywords,
+    int threads,
+    int users,
+  ) {
+    return '共识别 $total 条记录：关键词规则 $keywords 条、屏蔽主题 $threads 条、白名单用户 $users 位。';
+  }
+
+  @override
+  String get contentFilterBackupImportMerge => '合并导入';
+
+  @override
+  String get contentFilterBackupImportReplace => '覆盖替换';
+
+  @override
+  String contentFilterBackupImportSuccess(int imported, int skipped) {
+    return '导入完成：新增 $imported 条，跳过 $skipped 条';
+  }
+
+  @override
+  String get contentFilterBackupImportFailed => '导入失败，请重试';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -13776,7 +13924,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get contentFilterRuleDisabled => '已停用';
 
   @override
-  String get contentFilterKeywordRegexHint => '輸入正則運算式（不區分大小寫）';
+  String get contentFilterKeywordRegexHint => '輸入正則運算式（可切換大小寫敏感）';
 
   @override
   String get contentFilterKeywordRegexError => '正則運算式格式不正確';
@@ -13786,4 +13934,152 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get contentFilterWhitelistEmpty => '還沒有白名單規則，點擊右上角新增。';
+
+  @override
+  String threadKeywordExpandedDiagnostic(String keyword, String snippet) {
+    return '臨時展開：命中規則「$keyword」（片段：$snippet）';
+  }
+
+  @override
+  String threadKeywordExpandedRule(String keyword) {
+    return '臨時展開：命中規則「$keyword」';
+  }
+
+  @override
+  String get contentFilterWholeWordLabel => '拉丁字母整詞比對';
+
+  @override
+  String get contentFilterWholeWordDetail =>
+      '開啟後，英文詞邊界需為非字母（例如屏蔽 AI 不會誤傷 all in 或 daily）';
+
+  @override
+  String get contentFilterCaseSensitiveLabel => '區分大小寫';
+
+  @override
+  String get contentFilterCaseSensitiveDetail => '開啟後嚴格區分英文字母大小寫';
+
+  @override
+  String get contentFilterRuleWholeWordTag => '整詞';
+
+  @override
+  String get contentFilterRuleCaseSensitiveTag => '區分大小寫';
+
+  @override
+  String get contentFilterTesterTitle => '規則即時測試';
+
+  @override
+  String get contentFilterTesterHint => '輸入測試文本，即時查看是否會被當前規則命中';
+
+  @override
+  String contentFilterTesterBlocked(String keyword, String snippet) {
+    return '將被屏蔽：命中「$keyword」（$snippet）';
+  }
+
+  @override
+  String contentFilterTesterExempted(String allowKeyword, String blockKeyword) {
+    return '白名單豁免：命中「$allowKeyword」（原命中屏蔽詞「$blockKeyword」）';
+  }
+
+  @override
+  String contentFilterTesterAllowedOnly(String keyword) {
+    return '不會被屏蔽：命中白名單「$keyword」';
+  }
+
+  @override
+  String get contentFilterTesterNoMatch => '不會被屏蔽：未命中任何屏蔽規則';
+
+  @override
+  String get contentFilterWhitelistedUsersSection => '可信使用者白名單';
+
+  @override
+  String contentFilterWhitelistedUsersCount(int count) {
+    return '$count 位使用者';
+  }
+
+  @override
+  String get contentFilterWhitelistedUsersHint => '白名單使用者的主題帖和回覆不會觸發關鍵詞屏蔽';
+
+  @override
+  String get contentFilterWhitelistedUsersEmpty => '還沒有可信使用者，點擊右上角新增使用者 UID。';
+
+  @override
+  String get contentFilterWhitelistedUserAdd => '新增可信使用者';
+
+  @override
+  String get contentFilterWhitelistedUserUidLabel => '使用者 UID';
+
+  @override
+  String get contentFilterWhitelistedUserUidHint => '輸入數字 UID（例如 12345）';
+
+  @override
+  String get contentFilterWhitelistedUserNameLabel => '備註名稱（可選）';
+
+  @override
+  String get contentFilterWhitelistedUserNameHint => '方便識別的使用者名稱或備註';
+
+  @override
+  String get contentFilterWhitelistedUserUidInvalid => '請輸入有效的純數字 UID';
+
+  @override
+  String get contentFilterWhitelistedUserDuplicate => '該使用者已在白名單中';
+
+  @override
+  String get contentFilterBackupSectionTitle => '規則備份與恢復';
+
+  @override
+  String get contentFilterBackupExport => '匯出規則備份';
+
+  @override
+  String get contentFilterBackupExportDetail => '匯出關鍵詞規則、屏蔽主題與使用者白名單為 JSON 檔案';
+
+  @override
+  String get contentFilterBackupImport => '匯入規則備份';
+
+  @override
+  String get contentFilterBackupImportDetail => '從 JSON 備份檔案合併或替換現有規則';
+
+  @override
+  String get contentFilterBackupExportSuccess => '已匯出規則備份';
+
+  @override
+  String get contentFilterBackupExportFailed => '匯出失敗，請重試';
+
+  @override
+  String get contentFilterBackupInvalidFile => '備份檔案格式無效或已損壞';
+
+  @override
+  String get contentFilterBackupUnsupportedVersion => '不支援的備份版本';
+
+  @override
+  String get contentFilterBackupFileTooLarge => '備份檔案過大';
+
+  @override
+  String get contentFilterBackupEmpty => '備份檔案中沒有可匯入的內容';
+
+  @override
+  String get contentFilterBackupPreviewTitle => '確認匯入備份';
+
+  @override
+  String contentFilterBackupPreviewSummary(
+    int total,
+    int keywords,
+    int threads,
+    int users,
+  ) {
+    return '共識別 $total 條記錄：關鍵詞規則 $keywords 條、屏蔽主題 $threads 條、白名單使用者 $users 位。';
+  }
+
+  @override
+  String get contentFilterBackupImportMerge => '合併匯入';
+
+  @override
+  String get contentFilterBackupImportReplace => '覆蓋替換';
+
+  @override
+  String contentFilterBackupImportSuccess(int imported, int skipped) {
+    return '匯入完成：新增 $imported 條，跳過 $skipped 條';
+  }
+
+  @override
+  String get contentFilterBackupImportFailed => '匯入失敗，請重試';
 }

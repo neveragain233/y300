@@ -9,3 +9,8 @@ final blockedThreadClockProvider = Provider<DateTime Function()>(
 final blockedKeywordClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
 );
+
+/// Test seam for whitelisted user timestamps; production uses the wall clock.
+final whitelistedUserClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.now,
+);

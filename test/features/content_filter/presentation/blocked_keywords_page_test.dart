@@ -163,5 +163,20 @@ void main() {
       ),
       isTrue,
     );
+
+    await tester.tap(find.byKey(const Key('content-filter-tab-block')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('content-filter-rule-tester-input')),
+    );
+    await tester.enterText(
+      find.byKey(const Key('content-filter-rule-tester-input')),
+      '官方剧透预警',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('content-filter-rule-tester-result')),
+      findsOneWidget,
+    );
   });
 }

@@ -481,6 +481,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             ? projection.findByPid(topicAuthor.pid)?.displayPost.message
             : null,
         ruleSet: keywordRules,
+        authorId: topicAuthor?.authorId,
       );
       if (matchedKeyword != null) {
         return BlockedKeywordThreadGateView(
@@ -1230,27 +1231,28 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     required KeywordFilterRuleSet keywordRules,
     String? convertedHtml,
   }) {
-    if (post.isFirst || post.number == 1) {
-      return ThreadReplyFilterReason.none;
-    }
+    if (post.isFirst || post.number == 1) return ThreadReplyFilterReason.none;
     final authorId = post.authorId.trim();
     final isBlacklisted =
         authorId.isNotEmpty && blacklistedUserIds.contains(authorId);
-    final matchedKeyword = keywordRules.hasReplyRules
-        ? KeywordFilterMatcher.matchHtmlBody(
+    final matchedDetail = keywordRules.hasReplyRules
+        ? KeywordFilterMatcher.matchReplyHtmlDetail(
             post.message,
             keywordRules.replyRules,
             excludeQuotes: true,
             convertedHtml: convertedHtml,
             allowRules: keywordRules.activeAllowRules,
-          )?.keyword
+            authorId: authorId,
+            whitelistedUserIds: keywordRules.whitelistedUserIds,
+          )
         : null;
-    if (!isBlacklisted && matchedKeyword == null) {
+    if (!isBlacklisted && matchedDetail == null) {
       return ThreadReplyFilterReason.none;
     }
     return ThreadReplyFilterReason(
       isBlacklistedAuthor: isBlacklisted,
-      matchedKeyword: matchedKeyword,
+      matchedKeyword: matchedDetail?.rule.keyword,
+      matchedSnippet: matchedDetail?.snippet,
     );
   }
 

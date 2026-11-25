@@ -16,6 +16,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
     required this.onOpenAuthorProfile,
     required this.onOpenPostActions,
     this.onHideFilteredPost,
+    this.expandedFilterReason,
     this.firstPostTitleKey,
   });
 
@@ -29,6 +30,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
   final ValueChanged<ThreadPost> onOpenAuthorProfile;
   final ValueChanged<(ThreadPost, Offset)> onOpenPostActions;
   final VoidCallback? onHideFilteredPost;
+  final ThreadReplyFilterReason? expandedFilterReason;
 
   /// 首楼标题测点；页面据此换算标题在正文可读区中的可见性。
   final GlobalKey? firstPostTitleKey;
@@ -61,6 +63,7 @@ class _ThreadPostCardHeaderEntry extends StatelessWidget {
                 pid: sourcePost.pid,
                 palette: palette,
                 onHide: onHideFilteredPost!,
+                filterReason: expandedFilterReason,
               ),
             if (post.isFirst) ...[
               _FirstPostThreadSummary(
@@ -111,16 +114,25 @@ class _FilteredPostExpandedBanner extends StatelessWidget {
     required this.pid,
     required this.palette,
     required this.onHide,
+    this.filterReason,
   });
 
   final String pid;
   final ThreadDetailNativePalette palette;
   final VoidCallback onHide;
+  final ThreadReplyFilterReason? filterReason;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final keyword = filterReason?.matchedKeyword;
+    final snippet = filterReason?.matchedSnippet;
+    final noticeText = keyword != null
+        ? (snippet != null && snippet.isNotEmpty
+              ? l10n.threadKeywordExpandedDiagnostic(keyword, snippet)
+              : l10n.threadKeywordExpandedRule(keyword))
+        : l10n.threadBlacklistExpandedNotice;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
@@ -136,7 +148,9 @@ class _FilteredPostExpandedBanner extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                l10n.threadBlacklistExpandedNotice,
+                noticeText,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: palette.muted,
                 ),
@@ -576,6 +590,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
     this.preparerSelector,
     this.enableSafeDisplayPlanning = false,
     this.onHideFilteredPost,
+    this.expandedFilterReason,
     this.firstPostTitleKey,
   });
 
@@ -630,6 +645,7 @@ class _ThreadPostCardEntry extends StatefulWidget {
   final ThreadPreparedBodyPreparerSelector? preparerSelector;
   final bool enableSafeDisplayPlanning;
   final VoidCallback? onHideFilteredPost;
+  final ThreadReplyFilterReason? expandedFilterReason;
   final GlobalKey? firstPostTitleKey;
 
   @override
@@ -673,6 +689,7 @@ class _ThreadPostCardEntryState extends State<_ThreadPostCardEntry>
           onOpenAuthorProfile: widget.onOpenAuthorProfile,
           onOpenPostActions: widget.onOpenPostActions,
           onHideFilteredPost: widget.onHideFilteredPost,
+          expandedFilterReason: widget.expandedFilterReason,
           firstPostTitleKey: widget.firstPostTitleKey,
         ),
         _ThreadPostCardBodyEntry(
