@@ -52,6 +52,7 @@ class ThreadDetailPageState {
     this.threadFavoriteNotice,
     this.pollVoteNotice,
     this.replyNotice,
+    this.isPinned = false,
   });
 
   final String tid;
@@ -99,6 +100,7 @@ class ThreadDetailPageState {
   final ThreadActionNotice? threadFavoriteNotice;
   final ThreadActionNotice? pollVoteNotice;
   final ThreadActionNotice? replyNotice;
+  final bool isPinned;
 
   bool get isOnlyAuthorView =>
       (queryParameters['authorid']?.trim().isNotEmpty ?? false);
@@ -205,6 +207,7 @@ class ThreadDetailPageState {
     ThreadActionNotice? threadFavoriteNotice,
     ThreadActionNotice? pollVoteNotice,
     ThreadActionNotice? replyNotice,
+    bool? isPinned,
     bool clearReplyHint = false,
     bool clearThreadFavoriteHint = false,
     bool clearPollVoteHint = false,
@@ -292,6 +295,7 @@ class ThreadDetailPageState {
           ? null
           : (pollVoteNotice ?? this.pollVoteNotice),
       replyNotice: clearReplyNotice ? null : (replyNotice ?? this.replyNotice),
+      isPinned: isPinned ?? this.isPinned,
     );
   }
 }

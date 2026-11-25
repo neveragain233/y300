@@ -7041,6 +7041,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contentFilterBackupImportFailed => '导入失败，请重试';
+
+  @override
+  String get contentFilterBuiltInExemptionTitle => '系统内置豁免';
+
+  @override
+  String get contentFilterBuiltInExemptionDetail =>
+      '所有板块的置顶/公告内容以及各子版块内的全部内容永久豁免所有本地屏蔽拦截';
+
+  @override
+  String get contentFilterBuiltInExemptionLocked => '不可关闭';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -14082,4 +14092,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get contentFilterBackupImportFailed => '匯入失敗，請重試';
+
+  @override
+  String get contentFilterBuiltInExemptionTitle => '系統內建豁免';
+
+  @override
+  String get contentFilterBuiltInExemptionDetail =>
+      '所有版塊的置頂/公告內容以及各子版塊內的全部內容永久豁免所有本地屏蔽攔截';
+
+  @override
+  String get contentFilterBuiltInExemptionLocked => '不可關閉';
 }

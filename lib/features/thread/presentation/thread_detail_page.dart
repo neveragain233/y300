@@ -37,6 +37,7 @@ import 'package:y300/features/composer_shared/domain/models/composer_kind.dart';
 import 'package:y300/features/composer_shared/presentation/services/composer_text_resolver.dart';
 import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/application/content_filter_exemptions.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
@@ -94,6 +95,7 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
     this.bodyReadingObserver,
     this.gateBlockedEntry = false,
     this.bypassKeywordThreadGate = false,
+    this.exemptFromContentFilter = false,
   }) : assert(
          landing == ThreadPostLanding.top ||
              (targetPid != null && targetPid != ''),
@@ -119,6 +121,7 @@ class ThreadDetailPage extends ConsumerStatefulWidget {
   /// Whether the reader already confirmed viewing this thread from a filtered
   /// list placeholder in the current navigation flow.
   final bool bypassKeywordThreadGate;
+  final bool exemptFromContentFilter;
 
   @override
   ConsumerState<ThreadDetailPage> createState() => _ThreadDetailPageState();
@@ -397,7 +400,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (widget.gateBlockedEntry && !_allowedBlockedView) {
+    if (!widget.exemptFromContentFilter &&
+        widget.gateBlockedEntry &&
+        !_allowedBlockedView) {
       final blockedRules = ref.watch(blockedThreadsControllerProvider);
       if (blockedRules.isLoading && !blockedRules.hasValue) {
         // The prompt must not flash thread content while rules load; the body
@@ -439,40 +444,42 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     final state =
         asyncState.value ??
         ThreadDetailPageState.initial(tid: widget.tid, subject: widget.subject);
-    final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
-    final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
+    final isFilterExempt =
+        widget.exemptFromContentFilter ||
+        state.isPinned ||
+        ref.watch(exemptSubForumIdsProvider).contains(state.fid.trim());
+    final blacklistedUserIds = isFilterExempt
+        ? const <String>{}
+        : ref.watch(blacklistedUserIdsProvider);
+    final hideBlacklistedThreads =
+        !isFilterExempt && ref.watch(hideBlacklistedThreadsProvider);
     final topicAuthor = _topicAuthorPost(state);
+    final rawSubject = state.subject.trim().isNotEmpty
+        ? state.subject
+        : widget.subject;
     final blacklistedTopicAuthorId = topicAuthor?.authorId.trim() ?? '';
-    final blacklistedTopicAuthor =
-        blacklistedTopicAuthorId.isNotEmpty &&
-        blacklistedUserIds.contains(blacklistedTopicAuthorId);
     if (hideBlacklistedThreads &&
-        blacklistedTopicAuthor &&
+        blacklistedTopicAuthorId.isNotEmpty &&
+        blacklistedUserIds.contains(blacklistedTopicAuthorId) &&
         !_allowedBlacklistedAuthorView) {
       return BlacklistAuthorGateView(
-        subject: state.subject.trim().isNotEmpty
-            ? state.subject
-            : widget.subject,
+        subject: rawSubject,
         author: topicAuthor!.author,
         onViewOnce: () => setState(() => _allowedBlacklistedAuthorView = true),
       );
     }
     final conversionMode = ref.watch(appServerContentConversionModeProvider);
     final converter = ref.watch(textConverterProvider(conversionMode));
-    final projectionCandidate = ref
-        .watch(threadDetailContentProjectionProvider(args))
-        .value;
     final projection = _resolveProjection(
       state,
       mode: conversionMode,
       converterId: converter.id,
-      candidate: projectionCandidate,
+      candidate: ref.watch(threadDetailContentProjectionProvider(args)).value,
     );
-    final keywordRules = ref.watch(keywordFilterRulesProvider);
+    final keywordRules = isFilterExempt
+        ? KeywordFilterRuleSet.empty
+        : ref.watch(keywordFilterRulesProvider);
     if (!_allowedKeywordThreadView && keywordRules.hasBodyRules) {
-      final rawSubject = state.subject.trim().isNotEmpty
-          ? state.subject
-          : widget.subject;
       final matchedKeyword = KeywordFilterMatcher.matchThreadTopic(
         subject: rawSubject,
         convertedSubject: projection.displaySubject,
@@ -743,6 +750,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                         _replyTail.hasBudgetLimitation,
                                     onRetryTailCollect: _retryReplyTail,
                                     keywordFilterRules: keywordRules,
+                                    exemptFromContentFilter: isFilterExempt,
                                     hiddenQuotePlaceholderText:
                                         l10n.threadKeywordHiddenQuote,
                                     scrollController: _scrollController,
@@ -1246,14 +1254,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
             whitelistedUserIds: keywordRules.whitelistedUserIds,
           )
         : null;
-    if (!isBlacklisted && matchedDetail == null) {
-      return ThreadReplyFilterReason.none;
-    }
-    return ThreadReplyFilterReason(
-      isBlacklistedAuthor: isBlacklisted,
-      matchedKeyword: matchedDetail?.rule.keyword,
-      matchedSnippet: matchedDetail?.snippet,
-    );
+    return !isBlacklisted && matchedDetail == null
+        ? ThreadReplyFilterReason.none
+        : ThreadReplyFilterReason(
+            isBlacklistedAuthor: isBlacklisted,
+            matchedKeyword: matchedDetail?.rule.keyword,
+            matchedSnippet: matchedDetail?.snippet,
+          );
   }
 
   String? _topicPidOf(List<ThreadPost> posts) {
@@ -1269,13 +1276,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     return Uri(queryParameters: Map.fromEntries(entries)).query;
   }
 
-  static bool _isThreadLastPage(ThreadDetailPageState state) {
-    return state.currentPage > 0 &&
-        !state.isLoadingInitial &&
-        state.loadFailure == null &&
-        state.posts.isNotEmpty &&
-        !state.hasMore;
-  }
+  static bool _isThreadLastPage(ThreadDetailPageState s) =>
+      s.currentPage > 0 &&
+      !s.isLoadingInitial &&
+      s.loadFailure == null &&
+      s.posts.isNotEmpty &&
+      !s.hasMore;
 
   Set<String> _tailMembershipFor(
     Set<String> blacklistedUserIds, {
@@ -1283,21 +1289,15 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   }) {
     if (blacklistedUserIds.isEmpty) return const <String>{};
     final allowed = allowedAuthorId?.trim();
-    if (allowed == null || allowed.isEmpty) {
-      return Set<String>.unmodifiable(blacklistedUserIds);
-    }
     return Set<String>.unmodifiable(
-      blacklistedUserIds.where((id) => id != allowed),
+      allowed == null || allowed.isEmpty
+          ? blacklistedUserIds
+          : blacklistedUserIds.where((id) => id != allowed),
     );
   }
 
-  static bool _sameIds(Set<String> left, Set<String> right) {
-    if (left.length != right.length) return false;
-    for (final value in left) {
-      if (!right.contains(value)) return false;
-    }
-    return true;
-  }
+  static bool _sameIds(Set<String> left, Set<String> right) =>
+      left.length == right.length && left.every(right.contains);
 
   /// 显式重试：末页末端操作或展开折叠栏时按需补取前序未访问页。
   void _retryReplyTail() {

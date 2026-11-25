@@ -197,6 +197,10 @@ abstract final class PreferenceKeys {
     PreferenceKeyNames.contentFilterWhitelistedUsersV1,
   );
 
+  static const contentFilterKnownSubForumIdsV1 = PreferenceKey<String>(
+    PreferenceKeyNames.contentFilterKnownSubForumIdsV1,
+  );
+
   static const blacklistHideInitiatedThreadsV1 = PreferenceKey<bool>(
     PreferenceKeyNames.blacklistHideInitiatedThreadsV1,
   );

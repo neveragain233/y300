@@ -11,6 +11,7 @@ import 'package:y300/features/blacklist/application/blacklist_sync_controller.da
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/application/content_filter_exemptions.dart';
 import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
 import 'package:y300/features/content_filter/presentation/widgets/keyword_filtered_thread_tile.dart';
@@ -361,6 +362,9 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final keywordRules = ref.watch(keywordFilterRulesProvider);
+    final isExemptSubForum =
+        widget.forumId != null &&
+        ref.watch(exemptSubForumIdsProvider).contains(widget.forumId!.trim());
     final visibleEntries =
         <
           ({ForumSearchTopicSummary item, bool isKeywordFiltered, String tid})
@@ -368,6 +372,14 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
     for (final item in _items) {
       final normalizedTid =
           ThreadBlockIdentity.normalizeTid(item.tid) ?? item.tid.trim();
+      if (isExemptSubForum) {
+        visibleEntries.add((
+          item: item,
+          isKeywordFiltered: false,
+          tid: normalizedTid,
+        ));
+        continue;
+      }
       if (blockedThreadIds.contains(normalizedTid)) {
         continue;
       }
@@ -594,6 +606,7 @@ class _ForumSearchPageState extends ConsumerState<ForumSearchPage> {
                             tid: item.tid,
                             subject: item.title,
                             bypassKeywordThreadGate: revealed,
+                            exemptFromContentFilter: isExemptSubForum,
                           ),
                         ),
                       );

@@ -53,6 +53,7 @@ class ThreadDetailSnapshotCodec
       'homeUrl': value.homeUrl,
       'desktopUrl': value.desktopUrl,
       'hasMoreOverride': value.hasMoreOverride,
+      'isPinned': value.isPinned,
       'posts': value.posts.map(_encodePost).toList(growable: false),
     };
   }
@@ -87,6 +88,7 @@ class ThreadDetailSnapshotCodec
       hasMoreOverride: map['hasMoreOverride'] is bool
           ? map['hasMoreOverride'] as bool
           : null,
+      isPinned: LooseJson.boolean(map['isPinned']),
       posts: LooseJson.list(
         map['posts'],
       ).map((item) => _decodePost(LooseJson.map(item))).toList(growable: false),

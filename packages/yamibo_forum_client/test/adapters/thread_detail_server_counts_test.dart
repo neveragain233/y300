@@ -116,5 +116,46 @@ void main() {
       expect(restored.hasServerCounts, isFalse);
       expect(restored.replies, 52);
     });
+
+    test(
+      'maps displayorder 1..4 to isPinned and round-trips through snapshot codec',
+      () {
+        const mapper = ThreadDetailApiMapper();
+        final pinned = mapper.mapVariables(<String, Object?>{
+          'fid': '5',
+          'thread': <String, Object?>{
+            'tid': '99',
+            'fid': '5',
+            'subject': 'Pinned',
+            'author': 'Mod',
+            'replies': '0',
+            'views': '10',
+            'displayorder': '2',
+          },
+          'postlist': <Object?>[],
+        }, page: 1);
+        final normal = mapper.mapVariables(<String, Object?>{
+          'fid': '5',
+          'thread': <String, Object?>{
+            'tid': '100',
+            'fid': '5',
+            'subject': 'Normal',
+            'author': 'User',
+            'replies': '0',
+            'views': '10',
+            'displayorder': '0',
+          },
+          'postlist': <Object?>[],
+        }, page: 1);
+
+        expect(pinned.isPinned, isTrue);
+        expect(normal.isPinned, isFalse);
+
+        final restoredPinned = codec.decode(codec.encode(pinned));
+        final restoredNormal = codec.decode(codec.encode(normal));
+        expect(restoredPinned.isPinned, isTrue);
+        expect(restoredNormal.isPinned, isFalse);
+      },
+    );
   });
 }

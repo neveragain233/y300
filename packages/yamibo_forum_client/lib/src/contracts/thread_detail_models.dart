@@ -346,6 +346,7 @@ class ThreadDetailData {
     this.desktopUrl,
     this.hasServerCounts = true,
     this.hasMoreOverride,
+    this.isPinned = false,
   });
 
   /// Stable thread identifier.
@@ -423,6 +424,9 @@ class ThreadDetailData {
 
   /// Explicit source-verified continuation flag, overriding heuristic counts.
   final bool? hasMoreOverride;
+
+  /// Whether this thread is pinned/sticky (`displayorder` in `1..4`).
+  final bool isPinned;
 
   /// Discuz 返回 replies 为回帖数，不含主楼，故这里使用 <= 保守判断。
   bool get hasMore {

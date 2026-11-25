@@ -10,6 +10,7 @@ import 'package:y300/features/cache/domain/models/forum_image_dimensions.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/presentation/widgets/cached_library_image.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/features/content_filter/application/content_filter_exemptions.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 import 'package:y300/features/content_filter/domain/services/keyword_filter_matcher.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
@@ -50,6 +51,7 @@ class ForumDisplayContent extends StatefulWidget {
     this.blockedThreadIds = const <String>{},
     this.blacklistedUserIds = const <String>{},
     this.keywordFilterRules = KeywordFilterRuleSet.empty,
+    this.exemptFromContentFilter = false,
   });
 
   final ForumDisplayContentProjection projection;
@@ -74,6 +76,9 @@ class ForumDisplayContent extends StatefulWidget {
 
   /// Active local keyword rules for list filtering.
   final KeywordFilterRuleSet keywordFilterRules;
+
+  /// Whether this board/subforum is permanently exempt from local filtering.
+  final bool exemptFromContentFilter;
 
   @override
   State<ForumDisplayContent> createState() => _ForumDisplayContentState();
@@ -104,35 +109,33 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
   Widget build(BuildContext context) {
     final palette = ForumDisplayThemePalette.resolve(Theme.of(context));
     final state = widget.projection.sourceState;
-    final displayPrimaryFilters = _displayFilters(
-      widget.projection.primaryFilters,
-    );
-    final displayTypeFilters = _displayFilters(widget.projection.typeFilters);
-    final displaySubForums = _displaySubForums(widget.projection.subForums);
-    final displayTopEntries = [
-      for (final entry in _displayTopEntries(widget.projection.topEntries))
-        if (!widget.blockedThreadIds.contains(
-          ThreadBlockIdentity.normalizeTid(entry.tid),
-        ))
-          entry,
-    ];
+    final proj = widget.projection;
+    final displayPrimaryFilters = _displayFilters(proj.primaryFilters);
+    final displayTypeFilters = _displayFilters(proj.typeFilters);
+    final displaySubForums = _displaySubForums(proj.subForums);
+    final displayTopEntries = _displayTopEntries(proj.topEntries);
     final threadEntries = <_ForumThreadListItem>[];
-    for (final projection in widget.projection.threads) {
+    for (final projection in proj.threads) {
       final source = projection.source;
       final normalizedTid =
           ThreadBlockIdentity.normalizeTid(source.tid) ?? source.tid.trim();
-      if (widget.blockedThreadIds.contains(normalizedTid) ||
-          widget.blacklistedUserIds.contains(source.uid.trim())) {
+      final isExempt =
+          widget.exemptFromContentFilter || isStickyForumThread(source);
+      if (!isExempt &&
+          (widget.blockedThreadIds.contains(normalizedTid) ||
+              widget.blacklistedUserIds.contains(source.uid.trim()))) {
         continue;
       }
-      final matchedKeyword = KeywordFilterMatcher.matchThreadListItem(
-        subject: source.subject,
-        convertedSubject: projection.displaySubject,
-        excerpt: source.excerpt,
-        convertedExcerpt: projection.displayExcerpt,
-        ruleSet: widget.keywordFilterRules,
-        authorId: source.uid,
-      );
+      final matchedKeyword = isExempt
+          ? null
+          : KeywordFilterMatcher.matchThreadListItem(
+              subject: source.subject,
+              convertedSubject: projection.displaySubject,
+              excerpt: source.excerpt,
+              convertedExcerpt: projection.displayExcerpt,
+              ruleSet: widget.keywordFilterRules,
+              authorId: source.uid,
+            );
       if (matchedKeyword == null ||
           !widget.keywordFilterRules.hideBlockedContentCompletely) {
         threadEntries.add(
@@ -230,23 +233,17 @@ class _ForumDisplayContentState extends State<ForumDisplayContent> {
               signature: _threadListSignature(state),
               entries: threadEntries,
               revealedKeywordThreadIds: _revealedKeywordThreadIds,
-              onRevealKeywordThread: (tid) {
-                setState(() => _revealedKeywordThreadIds.add(tid));
-              },
-              onHideKeywordThread: (tid) {
-                setState(() => _revealedKeywordThreadIds.remove(tid));
-              },
+              onRevealKeywordThread: (tid) =>
+                  setState(() => _revealedKeywordThreadIds.add(tid)),
+              onHideKeywordThread: (tid) =>
+                  setState(() => _revealedKeywordThreadIds.remove(tid)),
               onOpenThread: (item) => widget.onOpenThread(
                 _sourceThread(item, widget.projection.threads),
               ),
-              onOpenRevealedThread: (item) {
-                final source = _sourceThread(item, widget.projection.threads);
-                if (widget.onOpenRevealedThread != null) {
-                  widget.onOpenRevealedThread!(source);
-                } else {
-                  widget.onOpenThread(source);
-                }
-              },
+              onOpenRevealedThread: (item) =>
+                  (widget.onOpenRevealedThread ?? widget.onOpenThread)(
+                    _sourceThread(item, proj.threads),
+                  ),
               onOpenThreadTag: (item) => widget.onOpenThreadTag(
                 _sourceThread(item, widget.projection.threads),
               ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:y300/core/network/yamibo_forum_client_provider.dart';
 import 'package:y300/features/cache/data/providers/image_cache_providers.dart';
 import 'package:y300/features/cache/domain/models/forum_image_dimensions.dart';
+import 'package:y300/features/content_filter/application/content_filter_exemptions.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
 import 'package:y300/features/forum/data/providers/forum_display_repository_providers.dart';
 import 'package:y300/features/forum/domain/services/forum_chrome_image_adapter.dart';
@@ -186,6 +187,11 @@ class ForumDisplayController extends AsyncNotifier<ForumDisplayPageState> {
           :final metadata,
         )) {
       final mappedThreads = await _attachSourceTagNames(data);
+      if (data.subForums.isNotEmpty) {
+        ref
+            .read(exemptSubForumIdsProvider.notifier)
+            .recordAll(data.subForums.map((item) => item.fid));
+      }
       _ensureCurrent(scope);
       final effectiveQuery = query.copyWithPage(data.currentPage);
       final effectiveFid = data.fid.isNotEmpty ? data.fid : query.fid;

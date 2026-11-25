@@ -137,7 +137,24 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
         if (rule.kind == kind) rule,
     ];
     return [
-      if (kind == BlockedKeywordKind.allow)
+      if (kind == BlockedKeywordKind.allow) ...[
+        AppGroupedSection(
+          children: [
+            AppGroupedRow(
+              key: const Key('content-filter-builtin-exemption-row'),
+              leading: const Icon(Icons.shield_outlined),
+              title: l10n.contentFilterBuiltInExemptionTitle,
+              subtitle: l10n.contentFilterBuiltInExemptionDetail,
+              trailing: Text(
+                l10n.contentFilterBuiltInExemptionLocked,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
           child: Text(
@@ -147,6 +164,7 @@ class _BlockedKeywordsPageState extends ConsumerState<BlockedKeywordsPage> {
             ),
           ),
         ),
+      ],
       AppGroupedSection(
         title: l10n.contentFilterKeywordsCount(filtered.length),
         children: [

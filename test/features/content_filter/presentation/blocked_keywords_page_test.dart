@@ -141,6 +141,17 @@ void main() {
 
     await tester.tap(find.byKey(const Key('content-filter-tab-allow')));
     await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('content-filter-builtin-exemption-row')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('content-filter-builtin-exemption-row')),
+        matching: find.byType(Switch),
+      ),
+      findsNothing,
+    );
     await tester.tap(
       find.byKey(const Key('content-filter-add-keyword-button')),
     );

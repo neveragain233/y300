@@ -442,6 +442,17 @@ void main() {
         find.byKey(const Key('content-filter-backup-preview-dialog')),
         findsNothing,
       );
+      expect(
+        find.byKey(const Key('content-filter-builtin-exemption-entry')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('content-filter-builtin-exemption-entry')),
+          matching: find.byType(Switch),
+        ),
+        findsNothing,
+      );
     },
   );
 }

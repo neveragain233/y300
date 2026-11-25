@@ -16,6 +16,7 @@ import 'package:y300/features/blacklist/application/blacklist_sync_controller.da
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/application/content_filter_exemptions.dart';
 import 'package:y300/app/theme/app_theme.dart';
 import 'package:y300/app/localization/app_server_content_conversion_provider.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
@@ -46,12 +47,14 @@ class ForumDisplayPage extends ConsumerStatefulWidget {
     this.title = '',
     this.initialPage = 1,
     this.initialUrl,
+    this.isSubForum = false,
   });
 
   final String fid;
   final String title;
   final int initialPage;
   final String? initialUrl;
+  final bool isSubForum;
 
   @override
   ConsumerState<ForumDisplayPage> createState() => _ForumDisplayPageState();
@@ -114,6 +117,9 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     final blacklistedUserIds = ref.watch(blacklistedUserIdsProvider);
     final hideBlacklistedThreads = ref.watch(hideBlacklistedThreadsProvider);
     final keywordRules = ref.watch(keywordFilterRulesProvider);
+    final isExemptSubForum =
+        widget.isSubForum ||
+        ref.watch(exemptSubForumIdsProvider).contains(widget.fid.trim());
     final projection = _projectionOrRaw(
       state,
       mode: mode,
@@ -201,6 +207,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
                     ? blacklistedUserIds
                     : const <String>{},
                 keywordFilterRules: keywordRules,
+                exemptFromContentFilter: isExemptSubForum,
                 scrollController: _scrollController,
                 filterAnchorKey: _filterAnchorKey,
                 headImageKey: _headImageKey,
@@ -213,12 +220,18 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
                 onOpenFilter: (item) =>
                     _runAndReturnToFilter(() => controller.openFilter(item)),
                 onOpenThreadTag: (thread) => _openThreadTag(context, thread),
-                onOpenThread: (thread) => _openThread(context, state, thread),
+                onOpenThread: (thread) => _openThread(
+                  context,
+                  state,
+                  thread,
+                  exemptSubForum: isExemptSubForum,
+                ),
                 onOpenRevealedThread: (thread) => _openThread(
                   context,
                   state,
                   thread,
                   bypassKeywordThreadGate: true,
+                  exemptSubForum: isExemptSubForum,
                 ),
                 onOpenTopEntry: (entry) => _openTopEntry(context, state, entry),
                 onOpenSubForum: (subForum) => _openSubForum(context, subForum),
@@ -230,6 +243,9 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
   void _openThreadTag(BuildContext context, ForumThreadSummary thread) {
     final url = thread.sourceTagUrl?.trim();
     if (url == null || url.isEmpty) return;
+    final isExemptSubForum =
+        widget.isSubForum ||
+        ref.read(exemptSubForumIdsProvider).contains(widget.fid.trim());
     // 分类页持有独立查询，返回时保留来源板块的列表和滚动位置。
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -237,6 +253,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           fid: widget.fid,
           title: thread.sourceTagName ?? widget.title,
           initialUrl: url,
+          isSubForum: isExemptSubForum,
         ),
       ),
     );
@@ -521,6 +538,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
     ForumDisplayPageState state,
     ForumThreadSummary thread, {
     bool bypassKeywordThreadGate = false,
+    bool exemptSubForum = false,
   }) {
     openAdaptiveDetail(
       context,
@@ -530,6 +548,8 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           subject: thread.subject,
           initialForumName: _forumNameForThreadDetail(state),
           bypassKeywordThreadGate: bypassKeywordThreadGate,
+          exemptFromContentFilter:
+              exemptSubForum || isStickyForumThread(thread),
         ),
       ),
     );
@@ -550,6 +570,7 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
           tid: entry.tid,
           subject: entry.title,
           initialForumName: _forumNameForThreadDetail(state),
+          exemptFromContentFilter: true,
         ),
       ),
     );
@@ -561,10 +582,14 @@ class _ForumDisplayPageState extends ConsumerState<ForumDisplayPage> {
   }
 
   void _openSubForum(BuildContext context, ForumDisplaySubForum subForum) {
+    ref.read(exemptSubForumIdsProvider.notifier).record(subForum.fid);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            ForumDisplayPage(fid: subForum.fid, title: subForum.title),
+        builder: (_) => ForumDisplayPage(
+          fid: subForum.fid,
+          title: subForum.title,
+          isSubForum: true,
+        ),
       ),
     );
   }

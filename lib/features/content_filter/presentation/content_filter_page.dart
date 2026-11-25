@@ -145,6 +145,26 @@ class _ContentFilterPageState extends ConsumerState<ContentFilterPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                AppGroupedSection(
+                  children: [
+                    AppGroupedRow(
+                      key: const Key('content-filter-builtin-exemption-entry'),
+                      leading: const Icon(Icons.shield_outlined),
+                      title: l10n.contentFilterBuiltInExemptionTitle,
+                      subtitle: l10n.contentFilterBuiltInExemptionDetail,
+                      trailing: Text(
+                        l10n.contentFilterBuiltInExemptionLocked,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

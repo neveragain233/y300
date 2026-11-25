@@ -4797,5 +4797,8 @@
       }
     }
   },
-  "contentFilterBackupImportFailed": "导入失败，请重试"
+  "contentFilterBackupImportFailed": "导入失败，请重试",
+  "contentFilterBuiltInExemptionTitle": "系统内置豁免",
+  "contentFilterBuiltInExemptionDetail": "所有板块的置顶/公告内容以及各子版块内的全部内容永久豁免所有本地屏蔽拦截",
+  "contentFilterBuiltInExemptionLocked": "不可关闭"
 }

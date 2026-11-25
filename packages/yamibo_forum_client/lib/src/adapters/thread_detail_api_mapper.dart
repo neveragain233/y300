@@ -10,6 +10,7 @@ final class ThreadDetailApiMapper {
   ThreadDetailData mapVariables(JsonMap variables, {required int page}) {
     final thread = LooseJson.map(variables['thread']);
     final perPage = LooseJson.integer(variables['ppp'], fallback: 20);
+    final displayOrder = LooseJson.integer(thread['displayorder']);
     return ThreadDetailData(
       tid: LooseJson.string(thread['tid']),
       fid: LooseJson.string(
@@ -26,6 +27,7 @@ final class ThreadDetailApiMapper {
       views: LooseJson.integer(thread['views']),
       currentPage: page,
       perPage: perPage,
+      isPinned: displayOrder >= 1 && displayOrder <= 4,
       posts: LooseJson.list(
         variables['postlist'],
       ).map((item) => mapPost(LooseJson.map(item))).toList(growable: false),

@@ -86,14 +86,16 @@ ThreadPost _post({
 
 ThreadDetailData _detail({
   required String tid,
+  String fid = '33',
   required String subject,
   required List<ThreadPost> posts,
   int currentPage = 1,
   int lastPage = 1,
+  bool isPinned = false,
 }) {
   return ThreadDetailData(
     tid: tid,
-    fid: '33',
+    fid: fid,
     subject: subject,
     author: 'User1',
     replies: posts.length - 1,
@@ -101,6 +103,7 @@ ThreadDetailData _detail({
     currentPage: currentPage,
     perPage: 20,
     lastPage: lastPage,
+    isPinned: isPinned,
     posts: posts,
   );
 }
@@ -659,6 +662,156 @@ void main() {
       );
       expect(find.byKey(const Key('thread-post-card-p2')), findsOneWidget);
       expect(find.byKey(const Key('thread-post-card-p3')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'pinned thread and known subforum skip gates and reply/quote filtering',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'content_filter.blocked_threads.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'threads': <Object?>[
+            <String, Object?>{
+              'tid': '100',
+              'subject': '剧透置顶帖',
+              'blockedAt': 1000,
+            },
+          ],
+        }),
+        'content_filter.blocked_keywords.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': <Object?>[
+            <String, Object?>{
+              'id': 'blk',
+              'keyword': '剧透',
+              'scope': 'includeBody',
+              'kind': 'block',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+        'content_filter.known_subforum_ids.v1': jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'fids': <String>['99'],
+        }),
+      });
+
+      final pinnedRepo = _FakeThreadRepository(
+        (tid, page) async => _detail(
+          tid: tid,
+          fid: '33',
+          subject: '剧透置顶帖',
+          isPinned: true,
+          posts: [
+            _post(
+              pid: 'p1',
+              number: 1,
+              isFirst: true,
+              message: '<p>主楼剧透正文</p>',
+            ),
+            _post(pid: 'p2', number: 2, message: '<p>回复也有剧透</p>'),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              forum_client.YamiboForumClient(
+                config: forum_client.ForumClientConfig(
+                  siteOrigin: Uri.parse('https://bbs.example.test'),
+                  apiOrigin: Uri.parse(
+                    'https://api.example.test/mobile/index.php',
+                  ),
+                  userAgent: 'test',
+                  desktopUserAgent: 'test',
+                ),
+                network: _UnusedNetwork(),
+                sourcePlan: forum_client.ForumClientSourcePlan(
+                  threadDetail: pinnedRepo,
+                  threadPollVoteCommand: _UnusedPollVoteCommand(),
+                ),
+              ),
+            ),
+          ],
+          child: const LocalizedTestApp(
+            home: ThreadDetailPage(
+              tid: '100',
+              subject: '剧透置顶帖',
+              gateBlockedEntry: true,
+              exemptFromContentFilter: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('blocked-thread-gate')), findsNothing);
+      expect(find.byKey(const Key('keyword-thread-gate')), findsNothing);
+      expect(
+        find.byKey(const Key('thread-filtered-tail-banner')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('thread-post-card-p1')), findsOneWidget);
+      expect(find.byKey(const Key('thread-post-card-p2')), findsOneWidget);
+
+      final subForumRepo = _FakeThreadRepository(
+        (tid, page) async => _detail(
+          tid: tid,
+          fid: '99',
+          subject: '子版块剧透帖',
+          posts: [
+            _post(
+              pid: 's1',
+              number: 1,
+              isFirst: true,
+              message: '<p>子版块主楼剧透</p>',
+            ),
+            _post(pid: 's2', number: 2, message: '<p>子版块回复剧透</p>'),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              forum_client.YamiboForumClient(
+                config: forum_client.ForumClientConfig(
+                  siteOrigin: Uri.parse('https://bbs.example.test'),
+                  apiOrigin: Uri.parse(
+                    'https://api.example.test/mobile/index.php',
+                  ),
+                  userAgent: 'test',
+                  desktopUserAgent: 'test',
+                ),
+                network: _UnusedNetwork(),
+                sourcePlan: forum_client.ForumClientSourcePlan(
+                  threadDetail: subForumRepo,
+                  threadPollVoteCommand: _UnusedPollVoteCommand(),
+                ),
+              ),
+            ),
+          ],
+          child: const LocalizedTestApp(
+            home: ThreadDetailPage(tid: '101', subject: '子版块剧透帖'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('keyword-thread-gate')), findsNothing);
+      expect(
+        find.byKey(const Key('thread-filtered-tail-banner')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('thread-post-card-s1')), findsOneWidget);
+      expect(find.byKey(const Key('thread-post-card-s2')), findsOneWidget);
     },
   );
 }

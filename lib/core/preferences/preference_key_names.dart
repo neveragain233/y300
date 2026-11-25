@@ -93,6 +93,9 @@ abstract final class PreferenceKeyNames {
   static const contentFilterWhitelistedUsersV1 =
       'content_filter.whitelisted_users.v1';
 
+  static const contentFilterKnownSubForumIdsV1 =
+      'content_filter.known_subforum_ids.v1';
+
   static const blacklistHideInitiatedThreadsV1 =
       'blacklist.hide_initiated_threads.v1';
 

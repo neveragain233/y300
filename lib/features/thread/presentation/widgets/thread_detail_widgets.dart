@@ -130,6 +130,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     this.tailHasBudgetLimitation = false,
     this.onRetryTailCollect,
     this.keywordFilterRules = KeywordFilterRuleSet.empty,
+    this.exemptFromContentFilter = false,
     this.hiddenQuotePlaceholderText = '',
     this.onToggleAuthorFilter,
     this.onOrderChanged,
@@ -194,6 +195,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
 
   /// Active local keyword rules for quote masking and reply filtering.
   final KeywordFilterRuleSet keywordFilterRules;
+  final bool exemptFromContentFilter;
 
   /// Localized placeholder text shown when a quote block is masked.
   final String hiddenQuotePlaceholderText;
@@ -1069,18 +1071,11 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     final moved = target.movedBlacklistedPids;
     final seen = <String>{};
     final pids = <String>[];
-    final projected = target.projection?.posts;
-    if (projected != null) {
-      for (final item in projected) {
-        final pid = item.sourcePost.pid;
-        if (moved.contains(pid) || !seen.add(pid)) continue;
-        pids.add(pid);
-      }
-    } else {
-      for (final post in target.state.posts) {
-        if (moved.contains(post.pid) || !seen.add(post.pid)) continue;
-        pids.add(post.pid);
-      }
+    final sourcePids =
+        target.projection?.posts.map((item) => item.sourcePost.pid) ??
+        target.state.posts.map((post) => post.pid);
+    for (final pid in sourcePids) {
+      if (!moved.contains(pid) && seen.add(pid)) pids.add(pid);
     }
     if (!target.showReplyTail || !target.filteredTailExpanded) return pids;
     for (final post in target.replyTailPosts) {
@@ -1104,6 +1099,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     ThreadPost sourcePost,
     Set<String> blacklistedUserIds,
   ) {
+    if (widget.exemptFromContentFilter) return ThreadReplyFilterReason.none;
     final authorId = sourcePost.authorId.trim();
     final isBlacklisted =
         authorId.isNotEmpty &&
@@ -1132,14 +1128,13 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
         whitelistedUserIds: widget.keywordFilterRules.whitelistedUserIds,
       );
     }
-    if (!isBlacklisted && matchedDetail == null) {
-      return ThreadReplyFilterReason.none;
-    }
-    return ThreadReplyFilterReason(
-      isBlacklistedAuthor: isBlacklisted,
-      matchedKeyword: matchedDetail?.rule.keyword,
-      matchedSnippet: matchedDetail?.snippet,
-    );
+    return !isBlacklisted && matchedDetail == null
+        ? ThreadReplyFilterReason.none
+        : ThreadReplyFilterReason(
+            isBlacklistedAuthor: isBlacklisted,
+            matchedKeyword: matchedDetail?.rule.keyword,
+            matchedSnippet: matchedDetail?.snippet,
+          );
   }
 
   @override
@@ -1643,6 +1638,8 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
     ThreadDetailNativePalette palette, {
     bool stabilizeImageLayout = true,
   }) {
+    final displaySubject =
+        widget.projection?.displaySubject ?? widget.state.subject;
     switch (entry.kind) {
       case ThreadDetailRenderEntryKind.repliesHeader:
         return Visibility(
@@ -1670,8 +1667,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
             footerExpansion: _footerExpansionFor(cardPid),
             sourcePost: entry.sourcePost!,
             displayPost: entry.displayPost!,
-            displaySubject:
-                widget.projection?.displaySubject ?? widget.state.subject,
+            displaySubject: displaySubject,
             displayRatingsByPostId:
                 widget.projection?.displayRatingsByPostId ??
                 widget.state.ratingsByPostId,

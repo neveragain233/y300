@@ -11921,6 +11921,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'导入失败，请重试'**
   String get contentFilterBackupImportFailed;
+
+  /// No description provided for @contentFilterBuiltInExemptionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统内置豁免'**
+  String get contentFilterBuiltInExemptionTitle;
+
+  /// No description provided for @contentFilterBuiltInExemptionDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有板块的置顶/公告内容以及各子版块内的全部内容永久豁免所有本地屏蔽拦截'**
+  String get contentFilterBuiltInExemptionDetail;
+
+  /// No description provided for @contentFilterBuiltInExemptionLocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'不可关闭'**
+  String get contentFilterBuiltInExemptionLocked;
 }
 
 class _AppLocalizationsDelegate

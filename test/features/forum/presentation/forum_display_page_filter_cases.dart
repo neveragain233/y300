@@ -289,4 +289,131 @@ void _filterCases() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'pinned topEntries and sticky threads are never hidden by local filters',
+    (tester) async {
+      _seedBlockedThreads(const <String, String>{'901': '置顶公告', '902': '置顶帖'});
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'content_filter.blocked_keywords.v1',
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'keywords': <Object?>[
+            <String, Object?>{
+              'id': 'kw1',
+              'keyword': '剧透',
+              'scope': 'includeBody',
+              'kind': 'block',
+              'matchType': 'plain',
+              'enabled': true,
+              'createdAt': 1000,
+              'updatedAt': 1000,
+            },
+          ],
+        }),
+      );
+      await prefs.setBool(
+        'content_filter.hide_blocked_keyword_threads_completely.v1',
+        true,
+      );
+
+      final repository = _FakeForumDisplayRepository((fid, page, query) async {
+        return ApiSuccess(
+          _displayData(
+            page: 1,
+            total: 2,
+            topEntries: const <ForumDisplayTopEntry>[
+              ForumDisplayTopEntry(
+                title: '剧透公告条目',
+                url: 'https://bbs.example.test/thread-901-1-1.html',
+                tid: '901',
+                badgeLabel: '置顶',
+              ),
+            ],
+            threads: [
+              ForumThreadSummary(
+                tid: '902',
+                subject: '包含剧透的置顶帖',
+                author: 'mod',
+                uid: '50',
+                replies: 0,
+                views: 10,
+                dateline: 'today',
+                badges: const <ForumThreadBadge>[
+                  ForumThreadBadge(
+                    kind: ForumThreadBadgeKind.sticky,
+                    sourceLabel: '置顶',
+                  ),
+                ],
+              ),
+              _blockedTestThread(tid: '903', subject: '普通剧透帖'),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('forum-thread-902')), findsOneWidget);
+      expect(find.byKey(const Key('forum-thread-903')), findsNothing);
+
+      await tester.tap(
+        find.byKey(const Key('forum-display-top-entries-toggle')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('剧透公告条目'), findsOneWidget);
+    },
+  );
+
+  testWidgets('subforum exempts all threads inside from local filters', (
+    tester,
+  ) async {
+    _seedBlockedThreads(const <String, String>{'801': '子版块屏蔽帖'});
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'content_filter.blocked_keywords.v1',
+      jsonEncode(<String, Object?>{
+        'schemaVersion': 1,
+        'keywords': <Object?>[
+          <String, Object?>{
+            'id': 'kw1',
+            'keyword': '剧透',
+            'scope': 'includeBody',
+            'kind': 'block',
+            'matchType': 'plain',
+            'enabled': true,
+            'createdAt': 1000,
+            'updatedAt': 1000,
+          },
+        ],
+      }),
+    );
+
+    final repository = _FakeForumDisplayRepository((fid, page, query) async {
+      return ApiSuccess(
+        _displayData(
+          fid: '99',
+          page: 1,
+          total: 2,
+          threads: [
+            _blockedTestThread(tid: '801', subject: '子版块屏蔽帖'),
+            _blockedTestThread(tid: '802', subject: '子版块剧透帖'),
+          ],
+        ),
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        repository,
+        home: const ForumDisplayPage(fid: '99', title: '子版块', isSubForum: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('forum-thread-801')), findsOneWidget);
+    expect(find.byKey(const Key('forum-thread-802')), findsOneWidget);
+  });
 }
