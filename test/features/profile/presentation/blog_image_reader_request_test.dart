@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:y300/features/cache/domain/models/forum_image_load_spec.dart';
 import 'package:y300/features/cache/domain/models/image_cache_keys.dart';
 import 'package:y300/features/cache/domain/models/image_cache_models.dart';
 import 'package:y300/features/cache/domain/services/forum_image_request_resolver.dart';
-import 'package:y300/features/profile/presentation/blog/blog_image_reader_capability.dart';
 import 'package:y300/features/profile/presentation/blog/blog_image_reader_request.dart';
 import 'package:y300/features/reader_shared/domain/continuous_image/continuous_image.dart';
-import 'package:y300/features/reader_shared/presentation/engine/engine.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 
 const _url = 'https://example.test/picture.png';
@@ -29,30 +26,17 @@ void main() {
         request.items.first.sourceKind,
         ContinuousImageSourceKind.genericImageReader,
       );
-      final capability = BlogImageReaderCapability(
-        request: request,
-        imageReferer: 'https://example.test/',
-        title: 'fixture',
-        displayLabel: 'display',
-        exportLabel: 'export',
-      );
-      for (final item in request.items) {
+      for (var i = 0; i < request.items.length; i++) {
+        final item = request.items[i];
+        final cached = request.requests[i];
         expect(item.ownerId, 'session-1');
         expect(item.knownDimensions!.width, 120);
         expect(item.knownDimensions!.height, 80);
-        final cached = capability.cacheRequestFor(item);
         expect(cached.ownerType, ImageCacheOwnerType.blog);
         expect(cached.ownerId, 'blog-11');
         expect(cached.role, ImageCacheRole.blogInline);
-        final spec = capability.imageLoadSpecFor(item)!;
-        expect(spec.kind, ForumImageKind.blogInline);
-        expect(spec.cacheKey, cached.cacheKey);
-        expect(
-          capability.exportMetadataFor(item)!.baseName,
-          startsWith('Y300-blog-blog-11-'),
-        );
+        expect(cached.cacheKey, ImageCacheKeys.blogInline(_url));
       }
-      expect(capability.readerKind, ReaderKind.generic);
     },
   );
 
@@ -82,19 +66,16 @@ void main() {
     );
   }
 
-  test(
-    'URL fallback accepts the actual visible cache key without guessing another source',
-    () {
-      final request = _build(
-        ForumHtmlImageRequest(
-          url: '$_url#fragment',
-          cacheKey: ImageCacheKeys.blogInline(_url),
-        ),
-      )!;
-      expect(request.initialIndex, 0);
-      expect(request.items.first.url, _url);
-    },
-  );
+  test('URL fallback accepts the actual visible cache key without guessing another source', () {
+    final request = _build(
+      ForumHtmlImageRequest(
+        url: '$_url#fragment',
+        cacheKey: ImageCacheKeys.blogInline(_url),
+      ),
+    )!;
+    expect(request.initialIndex, 0);
+    expect(request.items.first.url, _url);
+  });
 }
 
 BlogImageReaderRequest? _build(ForumHtmlImageRequest image) =>

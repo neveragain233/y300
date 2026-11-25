@@ -72,7 +72,8 @@ import 'package:y300/features/novel/presentation/widgets/novel_reader_chapter_in
 import 'package:y300/features/thread/domain/models/thread_image_open_models.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
-import 'package:y300/features/thread/presentation/thread_image_reader_page.dart';
+import 'package:y300/features/thread/presentation/thread_image_lightbox_page.dart';
+import 'package:y300/shared/widgets/image_lightbox/image_lightbox_page.dart';
 import 'package:y300/features/thread/presentation/widgets/thread_detail_theme.dart';
 import 'package:y300/l10n/app_localizations.dart';
 import 'package:y300/shared/widgets/link_copy_feedback.dart';
@@ -3117,16 +3118,14 @@ class _NovelReaderPageState extends ConsumerState<_NovelReaderContent>
   Future<void> _openHtmlReaderImage(ThreadImageOpenRequest request) async {
     if (request.continuousImages.isEmpty) {
       final entry = request.initialEntry;
-      if (entry != null) {
-        _copyNovelImageUrl(entry.url);
-      }
+      if (entry != null) _copyNovelImageUrl(entry.url);
       return;
     }
     await _runWithReaderSemanticsSuspended(() async {
       if (!mounted) return;
       await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ThreadImageReaderPage(
+        buildImageLightboxRoute<void>(
+          builder: (_) => ThreadImageLightboxPage(
             request: request,
             imageReferer: ref.read(forumImageRefererProvider),
           ),

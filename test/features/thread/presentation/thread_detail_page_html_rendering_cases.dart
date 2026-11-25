@@ -235,11 +235,8 @@ void _htmlRenderingCases() {
     await _tapVisibleTop(tester, secondImage);
     await _pumpThreadUiTransition(tester);
 
-    expect(find.byType(ThreadImageReaderPage), findsOneWidget);
-    expect(
-      find.byKey(const Key('thread-image-reader-page-view')),
-      findsOneWidget,
-    );
+    expect(find.byType(ThreadImageLightboxPage), findsOneWidget);
+    expect(find.byKey(const Key('image-lightbox-page-view')), findsOneWidget);
   });
 
   testWidgets('image reader return prepares the last read body image', (
@@ -255,15 +252,10 @@ void _htmlRenderingCases() {
         .height;
 
     await _readImageReturnPages(tester, 9);
-    await tester.tapAt(
-      tester.getCenter(find.byKey(const Key('shared-reader-center-tap-zone'))),
-    );
-    await tester.pump(const Duration(milliseconds: 330));
-    await tester.pump(const Duration(milliseconds: 260));
-    await tester.tap(find.byKey(const Key('shared-reader-top-back-button')));
+    await tester.tap(find.byKey(const Key('image-lightbox-close-button')));
     await _pumpImageReturnTransition(tester);
 
-    expect(find.byType(ThreadImageReaderPage), findsNothing);
+    expect(find.byType(ThreadImageLightboxPage), findsNothing);
     expect(
       tester.getTopLeft(_imageReturnBodyImage(9)).dy,
       closeTo(
@@ -328,20 +320,13 @@ void _htmlRenderingCases() {
         ),
       );
       await _pumpThreadUiTransition(tester);
-      expect(find.byType(ThreadImageReaderPage), findsOneWidget);
+      expect(find.byType(ThreadImageLightboxPage), findsOneWidget);
 
       await _readImageReturnPages(tester, 9);
-      await tester.tapAt(
-        tester.getCenter(
-          find.byKey(const Key('shared-reader-center-tap-zone')),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 330));
-      await tester.pump(const Duration(milliseconds: 260));
-      await tester.tap(find.byKey(const Key('shared-reader-top-back-button')));
+      await tester.tap(find.byKey(const Key('image-lightbox-close-button')));
       await _pumpImageReturnTransition(tester);
 
-      expect(find.byType(ThreadImageReaderPage), findsNothing);
+      expect(find.byType(ThreadImageLightboxPage), findsNothing);
       final listTop = tester
           .getTopLeft(find.byKey(const Key('thread-detail-list')))
           .dy;
@@ -373,7 +358,7 @@ void _htmlRenderingCases() {
     await tester.binding.handlePopRoute();
     await _pumpImageReturnTransition(tester);
 
-    expect(find.byType(ThreadImageReaderPage), findsNothing);
+    expect(find.byType(ThreadImageLightboxPage), findsNothing);
     final viewportTop = tester
         .getTopLeft(find.byKey(const Key('thread-detail-list')))
         .dy;
@@ -398,7 +383,7 @@ void _htmlRenderingCases() {
     await tester.binding.handlePopRoute();
     await _pumpImageReturnTransition(tester);
 
-    expect(find.byType(ThreadImageReaderPage), findsNothing);
+    expect(find.byType(ThreadImageLightboxPage), findsNothing);
     expect(
       _imageReturnScrollable(tester).position.pixels,
       closeTo(origin, 0.1),
@@ -414,7 +399,7 @@ void _htmlRenderingCases() {
 
     // The reader still covers the body: return must be ready before it is
     // removed, rather than exposing the old position for a visible frame.
-    expect(find.byType(ThreadImageReaderPage), findsOneWidget);
+    expect(find.byType(ThreadImageLightboxPage), findsOneWidget);
     expect(
       tester.getTopLeft(_imageReturnBodyImage(9, skipOffstage: false)).dy,
       closeTo(
@@ -566,7 +551,7 @@ void _htmlRenderingCases() {
     );
     await tester.binding.handlePopRoute();
     await _pumpImageReturnTransition(tester);
-    expect(find.byType(ThreadImageReaderPage), findsNothing);
+    expect(find.byType(ThreadImageLightboxPage), findsNothing);
     expect(
       _imageReturnScrollable(tester).position.pixels,
       closeTo(refreshedOrigin, 0.1),

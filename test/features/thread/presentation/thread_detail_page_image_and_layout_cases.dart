@@ -569,11 +569,136 @@ void _imageAndLayoutCases() {
     );
     await _pumpThreadUiTransition(tester);
 
-    expect(find.byType(ThreadImageReaderPage), findsOneWidget);
-    expect(
-      find.byKey(const Key('thread-image-reader-page-view')),
-      findsOneWidget,
-    );
-    expect(find.text('图片阅读'), findsOneWidget);
+    expect(find.byType(ThreadImageLightboxPage), findsOneWidget);
+    expect(find.byKey(const Key('image-lightbox-page-view')), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
   });
+
+  testWidgets(
+    'general thread lightbox ignores comic RTL preference and stays LTR',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'reader_pref_mode': 'rtl',
+      });
+      final repository = _FakeThreadRepository((tid, page, query) async {
+        return ApiSuccess(
+          ThreadDetailData(
+            tid: tid,
+            fid: '2',
+            subject: '测试主题',
+            author: 'alice',
+            replies: 0,
+            views: 10,
+            currentPage: 1,
+            lastPage: 1,
+            perPage: 20,
+            posts: [
+              _post(
+                pid: 'p1',
+                author: 'alice',
+                authorId: '1',
+                message:
+                    '<img file="data/attachment/forum/page-1.jpg" width="200" height="120">'
+                    '<img file="data/attachment/forum/page-2.jpg" width="200" height="120">',
+                number: 1,
+                isFirst: true,
+              ),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await _pumpThreadBodyUntil(
+        tester,
+        () => find
+            .byKey(const Key('thread-post-html-first-readable-image-p1-0'))
+            .evaluate()
+            .isNotEmpty,
+      );
+      await tester.tap(
+        find.byKey(const Key('thread-post-html-first-readable-image-p1-0')),
+      );
+      await _pumpThreadUiTransition(tester);
+
+      expect(find.byType(ThreadImageLightboxPage), findsOneWidget);
+      expect(find.text('1 / 2'), findsOneWidget);
+      await tester.fling(
+        find.byKey(const Key('image-lightbox-page-view')),
+        const Offset(-300, 0),
+        1200,
+      );
+      await _pumpImageReturnTransition(tester);
+      expect(find.text('2 / 2'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'comic-section OP uses comic reader while comic-section reply uses lightbox',
+    (tester) async {
+      final repository = _FakeThreadRepository((tid, page, query) async {
+        return ApiSuccess(
+          ThreadDetailData(
+            tid: tid,
+            fid: '30',
+            subject: '测试漫画',
+            author: 'alice',
+            replies: 1,
+            views: 10,
+            currentPage: 1,
+            lastPage: 1,
+            perPage: 20,
+            posts: [
+              _post(
+                pid: 'op-1',
+                author: 'alice',
+                authorId: '1',
+                message:
+                    '<img file="data/attachment/forum/op-1.jpg" width="200" height="120">'
+                    '<img file="data/attachment/forum/op-2.jpg" width="200" height="120">',
+                number: 1,
+                isFirst: true,
+              ),
+              _post(
+                pid: 'reply-2',
+                author: 'bob',
+                authorId: '2',
+                message: '<img file="data/attachment/forum/reply-1.jpg" width="200" height="120">',
+                number: 2,
+                isFirst: false,
+              ),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await _pumpThreadBodyUntil(
+        tester,
+        () => find
+            .byKey(const Key('thread-post-html-first-readable-image-op-1-0'))
+            .evaluate()
+            .isNotEmpty,
+      );
+      await tester.tap(
+        find.byKey(const Key('thread-post-html-first-readable-image-op-1-0')),
+      );
+      await _pumpThreadUiTransition(tester);
+      expect(find.byType(ThreadImageReaderPage), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await _pumpImageReturnTransition(tester);
+      expect(find.byType(ThreadImageReaderPage), findsNothing);
+
+      await _tapVisibleTop(
+        tester,
+        find.byKey(
+          const Key('thread-post-html-first-readable-image-reply-2-0'),
+        ),
+      );
+      await _pumpThreadUiTransition(tester);
+      expect(find.byType(ThreadImageLightboxPage), findsOneWidget);
+      expect(find.byType(ThreadImageReaderPage), findsNothing);
+    },
+  );
 }

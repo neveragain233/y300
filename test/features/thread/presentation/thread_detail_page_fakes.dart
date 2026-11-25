@@ -256,7 +256,7 @@ ScrollableState _imageReturnScrollable(WidgetTester tester) =>
       ),
     );
 
-Future<ThreadImageReaderPage> _openImageReturnReader(
+Future<ThreadImageLightboxPage> _openImageReturnReader(
   WidgetTester tester,
   ThreadRepository repository, {
   int initialIndex = 0,
@@ -278,15 +278,15 @@ Future<ThreadImageReaderPage> _openImageReturnReader(
   await tester.pump(const Duration(milliseconds: 120));
   await _tapVisibleTop(tester, _imageReturnBodyImage(initialIndex));
   await _pumpThreadUiTransition(tester);
-  final reader = tester.widget<ThreadImageReaderPage>(
-    find.byType(ThreadImageReaderPage),
+  final reader = tester.widget<ThreadImageLightboxPage>(
+    find.byType(ThreadImageLightboxPage),
   );
   expect(reader.onBeforeExit, isNotNull);
   return reader;
 }
 
 ThreadImageReaderExitResult _imageReturnResult(
-  ThreadImageReaderPage reader,
+  ThreadImageLightboxPage reader,
   int index,
 ) {
   final entry = reader.request.group.entries[index];
@@ -301,7 +301,7 @@ ThreadImageReaderExitResult _imageReturnResult(
 
 Future<void> _prepareImageReturn(
   WidgetTester tester,
-  ThreadImageReaderPage reader,
+  ThreadImageLightboxPage reader,
   ThreadImageReaderExitResult result,
 ) async {
   var completed = false;
@@ -320,16 +320,12 @@ Future<void> _prepareImageReturn(
 }
 
 Future<void> _readImageReturnPages(WidgetTester tester, int count) async {
+  final pageViewFinder = find.byKey(const Key('image-lightbox-page-view'));
   for (var index = 0; index < count; index++) {
-    await tester.tapAt(
-      tester.getCenter(find.byKey(const Key('shared-reader-right-tap-zone'))),
-    );
-    await tester.pump(const Duration(milliseconds: 330));
-    await _pumpThreadUiTransition(tester);
+    await tester.fling(pageViewFinder, const Offset(-300, 0), 1200);
+    await tester.pumpAndSettle();
   }
-  final pageView = tester.widget<PageView>(
-    find.byKey(const Key('thread-image-reader-page-view')),
-  );
+  final pageView = tester.widget<PageView>(pageViewFinder);
   expect(pageView.controller!.page, closeTo(count, 0.01));
 }
 

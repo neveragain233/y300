@@ -15,11 +15,10 @@ import 'package:y300/features/profile/data/providers/profile_read_providers.dart
 import 'package:y300/features/profile/presentation/blog/blog_editor_preview.dart';
 import 'package:y300/features/profile/presentation/blog/blog_editor_state.dart';
 import 'package:y300/features/profile/presentation/blog/blog_image_reader_page.dart';
-import 'package:y300/features/profile/presentation/blog/blog_image_reader_capability.dart';
 import 'package:y300/features/profile/presentation/blog/blog_selection_copy_page.dart';
 import 'package:y300/features/profile/presentation/profile_blog_page.dart';
-import 'package:y300/features/reader_shared/presentation/engine/engine.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
+import 'package:y300/shared/widgets/image_lightbox/image_lightbox_page.dart';
 
 import '../../../test_support/localized_test_app.dart';
 import '../test_support/blog_detail_fixture.dart';
@@ -89,28 +88,27 @@ void main() {
         gesture.onTap!();
         await _frames(tester);
         expect(find.byType(BlogImageReaderPage), findsOneWidget);
-        final capability =
-            tester
-                    .widget<ImageReaderEngine>(find.byType(ImageReaderEngine))
-                    .capability
-                as BlogImageReaderCapability;
-        expect(capability.request.initialIndex, 1);
-        expect(capability.content.items, hasLength(2));
-        expect(capability.imageReferer, 'https://example.test/');
+        final pageWidget = tester.widget<BlogImageReaderPage>(
+          find.byType(BlogImageReaderPage),
+        );
+        final request = pageWidget.request;
+        expect(request.initialIndex, 1);
+        expect(request.items, hasLength(2));
+        expect(pageWidget.referer, 'https://example.test/');
         expect(
-          capability.request.requests.map((request) => request.referer),
+          request.requests.map((request) => request.referer),
           everyElement('https://example.test/'),
         );
         expect(
-          capability.content.items.map((item) => item.referer),
+          request.items.map((item) => item.referer),
           everyElement(Uri.parse('https://example.test/')),
         );
         expect(
-          capability.request.requests.first.cacheKey,
+          request.requests.first.cacheKey,
           ImageCacheKeys.blogInline(_url),
         );
         expect(
-          capability.request.requests.first.ownerId,
+          request.requests.first.ownerId,
           source.startsWith('article')
               ? '11'
               : source.startsWith('comment')
@@ -118,7 +116,7 @@ void main() {
               : 'preview',
         );
         expect(
-          capability.request.requests.every(
+          request.requests.every(
             (request) => request.ownerType == ImageCacheOwnerType.blog,
           ),
           isTrue,
@@ -161,13 +159,13 @@ void main() {
       final staleTap = tester.widget<GestureDetector>(target).onTap!;
       await _tapImage(tester, target);
       await _frames(tester);
-      expect(find.byType(ImageReaderEngine), findsOneWidget);
+      expect(find.byType(ImageLightboxPage<void>), findsOneWidget);
       host.changeActor('202');
       await _frames(tester);
-      expect(find.byType(ImageReaderEngine), findsNothing);
+      expect(find.byType(ImageLightboxPage<void>), findsNothing);
       host.changeActor('101');
       await _frames(tester);
-      expect(find.byType(ImageReaderEngine), findsNothing);
+      expect(find.byType(ImageLightboxPage<void>), findsNothing);
       host.navigator.currentState!.pop();
       await _frames(tester);
       staleTap();
@@ -197,7 +195,7 @@ void main() {
       gate.complete(const ForumImagePrecacheResult(success: false));
       await _frames(tester);
       expect(find.byType(ProfileBlogDetailPage), findsOneWidget);
-      expect(find.byType(ImageReaderEngine), findsNothing);
+      expect(find.byType(ImageLightboxPage<void>), findsNothing);
       expect(host.details.queries, hasLength(1));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

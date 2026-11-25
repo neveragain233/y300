@@ -6930,6 +6930,30 @@ abstract class AppLocalizations {
   /// **'显示'**
   String get threadImageDisplay;
 
+  /// No description provided for @imageLightboxClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get imageLightboxClose;
+
+  /// No description provided for @imageLightboxFitWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合宽度'**
+  String get imageLightboxFitWidth;
+
+  /// No description provided for @imageLightboxResetZoom.
+  ///
+  /// In zh, this message translates to:
+  /// **'还原全览'**
+  String get imageLightboxResetZoom;
+
+  /// No description provided for @imageLightboxCopyLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制图片链接'**
+  String get imageLightboxCopyLink;
+
   /// No description provided for @threadHtmlConversionOriginal.
   ///
   /// In zh, this message translates to:

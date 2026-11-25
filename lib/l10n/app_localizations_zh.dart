@@ -4127,6 +4127,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get threadImageDisplay => '显示';
 
   @override
+  String get imageLightboxClose => '关闭';
+
+  @override
+  String get imageLightboxFitWidth => '适合宽度';
+
+  @override
+  String get imageLightboxResetZoom => '还原全览';
+
+  @override
+  String get imageLightboxCopyLink => '复制图片链接';
+
+  @override
   String get threadHtmlConversionOriginal => '原文';
 
   @override
@@ -11003,6 +11015,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get threadImageDisplay => '顯示';
+
+  @override
+  String get imageLightboxClose => '關閉';
+
+  @override
+  String get imageLightboxFitWidth => '適合寬度';
+
+  @override
+  String get imageLightboxResetZoom => '還原全覽';
+
+  @override
+  String get imageLightboxCopyLink => '複製圖片連結';
 
   @override
   String get threadHtmlConversionOriginal => '原文';

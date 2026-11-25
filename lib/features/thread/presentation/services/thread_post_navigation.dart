@@ -12,10 +12,14 @@ import 'package:y300/features/thread/domain/models/thread_image_reader_exit_resu
 import 'package:y300/features/thread/domain/services/thread_post_body_plain_text_extractor.dart';
 import 'package:y300/features/thread/domain/services/thread_floor_link_builder.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
+import 'package:y300/features/thread/domain/thread_content_classifier.dart';
+import 'package:y300/features/thread/presentation/thread_detail_controller.dart';
+import 'package:y300/features/thread/presentation/thread_image_lightbox_page.dart';
 import 'package:y300/features/thread/presentation/thread_image_reader_page.dart';
 import 'package:y300/features/profile/presentation/user_profile_page.dart';
 import 'package:y300/features/thread/presentation/thread_text_resolver.dart';
 import 'package:y300/l10n/app_localizations.dart';
+import 'package:y300/shared/widgets/image_lightbox/image_lightbox_page.dart';
 import 'package:y300/shared/widgets/transient_feedback.dart';
 
 class ThreadPostNavigation {
@@ -26,6 +30,7 @@ class ThreadPostNavigation {
     required this.imageReferer,
     required this.isCurrent,
     required this.routeSession,
+    this.threadArgs,
   });
   final BuildContext context;
   final WidgetRef ref;
@@ -33,6 +38,7 @@ class ThreadPostNavigation {
   final String? imageReferer;
   final bool Function() isCurrent;
   final ThreadPostNavigationSession routeSession;
+  final ThreadDetailArgs? threadArgs;
   bool get mounted => context.mounted && isCurrent();
   ThreadFloorLinkBuilder get _floorLinkBuilder => ThreadFloorLinkBuilder();
   void _showSnackBar(String text) {
@@ -42,6 +48,7 @@ class ThreadPostNavigation {
   void openImages(
     ThreadPost post,
     ThreadImageOpenRequest request, {
+    ThreadContentKind? contentKind,
     Future<void> Function(ThreadImageReaderExitResult)? onBeforeExit,
   }) {
     if (request.continuousImages.isEmpty) {
@@ -51,9 +58,30 @@ class ThreadPostNavigation {
       );
       return;
     }
+    final resolvedKind =
+        contentKind ??
+        (threadArgs == null
+            ? null
+            : ref
+                  .read(threadDetailControllerProvider(threadArgs!))
+                  .asData
+                  ?.value
+                  .contentKind);
+    if (resolvedKind == ThreadContentKind.comic && post.isFirst) {
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute<ThreadImageReaderExitResult>(
+          builder: (_) => ThreadImageReaderPage(
+            request: request,
+            imageReferer: imageReferer,
+            onBeforeExit: onBeforeExit,
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<ThreadImageReaderExitResult>(
-        builder: (_) => ThreadImageReaderPage(
+      buildImageLightboxRoute<ThreadImageReaderExitResult>(
+        builder: (_) => ThreadImageLightboxPage(
           request: request,
           imageReferer: imageReferer,
           onBeforeExit: onBeforeExit,

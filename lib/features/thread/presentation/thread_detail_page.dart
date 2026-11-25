@@ -59,7 +59,6 @@ import 'package:y300/features/reply/presentation/reply_composer_state.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_conversion_mode.dart';
 import 'package:y300/features/reader_shared/domain/rich_text/text_conversion/text_converter_factory.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
-import 'package:y300/features/thread/domain/models/thread_image_open_models.dart';
 import 'package:y300/features/thread/domain/models/thread_ui_feedback.dart';
 import 'package:y300/features/thread/domain/models/thread_post_target.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
@@ -794,7 +793,14 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                         _openCommentAuthorProfile,
                                     onCopyActionUrl: _copyActionUrl,
                                     onOpenPostLink: _openForumLink,
-                                    onOpenPostImages: _openPostImages,
+                                    onOpenPostImages: (p, r) =>
+                                        _postNavigation.openImages(
+                                          p,
+                                          r,
+                                          onBeforeExit:
+                                              _imageReaderReturnCoordinator
+                                                  .beforeExitFor(r),
+                                        ),
                                     onOpenPostActions: (press) {
                                       final (post, position) = press;
                                       final postProjection = projection
@@ -1641,15 +1647,11 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
 
   String _threadUrlForCopy(ThreadDetailPageState state) {
     final desktopUrl = state.desktopUrl?.trim();
-    if (desktopUrl != null && desktopUrl.isNotEmpty) {
-      return desktopUrl;
-    }
+    if (desktopUrl != null && desktopUrl.isNotEmpty) return desktopUrl;
     final tid = state.tid.trim().isNotEmpty
         ? state.tid.trim()
         : widget.tid.trim();
-    if (tid.isEmpty) {
-      return '';
-    }
+    if (tid.isEmpty) return '';
     final page = state.currentPage > 0
         ? state.currentPage
         : (widget.initialPage ?? 1);
@@ -1673,13 +1675,8 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     tid: widget.tid,
     imageReferer: _latestImageReferer,
     isCurrent: () => mounted,
+    threadArgs: _currentThreadArgs,
   );
-  void _openPostImages(ThreadPost post, ThreadImageOpenRequest request) =>
-      _postNavigation.openImages(
-        post,
-        request,
-        onBeforeExit: _imageReaderReturnCoordinator.beforeExitFor(request),
-      );
 
   Future<void> _openPostActions(
     ThreadDetailArgs args,

@@ -92,6 +92,7 @@ import 'package:y300/features/thread/domain/services/thread_favorite_action_serv
 import 'package:y300/features/thread/presentation/thread_detail_controller.dart';
 import 'package:y300/features/content_rendering_shared/content_rendering.dart';
 import 'package:y300/features/thread/presentation/html_rendering/thread_post_html_first_body.dart';
+import 'package:y300/features/thread/presentation/thread_image_lightbox_page.dart';
 import 'package:y300/features/thread/presentation/thread_image_reader_page.dart';
 import 'package:y300/features/thread/presentation/thread_detail_page.dart';
 import 'package:y300/features/thread/presentation/thread_detail_state.dart';
