@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/features/content_filter/data/codecs/blocked_keyword_snapshot_codec.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
 
@@ -49,8 +52,11 @@ final class BlockedKeywordsController
   int _sequence = 0;
 
   @override
-  FutureOr<List<BlockedKeyword>> build() {
-    return ref.watch(blockedKeywordRepositoryProvider).load();
+  FutureOr<List<BlockedKeyword>> build() async {
+    final raw = await ref
+        .watch(preferencesStoreProvider)
+        .read(PreferenceKeys.contentFilterBlockedKeywordsV1);
+    return BlockedKeywordSnapshotCodec.decode(raw);
   }
 
   Future<BlockedKeywordMutationResult> add({
@@ -249,9 +255,12 @@ final class BlockedKeywordsController
 
   Future<void> reload() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(blockedKeywordRepositoryProvider).load(),
-    );
+    state = await AsyncValue.guard(() async {
+      final raw = await ref
+          .read(preferencesStoreProvider)
+          .read(PreferenceKeys.contentFilterBlockedKeywordsV1);
+      return BlockedKeywordSnapshotCodec.decode(raw);
+    });
   }
 
   BlockedKeywordMutationResult _mapPatternError(
@@ -285,7 +294,12 @@ final class BlockedKeywordsController
 
   Future<bool> _commit(List<BlockedKeyword> next) async {
     try {
-      await ref.read(blockedKeywordRepositoryProvider).save(next);
+      await ref
+          .read(preferencesStoreProvider)
+          .write(
+            PreferenceKeys.contentFilterBlockedKeywordsV1,
+            BlockedKeywordSnapshotCodec.encode(next),
+          );
     } catch (_) {
       return false;
     }
@@ -355,9 +369,17 @@ final class KeywordFilterPreferencesController
   @override
   Future<KeywordFilterPreferences> build() async {
     try {
-      return _saved = await ref
-          .watch(keywordFilterPreferencesRepositoryProvider)
-          .load();
+      final hideCompletely =
+          await ref
+              .watch(preferencesStoreProvider)
+              .read(
+                PreferenceKeys
+                    .contentFilterHideBlockedKeywordThreadsCompletelyV1,
+              ) ??
+          false;
+      return _saved = KeywordFilterPreferences(
+        hideBlockedContentCompletely: hideCompletely,
+      );
     } on Object {
       return _saved = KeywordFilterPreferences.defaults;
     }
@@ -369,17 +391,23 @@ final class KeywordFilterPreferencesController
   }
 
   Future<bool> _save(KeywordFilterPreferences preferences) {
-    final repository = ref.read(keywordFilterPreferencesRepositoryProvider);
+    final store = ref.read(preferencesStoreProvider);
     final revision = ++_revision;
     state = AsyncData(preferences);
     final result = _writes.then((_) async {
       try {
-        await repository.save(preferences);
+        await store.write(
+          PreferenceKeys.contentFilterHideBlockedKeywordThreadsCompletelyV1,
+          preferences.hideBlockedContentCompletely,
+        );
         _saved = preferences;
         return true;
       } on Object {
         try {
-          await repository.save(_saved);
+          await store.write(
+            PreferenceKeys.contentFilterHideBlockedKeywordThreadsCompletelyV1,
+            _saved.hideBlockedContentCompletely,
+          );
         } on Object {
           // Keep the last successful value for future mutations.
         }

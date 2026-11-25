@@ -99,7 +99,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
     required this.imageReferer,
     required this.onLoadPreviousPage,
     required this.onLoadNextPage,
-    required this.onLoadPageNumber,
+    this.onOpenPagePicker,
     required this.onOpenAuthorProfile,
     required this.onOpenCommentAuthorProfile,
     required this.onCopyActionUrl,
@@ -212,7 +212,7 @@ class ThreadDetailContent extends ConsumerStatefulWidget {
   final String imageReferer;
   final VoidCallback onLoadPreviousPage;
   final VoidCallback onLoadNextPage;
-  final ValueChanged<int> onLoadPageNumber;
+  final ValueChanged<BuildContext>? onOpenPagePicker;
   final ValueChanged<ThreadPost> onOpenAuthorProfile;
   final ValueChanged<ThreadPostCommentEntry> onOpenCommentAuthorProfile;
   final void Function(String label, String url) onCopyActionUrl;
@@ -1878,7 +1878,7 @@ class _ThreadDetailContentState extends ConsumerState<ThreadDetailContent>
           canLoadPrevious: widget.state.currentPage > 1,
           onLoadPreviousPage: widget.onLoadPreviousPage,
           onLoadNextPage: widget.onLoadNextPage,
-          onLoadPageNumber: widget.onLoadPageNumber,
+          onOpenPagePicker: widget.onOpenPagePicker,
         );
       case ThreadDetailRenderEntryKind.targetSpacer:
         return SizedBox(height: MediaQuery.sizeOf(context).height * 0.72);

@@ -8,7 +8,7 @@ import '../../../../test_support/localized_test_app.dart';
 
 void main() {
   testWidgets(
-    'unknown totals accept only the known pages and the next available page',
+    'unknown totals accept any positive page number and reject zero',
     (tester) async {
       int? selected;
       await tester.pumpWidget(
@@ -38,19 +38,19 @@ void main() {
       final input = find.byKey(const Key('thread-detail-page-input'));
       final l10n = AppLocalizations.of(tester.element(input));
       expect(find.text(l10n.threadControlsPageUnknown(5)), findsOneWidget);
-      await tester.enterText(input, '99');
+      await tester.enterText(input, '0');
       await tester.tap(
         find.widgetWithText(FilledButton, l10n.threadControlsJumpPage),
       );
       await tester.pump();
       expect(find.text(l10n.threadControlsInvalidPage), findsOneWidget);
       expect(selected, isNull);
-      await tester.enterText(input, '6');
+      await tester.enterText(input, '99');
       await tester.tap(
         find.widgetWithText(FilledButton, l10n.threadControlsJumpPage),
       );
       await tester.pumpAndSettle();
-      expect(selected, 6);
+      expect(selected, 99);
     },
   );
 

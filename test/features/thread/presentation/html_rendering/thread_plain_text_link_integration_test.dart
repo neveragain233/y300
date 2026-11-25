@@ -371,7 +371,6 @@ ThreadDetailContent _content(
   imageReferer: '',
   onLoadPreviousPage: () {},
   onLoadNextPage: () {},
-  onLoadPageNumber: (_) {},
   onOpenAuthorProfile: (_) {},
   onOpenCommentAuthorProfile: (_) {},
   onCopyActionUrl: (_, _) {},

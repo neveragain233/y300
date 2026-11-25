@@ -610,7 +610,7 @@ class _LoadedThreadDetailSampleViewState
             imageReferer: widget.threadData.desktopUrl ?? '',
             onLoadPreviousPage: _showUnsupportedAction,
             onLoadNextPage: _showUnsupportedAction,
-            onLoadPageNumber: (_) => _showUnsupportedAction(),
+            onOpenPagePicker: (_) => _showUnsupportedAction(),
             onOpenAuthorProfile: (_) => _showUnsupportedAction(),
             onOpenCommentAuthorProfile: (_) => _showUnsupportedAction(),
             onCopyActionUrl: (_, url) => widget.onTapUrl(url),

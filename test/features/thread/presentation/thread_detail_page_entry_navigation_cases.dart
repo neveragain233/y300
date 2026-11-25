@@ -442,7 +442,6 @@ void _entryNavigationCases() {
                 'https://bbs.example.test/forum.php?mod=viewthread&tid=100',
             onLoadPreviousPage: () {},
             onLoadNextPage: () {},
-            onLoadPageNumber: (_) {},
             onOpenAuthorProfile: (_) {},
             onOpenCommentAuthorProfile: (_) {},
             onCopyActionUrl: (_, _) {},

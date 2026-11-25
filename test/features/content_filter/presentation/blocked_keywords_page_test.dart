@@ -1,39 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
+import 'package:y300/features/content_filter/data/codecs/blocked_keyword_snapshot_codec.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
-import 'package:y300/features/content_filter/domain/repositories/blocked_keyword_repository.dart';
-import 'package:y300/features/content_filter/domain/repositories/keyword_filter_preferences_repository.dart';
 import 'package:y300/features/content_filter/presentation/blocked_keywords_page.dart';
 import 'package:y300/shared/widgets/app_switch_row.dart';
 
 import '../../../test_support/localized_test_app.dart';
 
-class _MemoryKeywordRepo implements BlockedKeywordRepository {
-  _MemoryKeywordRepo([List<BlockedKeyword>? initial])
-    : _items = List<BlockedKeyword>.from(initial ?? const []);
+class _MemoryPreferencesStore implements PreferencesStore {
+  final Map<String, Object> _values = <String, Object>{};
 
-  List<BlockedKeyword> _items;
-
-  @override
-  Future<List<BlockedKeyword>> load() async => List.unmodifiable(_items);
+  List<BlockedKeyword> loadRules() => BlockedKeywordSnapshotCodec.decode(
+    _values[PreferenceKeys.contentFilterBlockedKeywordsV1.name] as String?,
+  );
 
   @override
-  Future<void> save(List<BlockedKeyword> keywords) async {
-    _items = List<BlockedKeyword>.from(keywords);
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async {
+    final value = _values[key.name];
+    return value is T ? value : null;
   }
-}
-
-class _MemoryPrefsRepo implements KeywordFilterPreferencesRepository {
-  KeywordFilterPreferences _prefs = KeywordFilterPreferences.defaults;
 
   @override
-  Future<KeywordFilterPreferences> load() async => _prefs;
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
+      _values.containsKey(key.name);
 
   @override
-  Future<void> save(KeywordFilterPreferences preferences) async {
-    _prefs = preferences;
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
+    _values[key.name] = value;
+  }
+
+  @override
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {
+    _values.remove(key.name);
   }
 }
 
@@ -41,16 +44,10 @@ void main() {
   testWidgets('adds, edits scope, toggles list hiding, and deletes with undo', (
     tester,
   ) async {
-    final repo = _MemoryKeywordRepo();
-    final prefsRepo = _MemoryPrefsRepo();
+    final store = _MemoryPreferencesStore();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          blockedKeywordRepositoryProvider.overrideWithValue(repo),
-          keywordFilterPreferencesRepositoryProvider.overrideWithValue(
-            prefsRepo,
-          ),
-        ],
+        overrides: [preferencesStoreProvider.overrideWithValue(store)],
         child: const LocalizedTestApp(home: BlockedKeywordsPage()),
       ),
     );
@@ -86,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('剧透'), findsOneWidget);
-    final savedRules = await repo.load();
+    final savedRules = store.loadRules();
     expect(savedRules.length, 1);
     expect(savedRules.single.scope, BlockedKeywordScope.includeBody);
 
@@ -108,7 +105,7 @@ void main() {
     await tester.tap(find.byKey(const Key('content-filter-keyword-save')));
     await tester.pumpAndSettle();
 
-    final updatedRules = await repo.load();
+    final updatedRules = store.loadRules();
     expect(updatedRules.single.scope, BlockedKeywordScope.repliesOnly);
 
     final switchFinder = find.byKey(
@@ -125,7 +122,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect((await repo.load()).single.enabled, isFalse);
+    expect(store.loadRules().single.enabled, isFalse);
 
     await tester.tap(
       find.byKey(
@@ -158,7 +155,7 @@ void main() {
     await tester.tap(find.byKey(const Key('content-filter-keyword-save')));
     await tester.pumpAndSettle();
     expect(find.text('官方剧透预警'), findsOneWidget);
-    final rulesWithAllow = await repo.load();
+    final rulesWithAllow = store.loadRules();
     expect(
       rulesWithAllow.any(
         (rule) =>

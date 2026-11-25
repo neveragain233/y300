@@ -424,7 +424,6 @@ void _bodyLandingCases() {
               imageReferer: 'https://bbs.yamibo.com/forum.php?mod=viewthread&tid=100&page=1',
               onLoadPreviousPage: () {},
               onLoadNextPage: () {},
-              onLoadPageNumber: (_) {},
               onOpenAuthorProfile: (_) {},
               onOpenCommentAuthorProfile: (_) {},
               onCopyActionUrl: (_, _) {},

@@ -381,7 +381,6 @@ final class _Fixture {
                     imageReferer: '',
                     onLoadPreviousPage: () {},
                     onLoadNextPage: () {},
-                    onLoadPageNumber: (_) {},
                     onOpenAuthorProfile: (_) {},
                     onOpenCommentAuthorProfile: (_) {},
                     onCopyActionUrl: (_, _) {},

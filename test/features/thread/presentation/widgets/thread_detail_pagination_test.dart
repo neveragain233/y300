@@ -17,25 +17,30 @@ void main() {
   ) async {
     var previousTaps = 0;
     var nextTaps = 0;
+    var pickerTaps = 0;
     await _pump(
       tester,
       onLoadPreviousPage: () => previousTaps++,
       onLoadNextPage: () => nextTaps++,
+      onOpenPagePicker: (_) => pickerTaps++,
     );
 
     final l10n = AppLocalizations.of(
       tester.element(find.byType(ThreadLoadMoreSection)),
     );
-    expect(find.byType(NativePaginationButton), findsNWidgets(2));
+    expect(find.byType(NativePaginationButton), findsNWidgets(3));
     expect(find.text(l10n.threadDetailPreviousPage), findsOneWidget);
     expect(find.text(l10n.threadDetailNextPage), findsOneWidget);
     expect(find.byKey(_pageLabelKey), findsOneWidget);
     expect(tester.getSize(find.byKey(_previousKey)).height, 34);
     expect(tester.getSize(find.byKey(_nextKey)).height, 34);
+    expect(tester.getSize(find.byKey(_pageLabelKey)).height, 34);
 
     await tester.tap(find.byKey(_previousKey));
+    await tester.tap(find.byKey(_pageLabelKey));
     await tester.tap(find.byKey(_nextKey));
     expect(previousTaps, 1);
+    expect(pickerTaps, 1);
     expect(nextTaps, 1);
   });
 
@@ -82,6 +87,7 @@ Future<void> _pump(
   bool eInk = false,
   VoidCallback? onLoadPreviousPage,
   VoidCallback? onLoadNextPage,
+  ValueChanged<BuildContext>? onOpenPagePicker,
   String? failure,
 }) => tester.pumpWidget(
   LocalizedTestApp(
@@ -97,7 +103,7 @@ Future<void> _pump(
             canLoadPrevious: canLoadPrevious,
             onLoadPreviousPage: onLoadPreviousPage ?? () {},
             onLoadNextPage: onLoadNextPage ?? () {},
-            onLoadPageNumber: (_) {},
+            onOpenPagePicker: onOpenPagePicker,
             failure: failure,
           ),
         ),

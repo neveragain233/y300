@@ -303,7 +303,6 @@ class _PageHost extends ChangeNotifier {
                 imageReferer: '',
                 onLoadPreviousPage: () {},
                 onLoadNextPage: () {},
-                onLoadPageNumber: (_) {},
                 onOpenAuthorProfile: (_) {},
                 onOpenCommentAuthorProfile: (_) {},
                 onCopyActionUrl: (_, _) {},

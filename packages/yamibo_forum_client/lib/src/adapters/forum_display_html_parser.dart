@@ -5,6 +5,7 @@ import 'package:html/parser.dart' as html_parser;
 import '../contracts/forum_display_models.dart';
 import '../contracts/forum_thread_badge.dart';
 import '../url/forum_uri_resolver.dart';
+import 'discuz_html_pager_parser.dart';
 import 'discuz_thread_badge_parser.dart';
 
 class ForumDisplayHtmlParser {
@@ -30,12 +31,14 @@ class ForumDisplayHtmlParser {
   }) {
     final fid = _extractFidFromDocument(document) ?? fallbackFid;
     final threads = _parseThreads(document);
-    final currentPage = _parseCurrentPage(document, fallback: fallbackPage);
-    final lastPage = _parseLastPage(document);
-    final favoriteAnchor = _findFavoriteAnchor(document);
-    final nextPageUrl = _resolve(
-      document.querySelector('.pg a.nxt')?.attributes['href'],
+    final pager = parseDiscuzHtmlPager(
+      document,
+      fallbackPage: fallbackPage,
+      resolveUrl: _resolve,
+      extractPageFromUrl: (url) =>
+          int.tryParse(_extractQueryValue(url, 'page') ?? '') ?? 0,
     );
+    final favoriteAnchor = _findFavoriteAnchor(document);
 
     return ForumDisplayData(
       fid: fid,
@@ -45,11 +48,10 @@ class ForumDisplayHtmlParser {
       todayPosts: _parseForumStat(document, '今日'),
       totalThreads: _parseForumStat(document, '主题'),
       rank: _parseForumStat(document, '排名'),
-      currentPage: currentPage,
+      currentPage: pager.currentPage,
       perPage: threads.isEmpty ? 20 : threads.length,
-      lastPage: lastPage,
-      hasMoreOverride:
-          nextPageUrl != null || (lastPage != null && lastPage > currentPage),
+      lastPage: pager.lastPage,
+      hasMoreOverride: pager.hasMore,
       postUrl: _resolve(
         document.querySelector('#a_newthread')?.attributes['href'],
       ),
@@ -71,10 +73,8 @@ class ForumDisplayHtmlParser {
         _parseTopEntries(document),
       ),
       threads: List<ForumThreadSummary>.unmodifiable(threads),
-      previousPageUrl: _resolve(
-        document.querySelector('.pg a.prev')?.attributes['href'],
-      ),
-      nextPageUrl: nextPageUrl,
+      previousPageUrl: pager.previousPageUrl,
+      nextPageUrl: pager.nextPageUrl,
     );
   }
 
@@ -355,34 +355,6 @@ class ForumDisplayHtmlParser {
       return _parseFirstInt(footItem.text);
     }
     return 0;
-  }
-
-  int _parseCurrentPage(html_dom.Document document, {required int fallback}) {
-    final strong = document.querySelector('.pg strong');
-    final parsed = _parseFirstInt(strong?.text ?? '');
-    return parsed > 0 ? parsed : fallback;
-  }
-
-  int? _parseLastPage(html_dom.Document document) {
-    final last = _parseFirstInt(
-      document.querySelector('.pg a.last')?.text ?? '',
-    );
-    if (last > 0) {
-      return last;
-    }
-
-    var maxPage = 0;
-    for (final anchor in document.querySelectorAll('.pg a')) {
-      final page = _extractQueryValue(
-        _resolve(anchor.attributes['href']),
-        'page',
-      );
-      final parsed = int.tryParse(page ?? '') ?? 0;
-      if (parsed > maxPage) {
-        maxPage = parsed;
-      }
-    }
-    return maxPage > 0 ? maxPage : null;
   }
 
   String? _extractFidFromDocument(html_dom.Document document) {

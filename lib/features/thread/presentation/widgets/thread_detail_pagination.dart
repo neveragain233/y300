@@ -12,7 +12,7 @@ class ThreadLoadMoreSection extends StatelessWidget {
     required this.canLoadPrevious,
     required this.onLoadPreviousPage,
     required this.onLoadNextPage,
-    required this.onLoadPageNumber,
+    this.onOpenPagePicker,
     this.failure,
   });
 
@@ -23,7 +23,7 @@ class ThreadLoadMoreSection extends StatelessWidget {
   final bool canLoadPrevious;
   final VoidCallback onLoadPreviousPage;
   final VoidCallback onLoadNextPage;
-  final ValueChanged<int> onLoadPageNumber;
+  final ValueChanged<BuildContext>? onOpenPagePicker;
   final String? failure;
 
   @override
@@ -75,11 +75,26 @@ class ThreadLoadMoreSection extends StatelessWidget {
                 label: l10n.threadDetailPreviousPage,
                 onPressed: canLoadPrevious ? onLoadPreviousPage : null,
               ),
-              Text(
-                lastPage == null
-                    ? l10n.threadDetailPage(currentPage)
-                    : l10n.threadControlsPageSummary(currentPage, lastPage!),
-                key: const Key('thread-detail-page-label'),
+              Builder(
+                builder: (buttonContext) {
+                  final effectiveLast =
+                      lastPage != null && lastPage! < currentPage
+                      ? currentPage
+                      : lastPage;
+                  final pageLabel = effectiveLast == null
+                      ? l10n.threadDetailPage(currentPage)
+                      : l10n.threadControlsPageSummary(
+                          currentPage,
+                          effectiveLast,
+                        );
+                  return NativePaginationButton(
+                    key: const Key('thread-detail-page-label'),
+                    label: pageLabel,
+                    onPressed: onOpenPagePicker == null
+                        ? null
+                        : () => onOpenPagePicker!(buttonContext),
+                  );
+                },
               ),
               NativePaginationButton(
                 key: const Key('thread-detail-load-more-button'),

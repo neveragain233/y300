@@ -92,7 +92,8 @@ class _ThreadPagePickerPopupState extends State<_ThreadPagePickerPopup> {
 
   void _submit() {
     final page = int.tryParse(_input.text);
-    if (page == null || page < 1 || page > _maximum) {
+    final upperBound = widget.lastPage == null ? null : _maximum;
+    if (page == null || page < 1 || (upperBound != null && page > upperBound)) {
       setState(() => _invalid = true);
       return;
     }

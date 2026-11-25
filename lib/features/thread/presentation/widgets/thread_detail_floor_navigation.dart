@@ -91,7 +91,8 @@ mixin _ThreadDetailFloorNavigation on ConsumerState<ThreadDetailContent>
         previous.targetPid != widget.targetPid ||
         previous.landing != widget.landing) {
       _ignoreInitialWidgetTarget = false;
-    } else if (previous.state.queryParameters['authorid'] !=
+    } else if (previous.state.currentPage != widget.state.currentPage ||
+        previous.state.queryParameters['authorid'] !=
             widget.state.queryParameters['authorid'] ||
         previous.state.queryParameters['ordertype'] !=
             widget.state.queryParameters['ordertype']) {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_display_preferences.dart';
 
 final blacklistDisplayPreferencesControllerProvider =
@@ -19,9 +20,14 @@ final class BlacklistDisplayPreferencesController
   @override
   Future<BlacklistDisplayPreferences> build() async {
     try {
-      return _saved = await ref
-          .watch(blacklistDisplayPreferencesRepositoryProvider)
-          .load();
+      final hide =
+          await ref
+              .watch(preferencesStoreProvider)
+              .read(PreferenceKeys.blacklistHideInitiatedThreadsV1) ??
+          false;
+      return _saved = BlacklistDisplayPreferences(
+        hideThreadsStartedByBlacklistedUsers: hide,
+      );
     } on Object {
       return _saved = BlacklistDisplayPreferences.defaults;
     }
@@ -34,17 +40,23 @@ final class BlacklistDisplayPreferencesController
   }
 
   Future<bool> _save(BlacklistDisplayPreferences preferences) {
-    final repository = ref.read(blacklistDisplayPreferencesRepositoryProvider);
+    final store = ref.read(preferencesStoreProvider);
     final revision = ++_revision;
     state = AsyncData(preferences);
     final result = _writes.then((_) async {
       try {
-        await repository.save(preferences);
+        await store.write(
+          PreferenceKeys.blacklistHideInitiatedThreadsV1,
+          preferences.hideThreadsStartedByBlacklistedUsers,
+        );
         _saved = preferences;
         return true;
       } on Object {
         try {
-          await repository.save(_saved);
+          await store.write(
+            PreferenceKeys.blacklistHideInitiatedThreadsV1,
+            _saved.hideThreadsStartedByBlacklistedUsers,
+          );
         } on Object {
           // Keep the last successful value; the next explicit change still
           // goes through the serialized queue.

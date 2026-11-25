@@ -1,11 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/features/recent_search/data/codecs/recent_search_snapshot_codec.dart';
-import 'package:y300/features/recent_search/data/providers/recent_search_providers.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_entry.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_snapshot.dart';
+
+/// Test seam for keyword timestamps; production uses the wall clock.
+final recentSearchClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.now,
+);
 
 /// Local recent keywords shared by the visible search surfaces.
 ///
@@ -18,8 +24,11 @@ final class RecentSearchesController
   int _revision = 0;
 
   @override
-  FutureOr<RecentSearchSnapshot> build() {
-    return ref.watch(recentSearchRepositoryProvider).load();
+  FutureOr<RecentSearchSnapshot> build() async {
+    final raw = await ref
+        .watch(preferencesStoreProvider)
+        .read(PreferenceKeys.recentSearchSnapshotV1);
+    return RecentSearchSnapshotCodec.decode(raw);
   }
 
   /// Records one explicitly submitted keyword for [scope].
@@ -109,9 +118,12 @@ final class RecentSearchesController
   Future<void> reload() async {
     final revision = _revision;
     state = const AsyncLoading();
-    final loaded = await AsyncValue.guard(
-      () => ref.read(recentSearchRepositoryProvider).load(),
-    );
+    final loaded = await AsyncValue.guard(() async {
+      final raw = await ref
+          .read(preferencesStoreProvider)
+          .read(PreferenceKeys.recentSearchSnapshotV1);
+      return RecentSearchSnapshotCodec.decode(raw);
+    });
     if (!ref.mounted || revision != _revision) {
       return;
     }
@@ -137,7 +149,12 @@ final class RecentSearchesController
   Future<bool> _commit(RecentSearchSnapshot next) async {
     _revision++;
     try {
-      await ref.read(recentSearchRepositoryProvider).save(next);
+      await ref
+          .read(preferencesStoreProvider)
+          .write(
+            PreferenceKeys.recentSearchSnapshotV1,
+            RecentSearchSnapshotCodec.encode(next),
+          );
     } catch (_) {
       return false;
     }

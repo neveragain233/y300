@@ -1156,4 +1156,80 @@ void _pagingCases() {
       );
     },
   );
+
+  testWidgets(
+    'failed next page keeps content, stays scrolled, and bottom label opens picker',
+    (tester) async {
+      final repository = _FakeThreadRepository((
+        String tid,
+        int page,
+        Map<String, String> query,
+      ) async {
+        if (page == 2) {
+          return const ApiFailure<ThreadDetailData>(
+            ApiError(type: ApiErrorType.network, message: 'page 2 failed'),
+          );
+        }
+        return ApiSuccess<ThreadDetailData>(
+          ThreadDetailData(
+            tid: tid,
+            fid: '2',
+            subject: '测试主题',
+            author: 'alice',
+            replies: 20,
+            views: 100,
+            currentPage: 1,
+            lastPage: 2,
+            perPage: 1,
+            nextPageUrl: 'https://bbs.yamibo.com/thread-100-2-1.html',
+            posts: [
+              for (var i = 1; i <= 5; i++)
+                _post(
+                  pid: 'keep-p$i',
+                  author: 'alice',
+                  authorId: '1',
+                  number: i,
+                  isFirst: i == 1,
+                  message: List.generate(
+                    6,
+                    (line) => '<p>第 $i 楼 第 $line 段内容</p>',
+                  ).join(),
+                ),
+            ],
+          ),
+        );
+      });
+
+      await tester.pumpWidget(_buildTestApp(repository));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      await tester.pump();
+
+      await tester.dragUntilVisible(
+        find.byKey(const Key('thread-detail-load-more-button')),
+        find.byKey(const Key('thread-detail-list')),
+        const Offset(0, -260),
+      );
+      final listController = tester
+          .widget<CustomScrollView>(find.byKey(const Key('thread-detail-list')))
+          .controller!;
+      listController.jumpTo(listController.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final offsetBefore = listController.offset;
+      expect(offsetBefore, greaterThan(0));
+
+      await tester.tap(find.byKey(const Key('thread-detail-load-more-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+
+      expect(find.byKey(const Key('thread-post-card-keep-p5')), findsOneWidget);
+      final offsetAfter = listController.offset;
+      expect(offsetAfter, closeTo(offsetBefore, 40));
+
+      await tester.tap(find.byKey(const Key('thread-detail-page-label')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byKey(const Key('thread-page-picker-popup')), findsOneWidget);
+    },
+  );
 }

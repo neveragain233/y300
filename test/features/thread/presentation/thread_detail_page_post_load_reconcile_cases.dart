@@ -2,119 +2,110 @@ part of 'thread_detail_page_test.dart';
 
 void _postLoadReconcileCases() {
   for (final change in ['completed', 'identity']) {
-    for (final succeeds in [true, false]) {
-      testWidgets(
-        'append reconciles post loads after $change success=$succeeds',
-        (tester) async {
-          final append = Completer<ApiResult<ThreadDetailData>>();
-          Future<ApiResult<ThreadDetailData>> readPage(
-            String tid,
-            int page,
-          ) async {
-            if (page == 2) return append.future;
-            return ApiSuccess(_postLoadingTestData(tid, page));
-          }
+    testWidgets('failed page replacement preserves post loads after $change', (
+      tester,
+    ) async {
+      final nextRead = Completer<ApiResult<ThreadDetailData>>();
+      Future<ApiResult<ThreadDetailData>> readPage(String tid, int page) async {
+        if (page == 2) return nextRead.future;
+        return ApiSuccess(_postLoadingTestData(tid, page));
+      }
 
-          final repository = _FakeThreadRepository(readPage);
-          final ratings = _ControlledThreadPostRatingsRepository();
-          final comments = _FakePagedCommentsRepository(
-            (query) async => DataReadSuccess(
-              data: ThreadPostCommentsPage(
-                tid: query.tid,
-                pid: query.pid,
-                page: query.page,
-                comments: const [
-                  ThreadPostCommentEntry(
-                    author: 'test',
-                    message: 'private continuation',
-                    dateline: '',
-                    commentId: '901',
-                  ),
-                ],
-                nextPage: null,
+      final repository = _FakeThreadRepository(readPage);
+      final ratings = _ControlledThreadPostRatingsRepository();
+      final comments = _FakePagedCommentsRepository(
+        (query) async => DataReadSuccess(
+          data: ThreadPostCommentsPage(
+            tid: query.tid,
+            pid: query.pid,
+            page: query.page,
+            comments: const [
+              ThreadPostCommentEntry(
+                author: 'test',
+                message: 'private continuation',
+                dateline: '',
+                commentId: '901',
               ),
-              capabilities: commentsCapabilities,
-              metadata: const DataReadMetadata.network(),
-            ),
-          );
-          final sessions = YamiboSessionStore();
-          await tester.pumpWidget(
-            _buildTestApp(
-              repository,
-              postRatingsRepository: ratings,
-              additionalOverrides: [
-                yamiboForumClientProvider.overrideWithValue(
-                  _clientWithPagedComments(comments),
-                ),
-                yamiboSessionStoreProvider.overrideWithValue(sessions),
-              ],
-            ),
-          );
-          await tester.pumpAndSettle();
-          final container = ProviderScope.containerOf(
-            tester.element(find.byType(ThreadDetailPage)),
-          );
-          const args = ThreadDetailArgs(tid: '100', subject: '测试主题');
-          final controller = container.read(
-            threadDetailControllerProvider(args).notifier,
-          );
-          final post = container
-              .read(threadDetailControllerProvider(args))
-              .requireValue
-              .posts
-              .first;
-          Future<void> loadChildren() async {
-            final ratingLoad = controller.loadAllRatings(post);
-            ratings.completeSuccess();
-            await ratingLoad;
-            await controller.loadMoreComments(post);
-          }
-
-          if (change == 'identity') await loadChildren();
-          final loadingMore = controller.loadMore();
-          if (change == 'completed') {
-            await loadChildren();
-          } else {
-            sessions.saveExtracted(
-              YamiboSessionSnapshot(
-                isLoggedIn: true,
-                uid: 'new-owner',
-                username: 'test',
-                formhash: '',
-                updatedAt: DateTime(2026, 1, 1),
-                source: 'test',
-              ),
-            );
-          }
-          final latest = container
-              .read(threadDetailControllerProvider(args))
-              .requireValue;
-          if (change == 'identity') expect(latest.commentsByPostId, isEmpty);
-          append.complete(
-            succeeds
-                ? ApiSuccess(_postLoadingTestData('100', 2))
-                : const ApiFailure(
-                    ApiError(
-                      type: ApiErrorType.network,
-                      message: 'append failure',
-                    ),
-                  ),
-          );
-          await loadingMore;
-          await tester.pumpAndSettle();
-          final result = container
-              .read(threadDetailControllerProvider(args))
-              .requireValue;
-          expect(result.ratingsByPostId, same(latest.ratingsByPostId));
-          expect(result.commentsByPostId, same(latest.commentsByPostId));
-          expect(
-            result.ratingsByPostId['200']!.status,
-            ThreadPostRatingsLoadStatus.loaded,
-          );
-          expect(result.commentsByPostId.isEmpty, change == 'identity');
-        },
+            ],
+            nextPage: null,
+          ),
+          capabilities: commentsCapabilities,
+          metadata: const DataReadMetadata.network(),
+        ),
       );
-    }
+      final sessions = YamiboSessionStore();
+      await tester.pumpWidget(
+        _buildTestApp(
+          repository,
+          postRatingsRepository: ratings,
+          additionalOverrides: [
+            yamiboForumClientProvider.overrideWithValue(
+              _clientWithPagedComments(comments),
+            ),
+            yamiboSessionStoreProvider.overrideWithValue(sessions),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ThreadDetailPage)),
+      );
+      const args = ThreadDetailArgs(tid: '100', subject: '测试主题');
+      final controller = container.read(
+        threadDetailControllerProvider(args).notifier,
+      );
+      final post = container
+          .read(threadDetailControllerProvider(args))
+          .requireValue
+          .posts
+          .first;
+      Future<void> loadChildren() async {
+        final ratingLoad = controller.loadAllRatings(post);
+        ratings.completeSuccess();
+        await ratingLoad;
+        await controller.loadMoreComments(post);
+      }
+
+      if (change == 'identity') await loadChildren();
+      final loadingPage = controller.loadPage(2);
+      if (change == 'completed') {
+        await loadChildren();
+      } else {
+        sessions.saveExtracted(
+          YamiboSessionSnapshot(
+            isLoggedIn: true,
+            uid: 'new-owner',
+            username: 'test',
+            formhash: '',
+            updatedAt: DateTime(2026, 1, 1),
+            source: 'test',
+          ),
+        );
+      }
+      final latest = container
+          .read(threadDetailControllerProvider(args))
+          .requireValue;
+      if (change == 'identity') expect(latest.commentsByPostId, isEmpty);
+      nextRead.complete(
+        const ApiFailure(
+          ApiError(type: ApiErrorType.network, message: 'page load failure'),
+        ),
+      );
+      await loadingPage;
+      await tester.pumpAndSettle();
+      final result = container
+          .read(threadDetailControllerProvider(args))
+          .requireValue;
+      expect(result.currentPage, 1);
+      expect(result.loadFailure, isNotNull);
+      expect(result.ratingsByPostId, same(latest.ratingsByPostId));
+      expect(result.commentsByPostId, same(latest.commentsByPostId));
+      expect(
+        result.ratingsByPostId['200']!.status,
+        ThreadPostRatingsLoadStatus.loaded,
+      );
+      expect(result.commentsByPostId.isEmpty, change == 'identity');
+    });
   }
 
   testWidgets(

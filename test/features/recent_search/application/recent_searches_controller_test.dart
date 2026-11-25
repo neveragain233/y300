@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/recent_search/application/recent_searches_controller.dart';
-import 'package:y300/features/recent_search/data/providers/recent_search_providers.dart';
+import 'package:y300/features/recent_search/data/codecs/recent_search_snapshot_codec.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_scope.dart';
 import 'package:y300/features/recent_search/domain/models/recent_search_snapshot.dart';
-import 'package:y300/features/recent_search/domain/repositories/recent_search_repository.dart';
 
 void main() {
   group('RecentSearchesController', () {
@@ -112,20 +115,38 @@ ProviderContainer _container(
 }) {
   return ProviderContainer.test(
     overrides: [
-      recentSearchRepositoryProvider.overrideWithValue(repository),
+      preferencesStoreProvider.overrideWithValue(repository),
       if (clock != null) recentSearchClockProvider.overrideWithValue(clock),
     ],
   );
 }
 
-final class _MemoryRepository implements RecentSearchRepository {
+final class _MemoryRepository implements PreferencesStore {
   RecentSearchSnapshot snapshot = RecentSearchSnapshot.empty;
 
   @override
-  Future<RecentSearchSnapshot> load() async => snapshot;
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async {
+    if (key.name == PreferenceKeys.recentSearchSnapshotV1.name) {
+      return RecentSearchSnapshotCodec.encode(snapshot) as T;
+    }
+    return null;
+  }
 
   @override
-  Future<void> save(RecentSearchSnapshot next) async {
-    snapshot = next;
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
+      key.name == PreferenceKeys.recentSearchSnapshotV1.name;
+
+  @override
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
+    if (key.name == PreferenceKeys.recentSearchSnapshotV1.name && value is String) {
+      snapshot = RecentSearchSnapshotCodec.decode(value);
+    }
+  }
+
+  @override
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {
+    if (key.name == PreferenceKeys.recentSearchSnapshotV1.name) {
+      snapshot = RecentSearchSnapshot.empty;
+    }
   }
 }

@@ -51,6 +51,57 @@ void main() {
     expect(state.replies, 60);
     expect(state.views, 141);
   });
+
+  test(
+    'failed loadNextPage preserves current page and does not wipe posts',
+    () async {
+      final repository = _PagedThreadRepository(
+        {1: _detail(page: 1, replies: 52, views: 120, countsKnown: true)},
+        failPages: const <int>{2},
+      );
+      final container = _container(repository);
+      final provider = threadDetailControllerProvider(
+        const ThreadDetailArgs(tid: '100', subject: 'Fixture thread'),
+      );
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+
+      await container.read(provider.future);
+      await container.read(provider.notifier).loadNextPage();
+
+      final state = container.read(provider).value!;
+      expect(state.currentPage, 1);
+      expect(state.posts, hasLength(1));
+      expect(state.posts.first.pid, '1');
+      expect(state.loadFailure, isNotNull);
+    },
+  );
+
+  test(
+    'switching to author-only view does not inherit unfiltered counts',
+    () async {
+      final repository = _PagedThreadRepository(
+        {1: _detail(page: 1, replies: 52, views: 120, countsKnown: true)},
+        authorPages: {
+          1: _detail(page: 1, replies: 0, views: 0, countsKnown: false),
+        },
+      );
+      final container = _container(repository);
+      final provider = threadDetailControllerProvider(
+        const ThreadDetailArgs(tid: '100', subject: 'Fixture thread'),
+      );
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+
+      await container.read(provider.future);
+      await container.read(provider.notifier).openOnlyAuthor(authorId: '10');
+
+      final state = container.read(provider).value!;
+      expect(state.isOnlyAuthorView, isTrue);
+      expect(state.replies, 0);
+      expect(state.views, 0);
+    },
+  );
 }
 
 ProviderContainer _container(_PagedThreadRepository repository) {
@@ -112,9 +163,15 @@ ThreadDetailData _detail({
 }
 
 final class _PagedThreadRepository implements ThreadRepository {
-  _PagedThreadRepository(this._pages);
+  _PagedThreadRepository(
+    this._pages, {
+    this.failPages = const <int>{},
+    this.authorPages = const <int, ThreadDetailData>{},
+  });
 
   final Map<int, ThreadDetailData> _pages;
+  final Set<int> failPages;
+  final Map<int, ThreadDetailData> authorPages;
   final List<int> requestedPages = <int>[];
 
   @override
@@ -129,8 +186,18 @@ final class _PagedThreadRepository implements ThreadRepository {
     ThreadDetailQuery query = const ThreadDetailQuery(),
   }) async {
     requestedPages.add(page);
+    if (failPages.contains(page)) {
+      return const DataReadFailure(
+        kind: DataReadFailureKind.network,
+        code: 'network_error',
+        diagnosticMessage: 'network_error',
+      );
+    }
+    final source = (query.authorId?.isNotEmpty ?? false)
+        ? authorPages[page]!
+        : _pages[page]!;
     return DataReadSuccess<ThreadDetailData, ThreadDetailReadCapabilities>(
-      data: _pages[page]!,
+      data: source,
       capabilities: capabilities.toReadCapabilities(),
       metadata: const DataReadMetadata.network(),
     );

@@ -80,7 +80,7 @@ abstract final class BlacklistSnapshotCodec {
       return null;
     }
     final epoch = value['lastSuccessAt'];
-    if (epoch is! int || epoch <= 0) {
+    if (epoch is! int || epoch < 0) {
       return null;
     }
     final rawMembers = value['members'];

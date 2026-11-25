@@ -345,6 +345,7 @@ class ThreadDetailData {
     this.homeUrl,
     this.desktopUrl,
     this.hasServerCounts = true,
+    this.hasMoreOverride,
   });
 
   /// Stable thread identifier.
@@ -420,8 +421,14 @@ class ThreadDetailData {
   /// Appending such a page must keep the counts already known to the caller.
   final bool hasServerCounts;
 
+  /// Explicit source-verified continuation flag, overriding heuristic counts.
+  final bool? hasMoreOverride;
+
   /// Discuz 返回 replies 为回帖数，不含主楼，故这里使用 <= 保守判断。
   bool get hasMore {
+    if (hasMoreOverride != null) {
+      return hasMoreOverride!;
+    }
     if (nextPageUrl != null) {
       return true;
     }

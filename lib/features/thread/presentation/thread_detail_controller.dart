@@ -160,119 +160,10 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
 
   Future<void> refreshAfterMutation() => refresh(forceNetwork: true);
 
-  Future<void> loadMore() async {
-    final current = state.value;
-    if (current == null || current.isLoadingMore || !current.hasMore) {
-      return;
-    }
-
-    state = AsyncData(current.copyWith(isLoadingMore: true, clearError: true));
-    final generation = ++_pageLoadGeneration;
-    final result = await _readRepository().getThreadDetail(
-      tid: _args.tid,
-      page: current.currentPage + 1,
-      query: ThreadDetailQuery.fromLegacyParameters(current.queryParameters),
-    );
-
-    if (!ref.mounted || generation != _pageLoadGeneration) return;
-    final next = result.when(
-      success: (data, capabilities, metadata) {
-        final effectiveCapabilities = current.capabilities == null
-            ? capabilities
-            : current.capabilities!.intersect(capabilities);
-        final effectiveMetadata = current.readMetadata == null
-            ? metadata
-            : current.readMetadata!.merge(metadata);
-        final merged = _preparePostsForView(<ThreadPost>[
-          ...current.posts,
-          ...data.posts,
-        ], current.queryParameters);
-        return AsyncData(
-          current.copyWith(
-            subject: data.subject.isNotEmpty ? data.subject : current.subject,
-            typeName: data.typeName,
-            forumName: data.forumName,
-            forumUrl: data.forumUrl,
-            views: data.hasServerCounts ? data.views : current.views,
-            replies: data.hasServerCounts ? data.replies : current.replies,
-            currentPage: data.currentPage,
-            lastPage:
-                effectiveCapabilities.supports(
-                  ThreadDetailCapability.exactPagination,
-                )
-                ? data.lastPage
-                : null,
-            previousPageUrl: data.previousPageUrl,
-            nextPageUrl: data.nextPageUrl,
-            reverseOrderUrl:
-                effectiveCapabilities.supports(
-                  ThreadDetailCapability.alternateViews,
-                )
-                ? data.reverseOrderUrl
-                : null,
-            onlyAuthorUrl:
-                effectiveCapabilities.supports(
-                  ThreadDetailCapability.alternateViews,
-                )
-                ? data.onlyAuthorUrl
-                : null,
-            favoriteUrl:
-                effectiveCapabilities.supports(
-                  ThreadDetailCapability.favoriteEntry,
-                )
-                ? data.favoriteUrl
-                : null,
-            shareUrl: data.shareUrl,
-            homeUrl: data.homeUrl,
-            desktopUrl: data.desktopUrl,
-            hasMore: data.hasMore,
-            isLoadingMore: false,
-            posts: merged,
-            capabilities: effectiveCapabilities,
-            readMetadata: effectiveMetadata,
-            clearLastPage: !effectiveCapabilities.supports(
-              ThreadDetailCapability.exactPagination,
-            ),
-            clearReverseOrderUrl: !effectiveCapabilities.supports(
-              ThreadDetailCapability.alternateViews,
-            ),
-            clearOnlyAuthorUrl: !effectiveCapabilities.supports(
-              ThreadDetailCapability.alternateViews,
-            ),
-            clearFavoriteUrl: !effectiveCapabilities.supports(
-              ThreadDetailCapability.favoriteEntry,
-            ),
-            clearError: true,
-          ),
-        );
-      },
-      failure: (failure) {
-        return AsyncData(
-          current.copyWith(
-            isLoadingMore: false,
-            errorMessage: failure.diagnosticMessage,
-            loadFailure: ThreadActionFailure(
-              code: failure.kind == DataReadFailureKind.unauthorized
-                  ? ThreadUiErrorCode.loginRequired
-                  : ThreadUiErrorCode.pageLoadFailed,
-              detail: failure.diagnosticMessage,
-              message: failure.diagnosticMessage,
-            ),
-          ),
-        );
-      },
-    );
-    // Appending a thread page must retain child loads that finished meanwhile,
-    // including an identity change that cleared private continuation comments.
-    state = next.whenData(
-      (value) => value.copyWith(
-        ratingsByPostId: _ratingsLoader.values,
-        commentsByPostId: _commentsLoader.values,
-      ),
-    );
-  }
-
   Future<void> loadPage(int page) {
+    if (page < 1) {
+      return Future<void>.value();
+    }
     return _replaceWithPage(page: page);
   }
 
@@ -402,14 +293,18 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
   ///
   /// The caller owns cancellation: late results are rejected by the tail
   /// coordinator's generation instead of mutating this controller.
-  Future<ThreadReplyTailPage?> readReplyTailPage(int page) async {
+  Future<ThreadReplyTailPage?> readReplyTailPage(
+    int page, {
+    Map<String, String>? queryParameters,
+  }) async {
     final current = state.value;
     if (!ref.mounted || current == null || page <= 0) return null;
     final tid = current.tid.trim().isEmpty ? _args.tid : current.tid;
+    final effectiveQuery = queryParameters ?? current.queryParameters;
     final result = await _readRepository().getThreadDetail(
       tid: tid,
       page: page,
-      query: ThreadDetailQuery.fromLegacyParameters(current.queryParameters),
+      query: ThreadDetailQuery.fromLegacyParameters(effectiveQuery),
     );
     if (!ref.mounted) return null;
     if (result
@@ -1188,13 +1083,14 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
     required int page,
     Map<String, String>? queryParameters,
     bool Function()? shouldApply,
-    bool preserveOnFailure = false,
+    bool preserveOnFailure = true,
   }) async {
     final current = state.value;
     if (current == null || current.isLoadingMore) {
       return;
     }
     final nextQuery = queryParameters ?? current.queryParameters;
+    final sameQuery = mapEquals(nextQuery, current.queryParameters);
     state = AsyncData(current.copyWith(isLoadingMore: true, clearError: true));
     final generation = _pageLoadGeneration + 1;
     final next = await _loadPage(
@@ -1202,7 +1098,7 @@ class ThreadDetailController extends AsyncNotifier<ThreadDetailPageState> {
       previous: const <ThreadPost>[],
       queryParameters: nextQuery,
       failureCode: ThreadUiErrorCode.pageLoadFailed,
-      countFallback: current,
+      countFallback: sameQuery ? current : null,
     );
     if (!ref.mounted || generation != _pageLoadGeneration) return;
     final afterLoading = state.value ?? current;

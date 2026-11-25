@@ -329,7 +329,7 @@ void _blacklistCases() {
       );
       await tester.pumpAndSettle();
 
-      expect(requests, containsAll(<int>[1, 2]));
+      expect(requests, equals(<int>[2]));
       expect(
         find.byKey(const Key('thread-filtered-tail-banner')),
         findsOneWidget,
@@ -345,6 +345,8 @@ void _blacklistCases() {
 
       await tester.tap(find.byKey(const Key('thread-filtered-tail-toggle')));
       await tester.pumpAndSettle();
+
+      expect(requests, containsAll(<int>[1, 2]));
 
       expect(
         find.byKey(const Key('thread-blacklisted-post-tail-page-b1')),

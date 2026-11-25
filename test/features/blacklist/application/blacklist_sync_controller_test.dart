@@ -7,15 +7,16 @@ import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
 import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
 import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
 import 'package:y300/features/blacklist/application/blacklist_sync_controller.dart';
+import 'package:y300/features/blacklist/data/codecs/blacklist_pending_mutation_codec.dart';
+import 'package:y300/features/blacklist/data/codecs/blacklist_snapshot_codec.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_pending_mutation.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
-import 'package:y300/features/blacklist/domain/repositories/blacklist_pending_repository.dart';
-import 'package:y300/features/blacklist/domain/repositories/blacklist_repository.dart';
 import 'package:y300/features/profile/presentation/account_display_controller.dart';
 
 void main() {
@@ -644,16 +645,18 @@ ProviderContainer _container({
       ),
     );
   }
+  final store = _MemoryPreferencesStore(<String, Object>{
+    if (preferencesStore != null) ...preferencesStore._values,
+    if (repository != null)
+      PreferenceKeys.contentFilterWebBlacklistSnapshotV1.name:
+          BlacklistSnapshotCodec.encode(repository.snapshot),
+    if (pendingRepository != null)
+      PreferenceKeys.contentFilterWebBlacklistPendingV1.name:
+          BlacklistPendingMutationCodec.encode(pendingRepository.snapshot),
+  }, onSnapshotWrite: repository?.saved.add);
   final container = ProviderContainer.test(
     overrides: [
-      if (preferencesStore != null)
-        preferencesStoreProvider.overrideWithValue(preferencesStore),
-      blacklistRepositoryProvider.overrideWithValue(
-        repository ?? _MemoryRepository(),
-      ),
-      blacklistPendingRepositoryProvider.overrideWithValue(
-        pendingRepository ?? _MemoryPendingRepository(),
-      ),
+      preferencesStoreProvider.overrideWithValue(store),
       blacklistRemoteLoaderProvider.overrideWithValue(
         load ?? (_) async => _success(const <ForumBlacklistEntry>[]),
       ),
@@ -688,41 +691,25 @@ final class _OwnerNotifier extends Notifier<VerifiedSessionOwner?> {
   }
 }
 
-final class _MemoryRepository implements BlacklistRepository {
+final class _MemoryRepository {
   _MemoryRepository([this.snapshot = BlacklistSnapshot.empty]);
 
   BlacklistSnapshot snapshot;
   final List<BlacklistSnapshot> saved = <BlacklistSnapshot>[];
-
-  @override
-  Future<BlacklistSnapshot> load() async => snapshot;
-
-  @override
-  Future<void> save(BlacklistSnapshot next) async {
-    snapshot = next;
-    saved.add(next);
-  }
 }
 
-final class _MemoryPendingRepository implements BlacklistPendingRepository {
+final class _MemoryPendingRepository {
   _MemoryPendingRepository([BlacklistPendingSnapshot? snapshot])
     : snapshot = snapshot ?? BlacklistPendingSnapshot.empty;
 
   BlacklistPendingSnapshot snapshot;
-
-  @override
-  Future<BlacklistPendingSnapshot> load() async => snapshot;
-
-  @override
-  Future<void> save(BlacklistPendingSnapshot next) async {
-    snapshot = next;
-  }
 }
 
 final class _MemoryPreferencesStore implements PreferencesStore {
-  _MemoryPreferencesStore(this._values);
+  _MemoryPreferencesStore(this._values, {this.onSnapshotWrite});
 
   final Map<String, Object> _values;
+  final void Function(BlacklistSnapshot snapshot)? onSnapshotWrite;
 
   @override
   Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
@@ -742,5 +729,9 @@ final class _MemoryPreferencesStore implements PreferencesStore {
   @override
   Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
     _values[key.name] = value;
+    if (key.name == PreferenceKeys.contentFilterWebBlacklistSnapshotV1.name &&
+        value is String) {
+      onSnapshotWrite?.call(BlacklistSnapshotCodec.decode(value));
+    }
   }
 }

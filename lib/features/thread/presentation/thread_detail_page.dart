@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:y300/core/motion/app_motion.dart';
 import 'package:y300/features/thread/presentation/services/thread_image_reader_return_coordinator.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_actions.dart';
 import 'package:y300/features/thread/presentation/services/thread_post_navigation.dart';
@@ -135,8 +134,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   late final ThreadDetailScrollTitleObserver _titleObserver;
   Set<String> _tailMembership = const <String>{};
   int _blacklistRevision = 0;
-  String? _tailPageKey;
-  bool _tailAutoAttempted = false;
   bool _filteredTailExpanded = false;
   bool _allowedKeywordThreadView = false;
   String? _lastTailContextKey;
@@ -192,9 +189,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       onTailPending: _retryReplyTail,
     );
     _replyTail = ThreadReplyTailCoordinator(
-      readPage: (page) => ref
+      readPage: (page, queryParameters) => ref
           .read(threadDetailControllerProvider(_currentThreadArgs).notifier)
-          .readReplyTailPage(page),
+          .readReplyTailPage(page, queryParameters: queryParameters),
     )..addListener(_handleReplyTailChanged);
     _bindReadingObserver();
   }
@@ -362,7 +359,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         oldWidget.landing != widget.landing) {
       _postRouteSession.invalidate();
       _replyTail.reset();
-      _tailAutoAttempted = false;
       _filteredTailExpanded = false;
       _titleObserver.reset();
     }
@@ -438,7 +434,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       if (previous?.value != null && previous?.value != next.value) {
         _cancelFloorNavigation();
         _replyTail.reset();
-        _tailAutoAttempted = false;
       }
     });
     final controller = ref.read(threadDetailControllerProvider(args).notifier);
@@ -561,6 +556,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     _replyTail.observe(
       threadId: state.tid.trim().isEmpty ? widget.tid : state.tid,
       queryIdentity: _queryIdentityFor(state),
+      queryParameters: state.queryParameters,
       page: state.currentPage,
       posts: state.posts,
       isLastPage: _isThreadLastPage(state),
@@ -577,7 +573,6 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       ),
     );
     _floorNavigation.refresh();
-    _scheduleReplyTailCollection(state);
     _scheduleHistoryVisit(
       asyncState: asyncState,
       state: state,
@@ -728,10 +723,17 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                     replyTailRevision: _replyTail.revision,
                                     filteredTailExpanded: _filteredTailExpanded,
                                     onToggleFilteredTail: () {
+                                      final nextExpanded =
+                                          !_filteredTailExpanded;
                                       setState(() {
-                                        _filteredTailExpanded =
-                                            !_filteredTailExpanded;
+                                        _filteredTailExpanded = nextExpanded;
                                       });
+                                      if (nextExpanded &&
+                                          _replyTail.tailPending &&
+                                          !_replyTail.isCollecting &&
+                                          !_replyTail.hasFailure) {
+                                        _retryReplyTail();
+                                      }
                                       _floorNavigation.refresh();
                                     },
                                     tailReasonsByPid: _replyTail.reasonsByPid,
@@ -763,10 +765,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
                                         ),
                                       );
                                     },
-                                    onLoadPageNumber: (page) {
+                                    onOpenPagePicker: (anchorContext) {
                                       unawaited(
-                                        _runPageActionAndScrollTop(
-                                          () => controller.loadPage(page),
+                                        _selectThreadPage(
+                                          controller,
+                                          state,
+                                          anchorContext: anchorContext,
                                         ),
                                       );
                                     },
@@ -1194,7 +1198,7 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       hasNext: value.hasMore,
       loading: value.isLoadingMore,
       topicPid: _topicPidOf(display),
-      tailPending: _replyTail.tailPending,
+      tailPending: _replyTail.isCollecting,
     );
   }
 
@@ -1287,34 +1291,13 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
     return true;
   }
 
-  void _scheduleReplyTailCollection(ThreadDetailPageState state) {
-    if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) return;
-    if (_replyTail.hasFailure) return;
-    final tailKey =
-        '${state.tid}|${_queryIdentityFor(state)}|${state.currentPage}';
-    if (_tailPageKey != tailKey) {
-      _tailPageKey = tailKey;
-      _tailAutoAttempted = false;
-    }
-    if (_tailAutoAttempted) return;
-    _tailAutoAttempted = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) {
-        return;
-      }
-      unawaited(_replyTail.ensureComplete(isCurrent: () => mounted));
-    });
-    WidgetsBinding.instance.scheduleFrame();
-  }
-
-  /// 显式重试：末页末端操作发现尾部集合未完成时继续补取。
+  /// 显式重试：末页末端操作或展开折叠栏时按需补取前序未访问页。
   void _retryReplyTail() {
     if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_replyTail.tailPending || _replyTail.isCollecting) {
         return;
       }
-      _tailAutoAttempted = true;
       unawaited(
         _replyTail.ensureComplete(isCurrent: () => mounted, force: true),
       );
@@ -1435,6 +1418,12 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
   Future<void> _runPageActionAndScrollTop(
     FutureOr<void> Function() action,
   ) async {
+    final provider = threadDetailControllerProvider(_currentThreadArgs);
+    final beforeState = ref.read(provider).value;
+    final beforePage = beforeState?.currentPage;
+    final beforeQuery = beforeState == null
+        ? null
+        : _queryIdentityFor(beforeState);
     final observer = widget.bodyReadingObserver;
     final ownerRevision = _readingOwnerRevision;
     _cancelFloorNavigation();
@@ -1452,6 +1441,19 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
       if (!mounted || ownerRevision != _readingOwnerRevision) {
         return;
       }
+      final afterState = ref.read(provider).value;
+      if (afterState == null ||
+          afterState.loadFailure != null ||
+          (afterState.currentPage == beforePage &&
+              _queryIdentityFor(afterState) == beforeQuery)) {
+        return;
+      }
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if ((pos.pixels - pos.minScrollExtent).abs() >= 1) {
+          _scrollController.jumpTo(pos.minScrollExtent);
+        }
+      }
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted ||
           ownerRevision != _readingOwnerRevision ||
@@ -1459,19 +1461,9 @@ class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage>
         return;
       }
       final position = _scrollController.position;
-      final targetOffset = position.minScrollExtent;
-      if ((position.pixels - targetOffset).abs() < 1) {
-        return;
+      if ((position.pixels - position.minScrollExtent).abs() >= 1) {
+        _scrollController.jumpTo(position.minScrollExtent);
       }
-      if (AppMotion.reduceMotion(context)) {
-        _scrollController.jumpTo(targetOffset);
-        return;
-      }
-      await _scrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-      );
     } finally {
       if (observer != null && ownerRevision == _readingOwnerRevision) {
         _readingSuspensions--;

@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/blacklist/application/blacklist_display_preferences_controller.dart';
-import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
-import 'package:y300/features/blacklist/domain/models/blacklist_display_preferences.dart';
-import 'package:y300/features/blacklist/domain/repositories/blacklist_display_preferences_repository.dart';
 
 void main() {
   test('hiding blacklisted threads is off by default', () async {
@@ -54,13 +54,9 @@ void main() {
   });
 
   test('a failed save restores the last successful value', () async {
-    final repository = _FailingSaveRepository();
+    final store = _FailingSaveStore();
     final container = ProviderContainer.test(
-      overrides: [
-        blacklistDisplayPreferencesRepositoryProvider.overrideWithValue(
-          repository,
-        ),
-      ],
+      overrides: [preferencesStoreProvider.overrideWithValue(store)],
     );
     addTearDown(container.dispose);
     await container.read(blacklistDisplayPreferencesControllerProvider.future);
@@ -73,21 +69,25 @@ void main() {
       isFalse,
     );
     expect(container.read(hideBlacklistedThreadsProvider), isFalse);
-    expect(repository.saves, isNotEmpty);
+    expect(store.writes, isNotEmpty);
   });
 }
 
-final class _FailingSaveRepository
-    implements BlacklistDisplayPreferencesRepository {
-  final saves = <BlacklistDisplayPreferences>[];
+final class _FailingSaveStore implements PreferencesStore {
+  final writes = <Object>[];
 
   @override
-  Future<BlacklistDisplayPreferences> load() async =>
-      BlacklistDisplayPreferences.defaults;
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async => null;
 
   @override
-  Future<void> save(BlacklistDisplayPreferences preferences) async {
-    saves.add(preferences);
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async => false;
+
+  @override
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
+    writes.add(value);
     throw StateError('fixture');
   }
+
+  @override
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {}
 }

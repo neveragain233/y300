@@ -2,6 +2,7 @@ import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html_parser;
 import '../contracts/thread_detail_models.dart';
 import '../url/forum_uri_resolver.dart';
+import 'discuz_html_pager_parser.dart';
 import 'discuz_thread_poll_summary_parser.dart';
 
 /// Source-neutral thread detail html parser.
@@ -64,13 +65,11 @@ class ThreadDetailHtmlParser {
     final threadHeader = _parseMobileThreadHeader(document);
     final posts = _parseMobilePosts(document, expectedTid: fallbackTid);
     final tid = _extractTid(document) ?? fallbackTid;
-    final page = _parseCurrentPage(document, fallback: fallbackPage);
-    final lastPage = _parseLastPage(document);
-    final nextPageUrl = _resolve(
-      document.querySelector('.pg a.nxt')?.attributes['href'],
-    );
-    final previousPageUrl = _resolve(
-      document.querySelector('.pg a.prev')?.attributes['href'],
+    final pager = parseDiscuzHtmlPager(
+      document,
+      fallbackPage: fallbackPage,
+      resolveUrl: _resolve,
+      extractPageFromUrl: _extractPageFromUrl,
     );
 
     return ThreadDetailData(
@@ -87,12 +86,13 @@ class ThreadDetailHtmlParser {
       replies: threadHeader.replies,
       views: threadHeader.views,
       hasServerCounts: threadHeader.hasCounts,
-      currentPage: page,
+      currentPage: pager.currentPage,
       perPage: posts.isEmpty ? 20 : posts.length,
       posts: List<ThreadPost>.unmodifiable(posts),
-      lastPage: lastPage,
-      previousPageUrl: previousPageUrl,
-      nextPageUrl: nextPageUrl,
+      lastPage: pager.lastPage,
+      previousPageUrl: pager.previousPageUrl,
+      nextPageUrl: pager.nextPageUrl,
+      hasMoreOverride: pager.hasMore,
       reverseOrderUrl: _parseReverseOrderUrl(document),
       onlyAuthorUrl: _parseOnlyAuthorUrl(document),
       favoriteUrl: _parseFavoriteUrl(document),
@@ -104,7 +104,9 @@ class ThreadDetailHtmlParser {
           _resolve('/index.php'),
       desktopUrl:
           document.querySelector('link[rel="canonical"]')?.attributes['href'] ??
-          _resolve('/forum.php?mod=viewthread&tid=$tid&page=$page'),
+          _resolve(
+            '/forum.php?mod=viewthread&tid=$tid&page=${pager.currentPage}',
+          ),
     );
   }
 
@@ -117,13 +119,11 @@ class ThreadDetailHtmlParser {
     final threadHeader = _parseDesktopThreadHeader(document);
     final posts = _parseDesktopPosts(document, expectedTid: fallbackTid);
     final tid = _extractTid(document) ?? fallbackTid;
-    final page = _parseCurrentPage(document, fallback: fallbackPage);
-    final lastPage = _parseLastPage(document);
-    final nextPageUrl = _resolve(
-      document.querySelector('.pg a.nxt')?.attributes['href'],
-    );
-    final previousPageUrl = _resolve(
-      document.querySelector('.pg a.prev')?.attributes['href'],
+    final pager = parseDiscuzHtmlPager(
+      document,
+      fallbackPage: fallbackPage,
+      resolveUrl: _resolve,
+      extractPageFromUrl: _extractPageFromUrl,
     );
 
     return ThreadDetailData(
@@ -140,18 +140,21 @@ class ThreadDetailHtmlParser {
       replies: threadHeader.replies,
       views: threadHeader.views,
       hasServerCounts: threadHeader.hasCounts,
-      currentPage: page,
+      currentPage: pager.currentPage,
       perPage: posts.isEmpty ? 20 : posts.length,
       posts: List<ThreadPost>.unmodifiable(posts),
-      lastPage: lastPage,
-      previousPageUrl: previousPageUrl,
-      nextPageUrl: nextPageUrl,
+      lastPage: pager.lastPage,
+      previousPageUrl: pager.previousPageUrl,
+      nextPageUrl: pager.nextPageUrl,
+      hasMoreOverride: pager.hasMore,
       reverseOrderUrl: _parseReverseOrderUrl(document),
       onlyAuthorUrl: _parseOnlyAuthorUrl(document),
       favoriteUrl: _parseFavoriteUrl(document),
       shareUrl: _parseShareUrl(document),
       homeUrl: _resolve('/index.php'),
-      desktopUrl: _resolve('/forum.php?mod=viewthread&tid=$tid&page=$page'),
+      desktopUrl: _resolve(
+        '/forum.php?mod=viewthread&tid=$tid&page=${pager.currentPage}',
+      ),
     );
   }
 
@@ -1532,30 +1535,6 @@ class ThreadDetailHtmlParser {
       }
     }
     return null;
-  }
-
-  int _parseCurrentPage(html_dom.Document document, {required int fallback}) {
-    final current = _parseFirstInt(
-      document.querySelector('.pg strong')?.text ?? '',
-    );
-    return current > 0 ? current : fallback;
-  }
-
-  int? _parseLastPage(html_dom.Document document) {
-    final last = _parseFirstInt(
-      document.querySelector('.pg a.last')?.text ?? '',
-    );
-    if (last > 0) {
-      return last;
-    }
-    var maxPage = 0;
-    for (final anchor in document.querySelectorAll('.pg a')) {
-      final parsed = _extractPageFromUrl(_resolve(anchor.attributes['href']));
-      if (parsed > maxPage) {
-        maxPage = parsed;
-      }
-    }
-    return maxPage > 0 ? maxPage : null;
   }
 
   String? _firstPresentAttribute(

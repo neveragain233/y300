@@ -1,60 +1,60 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/content_filter/application/blocked_keywords_controller.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_keyword.dart';
-import 'package:y300/features/content_filter/domain/repositories/blocked_keyword_repository.dart';
-import 'package:y300/features/content_filter/domain/repositories/keyword_filter_preferences_repository.dart';
 
-class _MemoryKeywordRepo implements BlockedKeywordRepository {
-  _MemoryKeywordRepo([List<BlockedKeyword>? initial])
-    : _items = List<BlockedKeyword>.from(initial ?? const []);
-
-  List<BlockedKeyword> _items;
-  bool failNextSave = false;
+class _MemoryPreferencesStore implements PreferencesStore {
+  final Map<String, Object> _values = <String, Object>{};
+  bool failNextKeywordSave = false;
+  bool failNextPrefsSave = false;
 
   @override
-  Future<List<BlockedKeyword>> load() async => List.unmodifiable(_items);
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async {
+    final value = _values[key.name];
+    return value is T ? value : null;
+  }
 
   @override
-  Future<void> save(List<BlockedKeyword> keywords) async {
-    if (failNextSave) {
-      failNextSave = false;
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
+      _values.containsKey(key.name);
+
+  @override
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
+    if (key.name == PreferenceKeys.contentFilterBlockedKeywordsV1.name &&
+        failNextKeywordSave) {
+      failNextKeywordSave = false;
       throw StateError('save failed');
     }
-    _items = List<BlockedKeyword>.from(keywords);
-  }
-}
-
-class _MemoryPrefsRepo implements KeywordFilterPreferencesRepository {
-  KeywordFilterPreferences _prefs = KeywordFilterPreferences.defaults;
-  bool failNextSave = false;
-
-  @override
-  Future<KeywordFilterPreferences> load() async => _prefs;
-
-  @override
-  Future<void> save(KeywordFilterPreferences preferences) async {
-    if (failNextSave) {
-      failNextSave = false;
+    if (key.name ==
+            PreferenceKeys
+                .contentFilterHideBlockedKeywordThreadsCompletelyV1
+                .name &&
+        failNextPrefsSave) {
+      failNextPrefsSave = false;
       throw StateError('prefs save failed');
     }
-    _prefs = preferences;
+    _values[key.name] = value;
+  }
+
+  @override
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {
+    _values.remove(key.name);
   }
 }
 
 void main() {
   group('BlockedKeywordsController', () {
     test('adds, deduplicates, updates scope, removes and undoes', () async {
-      final repo = _MemoryKeywordRepo();
-      final prefsRepo = _MemoryPrefsRepo();
+      final store = _MemoryPreferencesStore();
       var tick = 1000;
       final container = ProviderContainer(
         overrides: [
-          blockedKeywordRepositoryProvider.overrideWithValue(repo),
-          keywordFilterPreferencesRepositoryProvider.overrideWithValue(
-            prefsRepo,
-          ),
+          preferencesStoreProvider.overrideWithValue(store),
           blockedKeywordClockProvider.overrideWithValue(
             () => DateTime.fromMillisecondsSinceEpoch(tick += 1000),
           ),
@@ -129,20 +129,14 @@ void main() {
     });
 
     test('leaves existing state untouched when save fails', () async {
-      final repo = _MemoryKeywordRepo();
-      final prefsRepo = _MemoryPrefsRepo();
+      final store = _MemoryPreferencesStore();
       final container = ProviderContainer(
-        overrides: [
-          blockedKeywordRepositoryProvider.overrideWithValue(repo),
-          keywordFilterPreferencesRepositoryProvider.overrideWithValue(
-            prefsRepo,
-          ),
-        ],
+        overrides: [preferencesStoreProvider.overrideWithValue(store)],
       );
       addTearDown(container.dispose);
 
       await container.read(blockedKeywordsControllerProvider.future);
-      repo.failNextSave = true;
+      store.failNextKeywordSave = true;
 
       final result = await container
           .read(blockedKeywordsControllerProvider.notifier)
@@ -151,7 +145,7 @@ void main() {
       expect(container.read(blockedKeywordsControllerProvider).value, isEmpty);
 
       await container.read(keywordFilterPreferencesControllerProvider.future);
-      prefsRepo.failNextSave = true;
+      store.failNextPrefsSave = true;
       final saved = await container
           .read(keywordFilterPreferencesControllerProvider.notifier)
           .setHideBlockedContentCompletely(true);

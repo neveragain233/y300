@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/data/codecs/blacklist_pending_mutation_codec.dart';
 import 'package:y300/features/blacklist/data/codecs/blacklist_snapshot_codec.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_pending_mutation.dart';
@@ -47,8 +50,11 @@ final class BlacklistPendingController
   Future<void> _writes = Future<void>.value();
 
   @override
-  FutureOr<BlacklistPendingSnapshot> build() {
-    return ref.watch(blacklistPendingRepositoryProvider).load();
+  FutureOr<BlacklistPendingSnapshot> build() async {
+    final raw = await ref
+        .watch(preferencesStoreProvider)
+        .read(PreferenceKeys.contentFilterWebBlacklistPendingV1);
+    return BlacklistPendingMutationCodec.decode(raw);
   }
 
   Future<void> recordMutation(
@@ -97,7 +103,12 @@ final class BlacklistPendingController
       }
       state = AsyncData(next);
       try {
-        await ref.read(blacklistPendingRepositoryProvider).save(next);
+        await ref
+            .read(preferencesStoreProvider)
+            .write(
+              PreferenceKeys.contentFilterWebBlacklistPendingV1,
+              BlacklistPendingMutationCodec.encode(next),
+            );
       } catch (_) {
         // Keep in-memory pending intent; next save or read will retry.
       }
@@ -144,8 +155,11 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
   int _writeRevision = 0;
 
   @override
-  FutureOr<BlacklistSnapshot> build() {
-    return ref.watch(blacklistRepositoryProvider).load();
+  FutureOr<BlacklistSnapshot> build() async {
+    final raw = await ref
+        .watch(preferencesStoreProvider)
+        .read(PreferenceKeys.contentFilterWebBlacklistSnapshotV1);
+    return BlacklistSnapshotCodec.decode(raw);
   }
 
   /// Loads the complete web blacklist for the current verified owner.
@@ -220,7 +234,12 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
         maxAccounts: BlacklistSnapshotCodec.maxAccounts,
       );
       try {
-        await ref.read(blacklistRepositoryProvider).save(next);
+        await ref
+            .read(preferencesStoreProvider)
+            .write(
+              PreferenceKeys.contentFilterWebBlacklistSnapshotV1,
+              BlacklistSnapshotCodec.encode(next),
+            );
       } catch (_) {
         return BlacklistSyncOutcome.failure;
       }
@@ -387,7 +406,12 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
             maxAccounts: BlacklistSnapshotCodec.maxAccounts,
           );
           try {
-            await ref.read(blacklistRepositoryProvider).save(next);
+            await ref
+                .read(preferencesStoreProvider)
+                .write(
+                  PreferenceKeys.contentFilterWebBlacklistSnapshotV1,
+                  BlacklistSnapshotCodec.encode(next),
+                );
           } catch (_) {
             // The server effect is confirmed; keep the in-memory list and let
             // the reconciliation read repair persistence.
@@ -568,7 +592,12 @@ final class BlacklistSyncController extends AsyncNotifier<BlacklistSnapshot> {
               maxAccounts: BlacklistSnapshotCodec.maxAccounts,
             );
             try {
-              await ref.read(blacklistRepositoryProvider).save(next);
+              await ref
+                  .read(preferencesStoreProvider)
+                  .write(
+                    PreferenceKeys.contentFilterWebBlacklistSnapshotV1,
+                    BlacklistSnapshotCodec.encode(next),
+                  );
             } catch (_) {
               // Confirmed server effect; reconciliation read repairs disk state.
             }

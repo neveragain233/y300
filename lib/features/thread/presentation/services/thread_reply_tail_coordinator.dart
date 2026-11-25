@@ -62,7 +62,11 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   });
 
   /// Reads one thread page without publishing it into the visible detail state.
-  final Future<ThreadReplyTailPage?> Function(int page) readPage;
+  final Future<ThreadReplyTailPage?> Function(
+    int page,
+    Map<String, String> queryParameters,
+  )
+  readPage;
 
   /// Budget for one collection pass; the next explicit action may continue.
   final int maxPagesPerPass;
@@ -77,6 +81,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   final Set<int> _observedPages = <int>{};
   String? _threadId;
   String? _queryIdentity;
+  Map<String, String> _queryParameters = const <String, String>{};
   String? _pinnedPid;
   int _lastPage = 0;
   int _currentPage = 0;
@@ -157,6 +162,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
   void observe({
     required String threadId,
     required String queryIdentity,
+    Map<String, String> queryParameters = const <String, String>{},
     required int page,
     required List<ThreadPost> posts,
     required bool isLastPage,
@@ -180,6 +186,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     }
     if (normalizedTid.isNotEmpty) _threadId = normalizedTid;
     _queryIdentity = queryIdentity;
+    _queryParameters = Map<String, String>.unmodifiable(queryParameters);
     _evaluatePost = evaluatePost;
     final effectiveHasActiveFilters =
         hasActiveFilters ?? blacklistedUserIds.isNotEmpty;
@@ -312,6 +319,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
 
   Future<void> _collect(bool Function() isCurrent) async {
     final generation = _generation;
+    final queryParameters = _queryParameters;
     var fetched = 0;
     for (var page = 1; page <= _lastPage; page++) {
       if (_observedPages.contains(page)) continue;
@@ -320,7 +328,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
         return;
       }
       if (_disposed || generation != _generation || !isCurrent()) return;
-      final result = await readPage(page);
+      final result = await readPage(page, queryParameters);
       if (_disposed || generation != _generation || !isCurrent()) return;
       if (result == null) {
         _failed = true;
@@ -364,6 +372,7 @@ final class ThreadReplyTailCoordinator extends ChangeNotifier {
     _generation++;
     _threadId = null;
     _queryIdentity = null;
+    _queryParameters = const <String, String>{};
     _pinnedPid = null;
     _filterIdentity = null;
     _hasActiveFilters = false;

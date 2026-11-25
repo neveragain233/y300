@@ -1224,7 +1224,6 @@ class _PageState extends State<_Page> {
                 imageReferer: '',
                 onLoadPreviousPage: () {},
                 onLoadNextPage: () {},
-                onLoadPageNumber: (_) {},
                 onOpenAuthorProfile: (_) {},
                 onOpenCommentAuthorProfile: (_) {},
                 onCopyActionUrl: (_, _) {},

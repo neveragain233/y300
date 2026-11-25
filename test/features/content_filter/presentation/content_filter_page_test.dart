@@ -5,16 +5,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_snapshot.dart';
 import 'package:y300/core/network/yamibo/yamibo_session_store.dart';
 import 'package:y300/core/network/yamibo_forum_transport_providers.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/auth/application/verified_session_owner.dart';
+import 'package:y300/features/blacklist/data/codecs/blacklist_snapshot_codec.dart';
 import 'package:y300/features/blacklist/data/providers/blacklist_providers.dart';
-import 'package:y300/features/blacklist/domain/models/blacklist_pending_mutation.dart';
 import 'package:y300/features/blacklist/domain/models/blacklist_snapshot.dart';
-import 'package:y300/features/blacklist/domain/repositories/blacklist_pending_repository.dart';
-import 'package:y300/features/blacklist/domain/repositories/blacklist_repository.dart';
 import 'package:yamibo_forum_client/yamibo_forum_client_contracts.dart';
-import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
+import 'package:y300/features/content_filter/data/codecs/blocked_thread_snapshot_codec.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
-import 'package:y300/features/content_filter/domain/repositories/blocked_thread_repository.dart';
 import 'package:y300/features/content_filter/presentation/blocked_threads_page.dart';
 import 'package:y300/features/content_filter/presentation/content_filter_page.dart';
 import 'package:y300/features/content_filter/presentation/web_blacklist_page.dart';
@@ -29,12 +30,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          blockedThreadRepositoryProvider.overrideWithValue(
-            _MemoryRepository(const <BlockedThread>[]),
-          ),
-          blacklistRepositoryProvider.overrideWithValue(
-            _EmptyBlacklistRepository(),
-          ),
+          preferencesStoreProvider.overrideWithValue(_MemoryPreferencesStore()),
           blacklistAutoSyncProvider.overrideWithValue(false),
           verifiedSessionOwnerProvider.overrideWithValue(null),
         ],
@@ -84,8 +80,8 @@ void main() {
           source: 'test',
         ),
       );
-    final blacklistRepository = _SeededBlacklistRepository(
-      BlacklistSnapshot(
+    final store = _MemoryPreferencesStore(
+      blacklist: BlacklistSnapshot(
         accounts: <String, BlacklistAccountSnapshot>{
           '11': BlacklistAccountSnapshot(
             ownerUid: '11',
@@ -100,10 +96,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          blockedThreadRepositoryProvider.overrideWithValue(
-            _MemoryRepository(const <BlockedThread>[]),
-          ),
-          blacklistRepositoryProvider.overrideWithValue(blacklistRepository),
+          preferencesStoreProvider.overrideWithValue(store),
           blacklistAutoSyncProvider.overrideWithValue(false),
           verifiedSessionOwnerProvider.overrideWithValue((
             uid: '11',
@@ -134,12 +127,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          blockedThreadRepositoryProvider.overrideWithValue(
-            _MemoryRepository(const <BlockedThread>[]),
-          ),
-          blacklistRepositoryProvider.overrideWithValue(
-            _EmptyBlacklistRepository(),
-          ),
           blacklistAutoSyncProvider.overrideWithValue(false),
           verifiedSessionOwnerProvider.overrideWithValue(null),
         ],
@@ -163,20 +150,19 @@ void main() {
   });
 
   testWidgets('lists blocked threads and restores one', (tester) async {
-    final repository = _MemoryRepository([
-      BlockedThread(
-        tid: '12',
-        subject: '被屏蔽的帖子',
-        blockedAt: DateTime.fromMillisecondsSinceEpoch(1000),
-      ),
-    ]);
+    final store = _MemoryPreferencesStore(
+      blockedThreads: [
+        BlockedThread(
+          tid: '12',
+          subject: '被屏蔽的帖子',
+          blockedAt: DateTime.fromMillisecondsSinceEpoch(1000),
+        ),
+      ],
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          blockedThreadRepositoryProvider.overrideWithValue(repository),
-          blacklistRepositoryProvider.overrideWithValue(
-            _EmptyBlacklistRepository(),
-          ),
+          preferencesStoreProvider.overrideWithValue(store),
           blacklistAutoSyncProvider.overrideWithValue(false),
           verifiedSessionOwnerProvider.overrideWithValue(null),
         ],
@@ -208,7 +194,7 @@ void main() {
       find.byKey(const Key('content-filter-blocked-thread-empty')),
       findsOneWidget,
     );
-    expect(repository.rules, isEmpty);
+    expect(store.blockedThreads, isEmpty);
   });
 
   testWidgets(
@@ -225,8 +211,8 @@ void main() {
             source: 'test',
           ),
         );
-      final blacklistRepository = _SeededBlacklistRepository(
-        BlacklistSnapshot(
+      final store = _MemoryPreferencesStore(
+        blacklist: BlacklistSnapshot(
           accounts: <String, BlacklistAccountSnapshot>{
             '11': BlacklistAccountSnapshot(
               ownerUid: '11',
@@ -239,17 +225,10 @@ void main() {
           },
         ),
       );
-      final pendingRepository = _SeededPendingRepository();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            blockedThreadRepositoryProvider.overrideWithValue(
-              _MemoryRepository(const <BlockedThread>[]),
-            ),
-            blacklistRepositoryProvider.overrideWithValue(blacklistRepository),
-            blacklistPendingRepositoryProvider.overrideWithValue(
-              pendingRepository,
-            ),
+            preferencesStoreProvider.overrideWithValue(store),
             blacklistAutoSyncProvider.overrideWithValue(false),
             blacklistRemoveSupportedProvider.overrideWithValue(true),
             blacklistRemoveCommandProvider.overrideWithValue((
@@ -348,50 +327,40 @@ void main() {
   );
 }
 
-final class _MemoryRepository implements BlockedThreadRepository {
-  _MemoryRepository(this.rules);
+final class _MemoryPreferencesStore implements PreferencesStore {
+  _MemoryPreferencesStore({
+    List<BlockedThread> blockedThreads = const <BlockedThread>[],
+    BlacklistSnapshot blacklist = BlacklistSnapshot.empty,
+  }) : _values = <String, Object>{
+         PreferenceKeys.contentFilterBlockedThreadsV1.name:
+             BlockedThreadSnapshotCodec.encode(blockedThreads),
+         PreferenceKeys.contentFilterWebBlacklistSnapshotV1.name:
+             BlacklistSnapshotCodec.encode(blacklist),
+       };
 
-  List<BlockedThread> rules;
+  final Map<String, Object> _values;
+
+  List<BlockedThread> get blockedThreads => BlockedThreadSnapshotCodec.decode(
+    _values[PreferenceKeys.contentFilterBlockedThreadsV1.name] as String?,
+  );
 
   @override
-  Future<List<BlockedThread>> load() async => rules;
-
-  @override
-  Future<void> save(List<BlockedThread> threads) async {
-    rules = threads;
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async {
+    final value = _values[key.name];
+    return value is T ? value : null;
   }
-}
-
-final class _SeededBlacklistRepository implements BlacklistRepository {
-  _SeededBlacklistRepository(this.snapshot);
-
-  BlacklistSnapshot snapshot;
 
   @override
-  Future<BlacklistSnapshot> load() async => snapshot;
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
+      _values.containsKey(key.name);
 
   @override
-  Future<void> save(BlacklistSnapshot next) async {
-    snapshot = next;
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
+    _values[key.name] = value;
   }
-}
-
-final class _EmptyBlacklistRepository implements BlacklistRepository {
-  @override
-  Future<BlacklistSnapshot> load() async => BlacklistSnapshot.empty;
 
   @override
-  Future<void> save(BlacklistSnapshot snapshot) async {}
-}
-
-final class _SeededPendingRepository implements BlacklistPendingRepository {
-  BlacklistPendingSnapshot snapshot = BlacklistPendingSnapshot.empty;
-
-  @override
-  Future<BlacklistPendingSnapshot> load() async => snapshot;
-
-  @override
-  Future<void> save(BlacklistPendingSnapshot next) async {
-    snapshot = next;
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {
+    _values.remove(key.name);
   }
 }

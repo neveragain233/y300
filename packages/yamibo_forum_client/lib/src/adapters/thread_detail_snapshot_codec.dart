@@ -52,6 +52,7 @@ class ThreadDetailSnapshotCodec
       'shareUrl': value.shareUrl,
       'homeUrl': value.homeUrl,
       'desktopUrl': value.desktopUrl,
+      'hasMoreOverride': value.hasMoreOverride,
       'posts': value.posts.map(_encodePost).toList(growable: false),
     };
   }
@@ -83,6 +84,9 @@ class ThreadDetailSnapshotCodec
       shareUrl: _nullableString(map['shareUrl']),
       homeUrl: _nullableString(map['homeUrl']),
       desktopUrl: _nullableString(map['desktopUrl']),
+      hasMoreOverride: map['hasMoreOverride'] is bool
+          ? map['hasMoreOverride'] as bool
+          : null,
       posts: LooseJson.list(
         map['posts'],
       ).map((item) => _decodePost(LooseJson.map(item))).toList(growable: false),

@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/features/content_filter/data/codecs/blocked_thread_snapshot_codec.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
 import 'package:y300/features/content_filter/domain/services/thread_block_identity.dart';
@@ -32,8 +35,11 @@ final class BlockedThreadsController
   Future<void> _mutationTail = Future<void>.value();
 
   @override
-  FutureOr<List<BlockedThread>> build() {
-    return ref.watch(blockedThreadRepositoryProvider).load();
+  FutureOr<List<BlockedThread>> build() async {
+    final raw = await ref
+        .watch(preferencesStoreProvider)
+        .read(PreferenceKeys.contentFilterBlockedThreadsV1);
+    return BlockedThreadSnapshotCodec.decode(raw);
   }
 
   /// Blocks [tid] and captures [subject] for recognition in the management
@@ -129,9 +135,12 @@ final class BlockedThreadsController
   /// Retries loading after a failed read.
   Future<void> reload() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(blockedThreadRepositoryProvider).load(),
-    );
+    state = await AsyncValue.guard(() async {
+      final raw = await ref
+          .read(preferencesStoreProvider)
+          .read(PreferenceKeys.contentFilterBlockedThreadsV1);
+      return BlockedThreadSnapshotCodec.decode(raw);
+    });
   }
 
   Future<List<BlockedThread>> _currentRules() async {
@@ -154,7 +163,12 @@ final class BlockedThreadsController
 
   Future<bool> _commit(List<BlockedThread> next) async {
     try {
-      await ref.read(blockedThreadRepositoryProvider).save(next);
+      await ref
+          .read(preferencesStoreProvider)
+          .write(
+            PreferenceKeys.contentFilterBlockedThreadsV1,
+            BlockedThreadSnapshotCodec.encode(next),
+          );
     } catch (_) {
       return false;
     }

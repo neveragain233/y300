@@ -242,7 +242,6 @@ Widget _harness({
               imageReferer: 'https://bbs.yamibo.com/',
               onLoadPreviousPage: () {},
               onLoadNextPage: () {},
-              onLoadPageNumber: (_) {},
               onOpenAuthorProfile: (_) {},
               onOpenCommentAuthorProfile: (_) {},
               onCopyActionUrl: (_, _) {},

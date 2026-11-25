@@ -10,7 +10,7 @@ void main() {
   test('blocked replies from visited pages move to the tail in page order', () {
     final reads = <int>[];
     final coordinator = ThreadReplyTailCoordinator(
-      readPage: (page) async {
+      readPage: (page, _) async {
         reads.add(page);
         return null;
       },
@@ -52,7 +52,7 @@ void main() {
   test('the last page fills every unvisited page before completing', () async {
     final reads = <int>[];
     final coordinator = ThreadReplyTailCoordinator(
-      readPage: (page) async {
+      readPage: (page, _) async {
         reads.add(page);
         return ThreadReplyTailPage(
           page: page,
@@ -97,7 +97,9 @@ void main() {
   });
 
   test('a blocked topic body keeps its floor', () {
-    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
+    final coordinator = ThreadReplyTailCoordinator(
+      readPage: (_, _) async => null,
+    );
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -118,7 +120,7 @@ void main() {
   test('membership changes retire coverage and rescan the last page', () async {
     final reads = <int>[];
     final coordinator = ThreadReplyTailCoordinator(
-      readPage: (page) async {
+      readPage: (page, _) async {
         reads.add(page);
         return ThreadReplyTailPage(
           page: page,
@@ -160,7 +162,7 @@ void main() {
     var failures = 1;
     final reads = <int>[];
     final coordinator = ThreadReplyTailCoordinator(
-      readPage: (page) async {
+      readPage: (page, _) async {
         reads.add(page);
         if (failures > 0) {
           failures -= 1;
@@ -197,7 +199,7 @@ void main() {
   test('the per-pass budget leaves an explicit continuation', () async {
     final reads = <int>[];
     final coordinator = ThreadReplyTailCoordinator(
-      readPage: (page) async {
+      readPage: (page, _) async {
         reads.add(page);
         return ThreadReplyTailPage(
           page: page,
@@ -232,7 +234,9 @@ void main() {
   });
 
   test('thread and query changes discard the collected set', () {
-    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
+    final coordinator = ThreadReplyTailCoordinator(
+      readPage: (_, _) async => null,
+    );
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -257,7 +261,9 @@ void main() {
   });
 
   test('a pinned target stays on its floor and out of the moved set', () {
-    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
+    final coordinator = ThreadReplyTailCoordinator(
+      readPage: (_, _) async => null,
+    );
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -278,7 +284,9 @@ void main() {
   });
 
   test('duplicate posts across pages are collected once', () {
-    final coordinator = ThreadReplyTailCoordinator(readPage: (_) async => null);
+    final coordinator = ThreadReplyTailCoordinator(
+      readPage: (_, _) async => null,
+    );
     addTearDown(coordinator.dispose);
 
     coordinator.observe(
@@ -307,7 +315,7 @@ void main() {
   test('a late page read cannot enter a new generation', () async {
     final gate = Completer<ThreadReplyTailPage?>();
     final coordinator = ThreadReplyTailCoordinator(
-      readPage: (_) => gate.future,
+      readPage: (_, _) => gate.future,
     );
     addTearDown(coordinator.dispose);
 
@@ -345,7 +353,7 @@ void main() {
     () async {
       final reads = <int>[];
       final coordinator = ThreadReplyTailCoordinator(
-        readPage: (page) async {
+        readPage: (page, _) async {
           reads.add(page);
           return ThreadReplyTailPage(
             page: page,

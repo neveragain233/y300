@@ -1,9 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:y300/core/preferences/preference_key.dart';
+import 'package:y300/core/preferences/preference_keys.dart';
+import 'package:y300/core/preferences/preferences_providers.dart';
+import 'package:y300/core/preferences/preferences_store.dart';
 import 'package:y300/features/content_filter/application/blocked_threads_controller.dart';
+import 'package:y300/features/content_filter/data/codecs/blocked_thread_snapshot_codec.dart';
 import 'package:y300/features/content_filter/data/providers/content_filter_providers.dart';
 import 'package:y300/features/content_filter/domain/models/blocked_thread.dart';
-import 'package:y300/features/content_filter/domain/repositories/blocked_thread_repository.dart';
 
 void main() {
   group('BlockedThreadsController', () {
@@ -108,28 +112,47 @@ ProviderContainer _container(
 }) {
   return ProviderContainer.test(
     overrides: [
-      blockedThreadRepositoryProvider.overrideWithValue(repository),
+      preferencesStoreProvider.overrideWithValue(repository),
       if (clock != null) blockedThreadClockProvider.overrideWithValue(clock),
     ],
   );
 }
 
-final class _MemoryRepository implements BlockedThreadRepository {
+final class _MemoryRepository implements PreferencesStore {
   _MemoryRepository({this.failWrites = false});
 
   final bool failWrites;
-  List<BlockedThread> rules = const <BlockedThread>[];
+  final Map<String, Object> _values = <String, Object>{};
   final List<List<BlockedThread>> saved = <List<BlockedThread>>[];
 
-  @override
-  Future<List<BlockedThread>> load() async => rules;
+  List<BlockedThread> get rules => BlockedThreadSnapshotCodec.decode(
+    _values[PreferenceKeys.contentFilterBlockedThreadsV1.name] as String?,
+  );
 
   @override
-  Future<void> save(List<BlockedThread> threads) async {
+  Future<T?> read<T extends Object>(PreferenceKey<T> key) async {
+    final value = _values[key.name];
+    return value is T ? value : null;
+  }
+
+  @override
+  Future<bool> contains<T extends Object>(PreferenceKey<T> key) async =>
+      _values.containsKey(key.name);
+
+  @override
+  Future<void> write<T extends Object>(PreferenceKey<T> key, T value) async {
     if (failWrites) {
       throw StateError('fixture write failure');
     }
-    rules = threads;
-    saved.add(threads);
+    _values[key.name] = value;
+    if (key.name == PreferenceKeys.contentFilterBlockedThreadsV1.name &&
+        value is String) {
+      saved.add(BlockedThreadSnapshotCodec.decode(value));
+    }
+  }
+
+  @override
+  Future<void> remove<T extends Object>(PreferenceKey<T> key) async {
+    _values.remove(key.name);
   }
 }
